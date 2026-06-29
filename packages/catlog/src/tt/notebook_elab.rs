@@ -67,10 +67,10 @@ impl<'a> Elaborator<'a> {
         Evaluator::new(self.toplevel, self.ctx.env.clone(), self.ctx.scope.len())
     }
 
-    fn intro(&mut self, name: VarName, label: LabelSegment, ty: Option<TyV>) -> TmV {
-        let v = TmV::neu(
+    fn intro(&mut self, name: VarName, label: LabelSegment, ty: Option<BaseTyV>) -> BaseTmV {
+        let v = BaseTmV::neu(
             TmN::var(self.ctx.scope.len().into(), name, label),
-            ty.clone().unwrap_or(TyV::unit()),
+            ty.clone().unwrap_or(BaseTyV::empty_record()),
         );
         let v = if ty.is_some() {
             self.evaluator().eta(&v, ty.as_ref())
@@ -88,10 +88,10 @@ impl<'a> Elaborator<'a> {
         MetaVar::new(Some(self.ref_id), i)
     }
 
-    fn ty_error(&mut self, error: InvalidDblModel) -> (TyS, TyV) {
+    fn ty_error(&mut self, error: InvalidDblModel) -> (BaseTyS, BaseTyV) {
         self.errors.push(error);
         let ty_m = self.fresh_meta();
-        (TyS::meta(ty_m), TyV::meta(ty_m))
+        (BaseTyS::meta(ty_m), BaseTyV::meta(ty_m))
     }
 
     fn ob_type(&mut self, ob_type: &nb::ObType) -> Option<ObType> {
@@ -102,46 +102,49 @@ impl<'a> Elaborator<'a> {
         }
     }
 
-    fn object_cell(&mut self, ob_decl: &nb::ObDecl) -> (NameSegment, LabelSegment, TyS, TyV) {
+    fn object_cell(
+        &mut self,
+        ob_decl: &nb::ObDecl,
+    ) -> (NameSegment, LabelSegment, BaseTyS, BaseTyV) {
         let name = NameSegment::Uuid(ob_decl.id);
         let label = LabelSegment::Text(ustr(&ob_decl.name));
         let (ty_s, ty_v) = match self.ob_type(&ob_decl.ob_type) {
-            Some(ob_type) => (TyS::object(ob_type.clone()), TyV::object(ob_type)),
+            Some(ob_type) => (BaseTyS::object(ob_type.clone()), BaseTyV::object(ob_type)),
             None => self.ty_error(InvalidDblModel::ObType(QualifiedName::single(name))),
         };
         (name, label, ty_s, ty_v)
     }
 
-    fn lookup_tm(&self, name: VarName) -> Option<(TmS, TmV, TyV)> {
+    fn lookup_tm(&self, name: VarName) -> Option<(BaseTmS, BaseTmV, BaseTyV)> {
         let (i, label, ty) = self.ctx.lookup(name)?;
         let v = self.ctx.env.get(*i).unwrap().clone();
-        Some((TmS::var(i, name, label), v, ty.clone().unwrap()))
+        Some((BaseTmS::var(i, name, label), v, ty.clone().unwrap()))
     }
 
-    fn resolve_name(&self, segments: &[VarName]) -> Option<(TmS, TmV, TyV)> {
+    fn resolve_name(&self, segments: &[VarName]) -> Option<(BaseTmS, BaseTmV, BaseTyV)> {
         let (&last, rest) = segments.split_last()?;
         if rest.is_empty() {
             self.lookup_tm(last)
         } else {
             let (tm_s, tm_v, ty_v) = self.resolve_name(rest)?;
-            let TyV_::Record(r) = &*ty_v else {
+            let BaseTyV_::Record(r) = &*ty_v else {
                 return None;
             };
             let &(label, _) = r.fields.get_with_label(last)?;
             Some((
-                TmS::proj(tm_s, last, label),
+                BaseTmS::proj(tm_s, last, label),
                 self.evaluator().proj(&tm_v, last, label),
                 self.evaluator().field_ty(&ty_v, &tm_v, last),
             ))
         }
     }
 
-    fn ob_syn(&self, n: &nb::Ob) -> Option<(TmS, TmV, ObType)> {
+    fn ob_syn(&self, n: &nb::Ob) -> Option<(BaseTmS, BaseTmV, ObType)> {
         match n {
             nb::Ob::Basic(name) => {
                 let name = QualifiedName::deserialize_str(name).unwrap();
                 let (stx, val, ty) = self.resolve_name(name.as_slice())?;
-                let TyV_::Object(ob_type) = &*ty else {
+                let BaseTyV_::Object(ob_type) = &*ty else {
                     return None;
                 };
                 Some((stx, val, ob_type.clone()))
@@ -151,28 +154,28 @@ impl<'a> Elaborator<'a> {
                 let ob_op = self.theory().basic_ob_op([name].into())?;
                 let arg_type = self.theory().ob_op_dom(&ob_op);
                 let (arg_stx, arg_val) = self.ob_chk(ob, &arg_type)?;
-                let stx = TmS::ob_app(name, arg_stx);
-                let val = TmV::app(name, arg_val);
+                let stx = BaseTmS::ob_app(name, arg_stx);
+                let val = BaseTmV::app(name, arg_val);
                 Some((stx, val, self.theory().ob_op_cod(&ob_op)))
             }
             nb::Ob::Tabulated(mor) => {
                 let (mor_stx, mor_val, mor_ty) = self.mor_syn(mor)?;
-                let TyV_::Morphism(mt, _, _) = &*mor_ty else {
+                let BaseTyV_::Morphism(mt, _, _) = &*mor_ty else {
                     return None;
                 };
                 let ob_type = self.theory().tabulator(mt.clone())?;
-                Some((TmS::tab(mor_stx), TmV::tab(mor_val), ob_type))
+                Some((BaseTmS::tab(mor_stx), BaseTmV::tab(mor_val), ob_type))
             }
             _ => None,
         }
     }
 
-    fn mor_syn(&self, n: &nb::Mor) -> Option<(TmS, TmV, TyV)> {
+    fn mor_syn(&self, n: &nb::Mor) -> Option<(BaseTmS, BaseTmV, BaseTyV)> {
         match n {
             nb::Mor::Basic(name) => {
                 let name = QualifiedName::deserialize_str(name).unwrap();
                 let (stx, val, ty) = self.resolve_name(name.as_slice())?;
-                let TyV_::Morphism(..) = &*ty else {
+                let BaseTyV_::Morphism(..) = &*ty else {
                     return None;
                 };
                 Some((stx, val, ty))
@@ -181,7 +184,7 @@ impl<'a> Elaborator<'a> {
                 nb::path::Path::Id(ob) => {
                     let (stx, val, ob_type) = self.ob_syn(ob)?;
                     let mor_type = self.theory().hom_type(ob_type)?;
-                    Some((stx, val.clone(), TyV::morphism(mor_type, val.clone(), val.clone())))
+                    Some((stx, val.clone(), BaseTyV::morphism(mor_type, val.clone(), val.clone())))
                 }
                 nb::path::Path::Seq(ms) => match ms.as_slice() {
                     [] => None,
@@ -190,10 +193,11 @@ impl<'a> Elaborator<'a> {
                         let (stx_first, val_first, type_first) = self.mor_syn(first)?;
                         let rest = nb::Mor::Composite(Box::new(nb::path::Path::Seq(rest.to_vec())));
                         let (stx_rest, val_rest, type_rest) = self.mor_syn(&rest)?;
-                        let TyV_::Morphism(mt_first, dom_first, cod_first) = &*type_first else {
+                        let BaseTyV_::Morphism(mt_first, dom_first, cod_first) = &*type_first
+                        else {
                             unreachable!()
                         };
-                        let TyV_::Morphism(mt_rest, dom_rest, cod_rest) = &*type_rest else {
+                        let BaseTyV_::Morphism(mt_rest, dom_rest, cod_rest) = &*type_rest else {
                             unreachable!()
                         };
                         if mt_first != mt_rest {
@@ -202,12 +206,16 @@ impl<'a> Elaborator<'a> {
                         if self.evaluator().equal_tm(cod_first, dom_rest).is_err() {
                             return None;
                         }
-                        let stx = TmS::compose(stx_first, stx_rest);
-                        let val = TmV::compose(val_first, val_rest);
+                        let stx = BaseTmS::compose(stx_first, stx_rest);
+                        let val = BaseTmV::compose(val_first, val_rest);
                         Some((
                             stx,
                             val,
-                            TyV::morphism(mt_first.clone(), dom_first.clone(), cod_rest.clone()),
+                            BaseTyV::morphism(
+                                mt_first.clone(),
+                                dom_first.clone(),
+                                cod_rest.clone(),
+                            ),
                         ))
                     }
                 },
@@ -216,7 +224,7 @@ impl<'a> Elaborator<'a> {
         }
     }
 
-    fn ob_chk(&self, n: &nb::Ob, ob_type: &ObType) -> Option<(TmS, TmV)> {
+    fn ob_chk(&self, n: &nb::Ob, ob_type: &ObType) -> Option<(BaseTmS, BaseTmV)> {
         match n {
             nb::Ob::List { modality: nb_modality, objects: elems } => {
                 let (modality, ob_type) = ob_type.clone().mode_app()?;
@@ -230,7 +238,7 @@ impl<'a> Elaborator<'a> {
                     elem_stxs.push(tm_s);
                     elem_vals.push(tm_v);
                 }
-                Some((TmS::list(elem_stxs), TmV::list(elem_vals)))
+                Some((BaseTmS::list(elem_stxs), BaseTmV::list(elem_vals)))
             }
             _ => {
                 let (tm_s, tm_v, synthed) = self.ob_syn(n)?;
@@ -243,7 +251,7 @@ impl<'a> Elaborator<'a> {
         }
     }
 
-    fn morphism_cell_ty(&mut self, mor_decl: &nb::MorDecl) -> (TyS, TyV) {
+    fn morphism_cell_ty(&mut self, mor_decl: &nb::MorDecl) -> (BaseTyS, BaseTyV) {
         let id = QualifiedName::from(mor_decl.id);
         let (mor_type, dom_ty, cod_ty) = match &mor_decl.mor_type {
             nb::MorType::Basic(name) => {
@@ -275,19 +283,22 @@ impl<'a> Elaborator<'a> {
             return self.ty_error(InvalidDblModel::CodType(id));
         };
         (
-            TyS::morphism(mor_type.clone(), dom_s, cod_s),
-            TyV::morphism(mor_type, dom_v, cod_v),
+            BaseTyS::morphism(mor_type.clone(), dom_s, cod_s),
+            BaseTyV::morphism(mor_type, dom_v, cod_v),
         )
     }
 
-    fn morphism_cell(&mut self, mor_decl: &nb::MorDecl) -> (NameSegment, LabelSegment, TyS, TyV) {
+    fn morphism_cell(
+        &mut self,
+        mor_decl: &nb::MorDecl,
+    ) -> (NameSegment, LabelSegment, BaseTyS, BaseTyV) {
         let name = NameSegment::Uuid(mor_decl.id);
         let label = LabelSegment::Text(ustr(&mor_decl.name));
         let (ty_s, ty_v) = self.morphism_cell_ty(mor_decl);
         (name, label, ty_s, ty_v)
     }
 
-    fn equation_cell_ty(&mut self, eqn_decl: &nb::EqnDecl) -> (TyS, TyV) {
+    fn equation_cell_ty(&mut self, eqn_decl: &nb::EqnDecl) -> (BaseTyS, BaseTyV) {
         let (lhs_m, rhs_m) = match (&eqn_decl.lhs, &eqn_decl.rhs) {
             (Some(lhs), Some(rhs)) => (lhs, rhs),
             _ => {
@@ -312,10 +323,10 @@ impl<'a> Elaborator<'a> {
         };
 
         if let (Some((_, _, lhs_ty)), Some((_, _, rhs_ty))) = (&lhs, &rhs) {
-            let TyV_::Morphism(mt_lhs, dom_lhs, cod_lhs) = &**lhs_ty else {
+            let BaseTyV_::Morphism(mt_lhs, dom_lhs, cod_lhs) = &**lhs_ty else {
                 unreachable!()
             };
-            let TyV_::Morphism(mt_rhs, dom_rhs, cod_rhs) = &**rhs_ty else {
+            let BaseTyV_::Morphism(mt_rhs, dom_rhs, cod_rhs) = &**rhs_ty else {
                 unreachable!()
             };
             if mt_lhs != mt_rhs {
@@ -331,8 +342,8 @@ impl<'a> Elaborator<'a> {
         }
         match (NonEmpty::from_vec(errors), lhs, rhs) {
             (None, Some((lhs_s, lhs_v, lhs_ty)), Some((rhs_s, rhs_v, _))) => {
-                let ty_s = TyS::id(self.evaluator().quote_ty(&lhs_ty), lhs_s, rhs_s);
-                let ty_v = TyV::id(lhs_ty, lhs_v, rhs_v);
+                let ty_s = BaseTyS::id(self.evaluator().quote_ty(&lhs_ty), lhs_s, rhs_s);
+                let ty_v = BaseTyV::id(lhs_ty, lhs_v, rhs_v);
                 (ty_s, ty_v)
             }
             (Some(errors), _, _) => {
@@ -346,7 +357,10 @@ impl<'a> Elaborator<'a> {
         }
     }
 
-    fn equation_cell(&mut self, eqn_decl: &nb::EqnDecl) -> (NameSegment, LabelSegment, TyS, TyV) {
+    fn equation_cell(
+        &mut self,
+        eqn_decl: &nb::EqnDecl,
+    ) -> (NameSegment, LabelSegment, BaseTyS, BaseTyV) {
         // Kind of funny that the decl's id produces the cell's name
         // but the decl's name produces the cell's label.
         let name = NameSegment::Uuid(eqn_decl.id);
@@ -355,7 +369,7 @@ impl<'a> Elaborator<'a> {
         (name, label, ty_s, ty_v)
     }
 
-    fn instantiation_cell_ty(&mut self, i_decl: &nb::InstantiatedModel) -> (TyS, TyV) {
+    fn instantiation_cell_ty(&mut self, i_decl: &nb::InstantiatedModel) -> (BaseTyS, BaseTyV) {
         let name = QualifiedName::single(NameSegment::Uuid(i_decl.id));
         let link = match &i_decl.model {
             Some(l) => l,
@@ -373,7 +387,7 @@ impl<'a> Elaborator<'a> {
             return self.ty_error(InvalidDblModel::InvalidLink(name));
         }
         let mut specializations = Vec::new();
-        let TyV_::Record(r) = &*type_def.val else {
+        let BaseTyV_::Record(r) = &*type_def.val else {
             return self.ty_error(InvalidDblModel::InvalidLink(name));
         };
         let mut r = r.clone();
@@ -387,7 +401,7 @@ impl<'a> Elaborator<'a> {
                     continue;
                 };
                 match &**field_ty {
-                    TyS_::Object(expected_ob_ty) => {
+                    BaseTyS_::Object(expected_ob_ty) => {
                         if &ob_type != expected_ob_ty {
                             continue;
                         }
@@ -398,26 +412,26 @@ impl<'a> Elaborator<'a> {
                 }
                 specializations.push((
                     vec![(field_name, *field_label)],
-                    TyS::sing(TyS::object(ob_type.clone()), ob_s),
+                    BaseTyS::sing(BaseTyS::object(ob_type.clone()), ob_s),
                 ));
                 r = r.add_specialization(
                     &[(field_name, *field_label)],
-                    TyV::sing(TyV::object(ob_type), ob_v),
+                    BaseTyV::sing(BaseTyV::object(ob_type), ob_v),
                 )
             }
         }
         let ty_s = if specializations.is_empty() {
-            TyS::topvar(topname)
+            BaseTyS::topvar(topname)
         } else {
-            TyS::specialize(TyS::topvar(topname), specializations)
+            BaseTyS::specialize(BaseTyS::topvar(topname), specializations)
         };
-        (ty_s, TyV::record(r))
+        (ty_s, BaseTyV::record(r))
     }
 
     fn instantiation_cell(
         &mut self,
         i_decl: &nb::InstantiatedModel,
-    ) -> (NameSegment, LabelSegment, TyS, TyV) {
+    ) -> (NameSegment, LabelSegment, BaseTyS, BaseTyV) {
         let name = NameSegment::Uuid(i_decl.id);
         let label = LabelSegment::Text(ustr(&i_decl.name));
         let (ty_s, ty_v) = self.instantiation_cell_ty(i_decl);
@@ -428,7 +442,7 @@ impl<'a> Elaborator<'a> {
     pub fn notebook<'b>(
         &mut self,
         cells: impl Iterator<Item = &'b nb::ModelJudgment>,
-    ) -> (TyS, TyV) {
+    ) -> (BaseTyS, BaseTyV) {
         // Process the cells in dependency order. This is important because the
         // UI allows users to reorder cells freely and that shouldn't affect the
         // result of elaboration.
@@ -454,7 +468,7 @@ impl<'a> Elaborator<'a> {
             field_ty_vs.push((name, (label, ty_v.clone())));
             self.ctx.scope.push(VarInContext::new(name, label, Some(ty_v.clone())));
             self.ctx.env =
-                self.ctx.env.snoc(TmV::neu(TmN::proj(self_var.clone(), name, label), ty_v));
+                self.ctx.env.snoc(BaseTmV::neu(TmN::proj(self_var.clone(), name, label), ty_v));
         }
 
         self.reset_to(c);
@@ -463,7 +477,7 @@ impl<'a> Elaborator<'a> {
             .map(|(name, (label, ty_v))| (*name, (*label, self.evaluator().quote_ty(ty_v))))
             .collect();
         let r_v = RecordV::new(self.ctx.env.clone(), field_tys.clone(), Dtry::empty());
-        (TyS::record(field_tys), TyV::record(r_v))
+        (BaseTyS::record(field_tys), BaseTyV::record(r_v))
     }
 }
 

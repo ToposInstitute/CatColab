@@ -18,8 +18,8 @@
 //!
 //! |      | Syntax | Value |
 //! |------|--------|-------|
-//! | Term | [TmS]  | [TmV] |
-//! | Type | [TyS]  | [TyV] |
+//! | Term | [BaseTmS]  | [BaseTmV] |
+//! | Type | [BaseTyS]  | [BaseTyV] |
 //!
 //! Evaluation is the process of going from syntax to values. Evaluation is used to
 //! *normalize types*. We need to normalize types because there are many different
@@ -36,28 +36,28 @@
 //! ```ignore
 //! type BwdIdx = usize;
 //!
-//! enum TmS {
+//! enum BaseTmS {
 //!     Var(BwdIdx),
-//!     App(TmS, TmS),
-//!     Lam(TmS)
+//!     App(BaseTmS, BaseTmS),
+//!     Lam(BaseTmS)
 //! }
 //!
 //! type Env = Bwd<Closure>;
 //!
 //! struct Closure {
 //!     env: Env,
-//!     body: TmS
+//!     body: BaseTmS
 //! }
 //!
-//! fn eval(env: Env, tm_s: TmS) -> Closure {
+//! fn eval(env: Env, tm_s: BaseTmS) -> Closure {
 //!     match tm_s {
-//!         TmS::Var(i) => env.lookup(i),
-//!         TmS::App(f, x) => {
+//!         BaseTmS::Var(i) => env.lookup(i),
+//!         BaseTmS::App(f, x) => {
 //!             let fv = eval(env, f);
 //!             let xv = eval(env, x);
 //!             eval(fv.env.snoc(xv), fv.body)
 //!         }
-//!         TmS::Lam(body) => Closure { env, body }
+//!         BaseTmS::Lam(body) => Closure { env, body }
 //!     }
 //! }
 //! ```
@@ -71,43 +71,43 @@
 //! ```ignore
 //! type FwdIdx = usize;
 //!
-//! enum TmV {
+//! enum BaseTmV {
 //!     // f a₁ ... aₙ
-//!     Neu(FwdIdx, Bwd<TmV>),
+//!     Neu(FwdIdx, Bwd<BaseTmV>),
 //!     Clo(Closure)
 //! }
 //!
-//! impl TmV {
-//!     fn app(self, arg: TmV) -> TmV {
+//! impl BaseTmV {
+//!     fn app(self, arg: BaseTmV) -> BaseTmV {
 //!         match self {
-//!             TmV::Neu(head, args) => TmV::Neu(head, args.snoc(arg)),
-//!             TmV::Clo(clo) => eval(clo.env.snoc(arg), clo.body)
+//!             BaseTmV::Neu(head, args) => BaseTmV::Neu(head, args.snoc(arg)),
+//!             BaseTmV::Clo(clo) => eval(clo.env.snoc(arg), clo.body)
 //!         }
 //!     }
 //! }
 //!
-//! type Env = Bwd<TmV>;
+//! type Env = Bwd<BaseTmV>;
 //!
-//! fn eval(env: Env, tm_s: TmS) -> Closure {
+//! fn eval(env: Env, tm_s: BaseTmS) -> Closure {
 //!     match tm_s {
-//!         TmS::Var(i) => env.lookup(i),
-//!         TmS::App(f, x) => {
+//!         BaseTmS::Var(i) => env.lookup(i),
+//!         BaseTmS::App(f, x) => {
 //!             let fv = eval(env, f);
 //!             let xv = eval(env, x);
 //!             fv.app(xv)
 //!         }
-//!         TmS::Lam(body) => TmV::Clo(Closure { env, body })
+//!         BaseTmS::Lam(body) => BaseTmV::Clo(Closure { env, body })
 //!     }
 //! }
 //!
-//!     fn quote(scope_len: usize, tm_v: TmV) -> TmS {
+//!     fn quote(scope_len: usize, tm_v: BaseTmV) -> BaseTmS {
 //!         match tm_v {
-//!             TmV::Neu(f, xs) =>
-//!                 xs.iter.fold(TmS::Var(scope_len - f - 1), |f, x| TmS::App(f, x)),
-//!             TmV::Clo(clo) => {
-//!                 let x_v = TmV::Neu(scope_len, Bwd::Nil);
+//!             BaseTmV::Neu(f, xs) =>
+//!                 xs.iter.fold(BaseTmS::Var(scope_len - f - 1), |f, x| BaseTmS::App(f, x)),
+//!             BaseTmV::Clo(clo) => {
+//!                 let x_v = BaseTmV::Neu(scope_len, Bwd::Nil);
 //!                 let body_v = eval(clo.env.snoc(x_v), clo.body);
-//!             TmS::Lam(quote(scope_len + 1, body_v));
+//!             BaseTmS::Lam(quote(scope_len + 1, body_v));
 //!         }
 //!     }
 //! }
@@ -134,7 +134,7 @@
 //! the following double models.
 //!
 //! ```text
-//! type Graph := [
+//! model Graph := [
 //!     E : Entity,
 //!     V : Entity,
 //!     src : (Id Entity)[E, V],
@@ -142,7 +142,7 @@
 //! ]
 //! /# declared: Graph
 //!
-//! type Graph2 := [
+//! model Graph2 := [
 //!     V : Entity,
 //!     g1 : Graph & [ .V := V ],
 //!     g2 : Graph & [ .V := V ]

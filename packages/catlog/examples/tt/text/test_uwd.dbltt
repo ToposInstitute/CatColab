@@ -1,13 +1,13 @@
 set_theory ThSignedCategory
 
-type PredPrey := [
+model PredPrey := [
   Pred : Object,
   Prey : Object,
   eats : Negative[Pred, Prey],
   feeds : (Hom Object)[Prey, Pred]
 ]
 
-type TwoLevelFoodChain := [
+model TwoLevelFoodChain := [
   Grass : Object,
   Rabbit : Object,
   Fox : Object,
@@ -17,7 +17,7 @@ type TwoLevelFoodChain := [
 
 uwd TwoLevelFoodChain
 
-type TwoPredSystem := [
+model TwoPredSystem := [
   main: PredPrey,
   secondary: PredPrey & [ .Prey := main.Prey ]
 ]

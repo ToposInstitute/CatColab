@@ -27,8 +27,8 @@ impl fmt::Display for MetaVar {
     }
 }
 
-/// Inner enum for [TyS].
-pub enum TyS_ {
+/// Inner enum for [BaseTyS].
+pub enum BaseTyS_ {
     /// A reference to a top-level declaration.
     TopVar(TopVarName),
     /// Type constructor for object types.
@@ -46,7 +46,7 @@ pub enum TyS_ {
     ///
     /// A term of type `Morphism(mt, dom, cod)` represents an morphism of morphism
     /// type `mt` from `dom` to `cod`.
-    Morphism(MorType, TmS, TmS),
+    Morphism(MorType, BaseTmS, BaseTmS),
 
     /// Type constructor for record types.
     ///
@@ -54,7 +54,7 @@ pub enum TyS_ {
     ///
     /// A term `x` of type `Record(r)` represents a record where field `f` has type
     /// `eval(env.snoc(eval(env, x)), r.fields1[f])`.
-    Record(Row<TyS>),
+    Record(Row<BaseTyS>),
 
     /// Type constructor for singleton types.
     ///
@@ -62,14 +62,14 @@ pub enum TyS_ {
     ///
     /// A term `x` of type `Sing(ty, tm)` is a term of `ty` that is convertible with
     /// `tm`.
-    Sing(TyS, TmS),
+    Sing(BaseTyS, BaseTmS),
 
     /// Type constructor for identity types.
     ///
     /// Example syntax: `a == b` (assuming `a` and `b` are terms that synthesize the same type).
     ///
     /// A term `p` of type `a == b` is a proof that `a` and `b` are equal.
-    Id(TyS, TmS, TmS),
+    Id(BaseTyS, BaseTmS, BaseTmS),
 
     /// Type constructor for specialized types.
     ///
@@ -80,14 +80,7 @@ pub enum TyS_ {
     ///
     /// In order to form this type, it must be the case that `d[p]` is a subtype of
     /// the type of the field at path `p`.
-    Specialize(TyS, Vec<(Vec<(FieldName, LabelSegment)>, TyS)>),
-
-    /// Type constructor for the unit type.
-    ///
-    /// Example syntax: `Unit`.
-    ///
-    /// All terms of this type are convertible with `tt : Unit`.
-    Unit,
+    Specialize(BaseTyS, Vec<(Vec<(FieldName, LabelSegment)>, BaseTyS)>),
 
     /// A metavar.
     ///
@@ -96,86 +89,80 @@ pub enum TyS_ {
     Meta(MetaVar),
 }
 
-/// Syntax for total types, dereferences to [TyS_].
+/// Syntax for total types, dereferences to [BaseTyS_].
 ///
 /// See [crate::tt] for an explanation of what total types are, and for an
 /// explanation of our approach to Rc pointers in abstract syntax trees.
 #[derive(Clone, Deref)]
 #[deref(forward)]
-pub struct TyS(Rc<TyS_>);
+pub struct BaseTyS(Rc<BaseTyS_>);
 
-impl TyS {
-    /// Smart constructor for [TyS], [TyS_::TopVar] case.
+impl BaseTyS {
+    /// Smart constructor for [BaseTyS], [BaseTyS_::TopVar] case.
     pub fn topvar(name: TopVarName) -> Self {
-        Self(Rc::new(TyS_::TopVar(name)))
+        Self(Rc::new(BaseTyS_::TopVar(name)))
     }
 
-    /// Smart constructor for [TyS], [TyS_::Object] case.
+    /// Smart constructor for [BaseTyS], [BaseTyS_::Object] case.
     pub fn object(object_type: ObType) -> Self {
-        Self(Rc::new(TyS_::Object(object_type)))
+        Self(Rc::new(BaseTyS_::Object(object_type)))
     }
 
-    /// Smart constructor for [TyS], [TyS_::Morphism] case.
-    pub fn morphism(morphism_type: MorType, dom: TmS, cod: TmS) -> Self {
-        Self(Rc::new(TyS_::Morphism(morphism_type, dom, cod)))
+    /// Smart constructor for [BaseTyS], [BaseTyS_::Morphism] case.
+    pub fn morphism(morphism_type: MorType, dom: BaseTmS, cod: BaseTmS) -> Self {
+        Self(Rc::new(BaseTyS_::Morphism(morphism_type, dom, cod)))
     }
 
-    /// Smart constructor for [TyS], [TyS_::Record] case.
-    pub fn record(fields: Row<TyS>) -> Self {
-        Self(Rc::new(TyS_::Record(fields)))
+    /// Smart constructor for [BaseTyS], [BaseTyS_::Record] case.
+    pub fn record(fields: Row<BaseTyS>) -> Self {
+        Self(Rc::new(BaseTyS_::Record(fields)))
     }
 
-    /// Smart constructor for [TyS], [TyS_::Sing] case.
-    pub fn sing(ty: TyS, tm: TmS) -> Self {
-        Self(Rc::new(TyS_::Sing(ty, tm)))
+    /// Smart constructor for [BaseTyS], [BaseTyS_::Sing] case.
+    pub fn sing(ty: BaseTyS, tm: BaseTmS) -> Self {
+        Self(Rc::new(BaseTyS_::Sing(ty, tm)))
     }
 
-    /// Smart constructor for [TyS], [TyS_::Id] case.
-    pub fn id(ty: TyS, tm1: TmS, tm2: TmS) -> Self {
-        Self(Rc::new(TyS_::Id(ty, tm1, tm2)))
+    /// Smart constructor for [BaseTyS], [BaseTyS_::Id] case.
+    pub fn id(ty: BaseTyS, tm1: BaseTmS, tm2: BaseTmS) -> Self {
+        Self(Rc::new(BaseTyS_::Id(ty, tm1, tm2)))
     }
 
-    /// Smart constructor for [TyS], [TyS_::Specialize] case.
+    /// Smart constructor for [BaseTyS], [BaseTyS_::Specialize] case.
     pub fn specialize(
-        ty: TyS,
-        specializations: Vec<(Vec<(FieldName, LabelSegment)>, TyS)>,
+        ty: BaseTyS,
+        specializations: Vec<(Vec<(FieldName, LabelSegment)>, BaseTyS)>,
     ) -> Self {
-        Self(Rc::new(TyS_::Specialize(ty, specializations)))
+        Self(Rc::new(BaseTyS_::Specialize(ty, specializations)))
     }
 
-    /// Smart constructor for [TyS], [TyS_::Unit] case.
-    pub fn unit() -> Self {
-        Self(Rc::new(TyS_::Unit))
-    }
-
-    /// Smart constructor for [TyS], [TyS_::Meta] case.
+    /// Smart constructor for [BaseTyS], [BaseTyS_::Meta] case.
     pub fn meta(mv: MetaVar) -> Self {
-        Self(Rc::new(TyS_::Meta(mv)))
+        Self(Rc::new(BaseTyS_::Meta(mv)))
     }
 }
 
-impl ToDoc for TyS {
+impl ToDoc for BaseTyS {
     fn to_doc<'a>(&self) -> D<'a> {
         match &**self {
-            TyS_::TopVar(name) => t(format!("{}", name)),
-            TyS_::Object(ob_type) => t(format!("{}", ob_type)),
-            TyS_::Morphism(mor_type, dom, cod) => {
+            BaseTyS_::TopVar(name) => t(format!("{}", name)),
+            BaseTyS_::Object(ob_type) => t(format!("{}", ob_type)),
+            BaseTyS_::Morphism(mor_type, dom, cod) => {
                 mor_type.to_doc().parens() + tuple([dom.to_doc(), cod.to_doc()])
             }
-            TyS_::Record(fields) => tuple(fields.iter().map(|(_, (label, ty))| {
+            BaseTyS_::Record(fields) => tuple(fields.iter().map(|(_, (label, ty))| {
                 binop(t(":"), t(format!("{}", label)).group(), ty.to_doc())
             })),
-            TyS_::Sing(_, tm) => t("@sing") + s() + tm.to_doc(),
-            TyS_::Id(_, tm1, tm2) => binop(t("=="), tm1.to_doc(), tm2.to_doc()),
-            TyS_::Specialize(ty, d) => binop(
+            BaseTyS_::Sing(_, tm) => t("@sing") + s() + tm.to_doc(),
+            BaseTyS_::Id(_, tm1, tm2) => binop(t("=="), tm1.to_doc(), tm2.to_doc()),
+            BaseTyS_::Specialize(ty, d) => binop(
                 t("&"),
                 ty.to_doc(),
                 tuple(
                     d.iter().map(|(name, ty)| binop(t(":"), t(path_to_string(name)), ty.to_doc())),
                 ),
             ),
-            TyS_::Unit => t("Unit"),
-            TyS_::Meta(mv) => t(format!("?{}", mv.id)),
+            BaseTyS_::Meta(mv) => t(format!("?{}", mv.id)),
         }
     }
 }
@@ -188,141 +175,298 @@ fn path_to_string(path: &[(FieldName, LabelSegment)]) -> String {
     out
 }
 
-impl fmt::Display for TyS {
+/// Render an object path as a dotted label string with no leading dot
+/// (e.g. `V`, or `we.E` for a nested path), for use inside `Over(...)`.
+fn object_path_to_string(path: &[(FieldName, LabelSegment)]) -> String {
+    path.iter().map(|(_, seg)| seg.to_string()).collect::<Vec<_>>().join(".")
+}
+
+impl fmt::Display for BaseTyS {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.to_doc().group().pretty())
     }
 }
 
-/// Inner enum for [TmS].
-pub enum TmS_ {
-    /// A reference to a top-level constant def.
-    TopVar(TopVarName),
+/// Inner enum for [BaseTmS].
+pub enum BaseTmS_ {
     /// An application of a top-level term judgment to arguments.
-    TopApp(TopVarName, Vec<TmS>),
+    ///
+    /// A closed term (a nullary `def`, e.g. `tt : Unit`) is the empty-argument
+    /// case `TopApp(name, [])`.
+    TopApp(TopVarName, Vec<BaseTmS>),
     /// Variable syntax.
     ///
     /// We use a backward index, as when we evaluate we store the
     /// environment in a [bwd::Bwd], and this indexes into that.
     Var(BwdIdx, VarName, LabelSegment),
     /// Record introduction.
-    Cons(Row<TmS>),
+    Cons(Row<BaseTmS>),
     /// Record elimination.
-    Proj(TmS, FieldName, LabelSegment),
-    /// Unit introduction.
-    ///
-    /// Note that eta-expansion takes care of elimination for units.
-    Tt,
+    Proj(BaseTmS, FieldName, LabelSegment),
     /// Identity morphism at an object.
-    Id(TmS),
+    Id(BaseTmS),
     /// Tabulation of a morphism.
-    Tab(TmS),
+    Tab(BaseTmS),
     /// Composite of two morphisms.
-    Compose(TmS, TmS),
+    Compose(BaseTmS, BaseTmS),
     /// Application of an object operation in the theory.
-    ObApp(VarName, TmS),
+    ObApp(VarName, BaseTmS),
     /// List of objects.
-    List(Vec<TmS>),
+    List(Vec<BaseTmS>),
     /// A metavar.
     ///
     /// This only appears when we have an error in elaboration.
     Meta(MetaVar),
 }
 
-/// Syntax for total terms, dereferences to [TmS_].
+/// Syntax for total terms, dereferences to [BaseTmS_].
 ///
 /// See [crate::tt] for an explanation of what total types are, and for an
 /// explanation of our approach to Rc pointers in abstract syntax trees.
 #[derive(Clone, Deref)]
 #[deref(forward)]
-pub struct TmS(Rc<TmS_>);
+pub struct BaseTmS(Rc<BaseTmS_>);
 
-impl TmS {
-    /// Smart constructor for [TmS], [TmS_::TopVar] case.
-    pub fn topvar(var_name: VarName) -> Self {
-        Self(Rc::new(TmS_::TopVar(var_name)))
+impl BaseTmS {
+    /// Smart constructor for [BaseTmS], [BaseTmS_::TopApp] case.
+    pub fn topapp(var_name: VarName, args: Vec<BaseTmS>) -> Self {
+        Self(Rc::new(BaseTmS_::TopApp(var_name, args)))
     }
 
-    /// Smart constructor for [TmS], [TmS_::TopApp] case.
-    pub fn topapp(var_name: VarName, args: Vec<TmS>) -> Self {
-        Self(Rc::new(TmS_::TopApp(var_name, args)))
-    }
-
-    /// Smart constructor for [TmS], [TmS_::Var] case.
+    /// Smart constructor for [BaseTmS], [BaseTmS_::Var] case.
     pub fn var(bwd_idx: BwdIdx, var_name: VarName, label: LabelSegment) -> Self {
-        Self(Rc::new(TmS_::Var(bwd_idx, var_name, label)))
+        Self(Rc::new(BaseTmS_::Var(bwd_idx, var_name, label)))
     }
 
-    /// Smart constructor for [TmS], [TmS_::Cons] case.
-    pub fn cons(row: Row<TmS>) -> Self {
-        Self(Rc::new(TmS_::Cons(row)))
+    /// Smart constructor for [BaseTmS], [BaseTmS_::Cons] case.
+    pub fn cons(row: Row<BaseTmS>) -> Self {
+        Self(Rc::new(BaseTmS_::Cons(row)))
     }
 
-    /// Smart constructor for [TmS], [TmS_::Proj] case.
-    pub fn proj(tm_s: TmS, field_name: FieldName, label: LabelSegment) -> Self {
-        Self(Rc::new(TmS_::Proj(tm_s, field_name, label)))
+    /// Smart constructor for [BaseTmS], [BaseTmS_::Proj] case.
+    pub fn proj(tm_s: BaseTmS, field_name: FieldName, label: LabelSegment) -> Self {
+        Self(Rc::new(BaseTmS_::Proj(tm_s, field_name, label)))
     }
 
-    /// Smart constructor for [TmS], [TmS_::Tt] case.
-    pub fn tt() -> Self {
-        Self(Rc::new(TmS_::Tt))
+    /// Smart constructor for [BaseTmS], [BaseTmS_::Id] case.
+    pub fn id(ob: BaseTmS) -> Self {
+        Self(Rc::new(BaseTmS_::Id(ob)))
     }
 
-    /// Smart constructor for [TmS], [TmS_::Id] case.
-    pub fn id(ob: TmS) -> Self {
-        Self(Rc::new(TmS_::Id(ob)))
+    /// Smart constructor for [BaseTmS], [BaseTmS_::Tab] case.
+    pub fn tab(mor: BaseTmS) -> Self {
+        Self(Rc::new(BaseTmS_::Tab(mor)))
     }
 
-    /// Smart constructor for [TmS], [TmS_::Tab] case.
-    pub fn tab(mor: TmS) -> Self {
-        Self(Rc::new(TmS_::Tab(mor)))
+    /// Smart constructor for [BaseTmS], [BaseTmS_::Compose] case.
+    pub fn compose(f: BaseTmS, g: BaseTmS) -> Self {
+        Self(Rc::new(BaseTmS_::Compose(f, g)))
     }
 
-    /// Smart constructor for [TmS], [TmS_::Compose] case.
-    pub fn compose(f: TmS, g: TmS) -> Self {
-        Self(Rc::new(TmS_::Compose(f, g)))
+    /// Smart constructor for [BaseTmS], [BaseTmS_::ObApp] case.
+    pub fn ob_app(name: VarName, x: BaseTmS) -> Self {
+        Self(Rc::new(BaseTmS_::ObApp(name, x)))
     }
 
-    /// Smart constructor for [TmS], [TmS_::ObApp] case.
-    pub fn ob_app(name: VarName, x: TmS) -> Self {
-        Self(Rc::new(TmS_::ObApp(name, x)))
+    /// Smart constructor for [BaseTmS], [BaseTmS_::List] case.
+    pub fn list(elems: Vec<BaseTmS>) -> Self {
+        Self(Rc::new(BaseTmS_::List(elems)))
     }
 
-    /// Smart constructor for [TmS], [TmS_::List] case.
-    pub fn list(elems: Vec<TmS>) -> Self {
-        Self(Rc::new(TmS_::List(elems)))
-    }
-
-    /// Smart constructor for [TmS], [TmS_::Meta] case.
+    /// Smart constructor for [BaseTmS], [BaseTmS_::Meta] case.
     pub fn meta(mv: MetaVar) -> Self {
-        Self(Rc::new(TmS_::Meta(mv)))
+        Self(Rc::new(BaseTmS_::Meta(mv)))
     }
 }
 
-impl ToDoc for TmS {
+impl ToDoc for BaseTmS {
     fn to_doc<'a>(&self) -> D<'a> {
         match &**self {
-            TmS_::TopVar(name) => t(format!("{}", name)),
-            TmS_::TopApp(name, args) => {
+            BaseTmS_::TopApp(name, args) if args.is_empty() => t(format!("{}", name)),
+            BaseTmS_::TopApp(name, args) => {
                 t(format!("{}", name)) + tuple(args.iter().map(|arg| arg.to_doc()))
             }
-            TmS_::Var(_, _, label) => t(format!("{}", label)),
-            TmS_::Proj(tm, _, label) => tm.to_doc() + t(format!(".{}", label)),
-            TmS_::Cons(fields) => tuple(fields.iter().map(|(_, (label, field))| {
+            BaseTmS_::Var(_, _, label) => t(format!("{}", label)),
+            BaseTmS_::Proj(tm, _, label) => tm.to_doc() + t(format!(".{}", label)),
+            BaseTmS_::Cons(fields) => tuple(fields.iter().map(|(_, (label, field))| {
                 binop(t(":="), t(format!("{}", label)), field.to_doc())
             })),
-            TmS_::Id(ob) => (t("@id") + s() + ob.to_doc()).parens(),
-            TmS_::Tab(mor) => (t("@tab") + s() + mor.to_doc()).parens(),
-            TmS_::Compose(f, g) => binop(t("·"), f.to_doc(), g.to_doc()),
-            TmS_::ObApp(name, x) => unop(t(format!("@{name}")), x.to_doc()),
-            TmS_::List(elems) => tuple(elems.iter().map(|elem| elem.to_doc())),
-            TmS_::Tt => t("tt"),
-            TmS_::Meta(mv) => t(format!("?{}", mv.id)),
+            BaseTmS_::Id(ob) => (t("@id") + s() + ob.to_doc()).parens(),
+            BaseTmS_::Tab(mor) => (t("@tab") + s() + mor.to_doc()).parens(),
+            BaseTmS_::Compose(f, g) => binop(t("·"), f.to_doc(), g.to_doc()),
+            BaseTmS_::ObApp(name, x) => unop(t(format!("@{name}")), x.to_doc()),
+            BaseTmS_::List(elems) => tuple(elems.iter().map(|elem| elem.to_doc())),
+            BaseTmS_::Meta(mv) => t(format!("?{}", mv.id)),
         }
     }
 }
 
-impl fmt::Display for TmS {
+impl fmt::Display for BaseTmS {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.to_doc().group().pretty())
+    }
+}
+
+/// Inner enum for [FiberTyS].
+///
+/// Fiber types type the fiber world — instances of a model and their
+/// elements — mirroring how [`BaseTyS`] types the base world (models).
+/// See [`crate::tt::toplevel`] for the comprehension-category picture.
+/// The constructors parallel the base world: [`TopVar`](Self::TopVar)
+/// references a top-level instance, [`Over`](Self::Over) is the atomic
+/// fiber-element type, [`Record`](Self::Record) assembles them into an
+/// instance, and [`Id`](Self::Id) imposes a (propositional) equation —
+/// just as [`BaseTyS_::TopVar`] and [`BaseTyS_::Id`] do in the base.
+pub enum FiberTyS_ {
+    /// A reference to a top-level instance declaration, as in a
+    /// sub-instance import `we : Edge`. Mirrors [`BaseTyS_::TopVar`]: it
+    /// appears only in *syntax* and exists to preserve the instance's
+    /// name for display — like base top-vars, it is resolved away in the
+    /// value world (there is no `FiberTyV_::TopVar`), where it becomes the
+    /// referenced instance's [`Record`](Self::Record).
+    TopVar(TopVarName),
+    /// The type of a fiber element lying over the object generator of the
+    /// codomain model identified by `path`. No surface syntax — its
+    /// inhabitants ([`FiberTmS`]) are introduced by set-literal clauses
+    /// `field := [...]`, by projection out of a sub-instance import, and
+    /// by codomain-morphism application inside an instance body.
+    Over(Vec<(FieldName, LabelSegment)>),
+    /// An instance of a model — an object of the fiber over the codomain
+    /// model — presented as a record of fiber types. A generator is an
+    /// [`Over`](Self::Over) field, a sub-instance import is a nested
+    /// [`Record`](Self::Record) field, and an equation is an
+    /// [`Id`](Self::Id) field. This is what `instance I : X := [...]`
+    /// elaborates to, and also the type of a sub-instance import `we :
+    /// Edge` (whose generators are then projected as `we.e`).
+    Record(Row<FiberTyS>),
+    /// A propositional equation between two fiber elements of the given
+    /// fiber type, asserted to hold in the enclosing instance. Mirrors
+    /// [`BaseTyS_::Id`]; like it, these are proof-irrelevant.
+    Id(FiberTyS, FiberTmS, FiberTmS),
+}
+
+/// Syntax for fiber types, dereferences to [FiberTyS_].
+#[derive(Clone, Deref)]
+#[deref(forward)]
+pub struct FiberTyS(Rc<FiberTyS_>);
+
+impl FiberTyS {
+    /// Smart constructor for [FiberTyS], [FiberTyS_::TopVar] case.
+    pub fn topvar(name: TopVarName) -> Self {
+        Self(Rc::new(FiberTyS_::TopVar(name)))
+    }
+
+    /// Smart constructor for [FiberTyS], [FiberTyS_::Over] case.
+    pub fn over(path: Vec<(FieldName, LabelSegment)>) -> Self {
+        Self(Rc::new(FiberTyS_::Over(path)))
+    }
+
+    /// Smart constructor for [FiberTyS], [FiberTyS_::Record] case.
+    pub fn record(fields: Row<FiberTyS>) -> Self {
+        Self(Rc::new(FiberTyS_::Record(fields)))
+    }
+
+    /// Smart constructor for [FiberTyS], [FiberTyS_::Id] case.
+    pub fn id(ty: FiberTyS, tm1: FiberTmS, tm2: FiberTmS) -> Self {
+        Self(Rc::new(FiberTyS_::Id(ty, tm1, tm2)))
+    }
+}
+
+impl ToDoc for FiberTyS {
+    fn to_doc<'a>(&self) -> D<'a> {
+        match &**self {
+            FiberTyS_::TopVar(name) => t(format!("{}", name)),
+            FiberTyS_::Over(path) => t(format!("Over({})", object_path_to_string(path))),
+            FiberTyS_::Record(fields) => tuple(fields.iter().map(|(_, (label, ty))| {
+                binop(t(":"), t(format!("{}", label)).group(), ty.to_doc())
+            })),
+            FiberTyS_::Id(_, tm1, tm2) => binop(t("=="), tm1.to_doc(), tm2.to_doc()),
+        }
+    }
+}
+
+impl fmt::Display for FiberTyS {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.to_doc().group().pretty())
+    }
+}
+
+/// Inner enum for [FiberTmS]: a term of a fiber type, i.e. an element of
+/// an instance.
+///
+/// Fiber terms reference the elaborator's *fiber* scope (generators and
+/// sub-instance imports), which is separate from the base context; see
+/// [`crate::tt::context::Context`]. They are all neutral — there is no
+/// fiber introduction form yet (mapping out of an instance by a record
+/// literal is future work), so a fiber term is always a variable, a
+/// projection, or a codomain-morphism application.
+pub enum FiberTmS_ {
+    /// A fiber-context variable: a generator or a sub-instance import.
+    /// Backward index into the fiber environment.
+    Var(BwdIdx, VarName, LabelSegment),
+    /// Projection of a generator out of a sub-instance import, e.g.
+    /// `we.e`.
+    Proj(FiberTmS, FieldName, LabelSegment),
+    /// Application of a codomain morphism to a fiber element. Arguments,
+    /// in order: the morphism name (e.g. `src`), its display label, the
+    /// codomain object-path it lands at (stored so the result fiber type
+    /// is recoverable without consulting the codomain), and the
+    /// fiber-typed argument (e.g. the elaboration of `we.e`).
+    ///
+    /// Example: in `src(we.e) := v1`, the LHS elaborates to
+    /// `OverApp(src, src, [(V, V)], Proj(Var(we), e, e))` of fiber type
+    /// `Over(.V)`.
+    OverApp(FieldName, LabelSegment, Vec<(FieldName, LabelSegment)>, FiberTmS),
+    /// A metavar (elaboration-error placeholder).
+    Meta(MetaVar),
+}
+
+/// Syntax for fiber terms, dereferences to [FiberTmS_].
+#[derive(Clone, Deref)]
+#[deref(forward)]
+pub struct FiberTmS(Rc<FiberTmS_>);
+
+impl FiberTmS {
+    /// Smart constructor for [FiberTmS], [FiberTmS_::Var] case.
+    pub fn var(bwd_idx: BwdIdx, var_name: VarName, label: LabelSegment) -> Self {
+        Self(Rc::new(FiberTmS_::Var(bwd_idx, var_name, label)))
+    }
+
+    /// Smart constructor for [FiberTmS], [FiberTmS_::Proj] case.
+    pub fn proj(tm: FiberTmS, field_name: FieldName, label: LabelSegment) -> Self {
+        Self(Rc::new(FiberTmS_::Proj(tm, field_name, label)))
+    }
+
+    /// Smart constructor for [FiberTmS], [FiberTmS_::OverApp] case.
+    pub fn over_app(
+        mor: FieldName,
+        mor_label: LabelSegment,
+        tgt_path: Vec<(FieldName, LabelSegment)>,
+        inner: FiberTmS,
+    ) -> Self {
+        Self(Rc::new(FiberTmS_::OverApp(mor, mor_label, tgt_path, inner)))
+    }
+
+    /// Smart constructor for [FiberTmS], [FiberTmS_::Meta] case.
+    pub fn meta(mv: MetaVar) -> Self {
+        Self(Rc::new(FiberTmS_::Meta(mv)))
+    }
+}
+
+impl ToDoc for FiberTmS {
+    fn to_doc<'a>(&self) -> D<'a> {
+        match &**self {
+            FiberTmS_::Var(_, _, label) => t(format!("{}", label)),
+            FiberTmS_::Proj(tm, _, label) => tm.to_doc() + t(format!(".{}", label)),
+            FiberTmS_::OverApp(_, mor_label, _, inner) => {
+                inner.to_doc() + t(format!(".{mor_label}"))
+            }
+            FiberTmS_::Meta(mv) => t(format!("?{}", mv.id)),
+        }
+    }
+}
+
+impl fmt::Display for FiberTmS {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.to_doc().group().pretty())
     }

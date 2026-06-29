@@ -1,0 +1,127 @@
+set_theory ThSchema
+#/ result: set theory to ThSchema
+
+model WeightedGraph := [
+  V : Entity,
+  E : Entity,
+  Weight : AttrType,
+  src : (Hom Entity)[E, V],
+  tgt : (Hom Entity)[E, V],
+  weight : Attr[E, Weight]
+]
+#/ declared: WeightedGraph
+
+instance Edge : WeightedGraph := [
+    E := [e]
+]
+#/ declared: Edge
+#/ instance generators:
+#/   e : E
+
+instance I : WeightedGraph := [
+    V := [v1, v2],
+    Weight := [w],
+    we : Edge,
+    wf : Edge,
+    src(we.e) := v1,
+    tgt(we.e) := v2,
+    src(wf.e) := v2,
+    tgt(wf.e) := v1,
+    weight(we.e) := w,
+    weight(wf.e) := w
+]
+#/ declared: I
+#/ instance generators:
+#/   v1 : V
+#/   v2 : V
+#/   w : Weight
+#/   we.e : E
+#/   wf.e : E
+#/ instance equations:
+#/   src(we.e) == v1
+#/   tgt(we.e) == v2
+#/   src(wf.e) == v2
+#/   tgt(wf.e) == v1
+#/   weight(we.e) == w
+#/   weight(wf.e) == w
+
+instance I2 : WeightedGraph := [
+    V := [v1, v2],
+    Weight := [w],
+    we : Edge,
+    wf : Edge,
+    src := [we.e := v1, wf.e := v2],
+    tgt := [we.e := v2, wf.e := v1],
+    weight := [we.e := w, wf.e := w]
+]
+#/ declared: I2
+#/ instance generators:
+#/   v1 : V
+#/   v2 : V
+#/   w : Weight
+#/   we.e : E
+#/   wf.e : E
+#/ instance equations:
+#/   src(we.e) == v1
+#/   src(wf.e) == v2
+#/   tgt(we.e) == v2
+#/   tgt(wf.e) == v1
+#/   weight(we.e) == w
+#/   weight(wf.e) == w
+
+instance I3 : WeightedGraph := [
+    E := [e1, e2]
+]
+#/ declared: I3
+#/ instance generators:
+#/   e1 : E
+#/   e2 : E
+
+instance SelfNamed : WeightedGraph := [
+    V := [self, v2],
+    E := [e],
+    src(e) := self,
+    tgt(e) := v2
+]
+#/ declared: SelfNamed
+#/ instance generators:
+#/   self : V
+#/   v2 : V
+#/   e : E
+#/ instance equations:
+#/   src(e) == self
+#/   tgt(e) == v2
+
+#(should_fail)
+syn I.E
+#/ result: ?0 : ?1
+#/ expected errors:
+#/ error[elab]: cannot project a field out of an instance; an instance is eliminated by mapping out of it, not by projection
+#/ --> examples/tt/text/test_instances.dbltt:51:5
+#/ 51| syn I.E
+#/ 51|     ^^^
+
+model OtherSchema := [
+    W : Entity
+]
+#/ declared: OtherSchema
+
+instance OtherInst : OtherSchema := [
+    W := [w0]
+]
+#/ declared: OtherInst
+#/ instance generators:
+#/   w0 : W
+
+#(should_fail)
+instance MismatchedImport : WeightedGraph := [
+    bad : OtherInst
+]
+#/ declared: MismatchedImport
+#/ instance has no generators or equations
+#/ expected errors:
+#/ error[elab]: cannot import OtherInst: it is an instance of a different model than the enclosing instance
+#/ --> examples/tt/text/test_instances.dbltt:63:5
+#/ 63|     bad : OtherInst
+#/ 63|     ^^^^^^^^^^^^^^^
+

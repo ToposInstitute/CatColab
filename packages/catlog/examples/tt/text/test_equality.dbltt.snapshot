@@ -1,7 +1,7 @@
 set_theory ThSchema
 #/ result: set theory to ThSchema
 
-type CommutativeSquare := [
+model CommutativeSquare := [
     NW : Entity,
     NE : Entity,
     SW : Entity,

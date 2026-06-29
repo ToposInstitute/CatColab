@@ -22,8 +22,8 @@ use crate::zero::QualifiedName;
 /// to fields of arbitrary depth. In this function, any specializations more
 /// than one level deep are ignored. To capture these, one might look for a
 /// "nested UWD" data structure.
-pub fn record_to_uwd(ty: &TyV) -> Option<UWD<ObType, QualifiedName>> {
-    let TyV_::Record(record_v) = &**ty else {
+pub fn record_to_uwd(ty: &BaseTyV) -> Option<UWD<ObType, QualifiedName>> {
+    let BaseTyV_::Record(record_v) = &**ty else {
         return None;
     };
 
@@ -37,7 +37,7 @@ pub fn record_to_uwd(ty: &TyV) -> Option<UWD<ObType, QualifiedName>> {
     // First pass: add a box for each field that is itself of record type.
     for (field_name, (field_label, _)) in record_v.fields.iter() {
         let field_ty = eval.field_ty(ty, &tm_v, *field_name);
-        let TyV_::Record(r) = &&*field_ty else {
+        let BaseTyV_::Record(r) = &&*field_ty else {
             continue;
         };
         uwd.add_box(*field_name, *field_label);
@@ -49,10 +49,10 @@ pub fn record_to_uwd(ty: &TyV) -> Option<UWD<ObType, QualifiedName>> {
                 // depth one can be expressed in a UWD.
                 continue;
             };
-            let TyV_::Sing(ty, tm) = &**spec_type else {
+            let BaseTyV_::Sing(ty, tm) = &**spec_type else {
                 continue;
             };
-            let (TyV_::Object(ob_type), TmV_::Neu(n, _)) = (&**ty, &**tm) else {
+            let (BaseTyV_::Object(ob_type), BaseTmV_::Neu(n, _)) = (&**ty, &**tm) else {
                 continue;
             };
             let qual_name = n.to_qualified_name();
@@ -67,7 +67,7 @@ pub fn record_to_uwd(ty: &TyV) -> Option<UWD<ObType, QualifiedName>> {
         let field_ty = eval.field_ty(ty, &tm_v, *field_name);
         match &&*field_ty {
             // Add outer port for each top-level field that is a junction.
-            TyV_::Object(ob_type) => {
+            BaseTyV_::Object(ob_type) => {
                 let qual_name = QualifiedName::single(*field_name);
                 if uwd.has_junction(&qual_name) {
                     uwd.add_outer_port(*field_name, *field_label, ob_type.clone());
@@ -75,7 +75,7 @@ pub fn record_to_uwd(ty: &TyV) -> Option<UWD<ObType, QualifiedName>> {
                 }
             }
             // Add port to box for each sub-field that is a junction.
-            TyV_::Record(r) => {
+            BaseTyV_::Record(r) => {
                 let tm_v = eval.proj(&tm_v, *field_name, *field_label);
                 for (port_name, (port_label, _)) in r.fields.iter() {
                     if uwd.has_port(*field_name, *port_name) {
@@ -84,7 +84,7 @@ pub fn record_to_uwd(ty: &TyV) -> Option<UWD<ObType, QualifiedName>> {
                     let qual_name: QualifiedName = [*field_name, *port_name].into();
                     if uwd.has_junction(&qual_name) {
                         let port_ty = eval.field_ty(&field_ty, &tm_v, *port_name);
-                        let TyV_::Object(ob_type) = &*port_ty else {
+                        let BaseTyV_::Object(ob_type) = &*port_ty else {
                             continue;
                         };
                         uwd.add_port(*field_name, *port_name, *port_label, ob_type.clone());

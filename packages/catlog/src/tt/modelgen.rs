@@ -4,9 +4,12 @@ use all_the_same::all_the_same;
 use derive_more::{From, TryInto};
 use tattle::display::SourceInfo;
 
+use std::rc::Rc;
+
 use super::{eval::*, prelude::*, text_elab, theory::*, toplevel::*, val::*};
 use crate::dbl::{
-    discrete, discrete_tabulator, modal,
+    discrete::{self, DiscreteDblModelInstance, DiscreteInstanceTerm},
+    discrete_tabulator, modal,
     model::{DblModel, DblModelPrinter, MutDblModel},
     theory::{DblTheory, DblTheoryKind, NonUnital, Unital},
 };
@@ -91,7 +94,7 @@ impl Model {
     /// Generates a model from a type.
     ///
     /// Precondition: `ty` must be valid in the empty context.
-    pub fn from_ty(toplevel: &Toplevel, th: &TheoryDef, ty: &TyV) -> (Self, Namespace) {
+    pub fn from_ty(toplevel: &Toplevel, th: &TheoryDef, ty: &BaseTyV) -> (Self, Namespace) {
         let mut generator = ModelGenerator::new(toplevel, th);
         let namespace = generator.generate(ty);
         (generator.model, namespace)
@@ -215,7 +218,7 @@ impl<'a> ModelGenerator<'a> {
         Self { eval, theory, model }
     }
 
-    fn generate(&mut self, ty: &TyV) -> Namespace {
+    fn generate(&mut self, ty: &BaseTyV) -> Namespace {
         let tm_n;
         (tm_n, self.eval) = self.eval.bind_self(ty.clone());
         let tm_v = self.eval.eta_neu(&tm_n, ty);
@@ -236,7 +239,7 @@ impl<'a> ModelGenerator<'a> {
     /// Constructs an application of an object operation, if the theory is modal.
     ///
     /// Returns the constructed object along with the expected object type of the result.
-    fn ob_app(&self, name: &NameSegment, tm_v: &TmV) -> Option<(Ob, ObType)> {
+    fn ob_app(&self, name: &NameSegment, tm_v: &BaseTmV) -> Option<(Ob, ObType)> {
         let name: QualifiedName = [*name].into();
         match &self.model {
             Model::Discrete(_) | Model::DiscreteTab(_) => None,
@@ -249,7 +252,7 @@ impl<'a> ModelGenerator<'a> {
         &self,
         model: &modal::ModalDblModel<Kind>,
         name: QualifiedName,
-        tm_v: &TmV,
+        tm_v: &BaseTmV,
     ) -> Option<(Ob, ObType)> {
         let theory = model.theory();
         let op = modal::ModalObOp::generator(name.clone());
@@ -279,10 +282,10 @@ impl<'a> ModelGenerator<'a> {
     /// Attempts to make an object of a model from a term.
     ///
     /// Returns the object together with the appropriate type.
-    fn make_ob_synth_type(&self, val: &TmV) -> Option<(Ob, ObType)> {
+    fn make_ob_synth_type(&self, val: &BaseTmV) -> Option<(Ob, ObType)> {
         match &**val {
-            TmV_::Neu(n, ty_v) => {
-                let TyV_::Object(ob_type) = &**ty_v else {
+            BaseTmV_::Neu(n, ty_v) => {
+                let BaseTyV_::Object(ob_type) = &**ty_v else {
                     return None;
                 };
                 let name = n.to_qualified_name();
@@ -295,8 +298,8 @@ impl<'a> ModelGenerator<'a> {
                 };
                 Some((ob, ob_type.clone()))
             }
-            TmV_::App(name, tm_v) => self.ob_app(name, tm_v),
-            TmV_::Tab(mor_tm_v) => {
+            BaseTmV_::App(name, tm_v) => self.ob_app(name, tm_v),
+            BaseTmV_::Tab(mor_tm_v) => {
                 let (mor, mor_type) = self.synth_mor(mor_tm_v)?;
                 Some((self.model.tabulated(mor)?, self.theory.tabulator(mor_type)?))
             }
@@ -307,10 +310,10 @@ impl<'a> ModelGenerator<'a> {
     /// Attempts to make an object of a model from a term.
     ///
     /// Also checks that the term constructs an object of the given type, returning only the object if successful.
-    fn make_ob_check_type(&self, val: &TmV, ob_type: &ObType) -> Option<Ob> {
+    fn make_ob_check_type(&self, val: &BaseTmV, ob_type: &ObType) -> Option<Ob> {
         match &**val {
             // ob_type checked recursively.
-            TmV_::List(elems) => {
+            BaseTmV_::List(elems) => {
                 let el_type = ob_type.clone().list_arg()?;
                 let elems: Option<Vec<_>> =
                     elems.iter().map(|tm| self.make_ob_check_type(tm, &el_type)).collect();
@@ -326,21 +329,21 @@ impl<'a> ModelGenerator<'a> {
     /// Attempts to make a morphism of a model from a term.
     ///
     /// Also returns the expected morphism type of the result.
-    fn synth_mor(&self, val: &TmV) -> Option<(Mor, MorType)> {
+    fn synth_mor(&self, val: &BaseTmV) -> Option<(Mor, MorType)> {
         match &**val {
-            TmV_::Neu(n, ty_v) => {
-                let TyV_::Morphism(mor_type, _, _) = &**ty_v else {
+            BaseTmV_::Neu(n, ty_v) => {
+                let BaseTyV_::Morphism(mor_type, _, _) = &**ty_v else {
                     return None;
                 };
                 let name = n.to_qualified_name();
                 Some((self.mor_generator(name), mor_type.clone()))
             }
-            TmV_::Id(x) => {
+            BaseTmV_::Id(x) => {
                 let (dom, dom_type) = self.make_ob_synth_type(x)?;
                 let mor_type = self.theory.hom_type(dom_type)?;
                 Some((self.model.id(dom), mor_type))
             }
-            TmV_::Compose(f, g) => {
+            BaseTmV_::Compose(f, g) => {
                 let (mf, mtf) = self.synth_mor(f)?;
                 let (mg, mtg) = self.synth_mor(g)?;
                 Some((self.model.compose2(mf, mg), self.theory.compose_types2(mtf, mtg)?))
@@ -353,24 +356,29 @@ impl<'a> ModelGenerator<'a> {
     ///
     /// At this time, all morphism constructors allow for type synthesis, but
     /// eventually this will change.
-    fn make_mor(&self, val: &TmV, mor_type: &MorType) -> Option<Mor> {
+    fn make_mor(&self, val: &BaseTmV, mor_type: &MorType) -> Option<Mor> {
         let (mor, mt) = self.synth_mor(val)?;
         (mt == *mor_type).then_some(mor)
     }
 
-    fn extract(&mut self, prefix: Vec<NameSegment>, val: &TmV, ty: &TyV) -> Option<Namespace> {
+    fn extract(
+        &mut self,
+        prefix: Vec<NameSegment>,
+        val: &BaseTmV,
+        ty: &BaseTyV,
+    ) -> Option<Namespace> {
         match &**ty {
-            TyV_::Object(ot) => {
+            BaseTyV_::Object(ot) => {
                 self.model.add_ob(prefix.into(), ot.clone());
                 None
             }
-            TyV_::Morphism(mt, dom, cod) => {
+            BaseTyV_::Morphism(mt, dom, cod) => {
                 let dom = self.make_ob_check_type(dom, &self.theory.src_type(mt))?;
                 let cod = self.make_ob_check_type(cod, &self.theory.tgt_type(mt))?;
                 self.model.add_mor(prefix.into(), dom, cod, mt.clone());
                 None
             }
-            TyV_::Record(r) => {
+            BaseTyV_::Record(r) => {
                 let mut namespace = Namespace::new_for_uuid();
                 for (name, (label, _)) in r.fields.iter() {
                     let mut prefix = prefix.clone();
@@ -386,9 +394,9 @@ impl<'a> ModelGenerator<'a> {
                 }
                 Some(namespace)
             }
-            TyV_::Sing(_, _) => None,
-            TyV_::Id(mor_ty, lhs, rhs) => {
-                let TyV_::Morphism(mt, _, _) = &**mor_ty else {
+            BaseTyV_::Sing(_, _) => None,
+            BaseTyV_::Id(mor_ty, lhs, rhs) => {
+                let BaseTyV_::Morphism(mt, _, _) = &**mor_ty else {
                     return None;
                 };
                 if let (Some(lhs), Some(rhs)) = (self.make_mor(lhs, mt), self.make_mor(rhs, mt)) {
@@ -396,8 +404,268 @@ impl<'a> ModelGenerator<'a> {
                 }
                 None
             }
-            TyV_::Unit => None,
-            TyV_::Meta(_) => None,
+            BaseTyV_::Meta(_) => None,
         }
+    }
+}
+
+/// Generates a [`DiscreteDblModelInstance`] from an elaborated [`Instance`]
+/// declaration.
+///
+/// Walks the instance's fiber [`Record`](FiberTyV_::Record), registering
+/// each generator with its fiber, each equation as a pair of
+/// [`DiscreteInstanceTerm`]s, and each sub-instance's contents under
+/// the appropriate prefix.
+///
+/// Restricted to discrete double theories for the moment.
+pub fn instance_from_def(
+    toplevel: &Toplevel,
+    th: &TheoryDef,
+    inst: &Instance,
+) -> Result<(DiscreteDblModelInstance, Namespace), String> {
+    let TheoryDef::Discrete(_) = th else {
+        return Err("instance generation only supports discrete double theories".into());
+    };
+    let (cod_model, _) = Model::from_ty(toplevel, th, &inst.codomain);
+    let cod_model = cod_model
+        .as_discrete()
+        .ok_or_else(|| "expected a discrete codomain model".to_string())?;
+    let mut instance = DiscreteDblModelInstance::new(Rc::new(cod_model));
+    let FiberTyV_::Record(fields) = &*inst.val else {
+        return Err("expected an instance (a fiber record)".into());
+    };
+    let mut namespace = Namespace::new_for_uuid();
+    extract_instance_record(&mut instance, &mut namespace, &[], fields)?;
+    Ok((instance, namespace))
+}
+
+/// Register the contents of an instance (a fiber record) into the model
+/// instance under construction, recursing into sub-instance imports under
+/// their prefix.
+///
+/// Two passes so that every generator — including those of sub-instances
+/// — is registered before any equation that may mention it: first the
+/// [`Over`](FiberTyV_::Over) generator fields and [`Record`](FiberTyV_::Record)
+/// sub-instances, then the [`Id`](FiberTyV_::Id) equation fields.
+fn extract_instance_record(
+    instance: &mut DiscreteDblModelInstance,
+    namespace: &mut Namespace,
+    prefix: &[NameSegment],
+    fields: &Row<FiberTyV>,
+) -> Result<(), String> {
+    for (name, (label, field_ty)) in fields.iter() {
+        match &**field_ty {
+            FiberTyV_::Over(path) => {
+                if let NameSegment::Uuid(uuid) = name {
+                    namespace.set_label(*uuid, *label);
+                }
+                let mut qsegs = prefix.to_vec();
+                qsegs.push(*name);
+                let qname: QualifiedName = qsegs.into();
+                let fiber: QualifiedName =
+                    path.iter().map(|(seg, _)| *seg).collect::<Vec<_>>().into();
+                instance.add_generator(qname, fiber);
+            }
+            FiberTyV_::Record(sub_fields) => {
+                if let NameSegment::Uuid(uuid) = name {
+                    namespace.set_label(*uuid, *label);
+                }
+                let mut sub_prefix = prefix.to_vec();
+                sub_prefix.push(*name);
+                extract_instance_record(instance, namespace, &sub_prefix, sub_fields)?;
+            }
+            FiberTyV_::Id(_, _, _) => {}
+        }
+    }
+    for (_, (_, field_ty)) in fields.iter() {
+        if let FiberTyV_::Id(_, lhs, rhs) = &**field_ty {
+            let lhs_t = fiber_tm_to_discrete_instance_term(instance, lhs, prefix)?;
+            let rhs_t = fiber_tm_to_discrete_instance_term(instance, rhs, prefix)?;
+            instance.add_equation(lhs_t, rhs_t);
+        }
+    }
+    Ok(())
+}
+
+/// Convert a fiber term into a [`DiscreteInstanceTerm`], prefixing each
+/// generator name with the path into any enclosing sub-instances.
+///
+/// Nested [`OverApp`](FiberTmV_::OverApp)s are flattened into a single
+/// morphism path applied to the generator at the leaf, matching the flat
+/// canonical shape of [`DiscreteInstanceTerm`].
+fn fiber_tm_to_discrete_instance_term(
+    instance: &DiscreteDblModelInstance,
+    tm: &FiberTmV,
+    prefix: &[NameSegment],
+) -> Result<DiscreteInstanceTerm, String> {
+    // Walk outer-to-inner, recording each applied morphism.
+    let mut mors_outer_first: Vec<QualifiedName> = Vec::new();
+    let mut cur = tm;
+    let base: QualifiedName = loop {
+        match &**cur {
+            FiberTmV_::OverApp(mor_name, _, _, inner) => {
+                mors_outer_first.push(QualifiedName::single(*mor_name));
+                cur = inner;
+            }
+            _ => {
+                let mut segs = prefix.to_vec();
+                segs.extend(fiber_full_name(cur)?);
+                break segs.into();
+            }
+        }
+    };
+    // Path order is innermost-first (apply first goes first).
+    mors_outer_first.reverse();
+    let path = match Path::from_vec(mors_outer_first) {
+        Some(p) => p,
+        None => {
+            let fiber = instance
+                .fiber_of(&base)
+                .ok_or_else(|| format!("instance term mentions unknown generator {base}"))?;
+            Path::Id(fiber.clone())
+        }
+    };
+    Ok(DiscreteInstanceTerm { path, base })
+}
+
+/// Read off the full name of a fiber term that is a generator or a chain
+/// of projections out of a sub-instance import (e.g. `we.e`): the leading
+/// variable contributes a segment (it is itself a generator/import name),
+/// followed by each projected field.
+fn fiber_full_name(tm: &FiberTmV) -> Result<Vec<NameSegment>, String> {
+    let mut segments = Vec::new();
+    let mut cur = tm;
+    loop {
+        match &**cur {
+            FiberTmV_::Var(_, name, _) => {
+                segments.push(*name);
+                break;
+            }
+            FiberTmV_::Proj(inner, f, _) => {
+                segments.push(*f);
+                cur = inner;
+            }
+            _ => return Err("expected a fiber generator or projection".into()),
+        }
+    }
+    segments.reverse();
+    Ok(segments)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::tt::text_elab::{TT_PARSE_CONFIG, TopElabResult, TopElaborator};
+    use crate::tt::theory::std_theories;
+
+    fn elaborate_to_toplevel(src: &str) -> Toplevel {
+        let reporter = Reporter::new();
+        let mut toplevel = Toplevel::new(std_theories());
+        let _ = TT_PARSE_CONFIG.with_parsed_top(src, reporter.clone(), |topntns| {
+            let mut topelab = TopElaborator::new(reporter.clone());
+            for topntn in topntns.iter() {
+                if let Some(TopElabResult::Declaration(name, decl)) =
+                    topelab.elab(&toplevel, topntn)
+                {
+                    toplevel.declarations.insert(name, decl);
+                }
+            }
+            Some(())
+        });
+        assert!(!reporter.errored(), "elaboration produced errors");
+        toplevel
+    }
+
+    #[test]
+    fn instance_over_weighted_graph() {
+        let src = r#"
+set_theory ThSchema
+
+model WeightedGraph := [
+  V : Entity,
+  E : Entity,
+  Weight : AttrType,
+  src : (Hom Entity)[E, V],
+  tgt : (Hom Entity)[E, V],
+  weight : Attr[E, Weight]
+]
+
+instance I : WeightedGraph := [
+    V := [v],
+    E := [e],
+    src(e) := v
+]
+"#;
+        let toplevel = elaborate_to_toplevel(src);
+        let def = match toplevel.declarations.get(&name_seg("I")) {
+            Some(TopDecl::Instance(i)) => i.clone(),
+            _ => panic!("expected I to be an instance declaration"),
+        };
+        let (instance, _ns) = instance_from_def(&toplevel, &def.theory.definition, &def).unwrap();
+
+        let e_qname: QualifiedName = vec![name_seg("e")].into();
+        let e_fiber: QualifiedName = vec![name_seg("E")].into();
+        assert_eq!(instance.fiber_of(&e_qname), Some(&e_fiber));
+        assert_eq!(instance.equations().count(), 1);
+    }
+
+    /// An instance carrying fiber equations, imported as a sub-instance.
+    ///
+    /// `Loop` is itself a fiber record carrying an `Id`-typed field per
+    /// fiber equation alongside its `e`/`v` generators, and extraction of
+    /// the importer must recover both copies of the loop's structure.
+    #[test]
+    fn import_of_instance_with_fiber_equations() {
+        let src = r#"
+set_theory ThSchema
+
+model WeightedGraph := [
+  V : Entity,
+  E : Entity,
+  Weight : AttrType,
+  src : (Hom Entity)[E, V],
+  tgt : (Hom Entity)[E, V],
+  weight : Attr[E, Weight]
+]
+
+instance Loop : WeightedGraph := [
+    V := [v],
+    E := [e],
+    src(e) := v,
+    tgt(e) := v
+]
+
+instance UseLoop : WeightedGraph := [
+    l : Loop
+]
+"#;
+        let toplevel = elaborate_to_toplevel(src);
+
+        // `Loop` is a fiber record exposing its two fiber equations as
+        // `Id`-typed fields alongside the `e`/`v` generators.
+        let loop_def = match toplevel.declarations.get(&name_seg("Loop")) {
+            Some(TopDecl::Instance(i)) => i.clone(),
+            _ => panic!("expected Loop to be an instance declaration"),
+        };
+        let FiberTyV_::Record(r) = &*loop_def.val else {
+            panic!("Loop should be a fiber record");
+        };
+        assert!(r.get(name_seg("e")).is_some(), "generator field e");
+        assert!(r.get(name_seg("v")).is_some(), "generator field v");
+        assert!(r.get(name_seg("_eq0")).is_some(), "first fiber equation");
+        assert!(r.get(name_seg("_eq1")).is_some(), "second fiber equation");
+
+        // The importer still extracts both generators and the imported
+        // copy's two equations.
+        let use_def = match toplevel.declarations.get(&name_seg("UseLoop")) {
+            Some(TopDecl::Instance(i)) => i.clone(),
+            _ => panic!("expected UseLoop to be an instance declaration"),
+        };
+        let (instance, _ns) =
+            instance_from_def(&toplevel, &use_def.theory.definition, &use_def).unwrap();
+        let le_qname: QualifiedName = vec![name_seg("l"), name_seg("e")].into();
+        let e_fiber: QualifiedName = vec![name_seg("E")].into();
+        assert_eq!(instance.fiber_of(&le_qname), Some(&e_fiber));
+        assert_eq!(instance.equations().count(), 2);
     }
 }

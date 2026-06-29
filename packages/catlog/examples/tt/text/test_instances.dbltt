@@ -1,0 +1,64 @@
+set_theory ThSchema
+
+model WeightedGraph := [
+  V : Entity,
+  E : Entity,
+  Weight : AttrType,
+  src : (Hom Entity)[E, V],
+  tgt : (Hom Entity)[E, V],
+  weight : Attr[E, Weight]
+]
+
+instance Edge : WeightedGraph := [
+    E := [e]
+]
+
+instance I : WeightedGraph := [
+    V := [v1, v2],
+    Weight := [w],
+    we : Edge,
+    wf : Edge,
+    src(we.e) := v1,
+    tgt(we.e) := v2,
+    src(wf.e) := v2,
+    tgt(wf.e) := v1,
+    weight(we.e) := w,
+    weight(wf.e) := w
+]
+
+instance I2 : WeightedGraph := [
+    V := [v1, v2],
+    Weight := [w],
+    we : Edge,
+    wf : Edge,
+    src := [we.e := v1, wf.e := v2],
+    tgt := [we.e := v2, wf.e := v1],
+    weight := [we.e := w, wf.e := w]
+]
+
+instance I3 : WeightedGraph := [
+    E := [e1, e2]
+]
+
+instance SelfNamed : WeightedGraph := [
+    V := [self, v2],
+    E := [e],
+    src(e) := self,
+    tgt(e) := v2
+]
+
+#(should_fail)
+syn I.E
+
+model OtherSchema := [
+    W : Entity
+]
+
+instance OtherInst : OtherSchema := [
+    W := [w0]
+]
+
+#(should_fail)
+instance MismatchedImport : WeightedGraph := [
+    bad : OtherInst
+]
