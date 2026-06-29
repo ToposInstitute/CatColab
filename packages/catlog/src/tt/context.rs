@@ -27,18 +27,12 @@ pub struct Context {
     pub env: Env,
     /// Stores the names and types of each of the variables in context.
     pub scope: Vec<VarInContext>,
-    /// The codomain model of the instance body currently being
-    /// elaborated, if any. Its fields are the model's generators,
-    /// looked up by name — a separate namespace from `scope`, but
-    /// scoped state restored alongside it.
-    pub codomain: Option<Rc<RecordV>>,
 }
 
 /// A checkpoint that we can return the context to.
 pub struct ContextCheckpoint {
     env: Env,
     scope: usize,
-    codomain: Option<Rc<RecordV>>,
 }
 
 impl Default for Context {
@@ -50,11 +44,7 @@ impl Default for Context {
 impl Context {
     /// Create an empty context.
     pub fn new() -> Self {
-        Self {
-            env: Env::Nil,
-            scope: Vec::new(),
-            codomain: None,
-        }
+        Self { env: Env::Nil, scope: Vec::new() }
     }
 
     /// Create a checkpoint from the current state of the context.
@@ -62,7 +52,6 @@ impl Context {
         ContextCheckpoint {
             env: self.env.clone(),
             scope: self.scope.len(),
-            codomain: self.codomain.clone(),
         }
     }
 
@@ -70,7 +59,6 @@ impl Context {
     pub fn reset_to(&mut self, c: ContextCheckpoint) {
         self.env = c.env;
         self.scope.truncate(c.scope);
-        self.codomain = c.codomain;
     }
 
     /// Add a new variable to scope (note: does not add it to the environment).
