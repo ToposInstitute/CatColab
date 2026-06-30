@@ -574,14 +574,14 @@ We can dump a notebook.
 <!-- verifier:prepend-to-following -->
 
 ```ts
-const notebookData = notebook.dump();
+const petriNetData = notebook.dump();
 ```
 
 And load it. `loadNotebook` returns a [Standard Schema](https://standardschema.dev)
 result: a `{ value }` on success, or a `{ issues }` failure.
 
 ```ts
-const loaded = binder.loadNotebook(PetriNet, notebookData);
+const loaded = binder.loadNotebook(PetriNet, petriNetData);
 console.log("issues:", loaded.issues ?? []);
 if (!loaded.issues) {
     console.log("loaded:", loaded.value.name);
@@ -594,12 +594,12 @@ loaded: Example Petri-net
 ```
 
 Trying to load a document with the wrong shape yields a failure result whose
-`issues` describe the mismatch, instead of throwing.
+`issues` describe the mismatch.
 
 ```ts
 import { SimpleOlog } from "catcolab-logics/simple-olog";
 
-const wrong = binder.loadNotebook(SimpleOlog, notebookData);
+const wrong = binder.loadNotebook(SimpleOlog, petriNetData);
 console.log("issues:", wrong.issues?.map((issue) => issue.message).join("; "));
 ```
 
