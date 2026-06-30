@@ -5,6 +5,8 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 use std::fmt::Display;
 use std::rc::Rc;
+use std::hash::Hash;
+use std::cmp::Ordering;
 
 type Map<K, V> = HashMap<K, V>;
 
@@ -28,8 +30,6 @@ enum TaggedMap {
     Id(Map<EntityId, ()>),
     IdId(Map<EntityId, EntityId>),
     IdString(Map<EntityId, String>),
-    // // We need these for reverse indices. TODO
-    // StringId(Map<String, EntityId>),
 }
 
 impl TaggedMap {
@@ -41,8 +41,6 @@ impl TaggedMap {
             Id(_) => (Usize, None),
             IdId(_) => (Usize, Some(Usize)),
             IdString(_) => (Usize, Some(String)),
-            // SHITBALLS.
-            // StringId(_) => (String, 
         }
     }
 }
@@ -78,25 +76,57 @@ tagged_map!(Id, EntityId, ());
 tagged_map!(IdId, EntityId, EntityId);
 tagged_map!(IdString, EntityId, String);
 
+
+// ---------- REVERSE INDEXES ----------
+#[derive(Debug)]
+enum TaggedReverseIndex {
+    IdId(Map<EntityId, HashSet<EntityId>>),
+    IdString(Map<String, HashSet<EntityId>>),
+}
+
+fn build_reverse_index<K,V>(map: &HashMap<K, V>) -> HashMap<V, HashSet<K>> where
+    K:Eq + Hash + Clone,
+    V:Eq + Hash + Clone,
+{
+    let mut index = HashMap::<V, HashSet<K>>::new();
+    for (k,v) in map { index.entry(v.clone()).or_default().insert(k.clone()); }
+    index
+}
+
+impl TaggedMap {
+    // How could I macro-generate this function if Repr gets bigger?
+    fn build_reverse_index(&self) -> TaggedReverseIndex {
+        use TaggedMap::*;
+        match self {
+            Id(_) => panic!("should never build reverse index on EntityId -> () map"),
+            IdId(m) => { TaggedReverseIndex::IdId(build_reverse_index(m)) }
+            IdString(m) => { TaggedReverseIndex::IdString(build_reverse_index(m)) }
+        }
+    }
+}
+
+
 // TODO: I'm cloning strings all over the place, this is dumb.
 //
 // TODO: I should have separate types for entity names and morphism names so I can't mix them up on
 // accident.
 type Name = String;
+type EntityName = Name;
+type MorphismName = Name;
 
 /// The underlying relational data of an instance.
 type Mappings = HashMap<Name, TaggedMap>;
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
-enum EntityOrAttr { Entity(Name), Attr(Repr), }
+enum EntityOrAttr { Entity(EntityName), Attr(Repr), }
 
 #[derive(Debug)]
 struct Schema {
     /// Set of names for entity objects.
-    entities: Vec<Name>,
+    entities: Vec<EntityName>,
     /// A map from morphism names to their dom/cod types.
     /// All morphisms go from entities to either entities or attributes.
-    morphisms: Map<Name, (Name, EntityOrAttr)>,
+    morphisms: Map<MorphismName, (EntityName, EntityOrAttr)>,
 }
 
 #[derive(Debug)]
@@ -112,10 +142,10 @@ struct Instance {
 // A query "var" is an entity in self.mappings[map] for map ∈ schema.entities.
 // A query "atom" is a row in self.mappings[map] for map ∈ schema.morphisms.
 //
-// A var is represented as (entity_name: &Name, entity_id: EntityId).
-// An atom is represented as (map_name: &Name, key: EntityId).
-type Var<'a> = (&'a Name, EntityId);
-type Atom<'a> = (&'a Name, EntityId);
+// A var is represented as (entity_name: &EntityName, entity_id: EntityId).
+// An atom is represented as (map_name: &MorphismName, key: EntityId).
+type Var<'a> = (&'a EntityName, EntityId);
+type Atom<'a> = (&'a MorphismName, EntityId);
 
 // I'm going to need some structure to represent the partial var-entity bindings
 // so far. We go through vars in a fixed order, and each var gets mapped to a
@@ -154,26 +184,127 @@ type Binding = Vec<EntityId>;
 //   count_atom = (&"dept", 0)
 //
 // and we are trying to enumerate employees whose department is d.
-//
-// Let X stand for the `var` we are solving for right now.
-// Let C stand for known values (constants, or variables we have already solved).
-// Let V stand for yet-to-be-solved variables.
-// In general, there are five possible shapes the atom can have:
-//
-// 1  f(C) = X      2  f(X) = C
-// 3  f(V) = X      4  f(X) = V     5  f(X) = X
-//
-// Each one implies a different strategy.
-impl Instance {
-    #[allow(unused_variables, unreachable_code, unused_mut)]
-    fn query(&self, database: Instance) {
-        assert!(Rc::ptr_eq(&self.schema, &database.schema));
 
+// At each "step" of a WCO join, i.e. when solving for a particular variable, we examine
+// all atoms that touch this variable. These can have five different forms.
+//
+// Let X = the var we are solving for right now;
+// let C = a known value (constants, or variables we've already solved)
+// let V = a not-yet-solved var.
+//
+// Then the five shapes are:
+//
+//      SHAPE           STRATEGY
+//   1  f(C) = X        lookup f(C)
+//   2  f(X) = V        enumerate dom(f) = all entities of the given type
+//   3  f(X) = C        preimage f^{-1}(C) using a reverse index
+//   4  f(V) = X        enumerate image(f) using a reverse index
+//   5  f(X) = X        use a diagonal index {x : f(x) = x}
+//
+// Of these, 3 and 4 need a reverse index, and 5 needs a diagonal index.
+type Wcop<'a> = (&'a MorphismName, WcoStrategy<'a>); // worst-case optimal operator
+#[derive(Debug, Clone)]
+enum WcoStrategy<'a> {
+    Lookup(Known<'a>),
+    Preimage(Known<'a>),
+    Dom,
+    Image,
+    Diagonal,
+}
+#[derive(Debug, Clone)]
+enum Known<'a> {
+    Var(Var<'a>),               // FIXME: should use a usize index instead of the var!
+    String(&'a String),
+    Usize(usize),
+}
+
+impl Instance {
+    /// Produces a vector `plan` with plan.len() = var_order.len()
+    /// where plan[i] is a vector of Wcops for the variable v = var_order[i],
+    /// one for each atom which mentions v.
+    fn plan<'a>(&'a self, var_order: &Vec<Var<'a>>) -> Vec<(Var<'a>, Vec<Wcop<'a>>)> {
+        // TODO: assert! the variable order is exhaustive (hits all entities).
+        let var_position: HashMap<Var, usize> =
+            var_order.iter().enumerate().map(|(i, &x)| (x,i)).collect();
+
+        // For each atom, make appropriate plans for each variable it touches.
+        let mut plan: Vec<(Var, Vec<Wcop>)> =
+            var_order.iter().map(|v| (*v, Vec::<Wcop>::new())).collect();
+        for (morphism, (dom_entity, cod)) in self.schema.morphisms.iter() {
+
+            // For each row, determine which variables it touches and push the appropriate
+            // Wcops into their vectors in `plan`. Recall our five shapes:
+            //
+            //      SHAPE           STRATEGY
+            //   1  f(C) = X        Lookup(C)
+            //   2  f(X) = V        Dom
+            //   3  f(X) = C        Preimage(C)
+            //   4  f(V) = X        Image
+            //   5  f(X) = X        Diagonal
+            match cod {
+                EntityOrAttr::Entity(cod_entity) => {
+                    let map: &Map<EntityId, EntityId> = (&self.mappings[morphism]).into();
+                    for (&src_id, &tgt_id) in map.iter() {
+                        // We have f(X) = Y. Does X or Y come first in the var order? 3 cases.
+                        let src: Var = (dom_entity, src_id);
+                        let tgt: Var = (cod_entity, tgt_id);
+                        let src_i = var_position[&src];
+                        let tgt_i = var_position[&tgt];
+                        match src_i.cmp(&tgt_i) {
+                            // [Case A]  X precedes Y
+                            // so  X gets  f(X) = V     Dom
+                            // and Y gets  f(C) = Y     Lookup(C)
+                            Ordering::Less => {
+                                plan[src_i].1.push((morphism, WcoStrategy::Dom));
+                                plan[tgt_i].1.push((morphism, WcoStrategy::Lookup(Known::Var(src))));
+                            }
+                            // [Case B]  Y precedes X
+                            // so  Y gets  f(V) = Y     Image
+                            // and X gets  f(X) = C     Preimage(C)
+                            Ordering::Greater => {
+                                plan[tgt_i].1.push((morphism, WcoStrategy::Image));
+                                plan[src_i].1
+                                    .push((morphism, WcoStrategy::Preimage(Known::Var(tgt))));
+                            }
+                            // [Case C]  X == Y --> f(X) = X --> X gets Diagonal
+                            Ordering::Equal => { // case 5, f(X) = x
+                                assert!(dom_entity == cod_entity && src == tgt);
+                                plan[src_i].1.push((morphism, WcoStrategy::Diagonal));
+                            }
+                        }
+                    }
+                }
+
+                // TODO: factor these 2 cases out so we don't have to repeat ourselves
+                // when more attribute types are added.
+                EntityOrAttr::Attr(Repr::Usize) => {
+                    let map: &Map<EntityId, usize> = (&self.mappings[morphism]).into();
+                    for (&src_id, tgt_value) in map.iter() {
+                        // We have f(X) = C so we emit Preimage(C).
+                        let i = var_position[&(dom_entity, src_id)];
+                        plan[i].1.push((morphism, WcoStrategy::Preimage(Known::Usize(*tgt_value))));
+                    }
+                }
+                EntityOrAttr::Attr(Repr::String) => {
+                    let map: &Map<EntityId, String> = (&self.mappings[morphism]).into();
+                    for (&src_id, tgt_value) in map.iter() {
+                        // We have f(X) = C so we emit Preimage(C).
+                        let i = var_position[&(dom_entity, src_id)];
+                        plan[i].1.push((morphism, WcoStrategy::Preimage(Known::String(tgt_value))));
+                    }
+                }
+            }
+        }
+
+        return plan
+    }
+
+    // In principle the var order could be chosen based on the database. For now, no.
+    fn pick_var_order<'a>(&'a self) -> Vec<Var<'a>> {
         // TODO: check the query is connected. BIGGER TODO: if it's not
         // connected, decompose it into disjoint components and query for them
         // separately.
         eprintln!("WARNING: blithely assuming query is connected and that every var (entity) is covered by an atom (morphism)");
-
         // Pick a variable order over entity ids in self.
         // For now, we pick the order very badly.
         //
@@ -191,103 +322,34 @@ impl Instance {
                 var_order.push((&entity, id))
             }
         }
-        let var_order = var_order;
-        let var_position: HashMap<Var, usize> =
-            var_order.iter().enumerate().map(|(i,&x)| (x,i)).collect();
+        return var_order;
+    }
 
-        // For every atom, find the variables it touches.
-        let mut atom_vars: HashMap<Atom, Vec<Var>> = HashMap::new();
-        for (map_name, (dom, cod)) in self.schema.morphisms.iter() {
-            // For each row, determine which variables it touches.
-            todo!()
-        }
-        let atom_vars = atom_vars;
-        // for (name, (dom, cod)) in self.schema.morphisms.iter() {
-        //     // Does the type (dom/cod) of this morphism mention `entity`?
-        //     // If not, skip it.
-        //     let indom = dom == entity;
-        //     let incod = cod == &EntityOrAttr::Entity(entity.clone());
-        //     if !indom && !incod { continue };
-        //     let tagged_map = &self.mappings[name];
-        //     assert!(tagged_map.dom() == Repr::Usize);
-        //     // If we're in the cod, we must scan all entries to find where.
-        //     // With Column, this would use preimage().
-        //     if incod { todo!() }
-        //     // If we're in the dom, we look up our own entity id to find
-        //     // what it's related to.
-        //     // For each entry, does it mention this variable?
-        //     todo!();
-        //     // It mentions us; add it to the atom list.
-        //     atoms.push((name, todo!()))
-        // }
-
-        let mut var_atoms: HashMap<Var, Vec<Atom>> = HashMap::new();
-        for (&atom, vars) in atom_vars.iter() {
-            for &var in vars.iter() {
-                var_atoms.entry(var).or_default().push(atom);
-            }
-        }
-        let var_atoms = var_atoms;
+    #[allow(unused_variables, unreachable_code, unused_mut)]
+    fn query(&self, database: Instance) {
+        assert!(Rc::ptr_eq(&self.schema, &database.schema));
+        let var_order = self.pick_var_order();
+        let plan = self.plan(&var_order);
 
         // Determine the indexes we'll need.
         let mut reverse_index: HashSet<&Name> = HashSet::new();
         let mut diagonal_index: HashSet<&Name> = HashSet::new();
-        for (var_idx, var) in var_order.iter().enumerate() {
-            for &atom in var_atoms[var].iter() {
-                // Let X = the var we are solving
-                // and C = a known value, eg already-solved var or attribute value
-                // and V = a not-yet-solved var.
-                //
-                // There are five possible shapes the atom can have:
-                //
-                //   1  f(C) = X      2  f(X) = V
-                //   3  f(X) = C      4  f(V) = X      5  f(X) = X
-                //
-                // Of these, 3 and 4 need a reverse index, and 5 needs a diagonal index.
-                //
-                // Technically case 4 doesn't need a full reverse/preimage index; rather, it just
-                // needs an "image index": the set of all Xs that occur in the image of f. But a
-                // preimage index is strictly more informative, costs the same time (but possibly
-                // more space) to build, and allows more re-use (if two atoms with the same morphism
-                // both need a reverse index, they share it) without having to get clever and do
-                // things like index subsumption (ie: if one atom needs a reverse index and the
-                // other just needs the image set, only build the reverse index and use it for the
-                // image set).
-                let (atom_morphism, atom_src_id) = atom;
-                let (atom_dom, atom_cod) = &self.schema.morphisms[atom_morphism];
-                let atom_src: &Var = &(&atom_dom, atom_src_id);
-                let is_src = atom_src == var;
-                match atom_cod {
-                    EntityOrAttr::Attr(_) => {
-                        // Case 3, we know the target and need a reverse index. As an optimization,
-                        // we *could* build an index for this specific attribute value. This could
-                        // save space, but not much time (we'd still need to traverse the entire
-                        // relation we're indexing). And we'd then need to think about index
-                        // subsumption: if another atom needs a general reverse index on this
-                        // morphism, we'd rather not also build the attribute-value-specific index.
-                        // So I'm just gonna require a reverse index.
-                        reverse_index.insert(atom_morphism);
-                    }
-                    EntityOrAttr::Entity(cod) => { // handles cases 5 or 4
-                        let atom_map: &Map<EntityId, EntityId> = (&self.mappings[atom_morphism]).into();
-                        // We can only be in cases 4-5 if the atom's target is X, f(_) = X.
-                        if var != &(cod, atom_map[&atom_src_id]) { continue }
-                        if atom_src == var { // Case 5, diagonal index
-                            diagonal_index.insert(atom_morphism);
-                        } else if !(&var_order[..var_idx]).contains(atom_src) { // Case 4, reverse index
-                            reverse_index.insert(atom_morphism);
-                        }
+
+        for (var, wcops) in plan.iter() {
+            for (morphism, strategy) in wcops.iter() {
+                match strategy {
+                    WcoStrategy::Lookup(_) | WcoStrategy::Dom => {},
+                    WcoStrategy::Diagonal => { diagonal_index.insert(morphism); }
+                    WcoStrategy::Preimage(_) | WcoStrategy::Image => {
+                        reverse_index.insert(morphism);
                     }
                 }
             }
         }
 
         // Build the indexes.
-        let reverse_index: HashMap<&Name, TaggedMap> = reverse_index.into_iter()
-            .map(|morphism| {
-                // Is this an entity->entity map, or an entity->attribute map?
-                todo!()
-            })
+        let reverse_index: HashMap<&Name, TaggedReverseIndex> = reverse_index.into_iter()
+            .map(|morphism| (morphism, database.mappings[morphism].build_reverse_index()))
             .collect();
         let diagonal_index: HashMap<&Name, HashSet<usize>> = diagonal_index.into_iter()
             .map(|morphism| {
@@ -312,23 +374,20 @@ impl Instance {
         // 4b    If the binding is not in the atom, discard the binding.
         //
         let mut bindings: Vec<Binding> = vec![Vec::new()];
-        for var in var_order { // 1 For each var in some order
-            // Find the atoms that mention this var.
-            let atoms: &Vec<Atom> = &var_atoms[&var];
-            assert!(!atoms.is_empty()); // TODO: this is not guaranteed!
+        for (var, wcops) in plan { // 1 For each var in some order
+            assert!(!wcops.is_empty());
 
             // We assume the first atom mentioning us uniformly had smallest count.
             // TODO: fix this and actually implement counting.
-            let count_atom = &atoms[0]; // 3 For each atom that mentions this var,
-            for binding in std::mem::take(&mut bindings) {   // 3a For each binding of values to prior vars
+            let propose_wcop = &wcops[0]; // 3 For each atom that mentions this var,
+            // 3a For each binding of values to prior vars
+            for binding in std::mem::take(&mut bindings) {
                 // 3b If this atom had the least count, enumerate the new values.
-                //
-                let (atom_morphism, atom_key) = count_atom;
-                let (var_entity, var_key) = var;
-                todo!()         // something using count_atom
+                let (morphism, strategy) = propose_wcop;
+                todo!()         // something using propose_wcop
             }
 
-            for atom in &atoms[1..] { // 4 For each atom that mentions this var (excluding
+            for wcop in &wcops[1..] { // 4 For each atom that mentions this var (excluding
                 // the one that enumerated the new bindings, in this case, because it's
                 // easy)
                 todo!()
@@ -336,12 +395,6 @@ impl Instance {
         }
     }
 }
-
-// for (i,x) in R
-//  for (y,j) in S
-//   for k in T[y]
-//    for l in U[y]
-//     yield (x,y,i,j,k,l)
 
 
 // ---------- SELF CHECKS ON SCHEMAS & INSTANCES (ie type/tag checks) ----------
@@ -392,10 +445,45 @@ impl Instance {
                 _ => panic!("Data for morphism {} has wrong codomain type", name),
             }
         }
+
+        // FIXME: need to check every morphism is defined over its entire domain!
+        todo!("check morphisms are defined over their domain");
     }
 }
 
 
+macro_rules! map {
+    [$($x:expr => $y:expr),*,] => { [$(($x, $y)),*].into_iter().collect() };
+    [$($x:expr => $y:expr),*]  => { [$(($x, $y)),*].into_iter().collect() };
+}
+
+#[allow(non_snake_case, unused_variables, unreachable_code)]
 fn main() {
-    println!("hello world");
+    // Let's make a simple schema, a simple query, and try planning it.
+    println!("hello, world!");
+
+    let Employee = "Employee".to_string();
+    let Dept = "Dept".to_string();
+    let dept = "dept".to_string();
+    let name = "name".to_string();
+
+    let entities: Vec<EntityName> = vec![Employee.clone(), Dept.clone()];
+    let morphisms: Map<MorphismName, (EntityName, EntityOrAttr)> = map! {
+        dept.clone() => (Employee.clone(), EntityOrAttr::Entity(Dept.clone())),
+        name.clone() => (Dept.clone(), EntityOrAttr::Attr(Repr::String)),
+    };
+    let schema: Rc<Schema> = Rc::new(Schema { entities, morphisms });
+    use TaggedMap::*;
+    let mappings: HashMap<Name, TaggedMap> = map! {
+        Employee.to_string() => Id(map!{0 => ()}),
+        Dept.to_string() => Id(map!{0 => ()}),
+        dept.to_string() => IdId(map!{0 => 0}),
+        name.to_string() => IdString(map!{0 => "accounting".to_string()}),
+    };
+    let instance = Instance { schema: schema, mappings };
+
+    println!("constructed instance, checking...");
+    instance.self_check();
+
+    println!("done!");
 }
