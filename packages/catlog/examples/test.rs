@@ -419,24 +419,41 @@ impl Instance {
                             bindings.push(b);
                         }
                     }
+                    // BRANCH NOT YET TESTED
                     WcoStrategy::Image => { // use reverse index
-                        todo!("Image strategy");
+                        // f(V) = X: X is an entity, so f is entity->entity (IdId reverse
+                        // index), and its keys are exactly the image of f.
+                        let TaggedReverseIndex::IdId(index) = &reverse_index[morphism] else {
+                            panic!("reverse index tag error")
+                        };
+                        for &x in index.keys() {
+                            // DANGER! ALLOCATION IN INNER LOOP!
+                            let mut b = binding.clone();
+                            b.push(x);
+                            bindings.push(b);
+                        }
                     }
+                    // BRANCH NOT YET TESTED
                     WcoStrategy::Diagonal => { // use diagonal index
-                        todo!("Diagonal strategy");
+                        let index = &diagonal_index[morphism];
+                        for &x in index {
+                            // DANGER! ALLOCATION IN INNER LOOP!
+                            let mut b = binding.clone();
+                            b.push(x);
+                            bindings.push(b);
+                        }
                     }
                     WcoStrategy::Lookup(known) => { // look `known` up in `mapping`
-                        match known {
-                            Known::Var(known_var_index) => {
-                                // f(K) = X, so it must be an entity-entity map.
-                                let map: &Map<EntityId, EntityId> = table.into();
-                                let x = map[&binding[*known_var_index]];
-                                binding.push(x);
-                                bindings.push(binding);
-                            }
-                            Known::Usize(k) => { todo!("lookup usize") }
-                            Known::String(k) => { todo!("lookup string") }
-                        }
+                        // f(C) = X, so it must be an entity-entity map.
+                        let Known::Var(var_index) = known else {
+                            panic!("Lookup with attribute key shouldn't be possible");
+                        };
+                        let map: &Map<EntityId, EntityId> = table.into();
+                        // We can reuse the existing binding since we only generate one
+                        // result from it.
+                        let x = map[&binding[*var_index]];
+                        binding.push(x);
+                        bindings.push(binding);
                     }
                     WcoStrategy::Preimage(known) => { // look `known` up in reverse index
                         let index: &TaggedReverseIndex = &reverse_index[morphism];
@@ -477,7 +494,7 @@ impl Instance {
                 let table = &database.mappings[morphism];
                 match strategy {
                     WcoStrategy::Dom => {}, // nothing to do; always holds
-                    WcoStrategy::Image => {
+                    WcoStrategy::Image => { // NOT YET TESTED
                         // f(V) = X: keep bindings whose X is in the image of f.
                         // X is an entity, so f is entity->entity (IdId reverse index).
                         let TaggedReverseIndex::IdId(index) = &reverse_index[morphism] else {
@@ -485,7 +502,7 @@ impl Instance {
                         };
                         bindings.retain(|binding| index.contains_key(binding.last().unwrap()));
                     }
-                    WcoStrategy::Diagonal => {
+                    WcoStrategy::Diagonal => { // NOT YET TESTED
                         // f(X) = X: keep bindings whose X is on the diagonal of f.
                         let index = &diagonal_index[morphism];
                         bindings.retain(|binding| index.contains(binding.last().unwrap()));
