@@ -2,6 +2,7 @@ import {
     type Accessor,
     batch,
     createEffect,
+    createSignal,
     Index,
     type JSX,
     mergeProps,
@@ -146,14 +147,27 @@ export function InlineListEditor<T>(originalProps: InlineListEditorProps<T>) {
         }
     });
 
+    // Show the trailing "add item" when the list is focused or hovered.
+    const [isHovered, setIsHovered] = createSignal(false);
+
+    const hasTrailingAddItem = () =>
+        (parentFocus.hasFocus() || isHovered()) &&
+        props.items.length > 0 &&
+        props.items[props.items.length - 1] !== null;
+
+    const lastNavigableIndex = () =>
+        hasTrailingAddItem() ? props.items.length : props.items.length - 1;
+
     const itemOptions = (i: number): InlineListItemOptions => ({
         onTextChange: (text) => inputTexts.set(i, text),
         focus: focus.childFocus(i),
         deleteBackward: () =>
             batch(() => {
-                updateItems((items) => {
-                    items.splice(i, 1);
-                });
+                if (i < props.items.length) {
+                    updateItems((items) => {
+                        items.splice(i, 1);
+                    });
+                }
                 if (i === 0) {
                     props.deleteBackward?.();
                 } else {
@@ -162,9 +176,11 @@ export function InlineListEditor<T>(originalProps: InlineListEditorProps<T>) {
             }),
         deleteForward: () =>
             batch(() => {
-                updateItems((items) => {
-                    items.splice(i, 1);
-                });
+                if (i < props.items.length) {
+                    updateItems((items) => {
+                        items.splice(i, 1);
+                    });
+                }
                 if (i === 0) {
                     props.deleteForward?.();
                 }
@@ -179,7 +195,7 @@ export function InlineListEditor<T>(originalProps: InlineListEditorProps<T>) {
             }
         },
         exitRight: () => {
-            if (i === props.items.length - 1) {
+            if (i === lastNavigableIndex()) {
                 props.exitRight?.();
             } else {
                 focus.setActiveChild(i + 1);
@@ -193,14 +209,21 @@ export function InlineListEditor<T>(originalProps: InlineListEditorProps<T>) {
                 // TODO: Should move to beginning of input.
                 focus.setActiveChild(0);
             } else if (evt.key === "End" && !evt.shiftKey) {
-                focus.setActiveChild(props.items.length - 1);
+                focus.setActiveChild(lastNavigableIndex());
             }
             return false;
         },
     });
 
+    const appendItem = (item: T | null) => {
+        props.setItems(item === null ? props.items : [...props.items, item]);
+    };
+
+    let listRef!: HTMLUListElement;
+
     return (
         <ul
+            ref={listRef}
             class={styles.inlineList}
             onMouseDown={(evt) => {
                 if (props.items.length === 0) {
@@ -209,9 +232,19 @@ export function InlineListEditor<T>(originalProps: InlineListEditorProps<T>) {
                     evt.preventDefault();
                 }
             }}
+            onFocusOut={(evt) => {
+                // Lose focus only when it moves outside the list entirely.
+                const next = evt.relatedTarget as Element | null;
+                if (next && listRef.contains(next)) {
+                    return;
+                }
+                parentFocus.setFocused(false);
+            }}
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
         >
             {props.startDelimiter}
-            <Index each={props.items} fallback={<input class={styles.emptyListInput} />}>
+            <Index each={props.items}>
                 {(item, i) => (
                     <li>
                         <Show when={i > 0 && props.separator}>{(sep) => sep()(i)}</Show>
@@ -228,6 +261,19 @@ export function InlineListEditor<T>(originalProps: InlineListEditorProps<T>) {
                     </li>
                 )}
             </Index>
+            <Show when={props.items.length === 0 || hasTrailingAddItem()}>
+                <li>
+                    <Show when={props.items.length > 0 && props.separator}>
+                        {(sep) => sep()(props.items.length)}
+                    </Show>
+                    {props.children(
+                        () => null,
+                        appendItem,
+                        itemOptions(props.items.length),
+                        props.items.length,
+                    )}
+                </li>
+            </Show>
             {props.endDelimiter}
         </ul>
     );
