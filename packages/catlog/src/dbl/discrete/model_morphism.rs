@@ -24,8 +24,23 @@ type DiscreteDblModelMappingData = FpFunctorData<
 >;
 
 impl DiscreteDblModelMapping {
+    /// Returns object generators.
+    pub fn ob_generator_map(&self) -> HashColumn<QualifiedName, QualifiedName> {
+        self.0.ob_generator_map.clone()
+    }
+
+    /// Returns morphism generators.
+    pub fn mor_generator_map(&self) -> HashColumn<QualifiedName, QualifiedPath> {
+        self.0.mor_generator_map.clone()
+    }
+}
+
+impl MutDblModelMapping for DiscreteDblModelMapping {
+    type ObGen = QualifiedName;
+    type MorGen = QualifiedPath;
+
     /// Constructs a model mapping from a pair of hash maps.
-    pub fn new(
+    fn new(
         ob_pairs: impl IntoIterator<Item = (QualifiedName, QualifiedName)>,
         mor_pairs: impl IntoIterator<Item = (QualifiedName, QualifiedPath)>,
     ) -> Self {
@@ -36,25 +51,27 @@ impl DiscreteDblModelMapping {
     }
 
     /// Assigns an object generator, returning the previous assignment.
-    pub fn assign_ob(&mut self, x: QualifiedName, y: QualifiedName) -> Option<QualifiedName> {
+    fn assign_ob(&mut self, x: QualifiedName, y: QualifiedName) -> Option<QualifiedName> {
         self.0.ob_generator_map.set(x, y)
     }
 
     /// Assigns a morphism generator, returning the previous assignment.
-    pub fn assign_mor(&mut self, e: QualifiedName, n: QualifiedPath) -> Option<QualifiedPath> {
+    fn assign_mor(&mut self, e: QualifiedName, n: QualifiedPath) -> Option<QualifiedPath> {
         self.0.mor_generator_map.set(e, n)
     }
 
     /// Unassigns an object generator, returning the previous assignment.
-    pub fn unassign_ob(&mut self, x: &QualifiedName) -> Option<QualifiedName> {
+    fn unassign_ob(&mut self, x: &QualifiedName) -> Option<QualifiedName> {
         self.0.ob_generator_map.unset(x)
     }
 
     /// Unassigns a morphism generator, returning the previous assignment.
-    pub fn unassign_mor(&mut self, e: &QualifiedName) -> Option<QualifiedPath> {
+    fn unassign_mor(&mut self, e: &QualifiedName) -> Option<QualifiedPath> {
         self.0.mor_generator_map.unset(e)
     }
+}
 
+impl DiscreteDblModelMapping {
     /// Interprets the data as a functor into the given model.
     pub fn functor_into<'a>(
         &'a self,
@@ -71,13 +88,6 @@ impl DiscreteDblModelMapping {
         DiscreteDblModelMorphismFinder::new(dom, cod)
     }
 }
-
-/// A functor between models of a double theory.
-///
-/// This struct borrows its data to perform validation. The domain and codomain are
-/// assumed to be valid models of double theories. If that is in question, the
-/// models should be validated *before* validating this object.
-pub struct DblModelMorphism<'a, Map, Dom, Cod>(pub &'a Map, pub &'a Dom, pub &'a Cod);
 
 /// A morphism between models of a discrete double theory.
 pub type DiscreteDblModelMorphism<'a> =
