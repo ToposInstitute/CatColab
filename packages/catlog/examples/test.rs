@@ -107,9 +107,7 @@ impl TaggedMap {
 
 
 // TODO: I'm cloning strings all over the place, this is dumb.
-//
-// TODO: I should have separate types for entity names and morphism names so I can't mix them up on
-// accident.
+// TODO: make EntityName != MorphismName so the typechecker double-checks me.
 type Name = String;
 type EntityName = Name;
 type MorphismName = Name;
@@ -203,26 +201,62 @@ type Binding = Vec<EntityId>;
 //
 // Of these, 3 and 4 need a reverse index, and 5 needs a diagonal index.
 type Wcop<'a> = (&'a MorphismName, WcoStrategy<'a>); // worst-case optimal operator
-#[derive(Debug, Clone)]
+#[derive(Debug, Copy, Clone)]
 enum WcoStrategy<'a> {
     Lookup(Known<'a>),
     Preimage(Known<'a>),
+    // TODO: Dom is dumb. We actually don't need the morphism for Dom, just the entity
+    // type. And if the same variable appears as the source of multiple atoms, we might
+    // get redundant Dom(f) wcops for it. So instead we should just emit a Wcop for
+    // enumerating the entity type, and deduplicate those before query execution.
+    // Moreover, we should only use a Dom/Entity enumeration if we have *no other bound*
+    // on the value. So in fact the plan for a variable should be *either* "enumerate its
+    // type" *or* a vector of Wcops. So the solution is just to drop Dom and enumerate if
+    // there are no entries in the Wcop vector.
     Dom,
     Image,
     Diagonal,
 }
-#[derive(Debug, Clone)]
+#[derive(Debug, Copy, Clone)]
 enum Known<'a> {
     Var(Var<'a>),               // FIXME: should use a usize index instead of the var!
     String(&'a String),
     Usize(usize),
 }
 
+type WcoPlan<'a> = Vec<(Var<'a>, Vec<Wcop<'a>>)>;
+
 impl Instance {
+    // In principle the var order could be chosen based on the database. For now, no.
+    fn pick_var_order<'a>(&'a self) -> Vec<Var<'a>> {
+        // TODO: check the query is connected. BIGGER TODO: if it's not
+        // connected, decompose it into disjoint components and query for them
+        // separately.
+        eprintln!("WARNING: blithely assuming query is connected and that every var/entity is covered by an atom/morphism");
+        // Pick a variable order over entity ids in self.
+        // For now, we pick the order very badly.
+        //
+        // TODO: compute an actually reasonable var order:
+        // - put join keys (vars appearing in multiple atoms) first!
+        // - eagerly insert vars that are functionally determined by prior vars!
+        //
+        // Note that query attributes are treated as constants, not variables.
+        //
+        // TODO: also support constants for entities and variables for attributes.
+        let mut var_order: Vec<Var> = Vec::new();
+        for entity in self.schema.entities.iter() {
+            let table: &Map<EntityId, ()> = (&self.mappings[entity]).into();
+            for &id in table.keys() {
+                var_order.push((&entity, id))
+            }
+        }
+        return var_order;
+    }
+
     /// Produces a vector `plan` with plan.len() = var_order.len()
     /// where plan[i] is a vector of Wcops for the variable v = var_order[i],
     /// one for each atom which mentions v.
-    fn plan<'a>(&'a self, var_order: &Vec<Var<'a>>) -> Vec<(Var<'a>, Vec<Wcop<'a>>)> {
+    fn plan<'a>(&'a self, var_order: &Vec<Var<'a>>) -> WcoPlan<'a> {
         // TODO: assert! the variable order is exhaustive (hits all entities).
         let var_position: HashMap<Var, usize> =
             var_order.iter().enumerate().map(|(i, &x)| (x,i)).collect();
@@ -299,37 +333,9 @@ impl Instance {
         return plan
     }
 
-    // In principle the var order could be chosen based on the database. For now, no.
-    fn pick_var_order<'a>(&'a self) -> Vec<Var<'a>> {
-        // TODO: check the query is connected. BIGGER TODO: if it's not
-        // connected, decompose it into disjoint components and query for them
-        // separately.
-        eprintln!("WARNING: blithely assuming query is connected and that every var (entity) is covered by an atom (morphism)");
-        // Pick a variable order over entity ids in self.
-        // For now, we pick the order very badly.
-        //
-        // TODO: compute an actually reasonable var order:
-        // - put join keys (vars appearing in multiple atoms) first!
-        // - eagerly insert vars that are functionally determined by prior vars!
-        //
-        // Note that query attributes are treated as constants, not variables.
-        //
-        // TODO: also support constants for entities and variables for attributes.
-        let mut var_order: Vec<Var> = Vec::new();
-        for entity in self.schema.entities.iter() {
-            let table: &Map<EntityId, ()> = (&self.mappings[entity]).into();
-            for &id in table.keys() {
-                var_order.push((&entity, id))
-            }
-        }
-        return var_order;
-    }
-
     #[allow(unused_variables, unreachable_code, unused_mut)]
-    fn query(&self, database: Instance) {
+    fn execute(&self, plan: WcoPlan, database: &Instance) {
         assert!(Rc::ptr_eq(&self.schema, &database.schema));
-        let var_order = self.pick_var_order();
-        let plan = self.plan(&var_order);
 
         // Determine the indexes we'll need.
         let mut reverse_index: HashSet<&Name> = HashSet::new();
@@ -379,20 +385,47 @@ impl Instance {
 
             // We assume the first atom mentioning us uniformly had smallest count.
             // TODO: fix this and actually implement counting.
-            let propose_wcop = &wcops[0]; // 3 For each atom that mentions this var,
+            let propose_wcop: &Wcop = &wcops[0];
+            let morphism = propose_wcop.0;
+            let mapping = &database.mappings[morphism];
+            let strategy: &WcoStrategy = &propose_wcop.1;
+            // 3 For each atom that mentions this var,
             // 3a For each binding of values to prior vars
             for binding in std::mem::take(&mut bindings) {
                 // 3b If this atom had the least count, enumerate the new values.
-                let (morphism, strategy) = propose_wcop;
-                todo!()         // something using propose_wcop
+                // This should dispatch on the types involved to monomorphic code.
+                match strategy {
+                    WcoStrategy::Dom => { // enumerate the domain
+                        todo!();
+                    }
+                    WcoStrategy::Image => { // use reverse index
+                        todo!();
+                    }
+                    WcoStrategy::Diagonal => { // use diagonal index
+                        todo!();
+                    }
+                    WcoStrategy::Lookup(known) => { // look `known` up in `mapping`
+                        todo!();
+                    }
+                    WcoStrategy::Preimage(known) => { // look `known` up in reverse index
+                        todo!();
+                    }
+                }
             }
 
-            for wcop in &wcops[1..] { // 4 For each atom that mentions this var (excluding
-                // the one that enumerated the new bindings, in this case, because it's
-                // easy)
+            for wcop in &wcops[1..] {
+                // 4 For each atom that mentions this var (excluding the one that
+                // enumerated the new bindings, in this case, because it's easy)
                 todo!()
             }
         }
+    }
+
+    fn query(&self, database: &Instance) {
+        assert!(Rc::ptr_eq(&self.schema, &database.schema));
+        let var_order = self.pick_var_order();
+        let plan = self.plan(&var_order);
+        return self.execute(plan, database);
     }
 }
 
@@ -400,10 +433,21 @@ impl Instance {
 // ---------- SELF CHECKS ON SCHEMAS & INSTANCES (ie type/tag checks) ----------
 impl Schema {
     // check that the keys of self.entities and self.morphisms don't overlap.
+    // check that every entity name used as dom/cod in a morphism type exists.
     fn self_check(&self) {
         for name in self.entities.iter() {
             if self.morphisms.contains_key(name) {
                 panic!("Name {} used both as entity type and morphism", name)
+            }
+        }
+        for (morphism, (dom_entity, cod)) in self.morphisms.iter() {
+            if !self.entities.contains(dom_entity) {
+                panic!("domain of {morphism} is {dom_entity} but there is no such entity");
+            }
+            if let EntityOrAttr::Entity(cod_entity) = cod {
+                if !self.entities.contains(cod_entity) {
+                    panic!("codomain of {morphism} is {dom_entity} but there is no such entity");
+                }
             }
         }
     }
@@ -444,10 +488,23 @@ impl Instance {
                 (EntityOrAttr::Attr(want), Some(got)) if *want == got => {}
                 _ => panic!("Data for morphism {} has wrong codomain type", name),
             }
-        }
 
-        // FIXME: need to check every morphism is defined over its entire domain!
-        todo!("check morphisms are defined over their domain");
+            // FIXME: check morphism is defined over its entire domain!
+            let domain: &Map<EntityId, ()> = (&self.mappings[dom]).into();
+            for dom_id in domain.keys() {
+                use TaggedMap::*;
+                // This is inefficient; this tag check should be lifted out of the for
+                // loop.
+                let has_key = match mapping {
+                    IdId(m) => m.contains_key(dom_id),
+                    IdString(m) => m.contains_key(dom_id),
+                    Id(_) => unimplemented!(),
+                };
+                if !has_key {
+                    panic!("mapping `{name}' lacks entry for `{dom}' with id `{dom_id}'")
+                }
+            }
+        }
     }
 }
 
@@ -480,10 +537,36 @@ fn main() {
         dept.to_string() => IdId(map!{0 => 0}),
         name.to_string() => IdString(map!{0 => "accounting".to_string()}),
     };
-    let instance = Instance { schema: schema, mappings };
+    let query = Instance { schema: schema, mappings };
 
-    println!("constructed instance, checking...");
-    instance.self_check();
+    println!("Constructed query instance, checking it.");
+    query.self_check();
 
-    println!("done!");
+    println!("Planning.");
+    let var_order = query.pick_var_order();
+    println!("  variable order  {var_order:?}");
+    let plan = query.plan(&var_order);
+    println!("  query plan:");
+    for ((entity,id), wcops) in plan.iter() {
+        println!("    {entity:>10} {id:>2}    {wcops:?}");
+    }
+    // let table: Vec<_> = plan.iter()
+    //     .map(|((entity,id), wcops)|
+    //          vec![format!("{entity}:{id}"), format!("{wcops:?}")])
+    //     .collect();
+    // if table.is_empty() {
+    //     println!("  plan is empty?!");
+    // } else {
+    //     let colwidths = (0..table[0].len())
+    //         .map(|i| table.iter().map(|v| v[i].len()).max().unwrap());
+    //     for row in table {
+    //         let [x,y] = row.as_slice() else { panic!() };
+    //         println!("    {x}  {y}");
+    //     }
+    // }
+
+    // let's try finding automorphisms from the query to itself.
+    query.execute(plan, &query);
+
+    println!("success!");
 }
