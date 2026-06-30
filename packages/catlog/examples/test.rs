@@ -8,6 +8,8 @@ use std::rc::Rc;
 use std::hash::Hash;
 use std::cmp::Ordering;
 
+const DEBUG: bool = true;
+
 type Map<K, V> = HashMap<K, V>;
 
 // Uniform representation for entity ids.
@@ -201,7 +203,7 @@ type Binding = Vec<EntityId>;
 //
 // Of these, 3 and 4 need a reverse index, and 5 needs a diagonal index.
 type Wcop<'a> = (&'a MorphismName, WcoStrategy<'a>); // worst-case optimal operator
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Clone, Eq, PartialEq, PartialOrd, Ord)]
 enum WcoStrategy<'a> {
     Lookup(Known<'a>),
     Preimage(Known<'a>),
@@ -217,9 +219,9 @@ enum WcoStrategy<'a> {
     Image,
     Diagonal,
 }
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 enum Known<'a> {
-    Var(Var<'a>),               // FIXME: should use a usize index instead of the var!
+    Var(usize), // gives index of var in var order so we can look it up in existing binding
     String(&'a String),
     Usize(usize),
 }
@@ -246,7 +248,11 @@ impl Instance {
         let mut var_order: Vec<Var> = Vec::new();
         for entity in self.schema.entities.iter() {
             let table: &Map<EntityId, ()> = (&self.mappings[entity]).into();
-            for &id in table.keys() {
+            // Iteration order of hashtables is unstable across program runs, so we sort
+            // for determinism.
+            let mut keys: Vec<usize> = table.keys().cloned().collect();
+            keys.sort_unstable();
+            for id in keys {
                 var_order.push((&entity, id))
             }
         }
@@ -256,6 +262,9 @@ impl Instance {
     /// Produces a vector `plan` with plan.len() = var_order.len()
     /// where plan[i] is a vector of Wcops for the variable v = var_order[i],
     /// one for each atom which mentions v.
+    ///
+    /// TODO: currently, because Rust hashmap iteration order is nondeterministic across
+    /// program executions, so is query planning. I should fix this for my own sake.
     fn plan<'a>(&'a self, var_order: &Vec<Var<'a>>) -> WcoPlan<'a> {
         // TODO: assert! the variable order is exhaustive (hits all entities).
         let var_position: HashMap<Var, usize> =
@@ -264,6 +273,7 @@ impl Instance {
         // For each atom, make appropriate plans for each variable it touches.
         let mut plan: Vec<(Var, Vec<Wcop>)> =
             var_order.iter().map(|v| (*v, Vec::<Wcop>::new())).collect();
+        // TODO: determinize!
         for (morphism, (dom_entity, cod)) in self.schema.morphisms.iter() {
 
             // For each row, determine which variables it touches and push the appropriate
@@ -278,7 +288,7 @@ impl Instance {
             match cod {
                 EntityOrAttr::Entity(cod_entity) => {
                     let map: &Map<EntityId, EntityId> = (&self.mappings[morphism]).into();
-                    for (&src_id, &tgt_id) in map.iter() {
+                    for (&src_id, &tgt_id) in map.iter() { // TODO: determinize
                         // We have f(X) = Y. Does X or Y come first in the var order? 3 cases.
                         let src: Var = (dom_entity, src_id);
                         let tgt: Var = (cod_entity, tgt_id);
@@ -290,7 +300,7 @@ impl Instance {
                             // and Y gets  f(C) = Y     Lookup(C)
                             Ordering::Less => {
                                 plan[src_i].1.push((morphism, WcoStrategy::Dom));
-                                plan[tgt_i].1.push((morphism, WcoStrategy::Lookup(Known::Var(src))));
+                                plan[tgt_i].1.push((morphism, WcoStrategy::Lookup(Known::Var(src_i))));
                             }
                             // [Case B]  Y precedes X
                             // so  Y gets  f(V) = Y     Image
@@ -298,7 +308,7 @@ impl Instance {
                             Ordering::Greater => {
                                 plan[tgt_i].1.push((morphism, WcoStrategy::Image));
                                 plan[src_i].1
-                                    .push((morphism, WcoStrategy::Preimage(Known::Var(tgt))));
+                                    .push((morphism, WcoStrategy::Preimage(Known::Var(tgt_i))));
                             }
                             // [Case C]  X == Y --> f(X) = X --> X gets Diagonal
                             Ordering::Equal => { // case 5, f(X) = x
@@ -313,7 +323,7 @@ impl Instance {
                 // when more attribute types are added.
                 EntityOrAttr::Attr(Repr::Usize) => {
                     let map: &Map<EntityId, usize> = (&self.mappings[morphism]).into();
-                    for (&src_id, tgt_value) in map.iter() {
+                    for (&src_id, tgt_value) in map.iter() { // TODO: determinize!
                         // We have f(X) = C so we emit Preimage(C).
                         let i = var_position[&(dom_entity, src_id)];
                         plan[i].1.push((morphism, WcoStrategy::Preimage(Known::Usize(*tgt_value))));
@@ -321,7 +331,7 @@ impl Instance {
                 }
                 EntityOrAttr::Attr(Repr::String) => {
                     let map: &Map<EntityId, String> = (&self.mappings[morphism]).into();
-                    for (&src_id, tgt_value) in map.iter() {
+                    for (&src_id, tgt_value) in map.iter() { // TODO: determinize!
                         // We have f(X) = C so we emit Preimage(C).
                         let i = var_position[&(dom_entity, src_id)];
                         plan[i].1.push((morphism, WcoStrategy::Preimage(Known::String(tgt_value))));
@@ -383,40 +393,104 @@ impl Instance {
         for (var, wcops) in plan { // 1 For each var in some order
             assert!(!wcops.is_empty());
 
-            // We assume the first atom mentioning us uniformly had smallest count.
-            // TODO: fix this and actually implement counting.
-            let propose_wcop: &Wcop = &wcops[0];
-            let morphism = propose_wcop.0;
-            let mapping = &database.mappings[morphism];
-            let strategy: &WcoStrategy = &propose_wcop.1;
             // 3 For each atom that mentions this var,
             // 3a For each binding of values to prior vars
-            for binding in std::mem::take(&mut bindings) {
-                // 3b If this atom had the least count, enumerate the new values.
-                // This should dispatch on the types involved to monomorphic code.
+            // 3b If this atom had the least count, enumerate the new values.
+            //
+            // We assume the first atom mentioning us uniformly had smallest count, which
+            // makes this kind of wonky; eg we dispatch on `strategy` inside the `for
+            // binding in ...` loop even though we already know it -- because in the
+            // "correct" version we won't know it in advance.
+            //
+            // TODO: fix this and actually implement counting.
+            let &(morphism, ref strategy) = &wcops[0];
+            let (dom, cod) = &self.schema.morphisms[morphism];
+            let table = &database.mappings[morphism];
+            for mut binding in std::mem::take(&mut bindings) {
                 match strategy {
-                    WcoStrategy::Dom => { // enumerate the domain
-                        todo!();
+                    WcoStrategy::Dom => { // enumerate the domain entity type
+                        let entities: &Map<EntityId, ()> = (&database.mappings[dom]).into();
+                        for &x in entities.keys() {
+                            // TODO: DANGER! ALLOCATION IN INNER LOOP!
+                            let mut b = binding.clone();
+                            b.push(x);
+                            // how do I avoid doing this? maybe: be more columnar?
+                            // go look at how Datatoad does it.
+                            bindings.push(b);
+                        }
                     }
                     WcoStrategy::Image => { // use reverse index
-                        todo!();
+                        todo!("Image strategy");
                     }
                     WcoStrategy::Diagonal => { // use diagonal index
-                        todo!();
+                        todo!("Diagonal strategy");
                     }
                     WcoStrategy::Lookup(known) => { // look `known` up in `mapping`
-                        todo!();
+                        match known {
+                            Known::Var(known_var_index) => {
+                                // f(K) = X, so it must be an entity-entity map.
+                                let map: &Map<EntityId, EntityId> = table.into();
+                                let x = map[&binding[*known_var_index]];
+                                binding.push(x);
+                                bindings.push(binding);
+                            }
+                            Known::Usize(k) => { todo!("lookup usize") }
+                            Known::String(k) => { todo!("lookup string") }
+                        }
                     }
                     WcoStrategy::Preimage(known) => { // look `known` up in reverse index
-                        todo!();
+                        let index: &TaggedReverseIndex = &reverse_index[morphism];
+                        match *known {
+                            Known::Var(known_var_index) => todo!("preimage Var"),
+                            Known::Usize(k) => todo!("preimage usize"),
+                            Known::String(k) => {
+                                // TODO: this let-else should become a macro-generated .into() method.
+                                let TaggedReverseIndex::IdString(index) = index else {
+                                    panic!("reverse index tag error")
+                                };
+                                let entities: &HashSet<EntityId> = &index[k];
+                                for &entity in entities {
+                                    // DANGER! ALLOCATION IN INNER LOOP!
+                                    let mut b = binding.clone();
+                                    b.push(entity);
+                                    bindings.push(b);
+                                }
+                            }
+                        }
                     }
                 }
             }
 
+            if DEBUG {
+                eprintln!("  after proposing {var:?} via {morphism}/{strategy:?}, bindings are:");
+                if bindings.is_empty() { eprintln!("    empty?!"); }
+                for b in &bindings { eprintln!("    {b:?}"); }
+            }
+
+            // 4   For each atom that mentions the var,
+            // (we exclude the one that enumerate it in this case because it's easy)
             for wcop in &wcops[1..] {
-                // 4 For each atom that mentions this var (excluding the one that
-                // enumerated the new bindings, in this case, because it's easy)
-                todo!()
+                // 4a    For each binding of values to prior and new vars,
+                // 4b    If the binding is not in the atom, discard the binding.
+                let &(morphism, ref strategy) = wcop;
+                let (dom, cod) = &self.schema.morphisms[morphism];
+                let table = &database.mappings[morphism];
+                match strategy {
+                    WcoStrategy::Dom => {}, // nothing to do; always holds
+                    WcoStrategy::Image => todo!("filter image"),
+                    WcoStrategy::Diagonal => todo!("filter diagonal"),
+                    WcoStrategy::Lookup(k) => bindings.retain(|binding| {
+                        todo!("filter lookup test");
+                    }),
+                    WcoStrategy::Preimage(k) => bindings.retain(|binding| {
+                        todo!("filter preimage test");
+                    }),
+                }
+            }
+
+            if DEBUG {
+                eprintln!("  after filtering {var:?} through {} wcops:", &wcops[1..].len());
+                for b in &bindings { eprintln!("    {b:?}"); }
             }
         }
     }
@@ -519,8 +593,8 @@ fn main() {
     // Let's make a simple schema, a simple query, and try planning it.
     println!("hello, world!");
 
-    let Employee = "Employee".to_string();
     let Dept = "Dept".to_string();
+    let Employee = "Employee".to_string();
     let dept = "dept".to_string();
     let name = "name".to_string();
 
@@ -532,9 +606,9 @@ fn main() {
     let schema: Rc<Schema> = Rc::new(Schema { entities, morphisms });
     use TaggedMap::*;
     let mappings: HashMap<Name, TaggedMap> = map! {
-        Employee.to_string() => Id(map!{0 => ()}),
+        Employee.to_string() => Id(map!{1138 => ()}),
         Dept.to_string() => Id(map!{0 => ()}),
-        dept.to_string() => IdId(map!{0 => 0}),
+        dept.to_string() => IdId(map!{1138 => 0}),
         name.to_string() => IdString(map!{0 => "accounting".to_string()}),
     };
     let query = Instance { schema: schema, mappings };
@@ -548,8 +622,9 @@ fn main() {
     let plan = query.plan(&var_order);
     println!("  query plan:");
     for ((entity,id), wcops) in plan.iter() {
-        println!("    {entity:>10} {id:>2}    {wcops:?}");
+        println!("    {entity:>8} {id:>4}    {wcops:?}");
     }
+
     // let table: Vec<_> = plan.iter()
     //     .map(|((entity,id), wcops)|
     //          vec![format!("{entity}:{id}"), format!("{wcops:?}")])
