@@ -1,4 +1,8 @@
-using .Defaults: @default
+using .Defaults: @default, default_values
+
+
+function dimension end
+export dimension
 
 abstract type AbstractMeshSpec end
 

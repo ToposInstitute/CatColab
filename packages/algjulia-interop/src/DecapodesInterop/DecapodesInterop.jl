@@ -15,6 +15,8 @@ import DiagrammaticEquations: SummationDecapode
 using Decapodes
 using ACSets
 
+using StructEquality
+
 using ..Defaults
 using CatColabInterop, Oxygen, HTTP, JSON3, URIs
 import CatColabInterop: endpoint
@@ -27,12 +29,14 @@ Base.showerror(io::IO, e::ImplError) = print(io, "$(e.name) not implemented")
 
 # specifies the mesh
 include("geometry.jl")
+export Geometry
 
 # code specific to NS equations
 include("ns_helper.jl")
 
 # for specifying the initial conditions
 include("initial_conditions.jl")
+using .InitialConditions
 
 # build the decapode
 include("model_diagram.jl")
@@ -55,24 +59,24 @@ function make_progress_callback(stream::HTTP.Stream, tspan)
     t0, tf = tspan
     last_write = Ref(time())
     DiscreteCallback(
-            (u, t, integrator) -> true,
-            (integrator) -> begin
-                now = time()
-                if last_write[] == 0.0
-                    write(stream, JSON3.write(Dict("status" => "running")) * "\n")
-                end
-                if now - last_write[] > 0.1
-                    frac = clamp((integrator.t - t0) / (tf - t0), 0.0, 1.0)
-                    @info "Writing progress" frac
-                    write(stream, JSON3.write(Dict("progress" => frac)) * "\n")
-                    if frac == 1.0
-                        write(stream, JSON3.write(Dict("status" => "finalizing")) * "\n")
-                    end  
-                    flush(stream)
-                    last_write[] = now
-                end
-            end;
-            save_positions = (false, false)
+        (u, t, integrator) -> true,
+        (integrator) -> begin
+            now = time()
+            if last_write[] == 0.0
+                write(stream, JSON3.write(Dict("status" => "running")) * "\n")
+            end
+            if now - last_write[] > 0.1
+                frac = clamp((integrator.t - t0) / (tf - t0), 0.0, 1.0)
+                @info "Writing progress" frac
+                write(stream, JSON3.write(Dict("progress" => frac)) * "\n")
+                if frac == 1.0
+                    write(stream, JSON3.write(Dict("status" => "finalizing")) * "\n")
+                end  
+                flush(stream)
+                last_write[] = now
+            end
+        end;
+        save_positions = (false, false)
     )
 end
 
@@ -135,13 +139,24 @@ function DecapodesSystem(uri::URIs.URI)
     end
     constants = ComponentArray(; filter(!isnothing, constants)...)
 
+    mesh_type = typeof(mesh)
+    valid_ics = MeshInfo(mesh_type).ics
+
+    function resolve_ic(name::String)
+        hit = findfirst(ic -> ic.ic == name, valid_ics)
+        isnothing(hit) && error("IC $name not valid for mesh $(nameof(mesh_type))")
+        base = getproperty(DecapodesInterop, Symbol(name))
+        p = valid_ics[hit].params
+        isempty(p) ? base : base{p}
+    end
+
     ics = map(params) do (k,v)
         m = match(r"initialConditions.(.+)", k)
         if isnothing(m)
             nothing
         else
             var = only(m.captures)
-            Symbol(var) => getproperty(DecapodesInterop, Symbol(v))
+            Symbol(var) => resolve_ic(v)
         end
     end
     ics = Dict(filter(!isnothing, ics))
@@ -149,6 +164,25 @@ function DecapodesSystem(uri::URIs.URI)
     pode = SummationDecapode(parse_decapode(Meta.parse("begin\n$pode\nend")))
     infer_types!(pode)
     DecapodesSystem(pode; duration=duration, constants=constants, ics=ics, mesh=mesh)
+end
+
+
+"""
+    This contains the name of the initial conditions as well 
+"""
+@struct_hash_equal struct IC
+    ic::String
+    params::NamedTuple
+    defaults::Dict
+end
+
+function IC(::Type{T}) where T
+    params = T.parameters
+    if isempty(params)
+        IC(string(nameof(T)), (;params...), default_values(T))
+    else
+        IC(string(nameof(T)), (;only(params)...), default_values(T))
+    end
 end
 
 struct MeshInfo{Mesh <: AbstractMeshSpec}
@@ -160,55 +194,61 @@ struct MeshInfo{Mesh <: AbstractMeshSpec}
     defaults::Dict{String, Number}
 
     # valid initial conditions
-    ics::Vector{String}
+    ics::Vector{IC}
 end
 
-function spec(::Type{T}) where T
-    Dict(string.(fieldnames(T)) .=> string.(nameof.(fieldtypes(T))))
+spec(::Type{T}) where T = Dict(string.(fieldnames(T)) .=> string.(nameof.(fieldtypes(T))))
+
+# Walk `initial_condition` methods once. Each is (::IC, ::Geometry{Mesh}).
+# Yield (ic_type, mesh_param) where mesh_param is a Type or a TypeVar.
+function ic_method_sigs()
+    sigs = Tuple{Any,Any}[]
+    for m in methods(initial_condition, InitialConditions)
+        params = Base.unwrap_unionall(m.sig).parameters
+        length(params) >= 3 || continue
+        geom = params[3]
+        geom isa DataType && nameof(geom) === :Geometry || continue
+        push!(sigs, (params[2], geom.parameters[1]))
+    end
+    sigs
 end
 
-struct IC
-    ic::String
-    params::Vector{Any}
-end
-
-function IC(::Type{T}) where T
-    name = string(nameof(T))
-    IC(name, [T.parameters...])
+# "GaussianIC" => [ (params=(dim=1,), defaults=…), (params=(dim=2,), defaults=…) ]
+function ic_info()
+    info = Dict{String, Vector{@NamedTuple{params::NamedTuple, defaults::Any}}}()
+    for (ic_type, _) in ic_method_sigs()
+        ic_type isa DataType || continue
+        ps = ic_type.parameters
+        key = if isempty(ps)
+            NamedTuple()
+        elseif length(ps) == 1 && only(ps) isa NamedTuple
+            only(ps)
+        else
+            continue
+        end
+        base = string(nameof(ic_type))
+        push!(get!(() -> valtype(info)[], info, base),
+              (params = key, defaults = default_values(ic_type)))
+    end
+    info
 end
 
 function MeshInfo(mesh_type::Type{Mesh}) where Mesh <: AbstractMeshSpec
     specs = spec(mesh_type)
     defaults = Dict(string(k) => v for (k,v) in pairs(default_values(mesh_type)))
-
-    # Initial Conditions
-    ic_methods = methods(initial_condition)
-    names = String[]
-    for m in ic_methods
-        params = Base.unwrap_unionall(m.sig).parameters
-        length(params) >= 3 || continue
-
-        ic = IC(params[2])
-        @info default_values(params[2])
-
-        # parse the signature for Geometric data
-        geom = params[3]
-        geom isa DataType && nameof(geom) === :Geometry || continue
-        meshparam = geom.parameters[1]
-        if meshparam isa TypeVar || meshparam === mesh_type
-            push!(names, string(nameof(params[2])))
-        end
+    ics = IC[]
+    for (ic_type, meshparam) in ic_method_sigs()
+        (meshparam isa TypeVar || meshparam === mesh_type) || continue
+        push!(ics, IC(ic_type))
     end
-    ics = unique(names)
-    
-    MeshInfo{Mesh}(specs, defaults, ics)
+    MeshInfo{Mesh}(specs, defaults, unique(ics))
 end
      
 using InteractiveUtils: subtypes
+using .InitialConditions: default_values
 
 function supported_options()
     mesh_types = subtypes(AbstractMeshSpec)
-    meshes = string.(nameof.(mesh_types))
 
     mesh_info = Dict(map(mesh_types) do mesh
         string(nameof(mesh)) => MeshInfo(mesh)
@@ -216,16 +256,9 @@ function supported_options()
 
     ic_types = subtypes(AbstractInitialConditionSpec)
     ics = string.(nameof.(initial_conditions))
-    
 
-
-    # TS should receive a string which it knows how to interpret into a component. So
-    # "AbstractVortexParams" should be interpereted into a table
-    # ic_info = Dict(map(ic_types) do ic
-    #     string(nameof(ic)) => typeof(ic) == UnionAll ? default_values(ic{1}) : default_values(ic)
-    # end)
-
-    Dict(:meshes => meshes, :mesh_info => mesh_info)
+    meshes = string.(nameof.(mesh_types))
+    Dict(:meshes => meshes, :mesh_info => mesh_info, :ic_info => ic_info())
 end
 
 function endpoint(::Val{:DecapodesOptions})
