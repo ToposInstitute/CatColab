@@ -51,7 +51,7 @@ module Defaults
         end
 
         # default_values
-        call = :( default_values(::$struct_type) )
+        call = :( $(GlobalRef(@__MODULE__, :default_values))(::$struct_type) )
         wheres = copy(params)
         sig = isempty(wheres) ? call : Expr(:where, call, wheres...)
         func = Expr(:function, sig, body_expr)
