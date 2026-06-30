@@ -2,9 +2,14 @@ use crate::v1;
 
 pub use v1::{analysis, api, diagram_judgment, model, model_judgment, path, theory};
 
+/// Cells in a notebook.
 pub mod cell;
+/// Model documents, containing a notebook along with metadata.
 pub mod document;
+/// Tabular instances of models.
+pub mod instance;
 pub mod llm_conversation;
+/// Notebooks for models and diagrams.
 pub mod notebook;
 pub mod rich_text;
 

@@ -60,10 +60,8 @@ export function DocumentMenu(props: {
     const onNewAnalysis = async () => {
         const docRefId = props.docRef.refId;
         const docType = props.liveDoc.doc.type;
-        invariant(
-            docType === "model" || docType === "diagram",
-            "Analysis can only be created on a model or diagram",
-        );
+        invariant(docType !== "analysis", "Analysis cannot be created on other analysis");
+        invariant(docType !== "instance", "Analysis cannot yet be created on an instance");
 
         const newRef = await createAnalysis(api, docType, api.makeUnversionedRef(docRefId));
         handleDocCreated("analysis", newRef);
@@ -117,7 +115,12 @@ export function DocumentMenu(props: {
                             </MenuItem>
                         </Match>
                     </Switch>
-                    <Show when={props.liveDoc.doc.type !== "analysis"}>
+                    <Show
+                        when={
+                            props.liveDoc.doc.type !== "analysis" &&
+                            props.liveDoc.doc.type !== "instance"
+                        }
+                    >
                         <MenuItem onSelect={() => onNewAnalysis()}>
                             <DocumentTypeIcon documentType="analysis" />
                             <MenuItemLabel>{`New analysis of this ${docType()}`}</MenuItemLabel>

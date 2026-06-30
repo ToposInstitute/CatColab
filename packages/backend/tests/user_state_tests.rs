@@ -50,7 +50,7 @@ mod integration_tests {
     }
 
     /// Creates document content for a child document (diagram) that links to a parent ref.
-    fn create_child_document_content(name: &str, parent_ref_id: Uuid) -> serde_json::Value {
+    fn create_child_diagram_document_content(name: &str, parent_ref_id: Uuid) -> serde_json::Value {
         json!({
             "version": "1",
             "type": "diagram",
@@ -65,6 +65,25 @@ mod integration_tests {
                 "cellOrder": [],
                 "cellContents": {}
             }
+        })
+    }
+
+    /// Creates document content for a child document (instance) that links to a parent ref.
+    fn create_child_instance_document_content(
+        name: &str,
+        parent_ref_id: Uuid,
+    ) -> serde_json::Value {
+        json!({
+            "version": "2",
+            "type": "instance",
+            "name": name,
+            "instanceOf": {
+                "_id": parent_ref_id.to_string(),
+                "_version": null,
+                "_server": "test",
+                "type": "instance-of"
+            },
+            "tables": []
         })
     }
 
@@ -411,13 +430,24 @@ mod integration_tests {
         assert_eq!(doc.theory.as_deref(), Some("causal-loop"));
 
         // Diagram (no theory)
-        let diagram_content = create_child_document_content("Test Diagram", ref_id);
-        let diagram_id =
-            document::new_ref(ctx, diagram_content).await.expect("Failed to create diagram");
+        let diagram_content = create_child_diagram_document_content("Test Diagram", ref_id);
+        let diagram_id = document::new_ref(ctx.clone(), diagram_content)
+            .await
+            .expect("Failed to create diagram");
 
         let s = read_user_state_from_samod(&state, &user_id).await.unwrap();
         assert_eq!(s.documents[&diagram_id.to_string()].type_name, DocumentType::Diagram);
         assert_eq!(s.documents[&diagram_id.to_string()].theory, None);
+
+        // Instance (no theory)
+        let instance_content = create_child_instance_document_content("Test Instance", ref_id);
+        let instance_id = document::new_ref(ctx, instance_content)
+            .await
+            .expect("Failed to create instance");
+
+        let s = read_user_state_from_samod(&state, &user_id).await.unwrap();
+        assert_eq!(s.documents[&instance_id.to_string()].type_name, DocumentType::Instance);
+        assert_eq!(s.documents[&instance_id.to_string()].theory, None);
 
         // Update theory and propagate user state
         let updated = create_model_document_content("Theory Test", "petri-net");
@@ -689,27 +719,42 @@ mod integration_tests {
         let parent_id = document::new_ref(ctx.clone(), create_test_document_content("Parent Doc"))
             .await
             .unwrap();
-        let child_id =
-            document::new_ref(ctx, create_child_document_content("Child Doc", parent_id))
-                .await
-                .unwrap();
+        let child_diagram_id = document::new_ref(
+            ctx.clone(),
+            create_child_diagram_document_content("Child Diagram", parent_id),
+        )
+        .await
+        .unwrap();
+        let child_instance_id = document::new_ref(
+            ctx,
+            create_child_instance_document_content("Child Instance", parent_id),
+        )
+        .await
+        .unwrap();
 
         get_or_create_user_state_doc(&state, &user_id).await.unwrap();
 
         let us = read_user_state_from_samod(&state, &user_id).await.unwrap();
-        assert_eq!(us.documents.len(), 2);
+        assert_eq!(us.documents.len(), 3);
 
         let parent = &us.documents[&parent_id.to_string()];
-        let child = &us.documents[&child_id.to_string()];
+        let child_diagram = &us.documents[&child_diagram_id.to_string()];
+        let child_instance = &us.documents[&child_instance_id.to_string()];
 
         assert!(parent.depends_on.is_empty());
-        assert_eq!(child.depends_on.len(), 1);
-        assert_eq!(child.depends_on[0].ref_id, parent_id);
-        assert_eq!(child.depends_on[0].relation_type, "diagram-in");
+        assert_eq!(child_diagram.depends_on.len(), 1);
+        assert_eq!(child_diagram.depends_on[0].ref_id, parent_id);
+        assert_eq!(child_diagram.depends_on[0].relation_type, "diagram-in");
+        assert_eq!(child_instance.depends_on.len(), 1);
+        assert_eq!(child_instance.depends_on[0].ref_id, parent_id);
+        assert_eq!(child_instance.depends_on[0].relation_type, "instance-of");
 
-        assert_eq!(parent.used_by.len(), 1);
-        assert_eq!(parent.used_by[0].ref_id, child_id);
-        assert!(child.used_by.is_empty());
+        assert_eq!(parent.used_by.len(), 2);
+        let used_by_ref_ids: Vec<_> = parent.used_by.iter().map(|doc| doc.ref_id).collect();
+        assert!(used_by_ref_ids.contains(&child_diagram_id));
+        assert!(used_by_ref_ids.contains(&child_instance_id));
+        assert!(child_diagram.used_by.is_empty());
+        assert!(child_instance.used_by.is_empty());
 
         Ok(())
     }
@@ -736,23 +781,37 @@ mod integration_tests {
         let parent_id = document::new_ref(ctx.clone(), create_test_document_content("Parent Doc"))
             .await
             .unwrap();
-        let child_id =
-            document::new_ref(ctx, create_child_document_content("Child Doc", parent_id))
-                .await
-                .unwrap();
+        let child_diagram_id = document::new_ref(
+            ctx.clone(),
+            create_child_diagram_document_content("Child Diagram", parent_id),
+        )
+        .await
+        .unwrap();
+        let child_instance_id = document::new_ref(
+            ctx,
+            create_child_instance_document_content("Child Instance", parent_id),
+        )
+        .await
+        .unwrap();
 
         let us = read_user_state_from_samod(&state, &user_id).await.unwrap();
-        assert_eq!(us.documents.len(), 2);
+        assert_eq!(us.documents.len(), 3);
 
         let parent = &us.documents[&parent_id.to_string()];
-        let child = &us.documents[&child_id.to_string()];
+        let child_diagram = &us.documents[&child_diagram_id.to_string()];
+        let child_instance = &us.documents[&child_instance_id.to_string()];
 
         assert!(parent.depends_on.is_empty());
-        assert_eq!(child.depends_on.len(), 1);
-        assert_eq!(child.depends_on[0].ref_id, parent_id);
-        assert_eq!(parent.used_by.len(), 1);
-        assert_eq!(parent.used_by[0].ref_id, child_id);
-        assert!(child.used_by.is_empty());
+        assert_eq!(child_diagram.depends_on.len(), 1);
+        assert_eq!(child_diagram.depends_on[0].ref_id, parent_id);
+        assert_eq!(child_instance.depends_on.len(), 1);
+        assert_eq!(child_instance.depends_on[0].ref_id, parent_id);
+        assert_eq!(parent.used_by.len(), 2);
+        let used_by_ref_ids: Vec<_> = parent.used_by.iter().map(|doc| doc.ref_id).collect();
+        assert!(used_by_ref_ids.contains(&child_diagram_id));
+        assert!(used_by_ref_ids.contains(&child_instance_id));
+        assert!(child_diagram.used_by.is_empty());
+        assert!(child_instance.used_by.is_empty());
 
         Ok(())
     }

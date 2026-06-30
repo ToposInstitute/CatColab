@@ -57,6 +57,9 @@ pub enum LinkType {
     #[serde(rename = "diagram-in")]
     DiagramIn,
 
+    #[serde(rename = "instance-of")]
+    InstanceOf,
+
     #[serde(rename = "llmconversation-of")]
     ConversationOf,
 

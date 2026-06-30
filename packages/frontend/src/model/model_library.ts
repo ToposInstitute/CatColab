@@ -319,7 +319,7 @@ function isPatchToFormalContent(doc: Document, patch: Patch): boolean {
         // Ignore changes to top-level data like document name.
         return false;
     }
-    if (path[0] === "notebook" && path[1] === "cellContents" && path[2]) {
+    if (doc.type === "model" && path[0] === "notebook" && path[1] === "cellContents" && path[2]) {
         // Ignores changes to cells without formal content.
         const cell = doc.notebook.cellContents[path[2]];
         if (cell?.tag !== "formal") {

@@ -1,6 +1,7 @@
+use crate::current::instance::Table;
 use crate::v0::AnalysisType;
 use crate::v1;
-pub use crate::v1::DocumentType;
+use std::{collections::HashMap, str::FromStr};
 
 use super::analysis::Analysis;
 use super::api::Link;
@@ -9,6 +10,7 @@ use super::notebook::Notebook;
 
 use serde::{Deserialize, Serialize};
 use tsify::Tsify;
+use uuid::Uuid;
 
 /// This is the content of a model document. For legacy reasons, we reserve
 /// the name "ModelDocument" for `Document & { type: "model" }`.
@@ -37,6 +39,16 @@ pub struct DiagramDocumentContent {
     pub version: String,
 }
 
+#[derive(PartialEq, Debug, Serialize, Deserialize, Tsify)]
+#[tsify(into_wasm_abi, from_wasm_abi)]
+pub struct InstanceDocumentContent {
+    pub name: String,
+    #[serde(rename = "instanceOf")]
+    pub instance_of: Link,
+    pub tables: HashMap<Uuid, Table>,
+    pub version: String,
+}
+
 #[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Tsify)]
 #[tsify(into_wasm_abi, from_wasm_abi)]
 pub struct AnalysisDocumentContent {
@@ -49,7 +61,7 @@ pub struct AnalysisDocumentContent {
     pub version: String,
 }
 
-#[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Tsify)]
+#[derive(PartialEq, Debug, Serialize, Deserialize, Tsify)]
 #[serde(tag = "type")]
 #[tsify(into_wasm_abi, from_wasm_abi)]
 pub enum Document {
@@ -59,8 +71,50 @@ pub enum Document {
     Diagram(DiagramDocumentContent),
     #[serde(rename = "analysis")]
     Analysis(AnalysisDocumentContent),
+    #[serde(rename = "instance")]
+    Instance(InstanceDocumentContent),
     #[serde(rename = "llmconversation")]
     LLMConversation(LLMConversationDocumentContent),
+}
+
+/// The type/kind of a document, without any associated content.
+#[derive(PartialEq, Eq, Debug, Clone, Copy, Serialize, Deserialize, Tsify)]
+#[cfg_attr(
+    feature = "backend",
+    derive(autosurgeon::Reconcile, autosurgeon::Hydrate, ts_rs::TS)
+)]
+#[cfg_attr(
+    feature = "backend",
+    ts(export_to = "user_state.ts", rename_all = "lowercase")
+)]
+#[serde(rename_all = "lowercase")]
+#[tsify(into_wasm_abi, from_wasm_abi)]
+pub enum DocumentType {
+    #[cfg_attr(feature = "backend", autosurgeon(rename = "model"))]
+    Model,
+    #[cfg_attr(feature = "backend", autosurgeon(rename = "diagram"))]
+    Diagram,
+    #[cfg_attr(feature = "backend", autosurgeon(rename = "instance"))]
+    Instance,
+    #[cfg_attr(feature = "backend", autosurgeon(rename = "analysis"))]
+    Analysis,
+    #[cfg_attr(feature = "backend", autosurgeon(rename = "llmconversation"))]
+    LLMConversation,
+}
+
+impl FromStr for DocumentType {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "model" => Ok(DocumentType::Model),
+            "diagram" => Ok(DocumentType::Diagram),
+            "instance" => Ok(DocumentType::Instance),
+            "analysis" => Ok(DocumentType::Analysis),
+            "llmconversation" => Ok(DocumentType::LLMConversation),
+            other => Err(format!("unknown document type: {other}")),
+        }
+    }
 }
 
 impl Document {
