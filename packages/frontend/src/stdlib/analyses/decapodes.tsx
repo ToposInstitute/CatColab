@@ -76,6 +76,7 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
         return Object.fromEntries(entries);
     });
 
+    // TODO these should come from the objects of an elaborated document
     const icRows = ["n", "w", "Hydrodynamics_dX"];
     const icSchema: ColumnSchema<string>[] = [
         {
@@ -90,7 +91,7 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
             variants: () => {
                 const mesh = props.content.mesh;
                 if (!mesh) return [];
-                return options()?.mesh_info[mesh].ics ?? [];
+                return options()?.mesh_info[mesh].ics.map((ic) => ic.ic) ?? [];
             },
             content: (name) => props.content.initialConditions[name] ?? null,
             setContent: (name, value) =>
@@ -102,6 +103,28 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
                     }
                 }),
         },
+    ];
+
+    const [icValues, setICValues] = createSignal<Record<string, Record<string, number>>>({});
+
+    const selectedIC = (varName: string): IC | undefined => {
+        const mesh = props.content.mesh,
+            chosen = props.content.initialConditions[varName];
+        if (!mesh || !chosen) return undefined;
+        return options()?.mesh_info[mesh].ics.find((ic) => ic.ic === chosen);
+    };
+
+    const icFieldSchema = (
+        varName: string,
+        defaults: Record<string, number>,
+    ): ColumnSchema<string>[] => [
+        { contentType: "string", header: true, name: "Parameter", content: (f) => f },
+        createNumericalColumn({
+            name: "Value",
+            data: (f) => icValues()[varName]?.[f],
+            default: (f) => defaults[f],
+            setData: (f, v) => setICValues((p) => ({ ...p, [varName]: { ...p[varName], [f]: v } })),
+        }),
     ];
 
     // const variableSchema: ColumnSchema<QualifiedName>[] = [
@@ -173,50 +196,6 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
                 </IconButton>
             </Match>
         </Switch>
-    );
-
-    const DomainConfig = (domains: Domain[]) => (
-        <div class="decapodes-domain">
-            <span>Mesh:</span>
-            <select
-                value={props.content.domain ?? undefined}
-                onInput={(evt) =>
-                    props.changeContent((content) => {
-                        const domain = evt.currentTarget.value;
-                        if (content.domain === domain) {
-                            return;
-                        }
-                        content.domain = domain;
-                        content.mesh = options()?.mesh_info[domain].ics[0] ?? null;
-                        content.initialConditions = {};
-                        setMeshParams({});
-                    })
-                }
-            >
-                <For each={Array.from(domains.meshes)}>
-                    {(domain) => <option value={domain}>{domain}</option>}
-                </For>
-            </select>
-            <Show when={props.content.mesh}>
-                {(name) => (
-                    <>
-                        <span>Mesh:</span>
-                        <select
-                            value={props.content.mesh ?? undefined}
-                            onInput={(evt) =>
-                                props.changeContent((content) => {
-                                    content.mesh = evt.currentTarget.value;
-                                })
-                            }
-                        >
-                            <For each={domains.get(name())?.meshes ?? []}>
-                                {(mesh) => <option value={mesh}>{mesh}</option>}
-                            </For>
-                        </select>
-                    </>
-                )}
-            </Show>
-        </div>
     );
 
     const podeData = createMemo(() => {
@@ -313,8 +292,6 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
         params.set("duration", String(duration));
         const url = `${juliaUrl}/decapodes-string?${params.toString()}`;
 
-        console.log(url);
-
         const response = await fetch(url);
         if (!response.ok) throw new Error(`HTTP error! status ${response.status}`);
 
@@ -351,6 +328,25 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
         !isICsAllCompleted;
     };
 
+    type ICTab = { name: string; ic: IC };
+
+    const icTabs = createMemo<ICTab[]>(() =>
+        icRows
+            .map((name) => ({ name, ic: selectedIC(name) }))
+            .filter((t): t is ICTab => t.ic !== undefined && Object.keys(t.ic.defaults).length > 0),
+    );
+
+    const [activeTab, setActiveTab] = createSignal<string | null>(null);
+
+    const effectiveTab = createMemo(() => {
+        const tabs = icTabs();
+        if (tabs.length === 0) return null;
+        const current = activeTab();
+        return tabs.some((t) => t.name === current) ? current : tabs[0].name;
+    });
+
+    const activeTabData = createMemo(() => icTabs().find((t) => t.name === effectiveTab()));
+
     return (
         <div class="simulation">
             <BlockTitle title="Simulation" actions={RestartOrRerunButton()} />
@@ -366,7 +362,7 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
                                         setMeshParams({});
                                         content.mesh = evt.currentTarget.value;
                                         content.initialConditions = {};
-                                        console.log("meshParams after reset:", meshParams());
+                                        setICValues({});
                                     })
                                 }
                             >
@@ -376,6 +372,7 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
                             </select>
                             <Show when={options() && props.content.mesh}>
                                 {(mesh) => {
+                                    console.log(icValues());
                                     return (
                                         <FixedTableEditor
                                             rows={fieldNames(mesh())}
@@ -393,6 +390,36 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
                 <div class="decapodes-domain">
                     <Show when={props.content.mesh}>
                         <FixedTableEditor rows={icRows} schema={icSchema} />
+                        <Show when={icTabs().length > 0}>
+                            <div class="ic-tabs">
+                                <div class="ic-tab-list" role="tablist">
+                                    <For each={icTabs()}>
+                                        {(tab) => (
+                                            <button
+                                                type="button"
+                                                role="tab"
+                                                class="ic-tab"
+                                                classList={{ active: effectiveTab() === tab.name }}
+                                                aria-selected={effectiveTab() === tab.name}
+                                                onClick={() => setActiveTab(tab.name)}
+                                            >
+                                                {tab.name}
+                                            </button>
+                                        )}
+                                    </For>
+                                </div>
+                                <Show when={activeTabData()} keyed>
+                                    {(tab) => (
+                                        <div class="ic-tab-panel" role="tabpanel">
+                                            <FixedTableEditor
+                                                rows={Object.keys(tab.ic.defaults)}
+                                                schema={icFieldSchema(tab.name, tab.ic.defaults)}
+                                            />
+                                        </div>
+                                    )}
+                                </Show>
+                            </div>
+                        </Show>
                     </Show>
                 </div>
 
@@ -448,10 +475,15 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
     );
 }
 
+type IC = {
+    ic: string;
+    params: Record<string, number>;
+};
+
 type MeshInfo = {
     specs: Record<string, string>;
     defaults: Record<string, number>;
-    ics: string[];
+    ics: IC[];
 };
 
 /** Options supported by Decapodes, defined by the Julia service. */
