@@ -48,6 +48,14 @@ pub struct AnalysisDocumentContent {
     pub version: String,
 }
 
+#[derive(PartialEq, Eq, Debug, Serialize, Deserialize)]
+pub struct InstanceDocumentContent {
+    pub name: String,
+    #[serde(rename = "instanceOf")]
+    pub instance_of: Link,
+    pub version: String,
+}
+
 #[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Tsify)]
 #[serde(tag = "type")]
 #[tsify(into_wasm_abi, from_wasm_abi)]
@@ -58,6 +66,8 @@ pub enum Document {
     Diagram(DiagramDocumentContent),
     #[serde(rename = "analysis")]
     Analysis(AnalysisDocumentContent),
+    #[serde(rename = "instance")]
+    Instance(InstanceDocumentContent),
 }
 
 impl Document {
