@@ -4,6 +4,7 @@ pub use v1::{analysis, api, diagram_judgment, model, model_judgment, path, theor
 
 pub mod cell;
 pub mod document;
+pub mod instance;
 pub mod notebook;
 
 pub use analysis::*;
