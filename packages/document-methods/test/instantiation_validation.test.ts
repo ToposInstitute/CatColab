@@ -71,8 +71,8 @@ describe("instantiation validation", () => {
         });
 
         const result = await notebook.validate();
-        expect(result.tag).toBe("Valid");
-        expect(result.model).toBeInstanceOf(DblModel);
+        expect(result.issues).toBeUndefined();
+        expect(result.issues === undefined && result.value).toBeInstanceOf(DblModel);
     });
 
     test("the plain store resolves an instantiation of a locally-validated model", async () => {
@@ -80,15 +80,15 @@ describe("instantiation validation", () => {
         imported.add(Type, { name: "Thing" });
         // Validating the imported notebook elaborates it; the plain store caches
         // the resulting model so the instantiation below can resolve it.
-        expect((await imported.validate()).tag).toBe("Valid");
+        expect((await imported.validate()).issues).toBeUndefined();
 
         const notebook = binder.createNotebook(SimpleOlog, { name: "Main" });
         notebook.add(Type, { name: "A" });
         notebook.add(Instantiation, { name: "ImportedOlog", model: imported });
 
         const result = await notebook.validate();
-        expect(result.tag).toBe("Valid");
-        expect(result.model).toBeInstanceOf(DblModel);
+        expect(result.issues).toBeUndefined();
+        expect(result.issues === undefined && result.value).toBeInstanceOf(DblModel);
     });
 
     test("a failed resolution is reported as Illformed", async () => {
@@ -107,8 +107,10 @@ describe("instantiation validation", () => {
 
         failOnResolve.value = true;
         const result = await notebook.validate();
-        expect(result.tag).toBe("Illformed");
-        expect(result.tag === "Illformed" && result.error).toContain("Failed to resolve");
+        expect(result.issues).toBeDefined();
+        expect(result.issues?.map((issue) => issue.message).join("; ")).toContain(
+            "Failed to resolve",
+        );
     });
 
     test("resolution elaborates instantiations against the host notebook's theory", async () => {
@@ -128,8 +130,8 @@ describe("instantiation validation", () => {
         notebook.add(Instantiation, { name: "ImportedNet", model: imported });
 
         const result = await notebook.validate();
-        expect(result.tag).toBe("Valid");
-        expect(result.model).toBeInstanceOf(DblModel);
+        expect(result.issues).toBeUndefined();
+        expect(result.issues === undefined && result.value).toBeInstanceOf(DblModel);
     });
 
     test("a schema can instantiate an olog because their theories are compatible", async () => {
@@ -151,8 +153,8 @@ describe("instantiation validation", () => {
         notebook.add(Instantiation, { name: "ImportedOlog", model: imported });
 
         const result = await notebook.validate();
-        expect(result.tag).toBe("Valid");
-        expect(result.model).toBeInstanceOf(DblModel);
+        expect(result.issues).toBeUndefined();
+        expect(result.issues === undefined && result.value).toBeInstanceOf(DblModel);
     });
 
     test("resolution recursively resolves the referenced model's own instantiations", async () => {
@@ -178,8 +180,8 @@ describe("instantiation validation", () => {
         notebook.add(Instantiation, { name: "ImportedOlog", model: imported });
 
         const result = await notebook.validate();
-        expect(result.tag).toBe("Valid");
-        expect(result.model).toBeInstanceOf(DblModel);
+        expect(result.issues).toBeUndefined();
+        expect(result.issues === undefined && result.value).toBeInstanceOf(DblModel);
     });
 
     test("a cyclic instantiation is detected and reported as Illformed", async () => {
@@ -196,7 +198,9 @@ describe("instantiation validation", () => {
         c.add(Instantiation, { name: "toA", model: a });
 
         const result = await a.validate();
-        expect(result.tag).toBe("Illformed");
-        expect(result.tag === "Illformed" && result.error).toContain("Cyclic instantiation");
+        expect(result.issues).toBeDefined();
+        expect(result.issues?.map((issue) => issue.message).join("; ")).toContain(
+            "Cyclic instantiation",
+        );
     });
 });

@@ -13,10 +13,10 @@ import type {
     DblModel,
     DblModelDiagram,
     DblTheory,
-    InvalidDblModel,
     InvalidDiscreteDblModelDiagram,
 } from "catlog-wasm";
 import type { Notebook } from "./notebook";
+import type { Result } from "./validation";
 
 const richTextKind: unique symbol = Symbol("richText");
 const objectKind: unique symbol = Symbol("object");
@@ -884,14 +884,15 @@ export type ShapeAddCapability<S extends AnyShape> = UnionToIntersection<
         : never
 >;
 
-/** An elaborated model together with its validation status. */
-export type ModelValidationResult =
-    /** Successfully elaborated and validated. */
-    | { tag: "Valid"; model: DblModel }
-    /** Elaborated, but failing one or more validation checks. */
-    | { tag: "Invalid"; model: DblModel; errors: InvalidDblModel[] }
-    /** Failed to even elaborate into a model. */
-    | { tag: "Illformed"; model: null; error: string };
+/**
+ * The result of elaborating and validating a model, as a
+ * [Standard Schema](https://standardschema.dev) {@link Result}: success carries
+ * the elaborated {@link DblModel} as `value`; failure carries an `issues` array.
+ * Both a model that fails one or more validation checks and one that fails to
+ * even elaborate map to a failure, their errors surfaced as Standard Schema
+ * {@link Issue}s.
+ */
+export type ModelValidationResult = Result<DblModel>;
 
 /**
  * An analysis that can be added to an analysis notebook. An analysis has a

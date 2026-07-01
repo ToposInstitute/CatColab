@@ -196,7 +196,7 @@ describe("simple-schema formalCells() validation resource", () => {
             );
 
             await settled(validation);
-            expect(validation()?.tag).not.toBe("Illformed");
+            expect(validation()?.issues).toBeUndefined();
             expect(validations).toBe(1);
 
             // Add a rich-text comment. It is not a formal cell, so the formal-cell

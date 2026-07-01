@@ -174,7 +174,7 @@ describe("Petri-net elaborated-model consumer", () => {
             );
             const model = (): DblModel | undefined => {
                 const result = validation();
-                return result && result.tag !== "Illformed" ? result.model : undefined;
+                return result && result.issues === undefined ? result.value : undefined;
             };
 
             // Test hook only: expose the resource so the test can await
@@ -233,7 +233,7 @@ describe("Petri-net elaborated-model consumer", () => {
         const dispose = render(() => <Consumer />, container);
 
         await settled(globalValidation);
-        expect(globalValidation()?.tag).toBe("Valid");
+        expect(globalValidation()?.issues).toBeUndefined();
         expect(container.innerHTML).toBe(EXPECTED_INITIAL);
 
         const appendButton = container.querySelector<HTMLButtonElement>(

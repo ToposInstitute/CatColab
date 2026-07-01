@@ -140,7 +140,7 @@ describe("simple-schema completions consumer", () => {
             );
             const model = (): DblModel | undefined => {
                 const result = validation();
-                return result && result.tag !== "Illformed" ? result.model : undefined;
+                return result && result.issues === undefined ? result.value : undefined;
             };
 
             // Selecting an id only edits the morphism cell (an object
@@ -183,7 +183,7 @@ describe("simple-schema completions consumer", () => {
         }
 
         await settled(globalValidation);
-        expect(globalValidation()?.tag).not.toBe("Illformed");
+        expect(globalValidation()?.issues).toBeUndefined();
 
         // Empty text: every `AttrType` generator, in generator order.
         expect(container.innerHTML).toBe(

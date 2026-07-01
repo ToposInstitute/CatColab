@@ -120,15 +120,15 @@ order: has, Source, B
 
 ```ts
 const result = await notebook.validate();
-console.log("tag:", result.tag);
-if (result.tag === "Valid") {
-    console.log("objects:", result.model.obGenerators().length);
-    console.log("morphisms:", result.model.morGenerators().length);
+console.log("valid:", result.issues === undefined);
+if (result.issues === undefined) {
+    console.log("objects:", result.value.obGenerators().length);
+    console.log("morphisms:", result.value.morGenerators().length);
 }
 ```
 
 ```
-tag: Valid
+valid: true
 objects: 3
 morphisms: 1
 ```

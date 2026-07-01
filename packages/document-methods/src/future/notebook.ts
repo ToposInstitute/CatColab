@@ -11,7 +11,13 @@ import type {
     Ob,
     SpecializeModel,
 } from "catcolab-document-types";
-import { type DblModel, type DblModelDiagram, type DblTheory, elaborateDiagram } from "catlog-wasm";
+import {
+    type DblModel,
+    type DblModelDiagram,
+    type DblTheory,
+    elaborateDiagram,
+    type InvalidDblModel,
+} from "catlog-wasm";
 import {
     duplicateModelJudgment,
     type ModelDocument,
@@ -89,7 +95,7 @@ import {
     newDiagramObjectDecl,
 } from "./diagram";
 import { type DocumentStore, plainDocumentId, plainStore, resolveModelInStore } from "./store";
-import { validateAddArgs, validateUpdateArgs, type Result } from "./validation";
+import { type Issue, type Result, validateAddArgs, validateUpdateArgs } from "./validation";
 
 /**
  * A stable string capturing the document's *formal* cells — every cell except
@@ -109,6 +115,37 @@ const formalCellsSignature = (document: Document): string => {
         }
     }
     return parts.join("\u0000");
+};
+
+/**
+ * Convert an {@link InvalidDblModel} validation error into a
+ * [Standard Schema](https://standardschema.dev) {@link Issue}. The failing
+ * generator's qualified name (when the error carries one) becomes the issue's
+ * `path`, and a legible description of the error tag its `message`, so callers
+ * inspect model validation failures the same vendor-neutral way as `add`/`get`
+ * failures.
+ */
+const modelErrorToIssue = (error: InvalidDblModel): Issue => {
+    switch (error.tag) {
+        case "Dom":
+            return { message: `Morphism "${error.content}" has an invalid domain`, path: [error.content] };
+        case "Cod":
+            return { message: `Morphism "${error.content}" has an invalid codomain`, path: [error.content] };
+        case "ObType":
+            return { message: `Object "${error.content}" has an invalid type`, path: [error.content] };
+        case "MorType":
+            return { message: `Morphism "${error.content}" has an invalid type`, path: [error.content] };
+        case "DomType":
+            return { message: `Morphism "${error.content}" has an invalid domain type`, path: [error.content] };
+        case "CodType":
+            return { message: `Morphism "${error.content}" has an invalid codomain type`, path: [error.content] };
+        case "Eqn":
+            return { message: "An equation is invalid" };
+        case "UnsupportedFeature":
+            return { message: `Unsupported feature: ${error.content.tag}` };
+        case "InvalidLink":
+            return { message: `Object "${error.content}" has an invalid link`, path: [error.content] };
+    }
 };
 
 /**
@@ -1159,18 +1196,19 @@ function attachNotebook<TShape extends AnyShape, Handle>(
             // Delegate elaboration to the store: mint a link to this notebook's
             // own handle and resolve it. The store walks this notebook's
             // instantiations (resolving each recursively) and elaborates against
-            // the registered core theory; `validate` only splits the resulting
-            // model into Valid/Invalid (and a rejection into Illformed).
+            // the registered core theory. A successfully elaborated and
+            // validated model is a `value`; a model that fails validation, or
+            // one that fails to even elaborate, is a failure carrying `issues`.
             const resolved = await resolveSelf(theory);
             if ("error" in resolved) {
-                return { tag: "Illformed", model: null, error: resolved.error };
+                return { issues: [{ message: resolved.error }] };
             }
             const model = resolved;
             const result = model.validate();
             if (result.tag === "Ok") {
-                return { tag: "Valid", model };
+                return { value: model };
             }
-            return { tag: "Invalid", model, errors: result.content };
+            return { issues: result.content.map(modelErrorToIssue) };
         },
         async migrateTo<TTarget extends CreatableShape>(targetShape: TTarget) {
             // Trivial migration: an empty notebook or an inclusion target only
