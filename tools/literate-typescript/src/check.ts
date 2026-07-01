@@ -171,6 +171,10 @@ export function typeCheck(
             category: diagnosticCategory(diag),
             message,
         };
+        if (sample.skipTypecheck === true) {
+            // Diagnostics for this sample are ignored by request.
+            continue;
+        }
         if (sample.typeErrors === true) {
             const existing = expectedDiagnostics.get(sample.id) ?? [];
             existing.push(mappedDiagnostic);

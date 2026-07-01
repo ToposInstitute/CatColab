@@ -17,6 +17,10 @@
  *   - `<!-- verifier:typescript-errors -->` marks the next code fence as
  *     expected to fail type-checking: a following non-code fence is compared
  *     against the exact TypeScript diagnostic text for that sample.
+ *   - `<!-- verifier:skip-typecheck -->` marks the next code fence so that any
+ *     TypeScript diagnostics it produces are ignored: the sample is still
+ *     materialised (and may still be run for expected-output/throws checks),
+ *     but its diagnostics never count as failures.
  *   - `<!-- verifier:reset -->` clears the prepend stack so the next code
  *     fence starts fresh.
  *   - A sample is `tsx` if its body or any active prepend is a `tsx` fence;
@@ -51,6 +55,8 @@ export type TsSample = {
     throws?: boolean;
     /** Whether this sample is expected to fail TypeScript type-checking. */
     typeErrors?: boolean;
+    /** Whether TypeScript diagnostics for this sample should be ignored. */
+    skipTypecheck?: boolean;
 };
 
 export type Assembled = {
@@ -69,6 +75,7 @@ export function assemble(items: ParsedItem[], slug: string): Assembled {
     let prependNext = false;
     let throwsNext = false;
     let typeErrorsNext = false;
+    let skipTypecheckNext = false;
     let lastTsSample: TsSample | null = null;
 
     for (const item of items) {
@@ -78,6 +85,7 @@ export function assemble(items: ParsedItem[], slug: string): Assembled {
                 prependNext = false;
                 throwsNext = false;
                 typeErrorsNext = false;
+                skipTypecheckNext = false;
                 lastTsSample = null;
             } else if (item.directive === "prepend-to-following") {
                 prependNext = true;
@@ -85,6 +93,8 @@ export function assemble(items: ParsedItem[], slug: string): Assembled {
                 throwsNext = true;
             } else if (item.directive === "typescript-errors") {
                 typeErrorsNext = true;
+            } else if (item.directive === "skip-typecheck") {
+                skipTypecheckNext = true;
             }
             // Unknown directives are silently ignored so future additions
             // remain non-fatal.
@@ -125,9 +135,11 @@ export function assemble(items: ParsedItem[], slug: string): Assembled {
             bodyOffset,
             ...(throwsNext ? { throws: true } : {}),
             ...(typeErrorsNext ? { typeErrors: true } : {}),
+            ...(skipTypecheckNext ? { skipTypecheck: true } : {}),
         };
         throwsNext = false;
         typeErrorsNext = false;
+        skipTypecheckNext = false;
         tsSamples.push(sample);
         lastTsSample = sample;
 

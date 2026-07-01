@@ -4,7 +4,7 @@ A minimal literate-TypeScript verifier for `.lts.md` Markdown documents.
 
 For each `.lts.md` file passed on the command line, it:
 
-1. Extracts fenced code blocks (`ts` and `tsx`), honouring four directives:
+1. Extracts fenced code blocks (`ts` and `tsx`), honouring these directives:
     - `<!-- verifier:prepend-to-following -->` — the next code fence becomes a
       prelude: it is concatenated above every subsequent code fence (in
       addition to being a sample itself). Use this to share imports/setup
@@ -19,6 +19,11 @@ For each `.lts.md` file passed on the command line, it:
       to fail type-checking. If it is followed by a non-code fence, that fence
       is exact-compared against the TypeScript diagnostics for that sample,
       formatted as `error TS2322: ...` lines without generated `.lts` paths.
+    - `<!-- verifier:skip-typecheck -->` — the next code fence is still
+      materialised (and may still be run for expected-output/throws checks),
+      but any TypeScript diagnostics it produces are ignored rather than
+      reported as failures. Use this for illustrative snippets that are not
+      meant to type-check cleanly.
     - `<!-- verifier:reset -->` — clears the accumulated prepend stack so the
       next code fence starts fresh.
 2. If a code fence is immediately followed by a non-code fence, the non-code
