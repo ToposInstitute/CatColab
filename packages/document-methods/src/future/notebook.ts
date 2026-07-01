@@ -1082,10 +1082,10 @@ function attachNotebook<TShape extends AnyShape, Handle>(
 
     const addMorphismCell = (
         def: MorphismDef,
-        args: { name: string; from?: unknown; to?: unknown },
+        args: { name: string | null; from?: unknown; to?: unknown },
     ): MorphismCell => {
         const judgment = newMorphismDecl(def.morType);
-        judgment.name = args.name;
+        judgment.name = args.name ?? "";
         judgment.dom = encodeEndpoint(
             def.domain?.apply ?? null,
             def.domain?.modality ?? null,
@@ -1384,7 +1384,7 @@ function attachNotebook<TShape extends AnyShape, Handle>(
             // silently writing a corrupt cell.
             validateAddArgs(def, args);
             if (def.tag === "morphism") {
-                return addMorphismCell(def, args as { name: string });
+                return addMorphismCell(def, args as { name: string | null });
             }
             return addObjectCell(def, (args as { name: string }).name);
         },
@@ -1618,6 +1618,7 @@ export type Notebook<TShape extends AnyShape = AnyShape, Handle = Document> = Up
      *   `{ name, model, specializations }`.
      * - A morphism type from the shape adds a morphism cell; `args` is
      *   `{ name, from, to }`, with `from`/`to` constrained by the morphism type.
+     *   Each field may be `null` to record an unset name or endpoint.
      * - An object type from the shape adds an object cell; `args` is `{ name }`.
      */
     add(type: RichTextType, args: { content: string }): RichTextCell;
@@ -1638,7 +1639,7 @@ export type Notebook<TShape extends AnyShape = AnyShape, Handle = Document> = Up
     ): AspectCell<P>;
     add<M extends ShapeMorphisms<TShape>>(
         type: M,
-        args: { name: string; from: DomOf<M>; to: CodOf<M> },
+        args: { name: string | null; from: DomOf<M> | null; to: CodOf<M> | null },
     ): MorphismCell<M>;
     add<O extends ShapeObjects<TShape>>(type: O, args: { name: string }): ObjectCell<O>;
 } & CoreTheoryMethods<TShape, Handle> &

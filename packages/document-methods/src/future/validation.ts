@@ -108,20 +108,22 @@ const endpointOfType = (expected: ObType) =>
  */
 const endpointSchema = (meta: MorEndpointMeta | undefined) => {
     const cell = meta?.obType ? endpointOfType(meta.obType) : objectCellSchema;
-    return meta?.modality !== undefined ? cell.array() : cell;
+    const endpoint = meta?.modality !== undefined ? cell.array() : cell;
+    return endpoint.or("null");
 };
 
 /**
  * Build and run the validator for a {@link Notebook.add} call, throwing a
  * {@link ValidationError} on failure. Object cells require a `name`; morphism
- * cells require a `name` and validated `from`/`to` endpoints.
+ * cells require a `name` and `from`/`to` endpoints, each of which may be `null`
+ * to record an unset name or endpoint.
  */
 export function validateAddArgs(def: ObjectDef | MorphismDef, args: unknown): void {
     const schema =
         def.tag === "object"
             ? type({ name: "string", "+": "ignore" })
             : type({
-                  name: "string",
+                  name: "string | null",
                   from: endpointSchema(def.domain),
                   to: endpointSchema(def.codomain),
                   "+": "ignore",
