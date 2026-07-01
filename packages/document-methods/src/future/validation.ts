@@ -189,7 +189,7 @@ export function validateAddArgs(def: ObjectDef | MorphismDef, args: unknown): vo
         if (!(key in supplied)) {
             const meta = key === "from" ? def.domain : def.codomain;
             const shape = meta?.modality !== undefined ? "an array or null" : "an object cell or null";
-            missing.push({ message: `${key} must be ${shape} (was missing)`, path: [key] });
+            missing.push({ message: `\`${key}\` must be ${shape} (was missing)`, path: [key] });
         }
     }
 
@@ -226,6 +226,19 @@ export function validateUpdateArgs(def: ObjectDef | MorphismDef, args: unknown):
 /** The leading path key of an issue, for stable message ordering. */
 const issueKey = (issue: Issue): string => String(issue.path?.[0] ?? "");
 
+/** Wrap the leading field name of an ArkType message in backticks. ArkType
+ * prefixes each field message with its bare path key (e.g. `from must be …`);
+ * delimiting that key keeps the field name legible and consistent with our
+ * other messages (e.g. those from {@link Notebook.get}). */
+const delimitFieldName = (message: string, path: readonly PropertyKey[]): string => {
+    const key = path[0];
+    if (typeof key !== "string") {
+        return message;
+    }
+    const prefix = `${key} `;
+    return message.startsWith(prefix) ? `\`${key}\` ${message.slice(prefix.length)}` : message;
+};
+
 /** Run an ArkType schema and, on failure (or if any `extra` issues were
  * supplied), throw a {@link ValidationError} carrying all issues as a Standard
  * Schema `FailureResult`. Issues are sorted by their leading path key so the
@@ -238,7 +251,10 @@ function runSchema(
     const result = schema(args);
     const fromSchema =
         result instanceof type.errors
-            ? result.map((issue) => ({ message: issue.message, path: [...issue.path] }))
+            ? result.map((issue) => {
+                  const path = [...issue.path];
+                  return { message: delimitFieldName(issue.message, path), path };
+              })
             : [];
     const issues = [...fromSchema, ...extra];
     if (issues.length > 0) {
