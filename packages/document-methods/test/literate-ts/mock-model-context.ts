@@ -32,7 +32,7 @@ export function createMockModelContext(): MockModelContext {
             options?.signal?.addEventListener("abort", () => tools.delete(tool.name));
         },
         async getTools() {
-            return [...tools.values()].sort((a, b) => a.name.localeCompare(b.name));
+            return [...tools.values()].toSorted((a, b) => a.name.localeCompare(b.name));
         },
         async executeTool(ref, args) {
             const tool = tools.get(ref.name);

@@ -60,56 +60,103 @@ export class ValidationError extends Error {
     }
 }
 
-/**
- * The ArkType schema for an object-cell endpoint: any cell whose `kind` is
- * {@link CellKind.Object}. The narrower per-type check (its `obType`) is layered
- * on with {@link endpointOfType}, since the expected object type is only known
- * for a particular morphism def.
- */
-const objectCellSchema = type({
-    kind: ["===", CellKind.Object],
-    type: {
-        tag: "'object'",
-        "obType?": "unknown",
-    },
-    "+": "ignore",
-});
+/** A shape that looks like an object-cell handle: `kind` is
+ * {@link CellKind.Object} and it carries a `type.obType`. */
+type ObjectCellShape = { kind: unknown; type: { obType?: unknown } };
 
-/** A TypeScript type derived from {@link objectCellSchema}. */
-export type ObjectCellLike = typeof objectCellSchema.infer;
+/** Test the structural shape of an object-cell handle without leaking ArkType's
+ * internal per-field messages (e.g. the `kind` symbol). */
+const looksLikeObjectCell = (value: unknown): value is ObjectCellShape =>
+    typeof value === "object" &&
+    value !== null &&
+    (value as ObjectCellShape).kind === CellKind.Object &&
+    typeof (value as ObjectCellShape).type === "object" &&
+    (value as ObjectCellShape).type !== null;
 
-/**
- * Refine {@link objectCellSchema} to a cell of a specific object type, comparing
- * its stored `obType` structurally against `expected`. A cell of another object
- * type — including one from another theory, whose `obType` differs — fails this
- * narrow, which is what rejects a wrong-typed endpoint at runtime.
- */
-const endpointOfType = (expected: ObType) =>
-    objectCellSchema.narrow((cell, ctx) => {
-        if (sameTypeValue((cell as { type: { obType?: unknown } }).type.obType, expected)) {
-            return true;
-        }
+/** Human-readable name of an object type, for legible messages: the `content`
+ * of a `Basic` obType (e.g. `Entity`), else its JSON form. */
+const obTypeName = (obType: unknown): string => {
+    if (
+        typeof obType === "object" &&
+        obType !== null &&
+        typeof (obType as { content?: unknown }).content === "string"
+    ) {
+        return (obType as { content: string }).content;
+    }
+    return JSON.stringify(obType);
+};
+
+/** Describe a runtime value for the `(was …)` half of a legible message,
+ * without dumping a whole object-cell handle (functions, ids) as JSON. */
+const describeValue = (value: unknown): string => {
+    if (value === undefined) {
+        return "missing";
+    }
+    if (value === null) {
+        return "null";
+    }
+    if (Array.isArray(value)) {
+        return "an array";
+    }
+    if (looksLikeObjectCell(value)) {
+        return `an object cell of type ${obTypeName(value.type.obType)}`;
+    }
+    return typeof value;
+};
+
+/** Check that `value` is an object cell, optionally of `expected` type,
+ * rejecting through `ctx` with a legible message otherwise. */
+const checkObjectCell = (
+    value: unknown,
+    expected: ObType | undefined,
+    ctx: { reject(spec: { expected: string; actual: string }): false },
+): boolean => {
+    if (!looksLikeObjectCell(value)) {
+        return ctx.reject({ expected: "an object cell", actual: describeValue(value) });
+    }
+    if (expected && !sameTypeValue(value.type.obType, expected)) {
         return ctx.reject({
-            expected: `an object cell of type ${JSON.stringify(expected)}`,
-            actual: JSON.stringify((cell as { type: { obType?: unknown } }).type.obType),
-            path: ["type", "obType"],
+            expected: `an object cell of type ${obTypeName(expected)}`,
+            actual: `an object cell of type ${obTypeName(value.type.obType)}`,
         });
-    });
+    }
+    return true;
+};
 
 /**
  * The schema for one morphism endpoint (`from`/`to`), shaped by the endpoint's
- * declared metadata:
+ * declared metadata. It is a single `narrow` over `unknown` — deliberately *not*
+ * a `.or("null")`/`.array()` combination — so both halves of every failure
+ * message stay under our control and legible (an ArkType union re-serializes the
+ * rejected value, dumping a whole cell handle, functions and all):
  *
+ * - `null` is always accepted (an unset endpoint);
  * - a list endpoint (one with a `modality`) requires an *array* of object cells,
  *   so a single cell is rejected (and vice versa);
  * - the element/cell object type is checked against the declared `obType` when
  *   one is recorded; an endpoint with no declared `obType` accepts any object
- *   cell.
+ *   cell — including one from another theory, whose `obType` differs, which is
+ *   rejected when a type is declared.
  */
 const endpointSchema = (meta: MorEndpointMeta | undefined) => {
-    const cell = meta?.obType ? endpointOfType(meta.obType) : objectCellSchema;
-    const endpoint = meta?.modality !== undefined ? cell.array() : cell;
-    return endpoint.or("null");
+    const expected = meta?.obType;
+    const isList = meta?.modality !== undefined;
+    const shape = isList ? "an array or null" : "an object cell or null";
+    return type("unknown").narrow((value, ctx) => {
+        if (value === null) {
+            return true;
+        }
+        if (isList) {
+            if (!Array.isArray(value)) {
+                return ctx.reject({ expected: shape, actual: describeValue(value) });
+            }
+            return value.every((element) => checkObjectCell(element, expected, ctx));
+        }
+        if (Array.isArray(value)) {
+            return ctx.reject({ expected: shape, actual: "an array" });
+        }
+        return checkObjectCell(value, expected, ctx);
+    });
 };
 
 /**
@@ -119,20 +166,83 @@ const endpointSchema = (meta: MorEndpointMeta | undefined) => {
  * to record an unset name or endpoint.
  */
 export function validateAddArgs(def: ObjectDef | MorphismDef, args: unknown): void {
-    const schema =
-        def.tag === "object"
-            ? type({ name: "string", "+": "ignore" })
-            : type({
-                  name: "string | null",
-                  from: endpointSchema(def.domain),
-                  to: endpointSchema(def.codomain),
-                  "+": "ignore",
-              });
+    if (def.tag === "object") {
+        runSchema(type({ name: "string", "+": "ignore" }), args);
+        return;
+    }
 
+    // Endpoint keys are *optional* in the schema so an absent one reaches our
+    // own missing-field check below (which yields a legible "must be an object
+    // cell or null (was missing)") rather than ArkType's bare "must be present".
+    // A key that *is* present still runs the endpoint narrow.
+    const schema = type({
+        name: "string | null",
+        "from?": endpointSchema(def.domain),
+        "to?": endpointSchema(def.codomain),
+        "+": "ignore",
+    });
+
+    const supplied =
+        typeof args === "object" && args !== null ? (args as Record<string, unknown>) : {};
+    const missing: Issue[] = [];
+    for (const key of ["from", "to"] as const) {
+        if (!(key in supplied)) {
+            const meta = key === "from" ? def.domain : def.codomain;
+            const shape = meta?.modality !== undefined ? "an array or null" : "an object cell or null";
+            missing.push({ message: `${key} must be ${shape} (was missing)`, path: [key] });
+        }
+    }
+
+    runSchema(schema, args, missing);
+}
+
+/**
+ * Build and run the validator for a {@link Update.update} call, throwing a
+ * {@link ValidationError} on failure. Unlike {@link validateAddArgs}, an update
+ * is *partial*: only the fields actually present in `args` are checked, so an
+ * omitted field is left untouched rather than rejected as missing. The same
+ * per-field endpoint rules as `add` apply to any field that *is* supplied.
+ */
+export function validateUpdateArgs(def: ObjectDef | MorphismDef, args: unknown): void {
+    const supplied =
+        typeof args === "object" && args !== null ? (args as Record<string, unknown>) : {};
+
+    const fields: Record<string, unknown> = {};
+    if ("name" in supplied) {
+        fields["name"] = def.tag === "object" ? "string" : "string | null";
+    }
+    if (def.tag === "morphism") {
+        if ("from" in supplied) {
+            fields["from"] = endpointSchema(def.domain);
+        }
+        if ("to" in supplied) {
+            fields["to"] = endpointSchema(def.codomain);
+        }
+    }
+
+    runSchema(type({ ...fields, "+": "ignore" }), args);
+}
+
+/** The leading path key of an issue, for stable message ordering. */
+const issueKey = (issue: Issue): string => String(issue.path?.[0] ?? "");
+
+/** Run an ArkType schema and, on failure (or if any `extra` issues were
+ * supplied), throw a {@link ValidationError} carrying all issues as a Standard
+ * Schema `FailureResult`. Issues are sorted by their leading path key so the
+ * message order is stable regardless of input key order. */
+function runSchema(
+    schema: { (data: unknown): unknown },
+    args: unknown,
+    extra: readonly Issue[] = [],
+): void {
     const result = schema(args);
-    if (result instanceof type.errors) {
-        throw new ValidationError(
-            result.map((issue) => ({ message: issue.message, path: [...issue.path] })),
-        );
+    const fromSchema =
+        result instanceof type.errors
+            ? result.map((issue) => ({ message: issue.message, path: [...issue.path] }))
+            : [];
+    const issues = [...fromSchema, ...extra];
+    if (issues.length > 0) {
+        issues.sort((a, b) => issueKey(a).localeCompare(issueKey(b)));
+        throw new ValidationError(issues);
     }
 }

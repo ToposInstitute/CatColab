@@ -89,7 +89,7 @@ import {
     newDiagramObjectDecl,
 } from "./diagram";
 import { type DocumentStore, plainDocumentId, plainStore, resolveModelInStore } from "./store";
-import { validateAddArgs, type Result } from "./validation";
+import { validateAddArgs, validateUpdateArgs, type Result } from "./validation";
 
 /**
  * A stable string capturing the document's *formal* cells — every cell except
@@ -894,6 +894,11 @@ function attachNotebook<TShape extends AnyShape, Handle>(
                 return readCellContent<{ name: string }>(cellId)?.name;
             },
             update(u: { name?: string }) {
+                // Re-check the partial update at runtime: the typed `update`
+                // rejects field mistakes at compile time, but an untyped
+                // (plain-JS) caller bypasses that, so validate here and throw a
+                // `ValidationError` rather than silently writing a corrupt cell.
+                validateUpdateArgs(type, u);
                 change((d) => {
                     Object.assign(
                         (d.notebook.cellContents[cellId] as { content: object }).content,
@@ -973,6 +978,11 @@ function attachNotebook<TShape extends AnyShape, Handle>(
                 return content && decodeEndpoint(type.codomain?.modality ?? null, content.cod);
             },
             update(u: { name?: string; from?: unknown; to?: unknown }) {
+                // Re-check the partial update at runtime: the typed `update`
+                // rejects endpoint mistakes at compile time, but an untyped
+                // (plain-JS) caller bypasses that, so validate here and throw a
+                // `ValidationError` rather than silently writing a corrupt cell.
+                validateUpdateArgs(type, u);
                 change((d) => {
                     const content = (
                         d.notebook.cellContents[cellId] as {
