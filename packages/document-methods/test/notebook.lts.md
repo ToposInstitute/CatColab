@@ -554,6 +554,39 @@ console.log(describe(await notebook.validate()));
 valid model with 2 objects
 ```
 
+An ill-formed notebook validates to a failure carrying `issues`.
+
+<!-- verifier:reset -->
+
+```ts
+import { SimpleOlog, Type } from "catcolab-logics/simple-olog";
+import { binder, Instantiation } from "catcolab-documents";
+
+const first = binder.createNotebook(SimpleOlog, { name: "First" });
+const second = binder.createNotebook(SimpleOlog, { name: "Second" });
+
+first.add(Type, { name: "A" });
+second.add(Type, { name: "B" });
+
+// A cycle: `first` instantiates `second`, which instantiates `first`.
+first.add(Instantiation, { name: "ImportedSecond", model: second });
+second.add(Instantiation, { name: "ImportedFirst", model: first });
+
+const result = await first.validate();
+console.log("valid:", result.issues === undefined);
+console.log(
+    "issues:",
+    result.issues
+        ?.map((issue) => issue.message.replace(/model [0-9a-f-]{36}/, "model <id>"))
+        .join("; "),
+);
+```
+
+```
+valid: false
+issues: Failed to resolve instantiated model: Error: Cyclic instantiation detected while resolving model <id>.
+```
+
 ## Serialization
 
 <!-- verifier:reset -->
