@@ -114,3 +114,64 @@ function DecapodesSystem(a::Types.Analysis; hodge=GeometricHodge())
     # return the system
     return DecapodesSystem(pode, geometry, u0, duration, ops, plotVariables) 
 end
+
+# TODO this is just here until we can elaborate a diagram fully.
+function DecapodesSystem(uri::URIs.URI)
+    params = HTTP.queryparams(uri)
+    pode = pop!(params, "pode")
+    duration = parse(Int, pop!(params, "duration"))
+    mesh = pop!(params, "mesh")
+    params = collect(params)
+
+    meshdata = map(params) do (k, v)
+        m = match(r"mesh.(.+)", k)
+        if isnothing(m)
+            nothing
+        else
+            Symbol(only(m.captures)) => try
+                parse(Int64, v)
+            catch
+                parse(Float64, v)
+            end
+        end
+    end
+    meshdata = filter(!isnothing, meshdata)
+    mesh = getproperty(DecapodesInterop, Symbol(mesh))
+    mesh = mesh(;meshdata...)
+    
+    constants = map(enumerate(params)) do (i, (k,v))
+        m = match(r"constants\.(.+)", k)
+        if isnothing(m)
+            nothing
+        else
+            Symbol(only(m.captures)) => parse(Float64, v)
+        end
+    end
+    constants = ComponentArray(; filter(!isnothing, constants)...)
+
+    mesh_type = typeof(mesh)
+    valid_ics = MeshInfo(mesh_type).ics
+
+    function resolve_ic(name::String)
+        hit = findfirst(ic -> ic.ic == name, valid_ics)
+        isnothing(hit) && error("IC $name not valid for mesh $(nameof(mesh_type))")
+        base = getproperty(DecapodesInterop, Symbol(name))
+        p = valid_ics[hit].params
+        isempty(p) ? base : base{p}
+    end
+
+    ics = map(params) do (k,v)
+        m = match(r"initialConditions.(.+)", k)
+        if isnothing(m)
+            nothing
+        else
+            var = only(m.captures)
+            Symbol(var) => resolve_ic(v)
+        end
+    end
+    ics = Dict(filter(!isnothing, ics))
+    
+    pode = SummationDecapode(parse_decapode(Meta.parse("begin\n$pode\nend")))
+    infer_types!(pode)
+    DecapodesSystem(pode; duration=duration, constants=constants, ics=ics, mesh=mesh)
+end

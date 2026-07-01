@@ -122,6 +122,42 @@ export const createNumericalColumn = <Row,>(args: {
         }),
 });
 
+/** Create schema for a column with a vector of numerical (floating point) data. */
+export const createVectorColumn = <Row,>(args: {
+    name?: string;
+    header?: boolean;
+    data: (row: Row) => number[] | undefined;
+    length?: (row: Row) => number;          // expected arity, if known
+    default?: (row: Row) => number[];
+    setData?: (row: Row, data: number[]) => void;
+}): TextColumnSchema<Row> => ({
+    contentType: "string",
+    name: args.name,
+    header: args.header,
+    content(row) {
+        const v = args.data(row) ?? args.default?.(row);
+        if (v === undefined) return "";
+        return v.join(", ");
+    },
+    validate(row, text) {
+        const parts = text.split(",").map((s) => Number(s.trim()));
+        if (parts.some(Number.isNaN)) return false;
+        const n = args.length?.(row);
+        return n === undefined || parts.length === n;
+    },
+    setContent:
+        args.setData &&
+        ((row, text) => {
+            const parts = text.split(",").map((s) => Number(s.trim()));
+            if (parts.some(Number.isNaN)) return false;
+            const n = args.length?.(row);
+            if (n !== undefined && parts.length !== n) return false;
+            args.setData?.(row, parts);
+            return true;
+        }),
+});
+
+
 /** Edit tabular data given by a fixed list of rows.
 
 Displays tabular data given row-wise. The content of individual cells can be
