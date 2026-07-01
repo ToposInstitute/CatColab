@@ -74,14 +74,14 @@ nodes: A, B
 edges: 0
 ```
 
-## Simulation
+## Mass-action dynamics
 
 <!-- verifier:reset -->
 
 <!-- verifier:prepend-to-following -->
 
 ```ts
-import { Simulation } from "catcolab-analyses";
+import { MassActionDynamics } from "catcolab-analyses";
 import { PetriNet, Place, Transition } from "catcolab-logics/petri-net";
 import { binder } from "catcolab-documents";
 
@@ -97,7 +97,7 @@ const analysis = binder.createNotebook(PetriNet.Analysis, {
     of: petriNet,
 });
 
-const sim = analysis.add(Simulation);
+const sim = analysis.add(MassActionDynamics);
 ```
 
 ```ts
@@ -107,7 +107,7 @@ console.log("step:", sim.params.step);
 ```
 
 ```
-analysis id: simulation
+analysis id: mass-action
 duration: 10
 step: 1
 ```

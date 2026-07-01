@@ -57,8 +57,8 @@ export const Visualization = defineAnalysis({
 `initialValues` maps object handle ids (the `id` field of an `ObjectCell`) to
 initial population values; entries absent from the map default to 0. `rates`
 defaults to 1 for every transition generator found in the elaborated model. */
-export const Simulation = defineAnalysis({
-    id: "simulation",
+export const MassActionDynamics = defineAnalysis({
+    id: "mass-action",
     initialContent: () => ({
         duration: 10,
         step: 1,

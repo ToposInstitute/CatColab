@@ -1,4 +1,4 @@
-import { Simulation } from "catcolab-analyses";
+import { MassActionDynamics } from "catcolab-analyses";
 import type { AnalysisCell, MorphismCell, ObjectCell } from "catcolab-documents";
 import { defineMorphism, defineObject, defineShape } from "catcolab-documents";
 
@@ -18,9 +18,9 @@ export const PetriNet = defineShape({
     coreTheory: new ThSymMonoidalCategory().theory(),
     objects: [Place],
     morphisms: [Transition],
-    modelAnalyses: [Simulation],
+    modelAnalyses: [MassActionDynamics],
 });
 
 export type PlaceCell = ObjectCell<typeof Place>;
 export type TransitionCell = MorphismCell<typeof Transition>;
-export type SimulationCell = AnalysisCell<typeof Simulation>;
+export type MassActionDynamicsCell = AnalysisCell<typeof MassActionDynamics>;
