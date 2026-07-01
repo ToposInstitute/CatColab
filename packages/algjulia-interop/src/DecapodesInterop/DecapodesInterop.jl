@@ -1,5 +1,9 @@
+"""
+    This module is for interfacing with Decapodes.jl, a multiphysics package in the AlgebraicJulia ecosystem. 
+"""
 module DecapodesInterop
 
+# Julia packages
 using ComponentArrays
 using Distributions
 using MLStyle
@@ -8,17 +12,21 @@ using LinearAlgebra
 using OrdinaryDiffEq
 using CoordRefSystems
 using DiffEqCallbacks
+using StructEquality
 
+# Communication packages
+using Oxygen, HTTP, JSON3, URIs
+
+# AlgebraicJulia packages
+using ACSets
 using CombinatorialSpaces
 using DiagrammaticEquations
 import DiagrammaticEquations: SummationDecapode
 using Decapodes
-using ACSets
 
-using StructEquality
-
+# CatColabInterop
 using ..Defaults
-using CatColabInterop, Oxygen, HTTP, JSON3, URIs
+using CatColabInterop
 import CatColabInterop: endpoint
 
 struct ImplError <: Exception
@@ -27,26 +35,32 @@ end
 export ImplError
 Base.showerror(io::IO, e::ImplError) = print(io, "$(e.name) not implemented")
 
-# specifies the mesh
+# Specifying meshes
 include("geometry.jl")
 export Geometry
 
 # code specific to NS equations
 include("ns_helper.jl")
 
-# for specifying the initial conditions
+# Specifying the initial conditions
 include("initial_conditions.jl")
 using .InitialConditions
 
-# build the decapode
+# Interpret the ModelDiagram struct into a Decapode
 include("model_diagram.jl")
 
-# for running the simulation
+# Build the analysis
 include("simulation.jl")
 
 # for formatting the data into the correct return type
 include("formatting.jl")
 
+# DecapodesInterop-specific reflection utilities
+include("util.jl")
+
+"""
+    This parses an incoming Analysis JSON, interprets it into a Decapode simulation object, and executes it. 
+"""
 function endpoint(::Val{:Decapodes})
     @post "/decapodes" function (req::HTTP.Request)
         analysis = json(req, Analysis)
@@ -105,162 +119,12 @@ function endpoint(::Val{:DecapodesString})
     end
 end
 
-# TODO this is just here until we can elaborate a diagram fully.
-function DecapodesSystem(uri::URIs.URI)
-    params = HTTP.queryparams(uri)
-    pode = pop!(params, "pode")
-    duration = parse(Int, pop!(params, "duration"))
-    mesh = pop!(params, "mesh")
-    params = collect(params)
-
-    meshdata = map(params) do (k, v)
-        m = match(r"mesh.(.+)", k)
-        if isnothing(m)
-            nothing
-        else
-            Symbol(only(m.captures)) => try
-                parse(Int64, v)
-            catch
-                parse(Float64, v)
-            end
-        end
-    end
-    meshdata = filter(!isnothing, meshdata)
-    mesh = getproperty(DecapodesInterop, Symbol(mesh))
-    mesh = mesh(;meshdata...)
-    
-    constants = map(enumerate(params)) do (i, (k,v))
-        m = match(r"constants\.(.+)", k)
-        if isnothing(m)
-            nothing
-        else
-            Symbol(only(m.captures)) => parse(Float64, v)
-        end
-    end
-    constants = ComponentArray(; filter(!isnothing, constants)...)
-
-    mesh_type = typeof(mesh)
-    valid_ics = MeshInfo(mesh_type).ics
-
-    function resolve_ic(name::String)
-        hit = findfirst(ic -> ic.ic == name, valid_ics)
-        isnothing(hit) && error("IC $name not valid for mesh $(nameof(mesh_type))")
-        base = getproperty(DecapodesInterop, Symbol(name))
-        p = valid_ics[hit].params
-        isempty(p) ? base : base{p}
-    end
-
-    ics = map(params) do (k,v)
-        m = match(r"initialConditions.(.+)", k)
-        if isnothing(m)
-            nothing
-        else
-            var = only(m.captures)
-            Symbol(var) => resolve_ic(v)
-        end
-    end
-    ics = Dict(filter(!isnothing, ics))
-    
-    pode = SummationDecapode(parse_decapode(Meta.parse("begin\n$pode\nend")))
-    infer_types!(pode)
-    DecapodesSystem(pode; duration=duration, constants=constants, ics=ics, mesh=mesh)
-end
-
-
 """
-    This contains the name of the initial conditions as well 
+    This returns a dictionary of
+        - supported meshes
+        - dictionary of meshes with their information
+        - dictionary of initial conditions
 """
-@struct_hash_equal struct IC
-    ic::String
-    params::NamedTuple
-    defaults::Dict
-end
-
-function IC(::Type{T}) where T
-    params = T.parameters
-    if isempty(params)
-        IC(string(nameof(T)), (;params...), default_values(T))
-    else
-        IC(string(nameof(T)), (;only(params)...), default_values(T))
-    end
-end
-
-struct MeshInfo{Mesh <: AbstractMeshSpec}
-    # field names and their types
-    specs::Dict{String, String}
-
-    # mapping between geometry fields and their defaults
-    # TODO embiggen to an Enum, later
-    defaults::Dict{String, Number}
-
-    # valid initial conditions
-    ics::Vector{IC}
-end
-
-spec(::Type{T}) where T = Dict(string.(fieldnames(T)) .=> string.(nameof.(fieldtypes(T))))
-
-# Walk `initial_condition` methods once. Each is (::IC, ::Geometry{Mesh}).
-# Yield (ic_type, mesh_param) where mesh_param is a Type or a TypeVar.
-function ic_method_sigs()
-    sigs = Tuple{Any,Any}[]
-    for m in methods(initial_condition, InitialConditions)
-        params = Base.unwrap_unionall(m.sig).parameters
-        length(params) >= 3 || continue
-        geom = params[3]
-        geom isa DataType && nameof(geom) === :Geometry || continue
-        push!(sigs, (params[2], geom.parameters[1]))
-    end
-    sigs
-end
-
-# "GaussianIC" => [ (params=(dim=1,), defaults=…), (params=(dim=2,), defaults=…) ]
-function ic_info()
-    info = Dict{String, Vector{@NamedTuple{params::NamedTuple, defaults::Any}}}()
-    for (ic_type, _) in ic_method_sigs()
-        ic_type isa DataType || continue
-        ps = ic_type.parameters
-        key = if isempty(ps)
-            NamedTuple()
-        elseif length(ps) == 1 && only(ps) isa NamedTuple
-            only(ps)
-        else
-            continue
-        end
-        base = string(nameof(ic_type))
-        push!(get!(() -> valtype(info)[], info, base),
-              (params = key, defaults = default_values(ic_type)))
-    end
-    info
-end
-
-function MeshInfo(mesh_type::Type{Mesh}) where Mesh <: AbstractMeshSpec
-    specs = spec(mesh_type)
-    defaults = Dict(string(k) => v for (k,v) in pairs(default_values(mesh_type)))
-    ics = IC[]
-    for (ic_type, meshparam) in ic_method_sigs()
-        (meshparam isa TypeVar || meshparam === mesh_type) || continue
-        push!(ics, IC(ic_type))
-    end
-    MeshInfo{Mesh}(specs, defaults, unique(ics))
-end
-     
-using InteractiveUtils: subtypes
-using .InitialConditions: default_values
-
-function supported_options()
-    mesh_types = subtypes(AbstractMeshSpec)
-
-    mesh_info = Dict(map(mesh_types) do mesh
-        string(nameof(mesh)) => MeshInfo(mesh)
-    end)
-
-    ic_types = subtypes(AbstractInitialConditionSpec)
-    ics = string.(nameof.(initial_conditions))
-
-    meshes = string.(nameof.(mesh_types))
-    Dict(:meshes => meshes, :mesh_info => mesh_info, :ic_info => ic_info())
-end
-
 function endpoint(::Val{:DecapodesOptions})
     @get "/decapodes-options" function (req::HTTP.Request)
         supported_options()
@@ -278,9 +142,6 @@ function format(result::SolutionResult)
 
     nv = nparts(sd, :V)
     plottable = [:n]
-    # filter(keys(result.system.init)) do var
-    #     length(getproperty(result.system.init, var)) == nv
-    # end
 
     state = Dict{String, Vector}()
     for var in plottable
@@ -291,12 +152,7 @@ function format(result::SolutionResult)
         state[string(var)] = frames
     end
 
-    Dict(
-        "time"  => result.soln.t,
-        "x"     => xs,
-        "y"     => ys,
-        "state" => state,
-    )
+    Dict("time" => result.soln.t, "x" => xs, "y" => ys, "state" => state)
 end
 
 function format(sd::EmbeddedDeltaDualComplex1D, result::SolutionResult)
@@ -304,7 +160,7 @@ function format(sd::EmbeddedDeltaDualComplex1D, result::SolutionResult)
     xcoords = cumsum(lengths) .- lengths   # arc length: [0, l1, l1+l2, ...]
     nx = length(xcoords)
  
-    plottable = [:n]                       # exactly one: pde_plot asserts a single key
+    plottable = [:n]
  
     state = Dict{String, Vector}()
     for var in plottable
@@ -317,12 +173,7 @@ function format(sd::EmbeddedDeltaDualComplex1D, result::SolutionResult)
         state[string(var)] = frames
     end
  
-    Dict(
-        "time"  => result.soln.t,
-        "x"     => xcoords,
-        "y"     => [0.0],                  # single dummy row; space is 1D
-        "state" => state,
-    )
+    Dict("time" => result.soln.t, "x" => xcoords, "y" => [0.0], "state" => state)
 end
 
 

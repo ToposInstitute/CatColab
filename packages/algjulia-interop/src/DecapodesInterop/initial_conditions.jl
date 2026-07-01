@@ -52,12 +52,12 @@ The `dim` type parameter allows us to control dispatch on `initial_conditions`
 @default struct GaussianIC{params} <: AbstractInitialConditionSpec
     mean::Vector{Float64} = params isa @NamedTuple{dim::Int} ? zeros(params.dim) : [0.0]
     var::Diagonal{Float64, Vector{Float64}} = params isa @NamedTuple{dim::Int} ? Diagonal(ones(params.dim)) : Diagonal([1.0])
-    # need to convert the default value for `var` into a function
-    # need to tell typescript what type of component to render this
 end
 export GaussianIC
 
-dimension(::GaussianIC{params}) where params = params isa @NamedTuple{dim::Int} ? params.dim : error("")
+function dimension(::GaussianIC{params}) where params
+    params isa @NamedTuple{dim::Int} ? params.dim : error("")
+end
 
 function initial_condition(g::GaussianIC{(dim=1,)}, geometry::Geometry{Circle}; f::Function=identity)
     @assert dimension(g) == dimension(geometry) || error("!")
@@ -90,7 +90,7 @@ end
 
 vort_ring(tv::TaylorVortexIC, geometry::Geometry) = vort_ring(tv.d, tv.ξ.lat, tv.ξ.vortices, tv.ξ.p, geometry.dualmesh, taylor_vortex)
 
-""" associates the values in a dictionary to their initial condition flags, and passes the output to initial_conditions
+"""    Associates the values in a dictionary to their initial condition flags, and passes the output to initial_conditions
 """
 function initial_conditions(ics::Dict{Symbol, <:Union{UnionAll, Type}}, geometry::Geometry) 
     # Now we have a mapping between variables and their initial condition specs.
@@ -98,7 +98,7 @@ function initial_conditions(ics::Dict{Symbol, <:Union{UnionAll, Type}}, geometry
         x = ics[var]
         if x isa UnionAll
             # if the IC is a UnionAll, then we assume its dimension is
-            x{dimension(geometry)}()
+            x{(dim=dimension(geometry),)}()
         else
             x()
         end
@@ -109,4 +109,4 @@ function initial_conditions(ics::Dict{Symbol, <:Union{UnionAll, Type}}, geometry
 end
 export initial_conditions
 
-end
+end  # module
