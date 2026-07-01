@@ -5,10 +5,28 @@
     margin-bottom: 1ex;
 }
 
-.ic-tab-list { display: flex; gap: 0.25rem; border-bottom: 1px solid var(--border, #ccc); }
-.ic-tab {
-    padding: 0.4rem 0.8rem; border: none; background: none; cursor: pointer;
-    border-bottom: 2px solid transparent; color: inherit;
+.decapodes-domain > select {
+    align-self: start;
+    width: auto;
 }
-.ic-tab.active { border-bottom-color: currentColor; font-weight: 600; }
-.ic-tab-panel { padding-top: 0.5rem; }
+
+.ic-tab-list {
+    display: flex;
+    gap: 0.25rem;
+    border-bottom: 1px solid var(--border, #ccc);
+}
+.ic-tab {
+    padding: 0.4rem 0.8rem;
+    border: none;
+    background: none;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    color: inherit;
+}
+.ic-tab.active {
+    border-bottom-color: currentColor;
+    font-weight: 600;
+}
+.ic-tab-panel {
+    padding-top: 0.5rem;
+}

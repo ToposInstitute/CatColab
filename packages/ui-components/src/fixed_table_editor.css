@@ -38,3 +38,12 @@
 .fixed-table-cell-input.invalid {
     background: var(--color-form-invalid-bg);
 }
+
+.fixed-table-cell-select {
+    background: transparent;
+    border: none;
+    outline: none;
+    font: inherit;
+    width: auto;
+    padding: 0;
+}

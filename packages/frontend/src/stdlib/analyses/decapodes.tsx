@@ -11,13 +11,14 @@ import {
     createSignal,
     createEffect,
 } from "solid-js";
-import { unwrap } from "solid-js/store";
+import { unwrap, createStore, reconcile } from "solid-js/store";
 import invariant from "tiny-invariant";
 
 import {
     BlockTitle,
     type ColumnSchema,
     createNumericalColumn,
+    createVectorColumn,
     ErrorAlert,
     FixedTableEditor,
     Foldable,
@@ -105,27 +106,47 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
         },
     ];
 
-    const [icValues, setICValues] = createSignal<Record<string, Record<string, number>>>({});
+    const [icValues, setICValues] = createStore<Record<string, Record<string, number[]>>>({});
 
-    const selectedIC = (varName: string): IC | undefined => {
+    const selectedIC = (name: string): IC | undefined => {
         const mesh = props.content.mesh,
-            chosen = props.content.initialConditions[varName];
+            chosen = props.content.initialConditions[name];
         if (!mesh || !chosen) return undefined;
         return options()?.mesh_info[mesh].ics.find((ic) => ic.ic === chosen);
     };
 
     const icFieldSchema = (
         varName: string,
-        defaults: Record<string, number>,
-    ): ColumnSchema<string>[] => [
-        { contentType: "string", header: true, name: "Parameter", content: (f) => f },
-        createNumericalColumn({
-            name: "Value",
-            data: (f) => icValues()[varName]?.[f],
-            default: (f) => defaults[f],
-            setData: (f, v) => setICValues((p) => ({ ...p, [varName]: { ...p[varName], [f]: v } })),
-        }),
-    ];
+        defaults: Record<string, number[]>,
+    ): ColumnSchema<string>[] => {
+        console.log("icFieldSchema", varName, defaults);
+        return [
+            { contentType: "string", header: true, name: "Parameter", content: (f) => f },
+            createVectorColumn({
+                name: "Value",
+                data: (f) => icValues[varName]?.[f],
+                default: (f) => {
+                    const d = defaults[f];
+                    return Array.isArray(d) ? d : [d];
+                },
+                length: (f) => defaults[f]?.length,
+                setData: (f, v) => setICValues(varName, (prev) => ({ ...(prev ?? {}), [f]: v })),
+            }),
+        ];
+    };
+
+    // const icFieldSchema = (
+    //     varName: str
+    //     defaults: Record<string, number>,
+    // ): ColumnSchema<string>[] => [
+    //     { contentType: "string", header: true, name: "Parameter", content: (f) => f },
+    //     createNumericalColumn({
+    //         name: "Value",
+    //         data: (f) => icValues()[varName]?.[f],
+    //         default: (f) => defaults[f],
+    //         setData: (f, v) => setICValues((p) => ({ ...p, [varName]: { ...p[varName], [f]: v } })),
+    //     }),
+    // ];
 
     // const variableSchema: ColumnSchema<QualifiedName>[] = [
     //     {
@@ -320,12 +341,11 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
         });
     };
 
+    const isConfigured = (name: string) => selectedIC(name) !== undefined;
+
     const isDisabled = () => {
-        const isICsAllCompleted = icRows.every((name) => {
-            const v = props.content.initialConditions[name];
-            return v != null && v !== "";
-        });
-        !isICsAllCompleted;
+        console.log("initialConditions", unwrap(props.content.initialConditions));
+    return !icRows.every(isConfigured)
     };
 
     type ICTab = { name: string; ic: IC };
@@ -349,7 +369,7 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
 
     return (
         <div class="simulation">
-            <BlockTitle title="Simulation" actions={RestartOrRerunButton()} />
+            <BlockTitle title=<h3>Simulation</h3> actions={RestartOrRerunButton()} />
             <Foldable title="Parameters" defaultExpanded>
                 <Show when={options()}>
                     {(opts) => (
@@ -362,7 +382,7 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
                                         setMeshParams({});
                                         content.mesh = evt.currentTarget.value;
                                         content.initialConditions = {};
-                                        setICValues({});
+                                        setICValues(reconcile({}));
                                     })
                                 }
                             >
@@ -372,7 +392,6 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
                             </select>
                             <Show when={options() && props.content.mesh}>
                                 {(mesh) => {
-                                    console.log(icValues());
                                     return (
                                         <FixedTableEditor
                                             rows={fieldNames(mesh())}
@@ -388,7 +407,7 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
                 </Show>
 
                 <div class="decapodes-domain">
-                    <Show when={props.content.mesh}>
+                    <Show when={props.content.mesh && options()}>
                         <FixedTableEditor rows={icRows} schema={icSchema} />
                         <Show when={icTabs().length > 0}>
                             <div class="ic-tabs">
@@ -478,6 +497,7 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
 type IC = {
     ic: string;
     params: Record<string, number>;
+    defaults: Record<string, number[]>;
 };
 
 type MeshInfo = {
