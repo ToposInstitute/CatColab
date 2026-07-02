@@ -314,9 +314,9 @@ impl BaseTmV {
 /// [`Id`](Self::Id) equation fields are read off by name downstream
 /// (conversion and model generation) rather than re-evaluated.
 pub enum FiberTyV_ {
-    /// The type of a fiber element over the codomain object at `path`.
-    /// See [`super::stx::FiberTyS_::Over`].
-    Over(Vec<(FieldName, LabelSegment)>),
+    /// The type of a fiber element over the codomain object `obj` (a base
+    /// object value, possibly modal). See [`super::stx::FiberTyS_::Over`].
+    Over(BaseTmV),
     /// An instance presented as a record of fiber types. See
     /// [`super::stx::FiberTyS_::Record`].
     Record(Row<FiberTyV>),
@@ -332,8 +332,8 @@ pub struct FiberTyV(Rc<FiberTyV_>);
 
 impl FiberTyV {
     /// Smart constructor for [FiberTyV], [FiberTyV_::Over] case.
-    pub fn over(path: Vec<(FieldName, LabelSegment)>) -> Self {
-        Self(Rc::new(FiberTyV_::Over(path)))
+    pub fn over(obj: BaseTmV) -> Self {
+        Self(Rc::new(FiberTyV_::Over(obj)))
     }
 
     /// Smart constructor for [FiberTyV], [FiberTyV_::Record] case.
@@ -357,9 +357,15 @@ pub enum FiberTmV_ {
     Var(FwdIdx, VarName, LabelSegment),
     /// Projection of a generator out of a sub-instance import (`we.e`).
     Proj(FiberTmV, FieldName, LabelSegment),
-    /// Application of a codomain morphism to a fiber element. See
+    /// A fiber list literal. See [`super::stx::FiberTmS_::List`].
+    List(Vec<FiberTmV>),
+    /// A theory object-operation applied to a fiber element. See
+    /// [`super::stx::FiberTmS_::ObApp`].
+    ObApp(VarName, FiberTmV),
+    /// Application of a codomain morphism to a fiber element; the third
+    /// field is the codomain object it lands at. See
     /// [`super::stx::FiberTmS_::OverApp`].
-    OverApp(FieldName, LabelSegment, Vec<(FieldName, LabelSegment)>, FiberTmV),
+    OverApp(FieldName, LabelSegment, BaseTmV, FiberTmV),
     /// A metavariable.
     Meta(MetaVar),
 }
@@ -380,14 +386,24 @@ impl FiberTmV {
         Self(Rc::new(FiberTmV_::Proj(tm, field_name, label)))
     }
 
+    /// Smart constructor for [FiberTmV], [FiberTmV_::List] case.
+    pub fn list(elems: Vec<FiberTmV>) -> Self {
+        Self(Rc::new(FiberTmV_::List(elems)))
+    }
+
+    /// Smart constructor for [FiberTmV], [FiberTmV_::ObApp] case.
+    pub fn ob_app(name: VarName, arg: FiberTmV) -> Self {
+        Self(Rc::new(FiberTmV_::ObApp(name, arg)))
+    }
+
     /// Smart constructor for [FiberTmV], [FiberTmV_::OverApp] case.
     pub fn over_app(
         mor: FieldName,
         mor_label: LabelSegment,
-        tgt_path: Vec<(FieldName, LabelSegment)>,
+        cod: BaseTmV,
         inner: FiberTmV,
     ) -> Self {
-        Self(Rc::new(FiberTmV_::OverApp(mor, mor_label, tgt_path, inner)))
+        Self(Rc::new(FiberTmV_::OverApp(mor, mor_label, cod, inner)))
     }
 
     /// Smart constructor for [FiberTmV], [FiberTmV_::Meta] case.

@@ -412,7 +412,35 @@ impl<'a> Evaluator<'a> {
             (BaseTmV_::Tab(mor1), BaseTmV_::Tab(mor2)) => {
                 self.equal_tm_helper(mor1, mor2, strict1, strict2)
             }
-            _ => Err(t(format!(
+            (BaseTmV_::List(es1), BaseTmV_::List(es2)) => {
+                if es1.len() != es2.len() {
+                    return Err(t("lists have different lengths"));
+                }
+                for (e1, e2) in es1.iter().zip(es2.iter()) {
+                    self.equal_tm_helper(e1, e2, strict1, strict2)?;
+                }
+                Ok(())
+            }
+            (BaseTmV_::App(n1, a1), BaseTmV_::App(n2, a2)) => {
+                if n1 != n2 {
+                    return Err(t(format!("object operations {n1} and {n2} are not equal")));
+                }
+                self.equal_tm_helper(a1, a2, strict1, strict2)
+            }
+            // Constructor mismatch. Enumerating the left term's variants
+            // (rather than `_`) keeps this exhaustive, so a new `BaseTmV_`
+            // variant fails to compile here until its equality is defined.
+            (
+                BaseTmV_::Neu(_, _)
+                | BaseTmV_::App(_, _)
+                | BaseTmV_::List(_)
+                | BaseTmV_::Cons(_)
+                | BaseTmV_::Id(_)
+                | BaseTmV_::Tab(_)
+                | BaseTmV_::Compose(_, _)
+                | BaseTmV_::Meta(_),
+                _,
+            ) => Err(t(format!(
                 "failed to match terms {} and {}",
                 self.quote_tm(tm1),
                 self.quote_tm(tm2)
@@ -507,13 +535,9 @@ impl<'a> Evaluator<'a> {
     /// Check that two fiber types are convertible.
     pub fn convertible_fiber_ty<'b>(&self, ty1: &FiberTyV, ty2: &FiberTyV) -> Result<(), D<'b>> {
         match (&**ty1, &**ty2) {
-            (FiberTyV_::Over(p1), FiberTyV_::Over(p2)) => {
-                if p1 == p2 {
-                    Ok(())
-                } else {
-                    Err(t("over-types refer to different paths in the codomain"))
-                }
-            }
+            (FiberTyV_::Over(o1), FiberTyV_::Over(o2)) => self
+                .equal_tm(o1, o2)
+                .map_err(|d| t("over-types lie over different codomain objects: ") + d),
             (FiberTyV_::Record(r1), FiberTyV_::Record(r2)) => {
                 if r1.iter().count() != r2.iter().count() {
                     return Err(t("instance records have differing shapes"));
@@ -551,6 +575,21 @@ impl<'a> Evaluator<'a> {
                     return Err(t(format!("fiber projections {f1} and {f2} are not equal")));
                 }
                 self.equal_fiber_tm(t1, t2)
+            }
+            (FiberTmV_::List(es1), FiberTmV_::List(es2)) => {
+                if es1.len() != es2.len() {
+                    return Err(t("fiber lists have different lengths"));
+                }
+                for (e1, e2) in es1.iter().zip(es2.iter()) {
+                    self.equal_fiber_tm(e1, e2)?;
+                }
+                Ok(())
+            }
+            (FiberTmV_::ObApp(n1, a1), FiberTmV_::ObApp(n2, a2)) => {
+                if n1 != n2 {
+                    return Err(t(format!("object operations {n1} and {n2} are not equal")));
+                }
+                self.equal_fiber_tm(a1, a2)
             }
             (FiberTmV_::OverApp(m1, _, _, i1), FiberTmV_::OverApp(m2, _, _, i2)) => {
                 if m1 != m2 {

@@ -438,7 +438,8 @@ impl<'a> Elaborator<'a> {
 
     fn fiber_syn_hole(&mut self) -> (FiberTmS, FiberTmV, FiberTyV) {
         let tm_m = self.fresh_meta();
-        (FiberTmS::meta(tm_m), FiberTmV::meta(tm_m), FiberTyV::over(Vec::new()))
+        let obj_m = self.fresh_meta();
+        (FiberTmS::meta(tm_m), FiberTmV::meta(tm_m), FiberTyV::over(BaseTmV::meta(obj_m)))
     }
 
     fn fiber_syn_error(&mut self, msg: impl Into<String>) -> (FiberTmS, FiberTmV, FiberTyV) {
@@ -481,7 +482,27 @@ impl<'a> Elaborator<'a> {
                     field_ty,
                 )
             }
-            // Codomain-morphism application: `f(arg)`.
+            // A theory object-operation on a fiber element, e.g.
+            // `@tensor [a, b]`. The resulting element lies over the
+            // operation applied to the argument's base object.
+            App1(L(_, Prim(op)), arg_n) => {
+                let op_name = name_seg(*op);
+                if elab.theory().basic_ob_op([op_name].into()).is_none() {
+                    let th = elab.theory.name.to_string();
+                    return elab.fiber_syn_error(format!("operation @{op} not in theory {th}"));
+                }
+                let (arg_s, arg_v, arg_ty) = elab.fiber_syn(arg_n);
+                let FiberTyV_::Over(arg_obj) = &*arg_ty else {
+                    return elab.fiber_syn_error(format!("@{op} applied to a non-fiber-element"));
+                };
+                let obj = BaseTmV::app(op_name, arg_obj.clone());
+                (
+                    FiberTmS::ob_app(op_name, arg_s),
+                    FiberTmV::ob_app(op_name, arg_v),
+                    FiberTyV::over(obj),
+                )
+            }
+            // Codomain-morphism application: `f[arg]` / `f(arg)`.
             App1(L(_, Var(f)), arg_n) => {
                 // A display label for the argument, used only in errors.
                 let label = match arg_n.ast0() {
@@ -492,9 +513,29 @@ impl<'a> Elaborator<'a> {
                 let (arg_s, arg_v, arg_ty) = elab.fiber_syn(arg_n);
                 elab.apply_codomain_morphism(f, arg_s, arg_v, arg_ty, &label)
             }
+            // A fiber list literal `[a, b, ...]` (the argument of a
+            // multi-ary morphism); its object is the list of the elements'
+            // objects.
+            Tuple(elems) => {
+                let mut ss = Vec::with_capacity(elems.len());
+                let mut vs = Vec::with_capacity(elems.len());
+                let mut objs = Vec::with_capacity(elems.len());
+                for e in elems.iter() {
+                    let (s, v, ty) = elab.fiber_syn(e);
+                    let FiberTyV_::Over(o) = &*ty else {
+                        return elab.fiber_syn_error(
+                            "fiber list elements must be elements over an object",
+                        );
+                    };
+                    objs.push(o.clone());
+                    ss.push(s);
+                    vs.push(v);
+                }
+                (FiberTmS::list(ss), FiberTmV::list(vs), FiberTyV::over(BaseTmV::list(objs)))
+            }
             _ => elab.fiber_syn_error(
-                "expected a fiber element: a generator, a projection `we.e`, or a \
-                 codomain-morphism application `f(..)`",
+                "expected a fiber element: a generator, a projection `we.e`, a fiber list \
+                 `[..]`, an object operation `@op [..]`, or a morphism application `f[..]`",
             ),
         }
     }
@@ -572,14 +613,14 @@ impl<'a> Elaborator<'a> {
                         e.pretty()
                     ));
                 }
-                let FiberTyV_::Over(path) = &*a_ty else {
+                let FiberTyV_::Over(obj) = &*a_ty else {
                     return self.error(
                         "instance equations must be between elements over an object \
                          (fiber elements); morphism equations constrain the model, not \
                          an instance",
                     );
                 };
-                let over_s = FiberTyS::over(path.clone());
+                let over_s = FiberTyS::over(self.evaluator().quote_tm(obj));
                 Some((FiberTyS::id(over_s, a_s, b_s), FiberTyV::id(a_ty.clone(), a_v, b_v)))
             }
             _ => self.error("expected an instance name or an equation `a == b`"),
@@ -593,9 +634,27 @@ impl<'a> Elaborator<'a> {
         (BaseTyS::record(Row::empty()), BaseTyV::empty_record())
     }
 
-    /// Apply a codomain morphism `f` to an already-elaborated argument
-    /// of fiber type. Shared by the bare `f(x)` and `f(receiver.fld)`
-    /// arms of [`Self::syn`].
+    /// The value of the codomain `self` binding — the eta-expanded model
+    /// record. Codomain object values (`self.V`, morphism dom/cod) are
+    /// obtained by projecting / evaluating field types against it, so that
+    /// every codomain object is rooted at the same `self` neutral and thus
+    /// compares equal under [`Evaluator::equal_tm`].
+    fn codomain_self_value(&self) -> Option<BaseTmV> {
+        let (i, _, _) = self.ctx.lookup(name_seg(Self::CODOMAIN_BINDER))?;
+        self.ctx.env.get(*i).cloned()
+    }
+
+    /// The codomain object `self.<field>` (a base object value), for a
+    /// generator declared over the object-typed codomain field `field`.
+    fn codomain_object(&self, field: FieldName, label: LabelSegment) -> Option<BaseTmV> {
+        Some(self.evaluator().proj(&self.codomain_self_value()?, field, label))
+    }
+
+    /// Apply a codomain morphism `f` to an already-elaborated fiber
+    /// argument. The argument's `Over` object must equal the morphism's
+    /// domain object (compared as base objects, so modal domains — lists,
+    /// tensors — need no special handling); the result lies over the
+    /// morphism's codomain object.
     fn apply_codomain_morphism(
         &mut self,
         f: &str,
@@ -609,34 +668,41 @@ impl<'a> Elaborator<'a> {
                 "applied codomain morphism is only allowed inside an instance body",
             );
         };
-        let FiberTyV_::Over(src_path) = &*arg_ty else {
+        let FiberTyV_::Over(arg_obj) = &*arg_ty else {
             return self.fiber_syn_error(format!(
                 "argument {arg_label_str} is not an element over an object",
             ));
         };
+        let arg_obj = arg_obj.clone();
         let f_label = label_seg(f);
         let f_name = name_seg(f);
-        let Some(mor_ty_s) = codomain.fields.get(f_name) else {
+        if !codomain.fields.has(f_name) {
             return self.fiber_syn_error(format!("no such codomain morphism {f_name}"));
+        }
+        let Some(self_val) = self.codomain_self_value() else {
+            return self.fiber_syn_error(
+                "applied codomain morphism is only allowed inside an instance body",
+            );
         };
-        let BaseTyS_::Morphism(_, dom_s, cod_s) = &**mor_ty_s else {
+        let record_ty = BaseTyV::record((*codomain).clone());
+        let mor_ty = self.evaluator().field_ty(&record_ty, &self_val, f_name);
+        let BaseTyV_::Morphism(_, dom_obj, cod_obj) = &*mor_ty else {
             return self.fiber_syn_error(format!("codomain field {f_name} is not a morphism"));
         };
-        let (Some(dom_path), Some(cod_path)) = (tms_to_path(dom_s), tms_to_path(cod_s)) else {
+        if let Err(e) = self.evaluator().equal_tm(&arg_obj, dom_obj) {
+            let ev = self.evaluator();
             return self.fiber_syn_error(format!(
-                "codomain morphism {f_name} has non-path dom/cod; \
-                 applied-morphism syntax requires both to be paths",
-            ));
-        };
-        if dom_path != *src_path {
-            return self.fiber_syn_error(format!(
-                "codomain morphism {f_name} has source path differing from the argument",
+                "argument to {f_name} lies over {}, but {f_name} expects {}:\n{}",
+                ev.quote_tm(&arg_obj),
+                ev.quote_tm(dom_obj),
+                e.pretty()
             ));
         }
+        let cod_s = self.evaluator().quote_tm(cod_obj);
         (
-            FiberTmS::over_app(f_name, f_label, cod_path.clone(), arg_s),
-            FiberTmV::over_app(f_name, f_label, cod_path.clone(), arg_v),
-            FiberTyV::over(cod_path),
+            FiberTmS::over_app(f_name, f_label, cod_s, arg_s),
+            FiberTmV::over_app(f_name, f_label, cod_obj.clone(), arg_v),
+            FiberTyV::over(cod_obj.clone()),
         )
     }
 
@@ -758,29 +824,16 @@ impl<'a> Elaborator<'a> {
                         continue;
                     };
                     let f_seg = name_seg(*field_name);
-                    let f_label = label_seg(*field_name);
-                    let Some(mor_ty_s) = codomain.fields.get(f_seg) else {
+                    if !codomain.fields.has(f_seg) {
                         elab.error::<()>(format!("no such codomain field {field_name}"));
                         failed = true;
                         continue;
-                    };
-                    let BaseTyS_::Morphism(_, dom_s, cod_s) = &**mor_ty_s else {
-                        elab.error::<()>(format!(
-                            "mapping-literal assignment requires field {field_name} to be \
-                             morphism-typed",
-                        ));
-                        failed = true;
-                        continue;
-                    };
-                    let (Some(dom_path), Some(cod_path)) = (tms_to_path(dom_s), tms_to_path(cod_s))
-                    else {
-                        elab.error::<()>(format!(
-                            "codomain morphism {field_name} has non-path dom/cod; \
-                             mapping-literal assignment requires both to be paths",
-                        ));
-                        failed = true;
-                        continue;
-                    };
+                    }
+                    // Each `key := target` entry is the equation
+                    // `field(key) == target`: apply the codomain morphism
+                    // to the key (which also checks the key's object against
+                    // the morphism's domain and yields the codomain object),
+                    // then equate the result to the target.
                     let mut entry_failed = false;
                     for entry_n in entries.iter() {
                         elab.loc = Some(entry_n.loc());
@@ -788,34 +841,18 @@ impl<'a> Elaborator<'a> {
                             unreachable!("guard ensured all entries are `:=` clauses");
                         };
                         let (key_s, key_v, key_ty) = elab.fiber_syn(key_n);
-                        let FiberTyV_::Over(key_path) = &*key_ty else {
-                            elab.error::<()>(format!(
-                                "mapping-literal key is not an element over {}",
-                                object_path_str(&dom_path),
-                            ));
+                        let label = format!("{field_name} key");
+                        let (lhs_s, lhs_v, lhs_ty) =
+                            elab.apply_codomain_morphism(field_name, key_s, key_v, key_ty, &label);
+                        let FiberTyV_::Over(cod_obj) = &*lhs_ty else {
                             entry_failed = true;
                             break;
                         };
-                        if key_path != &dom_path {
-                            elab.error::<()>(format!(
-                                "mapping-literal key is an element over {}, but {field_name} expects an element over {}",
-                                object_path_str(key_path),
-                                object_path_str(&dom_path),
-                            ));
-                            entry_failed = true;
-                            break;
-                        }
-                        let lhs_ty_v = FiberTyV::over(cod_path.clone());
-                        let lhs_s = FiberTmS::over_app(f_seg, f_label, cod_path.clone(), key_s);
-                        let lhs_v = FiberTmV::over_app(f_seg, f_label, cod_path.clone(), key_v);
-                        let (rhs_s, rhs_v) = elab.fiber_chk(&lhs_ty_v, target_n);
+                        let over_s = FiberTyS::over(elab.evaluator().quote_tm(cod_obj));
+                        let (rhs_s, rhs_v) = elab.fiber_chk(&lhs_ty, target_n);
                         let (eqn, eql) = next_eq_field(&mut eq_count);
-                        fields_s.insert(
-                            eqn,
-                            eql,
-                            FiberTyS::id(FiberTyS::over(cod_path.clone()), lhs_s, rhs_s),
-                        );
-                        fields_v.insert(eqn, eql, FiberTyV::id(lhs_ty_v, lhs_v, rhs_v));
+                        fields_s.insert(eqn, eql, FiberTyS::id(over_s, lhs_s, rhs_s));
+                        fields_v.insert(eqn, eql, FiberTyV::id(lhs_ty.clone(), lhs_v, rhs_v));
                     }
                     if entry_failed {
                         failed = true;
@@ -848,7 +885,16 @@ impl<'a> Elaborator<'a> {
                         failed = true;
                         continue;
                     }
-                    let path = vec![(f_seg, f_label)];
+                    // Generators lie over the codomain object `self.<field>`.
+                    let Some(gen_obj_v) = elab.codomain_object(f_seg, f_label) else {
+                        elab.error::<()>(
+                            "set-literal field assignment is only allowed inside an \
+                             instance body",
+                        );
+                        failed = true;
+                        continue;
+                    };
+                    let gen_obj_s = elab.evaluator().quote_tm(&gen_obj_v);
                     for name_n in name_ns.iter() {
                         let Var(gen_name) = name_n.ast0() else {
                             elab.loc = Some(name_n.loc());
@@ -858,37 +904,31 @@ impl<'a> Elaborator<'a> {
                         };
                         let gen_seg = name_seg(*gen_name);
                         let gen_label = label_seg(*gen_name);
-                        elab.intro_fiber(gen_seg, gen_label, FiberTyV::over(path.clone()));
-                        fields_s.insert(gen_seg, gen_label, FiberTyS::over(path.clone()));
-                        fields_v.insert(gen_seg, gen_label, FiberTyV::over(path.clone()));
+                        elab.intro_fiber(gen_seg, gen_label, FiberTyV::over(gen_obj_v.clone()));
+                        fields_s.insert(gen_seg, gen_label, FiberTyS::over(gen_obj_s.clone()));
+                        fields_v.insert(gen_seg, gen_label, FiberTyV::over(gen_obj_v.clone()));
                     }
                 }
                 // `mor(arg) := target` — a single equation witness.
                 App2(L(_, Keyword(":=")), lhs_n, rhs_n) => {
                     let (lhs_s, lhs_v, lhs_ty) = elab.fiber_syn(lhs_n);
-                    let FiberTyV_::Over(over_path) = &*lhs_ty else {
-                        elab.loc = Some(lhs_n.loc());
-                        elab.error::<()>(
-                            "mapping-entry clause `mor(arg) := target` requires the LHS \
-                             to be an element over an object (a fiber element); morphism \
-                             equations constrain the model, not an instance",
-                        );
-                        failed = true;
-                        continue;
+                    let over_s = match &*lhs_ty {
+                        FiberTyV_::Over(obj) => FiberTyS::over(elab.evaluator().quote_tm(obj)),
+                        _ => {
+                            elab.loc = Some(lhs_n.loc());
+                            elab.error::<()>(
+                                "mapping-entry clause `mor(arg) := target` requires the LHS \
+                                 to be an element over an object (a fiber element); morphism \
+                                 equations constrain the model, not an instance",
+                            );
+                            failed = true;
+                            continue;
+                        }
                     };
-                    let over_path = over_path.clone();
                     let (rhs_s, rhs_v) = elab.fiber_chk(&lhs_ty, rhs_n);
                     let (eqn, eql) = next_eq_field(&mut eq_count);
-                    fields_s.insert(
-                        eqn,
-                        eql,
-                        FiberTyS::id(FiberTyS::over(over_path.clone()), lhs_s, rhs_s),
-                    );
-                    fields_v.insert(
-                        eqn,
-                        eql,
-                        FiberTyV::id(FiberTyV::over(over_path), lhs_v, rhs_v),
-                    );
+                    fields_s.insert(eqn, eql, FiberTyS::id(over_s, lhs_s, rhs_s));
+                    fields_v.insert(eqn, eql, FiberTyV::id(lhs_ty.clone(), lhs_v, rhs_v));
                 }
                 _ => {
                     elab.error::<()>(
@@ -1393,38 +1433,12 @@ impl<'a> Elaborator<'a> {
     }
 }
 
-/// Read off a path of `(name, label)` segments from a term that is a chain
-/// of projections rooted in a variable.
-///
-/// The leading variable is treated as the implicit root (e.g., the `self`
-/// of an enclosing record) and contributes no segment. So `Var(self)`
-/// returns `[]` and `Proj(Var(self), E, E_label)` returns `[(E, E_label)]`,
-/// matching the path representation produced by the surface `.E` syntax.
-/// Returns `None` if the term has any other shape.
-/// Render an object path (e.g. `[(V, V)]`) as a dotted label string
-/// (e.g. `V`, or `we.E` for a nested path) for use in error messages.
-fn object_path_str(path: &[(FieldName, LabelSegment)]) -> String {
-    path.iter().map(|(_, seg)| seg.to_string()).collect::<Vec<_>>().join(".")
-}
-
 /// The synthetic field name/label `_eqN` for the next auto-named equation
 /// field of an instance record, advancing the counter.
 fn next_eq_field(eq_count: &mut usize) -> (FieldName, LabelSegment) {
     let key = format!("_eq{}", *eq_count);
     *eq_count += 1;
     (name_seg(key.as_str()), label_seg(key.as_str()))
-}
-
-fn tms_to_path(tm: &BaseTmS) -> Option<Vec<(NameSegment, LabelSegment)>> {
-    match &**tm {
-        BaseTmS_::Var(_, _, _) => Some(vec![]),
-        BaseTmS_::Proj(inner, name, label) => {
-            let mut p = tms_to_path(inner)?;
-            p.push((*name, *label));
-            Some(p)
-        }
-        _ => None,
-    }
 }
 
 // NOTE: Most tests for the text elaborator are in the `examples` dir.

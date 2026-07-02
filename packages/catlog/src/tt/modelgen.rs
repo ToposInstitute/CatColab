@@ -455,16 +455,23 @@ fn extract_instance_record(
 ) -> Result<(), String> {
     for (name, (label, field_ty)) in fields.iter() {
         match &**field_ty {
-            FiberTyV_::Over(path) => {
+            FiberTyV_::Over(obj) => {
                 if let NameSegment::Uuid(uuid) = name {
                     namespace.set_label(*uuid, *label);
                 }
                 let mut qsegs = prefix.to_vec();
                 qsegs.push(*name);
                 let qname: QualifiedName = qsegs.into();
-                let fiber: QualifiedName =
-                    path.iter().map(|(seg, _)| *seg).collect::<Vec<_>>().into();
-                instance.add_generator(qname, fiber);
+                // The fiber is the codomain object the generator lies over.
+                // For a plain generator that is a projection `self.V`, whose
+                // qualified name is `V`. Modal objects (lists, tensors) are
+                // not yet supported by discrete model generation.
+                let BaseTmV_::Neu(n, _) = &**obj else {
+                    return Err("model generation does not yet support generators over a modal \
+                         object (list/tensor)"
+                        .into());
+                };
+                instance.add_generator(qname, n.to_qualified_name());
             }
             FiberTyV_::Record(sub_fields) => {
                 if let NameSegment::Uuid(uuid) = name {
