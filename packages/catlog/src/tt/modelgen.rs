@@ -510,8 +510,10 @@ fn fiber_tm_to_discrete_instance_term(
     let mut cur = tm;
     let base: QualifiedName = loop {
         match &**cur {
-            FiberTmV_::OverApp(mor_name, _, _, inner) => {
-                mors_outer_first.push(QualifiedName::single(*mor_name));
+            FiberTmV_::OverApp(mor_path, _, inner) => {
+                let name: QualifiedName =
+                    mor_path.iter().map(|(seg, _)| *seg).collect::<Vec<_>>().into();
+                mors_outer_first.push(name);
                 cur = inner;
             }
             _ => {

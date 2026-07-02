@@ -502,8 +502,16 @@ impl<'a> Elaborator<'a> {
                     FiberTyV::over(obj),
                 )
             }
-            // Codomain-morphism application: `f[arg]` / `f(arg)`.
-            App1(L(_, Var(f)), arg_n) => {
+            // Codomain-morphism application `f(arg)`. The morphism `f` may
+            // be a nested path into the codomain (e.g. `Add.op`), so its
+            // head is a projection chain, not just a bare variable.
+            App1(head_n, arg_n) => {
+                let Some(path) = morphism_path(head_n) else {
+                    return elab.fiber_syn_error(
+                        "expected a codomain morphism (a name or path like `Add.op`) applied \
+                         to a fiber element",
+                    );
+                };
                 // A display label for the argument, used only in errors.
                 let label = match arg_n.ast0() {
                     Var(x) => x.to_string(),
@@ -511,7 +519,7 @@ impl<'a> Elaborator<'a> {
                     _ => "argument".to_string(),
                 };
                 let (arg_s, arg_v, arg_ty) = elab.fiber_syn(arg_n);
-                elab.apply_codomain_morphism(f, arg_s, arg_v, arg_ty, &label)
+                elab.apply_codomain_morphism(&path, arg_s, arg_v, arg_ty, &label)
             }
             // A fiber list literal `[a, b, ...]` (the argument of a
             // multi-ary morphism); its object is the list of the elements'
@@ -657,7 +665,7 @@ impl<'a> Elaborator<'a> {
     /// morphism's codomain object.
     fn apply_codomain_morphism(
         &mut self,
-        f: &str,
+        path: &[(FieldName, LabelSegment)],
         arg_s: FiberTmS,
         arg_v: FiberTmV,
         arg_ty: FiberTyV,
@@ -674,25 +682,30 @@ impl<'a> Elaborator<'a> {
             ));
         };
         let arg_obj = arg_obj.clone();
-        let f_label = label_seg(f);
-        let f_name = name_seg(f);
-        if !codomain.fields.has(f_name) {
-            return self.fiber_syn_error(format!("no such codomain morphism {f_name}"));
-        }
         let Some(self_val) = self.codomain_self_value() else {
             return self.fiber_syn_error(
                 "applied codomain morphism is only allowed inside an instance body",
             );
         };
+        // Resolve the morphism's type by walking its (possibly nested)
+        // path into the codomain model, e.g. `Add.op`.
         let record_ty = BaseTyV::record((*codomain).clone());
-        let mor_ty = self.evaluator().field_ty(&record_ty, &self_val, f_name);
+        let mor_ty = match self.evaluator().path_ty(&record_ty, &self_val, path) {
+            Ok(ty) => ty,
+            Err(e) => {
+                return self
+                    .fiber_syn_error(format!("no such codomain morphism {}: {e}", path_str(path)));
+            }
+        };
         let BaseTyV_::Morphism(_, dom_obj, cod_obj) = &*mor_ty else {
-            return self.fiber_syn_error(format!("codomain field {f_name} is not a morphism"));
+            return self
+                .fiber_syn_error(format!("codomain field {} is not a morphism", path_str(path)));
         };
         if let Err(e) = self.evaluator().equal_tm(&arg_obj, dom_obj) {
             let ev = self.evaluator();
             return self.fiber_syn_error(format!(
-                "argument to {f_name} lies over {}, but {f_name} expects {}:\n{}",
+                "argument to {} lies over {}, but it expects {}:\n{}",
+                path_str(path),
                 ev.quote_tm(&arg_obj),
                 ev.quote_tm(dom_obj),
                 e.pretty()
@@ -700,8 +713,8 @@ impl<'a> Elaborator<'a> {
         }
         let cod_s = self.evaluator().quote_tm(cod_obj);
         (
-            FiberTmS::over_app(f_name, f_label, cod_s, arg_s),
-            FiberTmV::over_app(f_name, f_label, cod_obj.clone(), arg_v),
+            FiberTmS::over_app(path.to_vec(), cod_s, arg_s),
+            FiberTmV::over_app(path.to_vec(), cod_obj.clone(), arg_v),
             FiberTyV::over(cod_obj.clone()),
         )
     }
@@ -842,8 +855,9 @@ impl<'a> Elaborator<'a> {
                         };
                         let (key_s, key_v, key_ty) = elab.fiber_syn(key_n);
                         let label = format!("{field_name} key");
+                        let mor_path = vec![(name_seg(*field_name), label_seg(*field_name))];
                         let (lhs_s, lhs_v, lhs_ty) =
-                            elab.apply_codomain_morphism(field_name, key_s, key_v, key_ty, &label);
+                            elab.apply_codomain_morphism(&mor_path, key_s, key_v, key_ty, &label);
                         let FiberTyV_::Over(cod_obj) = &*lhs_ty else {
                             entry_failed = true;
                             break;
@@ -1431,6 +1445,27 @@ impl<'a> Elaborator<'a> {
             }
         }
     }
+}
+
+/// Extract the path to a codomain morphism from the head of an
+/// application: a bare variable `f` gives `[f]`, and a projection chain
+/// `Add.op` gives `[Add, op]`. Returns `None` for any other shape.
+fn morphism_path(n: &FNtn) -> Option<Vec<(FieldName, LabelSegment)>> {
+    match n.ast0() {
+        Var(f) => Some(vec![(name_seg(*f), label_seg(*f))]),
+        App1(recv, L(_, Field(g))) => {
+            let mut p = morphism_path(recv)?;
+            p.push((name_seg(*g), label_seg(*g)));
+            Some(p)
+        }
+        _ => None,
+    }
+}
+
+/// Render a morphism/object path as dotted labels (e.g. `Add.op`), for
+/// error messages.
+fn path_str(path: &[(FieldName, LabelSegment)]) -> String {
+    path.iter().map(|(_, label)| label.to_string()).collect::<Vec<_>>().join(".")
 }
 
 /// The synthetic field name/label `_eqN` for the next auto-named equation
