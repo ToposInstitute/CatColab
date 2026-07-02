@@ -1,6 +1,6 @@
 A notebook's storage is abstracted to allow plugging in custom stores. This could be used with anything but our concrete plan is to use this with Solid and Automerge.
 
-A `DocumentStore` is a stateless object that works on handles of its own choosing. `createHandle` creates a handle from an initial document; the other methods receive that handle back: `getReactiveProjection` returns the read view, `changeDocument` applies a draft mutation, and `copyValue` makes detached plain-JS copies of values from the store's canonical document. A store also provides `linkForHandle` (the handle's stable reference, or `undefined`) and `getHandle` (fetches a referenced handle by id, the inverse of `linkForHandle`). The shared recursive resolver uses `getHandle` to resolve an instantiation link to an elaborated model, elaborating every node against the host notebook's core theory, and rejecting when it cannot.
+A `DocumentStore` is a stateless object that works on handles of its own choosing. `createHandle` creates a handle from an initial document; the other methods receive that handle back: `makeReactiveProjection` makes the read view, `changeDocument` applies a draft mutation, and `copyValue` makes detached plain-JS copies of values from the store's canonical document. A store also provides `linkForHandle` (the handle's stable reference, or `undefined`) and `getHandle` (fetches a referenced handle by id, the inverse of `linkForHandle`). The shared recursive resolver uses `getHandle` to resolve an instantiation link to an elaborated model, elaborating every node against the host notebook's core theory, and rejecting when it cannot.
 
 A store is bound once with `createBinder`, which yields the notebook entry points `createNotebook`, `loadNotebook`, and `loadNotebookFromHandle`.
 
@@ -25,7 +25,7 @@ const solidStore: DocumentStore<SolidStoreHandle> = {
         const [doc, setDoc] = createStore<ModelDocument>(initialDoc as ModelDocument);
         return { doc, setDoc };
     },
-    getReactiveProjection: (handle) => handle.doc,
+    makeReactiveProjection: (handle) => handle.doc,
     changeDocument: (handle, fn) => handle.setDoc(produce<ModelDocument>(fn)),
     copyValue: (_handle, value) => structuredClone(unwrap(value)),
     linkForHandle: () => undefined,
@@ -139,7 +139,7 @@ copied obj: Updated copied
 
 <!-- verifier:reset -->
 
-To combine Solid reactivity with Automerge, we can plug in `makeDocumentProjection` from `@automerge/automerge-repo-solid-primitives`. The store's handle bundles the Automerge `DocHandle` with the projection built from it: `createHandle` creates a document in the repo and projects it once, and the other methods work through that handle so `makeDocumentProjection` is never called again on a read.
+To combine Solid reactivity with Automerge, we can plug in `makeDocumentProjection` from `@automerge/automerge-repo-solid-primitives`. The store's handle is just the Automerge `DocHandle`: `createHandle` creates a document in the repo, and `makeReactiveProjection` builds the projection from the handle inline with `makeDocumentProjection`. The binder memoizes the projection per handle, so `makeDocumentProjection` is not called again on a subsequent read.
 
 <!-- verifier:prepend-to-following -->
 
@@ -159,30 +159,19 @@ function materializeFromAutomerge<T>(doc: Doc<unknown>, subtree: T): T {
 
 const repo = new Repo();
 
-// The handle bundles the Automerge `DocHandle` with its reactive projection, so
-// `makeDocumentProjection` is called exactly once — when the handle is minted —
-// rather than on every read. `getReactiveProjection` then just returns it.
-interface AutomergeHandle {
-    automergeHandle: DocHandle<ModelDocument>;
-    projection: ModelDocument;
-}
-
-const makeHandle = (automergeHandle: DocHandle<ModelDocument>): AutomergeHandle => ({
-    automergeHandle,
-    projection: makeDocumentProjection(automergeHandle),
-});
-
-const solidAutomergeStore: DocumentStore<AutomergeHandle> = {
-    createHandle: async (initialDoc) =>
-        makeHandle(repo.create<ModelDocument>(initialDoc as ModelDocument)),
-    getReactiveProjection: (handle) => handle.projection,
-    changeDocument: (handle, fn) => handle.automergeHandle.change(fn),
+// The handle is just the Automerge `DocHandle`. `makeReactiveProjection` builds
+// the Solid projection from it inline with `makeDocumentProjection`; the binder
+// memoizes the result per handle, so repeated reactive reads reuse one.
+const solidAutomergeStore: DocumentStore<DocHandle<ModelDocument>> = {
+    createHandle: async (initialDoc) => repo.create<ModelDocument>(initialDoc as ModelDocument),
+    makeReactiveProjection: (handle) => makeDocumentProjection(handle),
+    changeDocument: (handle, fn) => handle.change(fn),
     subscribe: (handle, callback) => {
         const onChange = () => callback();
-        handle.automergeHandle.on("change", onChange);
-        return () => handle.automergeHandle.off("change", onChange);
+        handle.on("change", onChange);
+        return () => handle.off("change", onChange);
     },
-    copyValue: (handle, value) => materializeFromAutomerge(handle.automergeHandle.doc(), value),
+    copyValue: (handle, value) => materializeFromAutomerge(handle.doc(), value),
     linkForHandle: () => undefined,
     getHandle: async () => undefined,
 };
@@ -230,8 +219,8 @@ const sourceNotebook = await automergeBinder.createNotebook(SimpleOlog, {
     name: "Automerge Olog",
 });
 
-const foundHandle = await repo.find<ModelDocument>(sourceNotebook.handle.automergeHandle.url);
-const result = await automergeBinder.loadNotebookFromHandle(SimpleOlog, makeHandle(foundHandle));
+const foundHandle = await repo.find<ModelDocument>(sourceNotebook.handle.url);
+const result = await automergeBinder.loadNotebookFromHandle(SimpleOlog, foundHandle);
 console.log("issues:", result.issues ?? []);
 if (!result.issues) {
     const loadedNotebook = result.value;
@@ -253,7 +242,7 @@ migrated notebook keeps the very same Automerge `DocHandle` and URL as before.
 import { SimpleSchema } from "catcolab-logics/simple-schema";
 
 const migratable = await automergeBinder.createNotebook(SimpleOlog, { name: "To migrate" });
-const urlBefore = migratable.handle.automergeHandle.url;
+const urlBefore = migratable.handle.url;
 
 const migration = await migratable.migrateTo(SimpleSchema);
 console.log("issues:", migration.issues ?? []);
@@ -261,7 +250,7 @@ if (!migration.issues) {
     const migrated = migration.value;
 
     console.log("same handle:", migrated.handle === migratable.handle);
-    console.log("same url:", migrated.handle.automergeHandle.url === urlBefore);
+    console.log("same url:", migrated.handle.url === urlBefore);
     console.log("theory:", migrated.document.theory);
 }
 ```
@@ -287,7 +276,7 @@ const unsubscribe = shared.onChange(() => {
     observedChanges += 1;
 });
 
-const remoteHandle = await repo.find<ModelDocument>(shared.handle.automergeHandle.url);
+const remoteHandle = await repo.find<ModelDocument>(shared.handle.url);
 remoteHandle.change((doc) => {
     doc.name = "Edited by a collaborator";
 });

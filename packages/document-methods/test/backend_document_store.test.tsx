@@ -6,8 +6,9 @@
 // `rpc.get_doc`, then `repo.find` it — but expressed as the
 // `DocumentStore<Handle>` abstraction from `catcolab-documents`.
 //
-// The store's `Handle` is an Automerge `DocHandle<ModelDocument>` bundled with
-// the Solid projection built from it, exactly as
+// The store's `Handle` is an Automerge `DocHandle<ModelDocument>`; the Solid
+// projection is made from it inline by `makeReactiveProjection` (the binder
+// memoizes it per handle), exactly as
 // `notebook_with_automerge_solid_component.lts.md` sketches. What this example
 // adds over that sketch is the backend wiring:
 //
@@ -70,8 +71,7 @@ import { DblModel } from "catlog-wasm";
 type RpcResult<T> = { tag: "Ok"; content: T } | { tag: "Err"; code: number; message: string };
 
 type RefDoc =
-    | { tag: "Live"; docId: string; isDeleted: boolean }
-    | { tag: "Readonly"; binaryData: string; isDeleted: boolean };
+    { tag: "Live"; docId: string; isDeleted: boolean }
 
 class FakeBackend {
     readonly serverHost = "test.catcolab.org";
@@ -108,12 +108,13 @@ class FakeBackend {
 // The store.
 //
 // This is the whole integration surface for a backend-backed store. It builds a
-// `DocumentStore<Handle>` where `Handle` is `{ automergeHandle, projection }`:
-// an Automerge `DocHandle` plus the Solid projection made from it once, so that
-// repeated `getReactiveProjection` reads reuse one projection. The store keeps a
-// bidirectional cache between a handle's Automerge `DocumentId` and the backend
-// ref id it was registered under, so `linkForHandle` can answer synchronously
-// and `getHandle` can skip a round-trip for handles it has already resolved.
+// `DocumentStore<Handle>` where `Handle` is an Automerge `DocHandle`; the Solid
+// projection is made from it inline by `makeReactiveProjection` (the binder
+// memoizes it per handle, so repeated reactive reads reuse one projection). The
+// store keeps a bidirectional cache between a handle's Automerge `DocumentId`
+// and the backend ref id it was registered under, so `linkForHandle` can answer
+// synchronously and `getHandle` can skip a round-trip for handles already
+// resolved.
 //
 // There is no separate "register" step: `createHandle` registers the document
 // with the backend as it creates it, so a notebook is referenceable the moment
@@ -123,32 +124,15 @@ class FakeBackend {
 function createBackendStore(backend: FakeBackend) {
     const repo = backend.repo;
 
-    // The store's handle: an Automerge `DocHandle` for local/remote state, plus
-    // the Solid projection built from it once (so repeated reactive reads reuse
-    // one projection). Declaring the handle shape is the one unavoidable step of
-    // any `DocumentStore` integration — every method below takes or returns it.
-    type Handle = { automergeHandle: DocHandle<ModelDocument>; projection: ModelDocument };
+    // The store's handle is just the Automerge `DocHandle` for local/remote
+    // state. Declaring the handle shape is the one unavoidable step of any
+    // `DocumentStore` integration — every method below takes or returns it.
+    type Handle = DocHandle<ModelDocument>;
 
     // handle document id <-> backend ref id, and ref id -> minted handle so a
     // ref resolves to one stable handle (and one projection) per store.
     const refByDocId = new Map<DocumentId, string>();
     const handleByRefId = new Map<string, Handle>();
-
-    // Resolve a `RefDoc` to an Automerge handle: `Live` documents live in the
-    // shared repo (find by id); `Readonly` documents arrive as bytes and are
-    // imported into a local repo. This fake only serves `Live`, but the store
-    // handles both, exactly as `Api.fetchDocCacheEntry` does.
-    const handleForRefDoc = async (refDoc: RefDoc): Promise<DocHandle<ModelDocument>> => {
-        if (refDoc.tag === "Live") {
-            return await repo.find<ModelDocument>(refDoc.docId as DocumentId);
-        }
-        const binaryString = atob(refDoc.binaryData);
-        const bytes = new Uint8Array(binaryString.length);
-        for (let i = 0; i < binaryString.length; i++) {
-            bytes[i] = binaryString.charCodeAt(i);
-        }
-        return repo.import<ModelDocument>(bytes);
-    };
 
     // Annotated as `DocumentStore<Handle>` so all methods share the one handle
     // type and the store is checked against the interface as it is written.
@@ -170,34 +154,34 @@ function createBackendStore(backend: FakeBackend) {
             if (fetched.tag !== "Ok") {
                 throw new Error(fetched.message);
             }
-            const automergeHandle = await handleForRefDoc(fetched.content);
+            const handle = await repo.find<ModelDocument>(fetched.content.docId as DocumentId);
 
-            const handle = { automergeHandle, projection: makeDocumentProjection(automergeHandle) };
-            refByDocId.set(automergeHandle.documentId, refId);
+            refByDocId.set(handle.documentId, refId);
             handleByRefId.set(refId, handle);
             return handle;
         },
 
-        // Reactive read view: the projection made when the handle was minted, so
-        // notebook getters are tracked in Solid effects/JSX (see the render test
-        // below) without rebuilding the projection on every read.
-        getReactiveProjection: (handle) => handle.projection,
+        // Reactive read view: make the Solid projection for the handle inline,
+        // so notebook getters are tracked in Solid effects/JSX (see the render
+        // test below). The binder memoizes it per handle, so repeated reactive
+        // reads reuse one projection.
+        makeReactiveProjection: (handle) => makeDocumentProjection(handle),
 
-        changeDocument: (handle, fn) => handle.automergeHandle.change(fn),
+        changeDocument: (handle, fn) => handle.change(fn),
 
         // Remote changes flow through the Automerge change event, so a notebook
         // built on this store reacts to collaborators editing the shared doc.
         subscribe: (handle, callback) => {
             const onChange = () => callback();
-            handle.automergeHandle.on("change", onChange);
-            return () => handle.automergeHandle.off("change", onChange);
+            handle.on("change", onChange);
+            return () => handle.off("change", onChange);
         },
 
         // Detach Solid/Automerge proxies before the caller clones a subtree:
         // resolve the value's object id inside the current document and ask the
         // Automerge backend to materialize a plain-JS copy of that subtree.
         copyValue: (handle, value) => {
-            const doc = handle.automergeHandle.doc();
+            const doc = handle.doc();
             const objId = getObjectId(value as object);
             return getBackend(doc).materialize(objId!) as typeof value;
         },
@@ -207,7 +191,7 @@ function createBackendStore(backend: FakeBackend) {
         // this server. A handle unknown to this store returns `undefined`, per
         // the interface — e.g. one minted by a different store instance.
         linkForHandle: (handle) => {
-            const refId = refByDocId.get(handle.automergeHandle.documentId);
+            const refId = refByDocId.get(handle.documentId);
             if (!refId) {
                 return undefined;
             }
@@ -228,10 +212,9 @@ function createBackendStore(backend: FakeBackend) {
                 return undefined;
             }
 
-            const automergeHandle = await handleForRefDoc(result.content);
-            const handle = { automergeHandle, projection: makeDocumentProjection(automergeHandle) };
+            const handle = await repo.find<ModelDocument>(result.content.docId as DocumentId);
             handleByRefId.set(refId, handle);
-            refByDocId.set(automergeHandle.documentId, refId);
+            refByDocId.set(handle.documentId, refId);
             return handle;
         },
     };
@@ -252,10 +235,7 @@ describe("backend-backed Solid + Automerge DocumentStore", () => {
         }
 
         function Types(props: {
-            notebook: Notebook<
-                typeof SimpleOlog,
-                { automergeHandle: DocHandle<ModelDocument>; projection: ModelDocument }
-            >;
+            notebook: Notebook<typeof SimpleOlog, DocHandle<ModelDocument>>;
         }) {
             return (
                 <ul>
@@ -326,7 +306,7 @@ describe("backend-backed Solid + Automerge DocumentStore", () => {
         const resolved = await otherStore.getHandle(refId!);
 
         expect(resolved).toBeDefined();
-        const doc = otherStore.getReactiveProjection(resolved!);
+        const doc = otherStore.makeReactiveProjection(resolved!);
         expect(doc.name).toBe("Shared");
 
         // The ref round-trips back to the same id.
@@ -359,9 +339,9 @@ describe("backend-backed Solid + Automerge DocumentStore", () => {
 });
 
 // Keep `createRoot` imported and exercised so the reactive-primitives path is
-// covered even outside `render` (e.g. a headless consumer of `getReactiveProjection`).
+// covered even outside `render` (e.g. a headless consumer of `makeReactiveProjection`).
 describe("headless reactive read", () => {
-    test("getReactiveProjection is reactive under createRoot", async () => {
+    test("makeReactiveProjection is reactive under createRoot", async () => {
         const backend = new FakeBackend();
         const store = createBackendStore(backend);
         const backendBinder = createBinder(store);

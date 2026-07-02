@@ -11,7 +11,7 @@ import { DblModel } from "catlog-wasm";
 // A bespoke store augmented with `getHandle`, so notebooks containing
 // instantiation cells can be validated. Handles are registered by a stable id;
 // the store contributes only how to fetch a handle by id (`getHandle`, whose
-// document the resolver reads with `getReactiveProjection`). The shared recursive
+// document the resolver reads with `makeReactiveProjection`). The shared recursive
 // elaborator (the same one the plain store uses) walks the referenced model's
 // own instantiations, elaborates each against the host notebook's core theory
 // (supplied by `validate`), and detects cycles, so this store reimplements none
@@ -39,7 +39,7 @@ function createResolvingStore(): {
             return doc;
         },
         getHandle: async (id) => (failOnResolve.value ? undefined : byId.get(id)),
-        getReactiveProjection: (handle) => handle,
+        makeReactiveProjection: (handle) => handle,
         changeDocument: (handle, fn) => fn(handle),
         copyValue: (_handle, value) => structuredClone(value),
         linkForHandle: (handle) => {

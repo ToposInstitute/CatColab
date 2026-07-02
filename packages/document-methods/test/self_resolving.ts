@@ -7,7 +7,7 @@ import { v7 } from "uuid";
  * since `validate` resolves a notebook's own model by minting a link to its
  * handle. Each handle is assigned a stable id and registered so the shared
  * recursive elaborator can fetch it back (via `getHandle`, then view its
- * document with the store's own `getReactiveProjection`) and elaborate it against the
+ * document with the store's own `makeReactiveProjection`) and elaborate it against the
  * host notebook's core theory (supplied by `validate`).
  *
  * Used by the test fixtures' stores so a no-instantiation notebook validates

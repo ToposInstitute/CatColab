@@ -208,7 +208,7 @@ function attachAnalysisNotebook<TShape extends AnalysisShape, Handle>(
     handle: Handle,
     shape: TShape,
 ): Notebook<TShape, Handle> {
-    const doc = store.getReactiveProjection(handle) as AnalysisDocument;
+    const doc = store.makeReactiveProjection(handle) as AnalysisDocument;
     const change = (fn: (doc: AnalysisDocument) => void) =>
         store.changeDocument(handle, fn as (doc: Document) => void);
 
@@ -432,7 +432,7 @@ function attachDiagramNotebook<TShape extends DiagramShape, Handle>(
     shape: TShape,
     modelHandle: Handle,
 ): Notebook<TShape, Handle> {
-    const doc = store.getReactiveProjection(handle) as DiagramDocument;
+    const doc = store.makeReactiveProjection(handle) as DiagramDocument;
     const change = (fn: (doc: DiagramDocument) => void) =>
         store.changeDocument(handle, fn as (doc: Document) => void);
     const copy = <T>(value: T): T => store.copyValue(handle, value);
@@ -446,7 +446,7 @@ function attachDiagramNotebook<TShape extends DiagramShape, Handle>(
      * already holds the model it is drawing in.
      */
     const modelDocument = (): ModelDocument =>
-        store.getReactiveProjection(modelHandle) as ModelDocument;
+        store.makeReactiveProjection(modelHandle) as ModelDocument;
 
     /** Read a model judgment by its generator id from the model document. */
     const modelJudgment = (id: string): ModelJudgment | undefined => {
@@ -848,7 +848,7 @@ function attachNotebook<TShape extends AnyShape, Handle>(
         }
         return attachDiagramNotebook(store, handle, shape, modelHandle) as Notebook<TShape, Handle>;
     }
-    const doc = store.getReactiveProjection(handle) as ModelDocument;
+    const doc = store.makeReactiveProjection(handle) as ModelDocument;
     const change = (fn: (doc: ModelDocument) => void) =>
         store.changeDocument(handle, fn as (doc: Document) => void);
     const copy = <T>(value: T): T => store.copyValue(handle, value);
@@ -1911,7 +1911,27 @@ export interface Binder<Handle> {
 }
 
 /** Bind a store once, yielding the notebook entry points. */
-export function createBinder<Handle>(store: DocumentStore<Handle>): Binder<Handle> {
+export function createBinder<Handle>(rawStore: DocumentStore<Handle>): Binder<Handle> {
+    // Cache each handle's reactive projection so repeated
+    // `makeReactiveProjection` calls (across notebook attachment and the shared
+    // resolver) reuse one projection rather than rebuilding it. Stores call
+    // `makeDocumentProjection` (or its analog) inline; the caching lives here so
+    // every store benefits without repeating it. `WeakMap` lets a projection be
+    // collected once its handle is; handles are always objects in practice.
+    const projectionCache = new WeakMap<object, Document>();
+    const store: DocumentStore<Handle> = {
+        ...rawStore,
+        makeReactiveProjection: (handle) => {
+            const key = handle as unknown as object;
+            let projection = projectionCache.get(key);
+            if (!projection) {
+                projection = rawStore.makeReactiveProjection(handle);
+                projectionCache.set(key, projection);
+            }
+            return projection;
+        },
+    };
+
     const binder = {
         async createNotebook(
             shape: AnyShape,
@@ -1987,7 +2007,7 @@ export function createBinder<Handle>(store: DocumentStore<Handle>): Binder<Handl
             shape: TShape,
             handle: Handle,
         ): Result<Notebook<TShape, Handle>> {
-            const document = store.getReactiveProjection(handle);
+            const document = store.makeReactiveProjection(handle);
             const theory = document.type === "model" ? document.theory : undefined;
             if (theory !== shape.theory) {
                 return {
