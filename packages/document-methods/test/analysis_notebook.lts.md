@@ -63,10 +63,12 @@ direction: horizontal
 ## Running an analysis
 
 ```ts
-const graph = await viz.run();
-
-console.log("nodes:", graph.nodes.map((node) => node.label).join(", "));
-console.log("edges:", graph.edges.length);
+const result = await viz.run();
+if (!result.issues) {
+    const graph = result.value;
+    console.log("nodes:", graph.nodes.map((node) => node.label).join(", "));
+    console.log("edges:", graph.edges.length);
+}
 ```
 
 ```
@@ -129,11 +131,13 @@ S initial: 1
 ```
 
 ```ts
-const trajectories = await sim.run();
-
-console.log("times:", trajectories.time.join(", "));
-console.log("states:", trajectories.states.map((state) => state.label).join(", "));
-console.log("S samples:", trajectories.states[0]!.values.length);
+const result = await sim.run();
+if (!result.issues) {
+    const trajectories = result.value;
+    console.log("times:", trajectories.time.join(", "));
+    console.log("states:", trajectories.states.map((state) => state.label).join(", "));
+    console.log("S samples:", trajectories.states[0]!.values.length);
+}
 ```
 
 ```

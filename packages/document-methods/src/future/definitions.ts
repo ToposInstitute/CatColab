@@ -943,8 +943,13 @@ export type AnalysisCell<Def extends AnalysisDef = AnalysisDef> = Reorder & {
     readonly params: ParamsOf<Def>;
     /** Merge `partial` into the cell's params. */
     update(partial: Partial<ParamsOf<Def>>): void;
-    /** Run the analysis, returning its output. */
-    run(): Promise<OutputOf<Def>>;
+    /**
+     * Run the analysis, returning a [Standard Schema](https://standardschema.dev)
+     * {@link Result}: success carries the analysis output as `value`; failure
+     * carries an `issues` array. Failures include an unresolvable or invalid
+     * analyzed model and any error thrown by the analysis def's `run`.
+     */
+    run(): Promise<Result<OutputOf<Def>>>;
 };
 
 /**

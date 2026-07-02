@@ -273,17 +273,29 @@ function attachAnalysisNotebook<TShape extends AnalysisShape, Handle>(
                     }
                 });
             },
-            async run() {
+            async run(): Promise<Result<OutputOf<Def>>> {
                 const params = readParams(cellId) as ParamsOf<Def>;
                 const coreTheory = shape.analysisOfCoreTheory;
                 if (!coreTheory) {
-                    throw new Error(
-                        "run() needs the analyzed model's core theory: this analysis shape " +
-                            "has no `analysisOfCoreTheory`.",
-                    );
+                    return {
+                        issues: [
+                            {
+                                message:
+                                    "run() needs the analyzed model's core theory: this " +
+                                    "analysis shape has no `analysisOfCoreTheory`.",
+                            },
+                        ],
+                    };
                 }
-                const model = await resolveModelInStore(store, doc.analysisOf, coreTheory);
-                return def.run(model, params) as Promise<OutputOf<Def>>;
+                try {
+                    const model = await resolveModelInStore(store, doc.analysisOf, coreTheory);
+                    const value = (await def.run(model, params)) as OutputOf<Def>;
+                    return { value };
+                } catch (error) {
+                    return {
+                        issues: [{ message: error instanceof Error ? error.message : String(error) }],
+                    };
+                }
             },
             ...reorderMethods(cellId),
         }) as unknown as AnalysisCell<Def>;
