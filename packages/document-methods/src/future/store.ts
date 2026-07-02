@@ -11,6 +11,22 @@ import {
 import type { ModelDocument } from "../model";
 
 /**
+ * Thrown when a notebook instantiates itself, directly or through a chain of
+ * other notebooks, so its model can never be resolved. Carries the cycle as a
+ * `A → B → A` chain of the notebooks' names for a message the user can act on.
+ */
+export class CyclicInstantiationError extends Error {
+    constructor(readonly cycle: string) {
+        super(
+            `Instantiation cycle detected: ${cycle}. ` +
+                `A notebook cannot instantiate itself, directly or indirectly. ` +
+                `To fix, remove one of the instantiations in this chain.`,
+        );
+        this.name = "CyclicInstantiationError";
+    }
+}
+
+/**
  * A document store abstracts the storage that notebooks operate over. A
  * store is a stateless object working on handles of its own choosing: a
  * plain document, a Solid store, an Automerge `DocHandle`, etc. Handles are
@@ -113,6 +129,16 @@ export async function resolveModelInStore<Handle>(
     // Per-resolution-tree state: dedupe within this call, persist across none.
     const cache = new Map<string, DblModel>();
     const resolving = new Set<string>();
+    // The chain of documents currently being resolved, so a cycle can be
+    // reported by the human-readable names the user gave, not opaque ids.
+    const path: { id: string; name: string }[] = [];
+
+    // A document's display name, or a short id fallback for an unnamed document.
+    const nameFor = (id: string): string => {
+        const handle = store.getHandle(id);
+        const name = handle && (store.viewDocument(handle) as ModelDocument).name;
+        return name && name.length > 0 ? `"${name}"` : `model ${id}`;
+    };
 
     const resolve = async (link: Link): Promise<DblModel> => {
         const cached = cache.get(link._id);
@@ -120,7 +146,12 @@ export async function resolveModelInStore<Handle>(
             return cached;
         }
         if (resolving.has(link._id)) {
-            throw new Error(`Cyclic instantiation detected while resolving model ${link._id}.`);
+            // Report the cycle as the chain of instantiations that closes it,
+            // e.g. `"First" → "Second" → "First"`, so the user can see exactly
+            // which notebooks instantiate each other.
+            const start = path.findIndex((entry) => entry.id === link._id);
+            const loop = [...path.slice(start).map((entry) => entry.name), nameFor(link._id)];
+            throw new CyclicInstantiationError(loop.join(" → "));
         }
         const handle = store.getHandle(link._id);
         if (handle === undefined) {
@@ -128,6 +159,7 @@ export async function resolveModelInStore<Handle>(
         }
         const doc = store.viewDocument(handle) as ModelDocument;
         resolving.add(link._id);
+        path.push({ id: link._id, name: nameFor(link._id) });
         try {
             // Recursively resolve the document's own instantiations so it
             // elaborates against a populated map; `resolving` catches cycles.
@@ -147,6 +179,7 @@ export async function resolveModelInStore<Handle>(
             return model;
         } finally {
             resolving.delete(link._id);
+            path.pop();
         }
     };
 

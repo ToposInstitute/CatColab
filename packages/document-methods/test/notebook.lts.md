@@ -574,17 +574,12 @@ second.add(Instantiation, { name: "ImportedFirst", model: first });
 
 const result = await first.validate();
 console.log("valid:", result.issues === undefined);
-console.log(
-    "issues:",
-    result.issues
-        ?.map((issue) => issue.message.replace(/model [0-9a-f-]{36}/, "model <id>"))
-        .join("; "),
-);
+console.log("issues:", result.issues?.map((issue) => issue.message).join("; "));
 ```
 
 ```
 valid: false
-issues: Failed to resolve instantiated model: Error: Cyclic instantiation detected while resolving model <id>.
+issues: Instantiation cycle detected: "First" → "Second" → "First". A notebook cannot instantiate itself, directly or indirectly. To fix, remove one of the instantiations in this chain.
 ```
 
 ## Serialization

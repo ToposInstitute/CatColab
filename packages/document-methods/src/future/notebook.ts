@@ -845,7 +845,10 @@ function attachNotebook<TShape extends AnyShape, Handle>(
         try {
             return await resolveModelInStore(store, { ...ref, type: "instantiation" }, coreTheory);
         } catch (e) {
-            return { error: `Failed to resolve instantiated model: ${String(e)}` };
+            // Surface the error's own message (e.g. a CyclicInstantiationError's
+            // named cycle) rather than `String(e)`, which prepends a noisy
+            // `Error:` and buries the actionable text.
+            return { error: e instanceof Error ? e.message : String(e) };
         }
     };
 

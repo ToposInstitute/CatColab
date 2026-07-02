@@ -138,7 +138,7 @@ copied obj: Updated copied
 
 <!-- verifier:reset -->
 
-To combine Solid reactivity with Automerge, we could make custom functions or use `makeDocumentProjection` from `@automerge/automerge-repo-solid-primitives`. The store's handle is the Automerge `DocHandle` itself: `createHandle` creates a document in the repo, and the other methods work through the handle.
+To combine Solid reactivity with Automerge, we can plug in `makeDocumentProjection` from `@automerge/automerge-repo-solid-primitives`. The store's handle is the Automerge `DocHandle` itself: `createHandle` creates a document in the repo, and the other methods work through the handle.
 
 <!-- verifier:prepend-to-following -->
 
