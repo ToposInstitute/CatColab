@@ -417,16 +417,17 @@ pub enum FiberTmS_ {
     /// base object.
     ObApp(VarName, FiberTmS),
     /// Application of a codomain morphism to a fiber element. Arguments,
-    /// in order: the morphism name (e.g. `src`), its display label, the
-    /// codomain object it lands at (a base object term, stored so the
-    /// result fiber type is recoverable without re-deriving it), and the
-    /// fiber-typed argument (e.g. the elaboration of `we.e`, or a fiber
-    /// list `[x, x]` for a multi-ary morphism).
+    /// in order: the *path* to the morphism in the codomain (a single
+    /// segment like `src`, or a nested one like `Add.op` for a morphism of
+    /// a sub-model), the codomain object it lands at (a base object term,
+    /// stored so the result fiber type is recoverable without re-deriving
+    /// it), and the fiber-typed argument (e.g. the elaboration of `we.e`,
+    /// or a fiber list `[x, x]` for a multi-ary morphism).
     ///
     /// Example: in `src(we.e) := v1`, the LHS elaborates to
-    /// `OverApp(src, src, self.V, Proj(Var(we), e, e))` of fiber type
+    /// `OverApp([src], self.V, Proj(Var(we), e, e))` of fiber type
     /// `Over(self.V)`.
-    OverApp(FieldName, LabelSegment, BaseTmS, FiberTmS),
+    OverApp(Vec<(FieldName, LabelSegment)>, BaseTmS, FiberTmS),
     /// A metavar (elaboration-error placeholder).
     Meta(MetaVar),
 }
@@ -458,13 +459,8 @@ impl FiberTmS {
     }
 
     /// Smart constructor for [FiberTmS], [FiberTmS_::OverApp] case.
-    pub fn over_app(
-        mor: FieldName,
-        mor_label: LabelSegment,
-        cod: BaseTmS,
-        inner: FiberTmS,
-    ) -> Self {
-        Self(Rc::new(FiberTmS_::OverApp(mor, mor_label, cod, inner)))
+    pub fn over_app(mor: Vec<(FieldName, LabelSegment)>, cod: BaseTmS, inner: FiberTmS) -> Self {
+        Self(Rc::new(FiberTmS_::OverApp(mor, cod, inner)))
     }
 
     /// Smart constructor for [FiberTmS], [FiberTmS_::Meta] case.
@@ -480,8 +476,12 @@ impl ToDoc for FiberTmS {
             FiberTmS_::Proj(tm, _, label) => tm.to_doc() + t(format!(".{}", label)),
             FiberTmS_::List(elems) => tuple(elems.iter().map(|e| e.to_doc())),
             FiberTmS_::ObApp(name, arg) => unop(t(format!("@{name}")), arg.to_doc()),
-            FiberTmS_::OverApp(_, mor_label, _, inner) => {
-                inner.to_doc() + t(format!(".{mor_label}"))
+            FiberTmS_::OverApp(path, _, inner) => {
+                let mut d = inner.to_doc();
+                for (_, label) in path {
+                    d = d + t(format!(".{label}"));
+                }
+                d
             }
             FiberTmS_::Meta(mv) => t(format!("?{}", mv.id)),
         }

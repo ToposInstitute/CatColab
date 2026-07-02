@@ -591,9 +591,12 @@ impl<'a> Evaluator<'a> {
                 }
                 self.equal_fiber_tm(a1, a2)
             }
-            (FiberTmV_::OverApp(m1, _, _, i1), FiberTmV_::OverApp(m2, _, _, i2)) => {
-                if m1 != m2 {
-                    return Err(t(format!("OverApp morphisms {m1} and {m2} are not equal")));
+            (FiberTmV_::OverApp(p1, _, i1), FiberTmV_::OverApp(p2, _, i2)) => {
+                // Compare the morphism paths by name.
+                let names1 = p1.iter().map(|(n, _)| n).collect::<Vec<_>>();
+                let names2 = p2.iter().map(|(n, _)| n).collect::<Vec<_>>();
+                if names1 != names2 {
+                    return Err(t("applied codomain morphisms are not equal"));
                 }
                 self.equal_fiber_tm(i1, i2)
             }

@@ -362,10 +362,10 @@ pub enum FiberTmV_ {
     /// A theory object-operation applied to a fiber element. See
     /// [`super::stx::FiberTmS_::ObApp`].
     ObApp(VarName, FiberTmV),
-    /// Application of a codomain morphism to a fiber element; the third
-    /// field is the codomain object it lands at. See
-    /// [`super::stx::FiberTmS_::OverApp`].
-    OverApp(FieldName, LabelSegment, BaseTmV, FiberTmV),
+    /// Application of a codomain morphism (identified by its path) to a
+    /// fiber element; the second field is the codomain object it lands at.
+    /// See [`super::stx::FiberTmS_::OverApp`].
+    OverApp(Vec<(FieldName, LabelSegment)>, BaseTmV, FiberTmV),
     /// A metavariable.
     Meta(MetaVar),
 }
@@ -397,13 +397,8 @@ impl FiberTmV {
     }
 
     /// Smart constructor for [FiberTmV], [FiberTmV_::OverApp] case.
-    pub fn over_app(
-        mor: FieldName,
-        mor_label: LabelSegment,
-        cod: BaseTmV,
-        inner: FiberTmV,
-    ) -> Self {
-        Self(Rc::new(FiberTmV_::OverApp(mor, mor_label, cod, inner)))
+    pub fn over_app(mor: Vec<(FieldName, LabelSegment)>, cod: BaseTmV, inner: FiberTmV) -> Self {
+        Self(Rc::new(FiberTmV_::OverApp(mor, cod, inner)))
     }
 
     /// Smart constructor for [FiberTmV], [FiberTmV_::Meta] case.
