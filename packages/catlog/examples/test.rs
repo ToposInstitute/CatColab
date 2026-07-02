@@ -1,6 +1,6 @@
-#![allow(missing_docs, dead_code, unused_imports)]
+#![allow(missing_docs, dead_code)]
 
-use catlog::zero::column::{Column, Mapping};
+// use catlog::zero::column::{Column, Mapping};
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::fmt::Display;
@@ -10,6 +10,7 @@ use std::cmp::Ordering;
 
 const DEBUG: bool = true;
 
+// TODO: use IndexMap for deterministic ordering? or BTreeMap?
 type Map<K, V> = HashMap<K, V>;
 
 // Uniform representation for entity ids.
@@ -27,6 +28,7 @@ impl Display for Repr {
     }
 }
 
+// TODO: does derive_more allow me to auto-generate this?
 #[derive(Debug)]
 enum TaggedMap {
     Id(Map<EntityId, ()>),
@@ -343,15 +345,14 @@ impl Instance {
         return plan
     }
 
-    #[allow(unused_variables, unreachable_code, unused_mut)]
-    fn execute(&self, plan: WcoPlan, database: &Instance) {
+    fn execute(&self, plan: WcoPlan, database: &Instance) -> Vec<Binding> {
         assert!(Rc::ptr_eq(&self.schema, &database.schema));
 
         // Determine the indexes we'll need.
         let mut reverse_index: HashSet<&Name> = HashSet::new();
         let mut diagonal_index: HashSet<&Name> = HashSet::new();
 
-        for (var, wcops) in plan.iter() {
+        for (_var, wcops) in plan.iter() {
             for (morphism, strategy) in wcops.iter() {
                 match strategy {
                     WcoStrategy::Lookup(_) | WcoStrategy::Dom => {},
@@ -404,7 +405,7 @@ impl Instance {
             //
             // TODO: fix this and actually implement counting.
             let &(morphism, ref strategy) = &wcops[0];
-            let (dom, cod) = &self.schema.morphisms[morphism];
+            let (dom, _cod) = &self.schema.morphisms[morphism];
             let table = &database.mappings[morphism];
             for mut binding in std::mem::take(&mut bindings) {
                 match strategy {
@@ -457,6 +458,7 @@ impl Instance {
                     }
                     WcoStrategy::Preimage(known) => { // look `known` up in reverse index
                         let index: &TaggedReverseIndex = &reverse_index[morphism];
+                        #[allow(unused_variables)]
                         match *known {
                             Known::Var(known_var_index) => todo!("preimage Var"),
                             Known::Usize(k) => todo!("preimage usize"),
@@ -490,7 +492,6 @@ impl Instance {
                 // 4a    For each binding of values to prior and new vars,
                 // 4b    If the binding is not in the atom, discard the binding.
                 let &(morphism, ref strategy) = wcop;
-                let (dom, cod) = &self.schema.morphisms[morphism];
                 let table = &database.mappings[morphism];
                 match strategy {
                     WcoStrategy::Dom => {}, // nothing to do; always holds
@@ -538,13 +539,15 @@ impl Instance {
             }
 
             if DEBUG {
-                eprintln!("  after filtering {var:?} through {} wcops:", &wcops[1..].len());
+                eprintln!("  after filtering {var:?} through {:?}", &wcops[1..]);
                 for b in &bindings { eprintln!("    {b:?}"); }
             }
         }
+
+        return bindings;
     }
 
-    fn query(&self, database: &Instance) {
+    fn query(&self, database: &Instance) -> Vec<Binding> {
         assert!(Rc::ptr_eq(&self.schema, &database.schema));
         let var_order = self.pick_var_order();
         let plan = self.plan(&var_order);
@@ -637,7 +640,7 @@ macro_rules! map {
     [$($x:expr => $y:expr),*]  => { [$(($x, $y)),*].into_iter().collect() };
 }
 
-#[allow(non_snake_case, unused_variables, unreachable_code)]
+#[allow(non_snake_case)]
 fn main() {
     // Let's make a simple schema, a simple query, and try planning it.
     println!("hello, world!");
@@ -653,6 +656,7 @@ fn main() {
         name.clone() => (Dept.clone(), EntityOrAttr::Attr(Repr::String)),
     };
     let schema: Rc<Schema> = Rc::new(Schema { entities, morphisms });
+
     use TaggedMap::*;
     let mappings: HashMap<Name, TaggedMap> = map! {
         Employee.to_string() => Id(map!{1138 => ()}),
@@ -660,10 +664,19 @@ fn main() {
         dept.to_string() => IdId(map!{1138 => 0}),
         name.to_string() => IdString(map!{0 => "accounting".to_string()}),
     };
-    let query = Instance { schema: schema, mappings };
+    let query = Instance { schema: schema.clone(), mappings };
 
     println!("Constructed query instance, checking it.");
     query.self_check();
+
+    let db_mappings: HashMap<Name, TaggedMap> = map! {
+        Employee.to_string() => Id(map!{101 => (), 102 => (), 103 => ()}),
+        Dept.to_string() => Id(map!{1 => (), 2 => ()}),
+        dept.to_string() => IdId(map!{101 => 1, 102 => 2, 103 => 1}),
+        name.to_string() => IdString(map!{1 => "accounting".to_string(),
+                                          2 => "hr".to_string()}),
+    };
+    let db = Instance { schema: schema.clone(), mappings: db_mappings };
 
     println!("Planning.");
     let var_order = query.pick_var_order();
@@ -690,7 +703,11 @@ fn main() {
     // }
 
     // let's try finding automorphisms from the query to itself.
-    query.execute(plan, &query);
+    let bindings = query.execute(plan, &db);
+    println!("RESULT BINDINGS"); // TODO: Print column headers (variables)
+    for b in bindings {
+        println!("  {b:?}");
+    }
 
     println!("success!");
 }
