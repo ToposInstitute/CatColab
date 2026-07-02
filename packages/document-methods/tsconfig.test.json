@@ -1,0 +1,17 @@
+{
+    "extends": ["./tsconfig.json", "@tsconfig/strictest/tsconfig.json"],
+    "compilerOptions": {
+        "noEmit": true,
+        "types": ["node"],
+        "jsx": "preserve",
+        "jsxImportSource": "solid-js",
+        "lib": ["ES2023", "DOM", "DOM.Iterable"],
+        "paths": {
+            "catcolab-logics/*": ["./test/literate-ts/catcolab-logics/*.ts"],
+            "catcolab-analyses": ["./test/literate-ts/catcolab-analyses/index.ts"],
+            "catcolab-analyses/*": ["./test/literate-ts/catcolab-analyses/*.ts"],
+            "catcolab-documents": ["./src/future/index.ts"]
+        }
+    },
+    "include": ["vite.config.ts", "test/**/*.ts", "test/**/*.tsx"]
+}

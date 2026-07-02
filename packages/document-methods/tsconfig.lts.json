@@ -1,0 +1,22 @@
+{
+    "extends": ["./tsconfig.json", "@tsconfig/strictest/tsconfig.json"],
+    "compilerOptions": {
+        "noEmit": true,
+        // Literate samples in markdown often declare bindings that are not
+        // referenced again in the same fence (the prose is the consumer), so
+        // the strictest preset's unused-locals/parameters checks would
+        // produce spurious diagnostics here.
+        "noUnusedLocals": false,
+        "noUnusedParameters": false,
+        "jsx": "preserve",
+        "jsxImportSource": "solid-js",
+        "lib": ["ES2023", "DOM"],
+        "paths": {
+            "catcolab-logics/*": ["./test/literate-ts/catcolab-logics/*.ts"],
+            "catcolab-analyses": ["./test/literate-ts/catcolab-analyses/index.ts"],
+            "catcolab-analyses/*": ["./test/literate-ts/catcolab-analyses/*.ts"],
+            "catcolab-documents": ["./src/future/index.ts"]
+        }
+    },
+    "include": [".lts/**/*.ts", ".lts/**/*.tsx"]
+}
