@@ -36,7 +36,7 @@ export interface DocumentStore<Handle> {
     /** Initialize a store handle from an initial document. */
     createHandle(initialDoc: Document): Handle;
     /** Read view of the document for a handle (reactive where applicable). */
-    viewDocument(handle: Handle): Document;
+    getReactiveProjection(handle: Handle): Document;
     /** Apply a mutation by mutating a draft document. */
     changeDocument(handle: Handle, fn: (doc: Document) => void): void;
     /**
@@ -66,7 +66,7 @@ export interface DocumentStore<Handle> {
     /**
      * Fetch the handle a link `_id` refers to, or `undefined` if the store does
      * not know it. The referenced document is read off the handle with
-     * {@link viewDocument}, the inverse of {@link linkForHandle}.
+     * {@link getReactiveProjection}, the inverse of {@link linkForHandle}.
      *
      * This is the store's contribution to resolution: validation's recursive
      * elaborator (see {@link resolveModelInStore}) walks a model's
@@ -140,7 +140,7 @@ export async function resolveModelInStore<Handle>(
     // A document's display name, or a short id fallback for an unnamed document.
     const nameFor = async (id: string): Promise<string> => {
         const handle = await store.getHandle(id);
-        const name = handle && (store.viewDocument(handle) as ModelDocument).name;
+        const name = handle && (store.getReactiveProjection(handle) as ModelDocument).name;
         return name && name.length > 0 ? `"${name}"` : `model ${id}`;
     };
 
@@ -161,7 +161,7 @@ export async function resolveModelInStore<Handle>(
         if (handle === undefined) {
             throw new Error(`unknown model ${link._id}`);
         }
-        const doc = store.viewDocument(handle) as ModelDocument;
+        const doc = store.getReactiveProjection(handle) as ModelDocument;
         resolving.add(link._id);
         path.push({ id: link._id, name: await nameFor(link._id) });
         try {
@@ -221,7 +221,7 @@ export const plainStore: DocumentStore<Document> = {
         return initialDoc;
     },
     getHandle: async (id) => plainDocumentsById.get(id),
-    viewDocument: (handle) => handle,
+    getReactiveProjection: (handle) => handle,
     changeDocument: (handle, fn) => {
         fn(handle);
         const listeners = plainChangeListeners.get(handle);

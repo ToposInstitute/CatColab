@@ -48,7 +48,7 @@ const solidStore: DocumentStore<SolidStoreHandle> = {
         const [doc, setDoc] = createStore<ModelDocument>(initialDoc as ModelDocument);
         return { doc, setDoc, listeners: new Set() };
     },
-    viewDocument: (handle) => handle.doc,
+    getReactiveProjection: (handle) => handle.doc,
     changeDocument: (handle, fn) => {
         handle.setDoc(produce<ModelDocument>(fn));
         // Notify subscribers after the mutation. A real reactive store (Solid,

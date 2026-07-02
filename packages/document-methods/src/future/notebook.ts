@@ -187,7 +187,7 @@ function attachAnalysisNotebook<TShape extends AnalysisShape, Handle>(
     handle: Handle,
     shape: TShape,
 ): Notebook<TShape, Handle> {
-    const doc = store.viewDocument(handle) as AnalysisDocument;
+    const doc = store.getReactiveProjection(handle) as AnalysisDocument;
     const change = (fn: (doc: AnalysisDocument) => void) =>
         store.changeDocument(handle, fn as (doc: Document) => void);
 
@@ -409,7 +409,7 @@ function attachDiagramNotebook<TShape extends DiagramShape, Handle>(
     shape: TShape,
     modelHandle: Handle,
 ): Notebook<TShape, Handle> {
-    const doc = store.viewDocument(handle) as DiagramDocument;
+    const doc = store.getReactiveProjection(handle) as DiagramDocument;
     const change = (fn: (doc: DiagramDocument) => void) =>
         store.changeDocument(handle, fn as (doc: Document) => void);
     const copy = <T>(value: T): T => store.copyValue(handle, value);
@@ -422,7 +422,7 @@ function attachDiagramNotebook<TShape extends DiagramShape, Handle>(
      * `getHandle` round-trip is needed for reactive reads, since the caller
      * already holds the model it is drawing in.
      */
-    const modelDocument = (): ModelDocument => store.viewDocument(modelHandle) as ModelDocument;
+    const modelDocument = (): ModelDocument => store.getReactiveProjection(modelHandle) as ModelDocument;
 
     /** Read a model judgment by its generator id from the model document. */
     const modelJudgment = (id: string): ModelJudgment | undefined => {
@@ -829,7 +829,7 @@ function attachNotebook<TShape extends AnyShape, Handle>(
             modelHandle,
         ) as Notebook<TShape, Handle>;
     }
-    const doc = store.viewDocument(handle) as ModelDocument;
+    const doc = store.getReactiveProjection(handle) as ModelDocument;
     const change = (fn: (doc: ModelDocument) => void) =>
         store.changeDocument(handle, fn as (doc: Document) => void);
     const copy = <T>(value: T): T => store.copyValue(handle, value);
@@ -1964,7 +1964,7 @@ export function createBinder<Handle>(store: DocumentStore<Handle>): Binder<Handl
             shape: TShape,
             handle: Handle,
         ): Result<Notebook<TShape, Handle>> {
-            const document = store.viewDocument(handle);
+            const document = store.getReactiveProjection(handle);
             const theory = document.type === "model" ? document.theory : undefined;
             if (theory !== shape.theory) {
                 return {

@@ -16,11 +16,25 @@ function materializeFromAutomerge<T>(doc: Doc<unknown>, subtree: T): T {
 
 const repo = new Repo();
 
-const solidAutomergeStore: DocumentStore<DocHandle<ModelDocument>> = {
-    createHandle: (initialDoc) => repo.create<ModelDocument>(initialDoc as ModelDocument),
-    viewDocument: (handle) => makeDocumentProjection(handle),
-    changeDocument: (handle, fn) => handle.change(fn),
-    copyValue: (handle, value) => materializeFromAutomerge(handle.doc(), value),
+// The handle bundles the Automerge `DocHandle` with its reactive projection, so
+// `makeDocumentProjection` is called exactly once — when the handle is minted —
+// rather than on every read. `getReactiveProjection` then just returns it.
+interface AutomergeHandle {
+    automergeHandle: DocHandle<ModelDocument>;
+    projection: ModelDocument;
+}
+
+const makeHandle = (automergeHandle: DocHandle<ModelDocument>): AutomergeHandle => ({
+    automergeHandle,
+    projection: makeDocumentProjection(automergeHandle),
+});
+
+const solidAutomergeStore: DocumentStore<AutomergeHandle> = {
+    createHandle: (initialDoc) =>
+        makeHandle(repo.create<ModelDocument>(initialDoc as ModelDocument)),
+    getReactiveProjection: (handle) => handle.projection,
+    changeDocument: (handle, fn) => handle.automergeHandle.change(fn),
+    copyValue: (handle, value) => materializeFromAutomerge(handle.automergeHandle.doc(), value),
     linkForHandle: () => undefined,
     getHandle: async () => undefined,
 };

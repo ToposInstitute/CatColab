@@ -188,7 +188,7 @@ const solidStore: DocumentStore<SolidStoreHandle> = {
         const [doc, setDoc] = createStore<ModelDocument>(initialDoc as ModelDocument);
         return { doc, setDoc };
     },
-    viewDocument: (handle) => handle.doc,
+    getReactiveProjection: (handle) => handle.doc,
     changeDocument: (handle, fn) => handle.setDoc(produce<ModelDocument>(fn)),
     copyValue: (_handle, value) => structuredClone(unwrap(value)),
     linkForHandle: () => undefined,

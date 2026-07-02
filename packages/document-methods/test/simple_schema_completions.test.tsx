@@ -52,7 +52,7 @@ const solidStore: DocumentStore<SolidStoreHandle> = {
         const [doc, setDoc] = createStore<ModelDocument>(initialDoc as ModelDocument);
         return { doc, setDoc, listeners: new Set() };
     },
-    viewDocument: (handle) => handle.doc,
+    getReactiveProjection: (handle) => handle.doc,
     changeDocument: (handle, fn) => {
         handle.setDoc(produce<ModelDocument>(fn));
         for (const listener of Array.from(handle.listeners)) {
