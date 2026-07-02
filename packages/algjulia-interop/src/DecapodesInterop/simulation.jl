@@ -2,8 +2,11 @@
 
 const MAX_FRAMES = 1000
 
+using SymbolicUtils: BasicSymbolic, symtype
 using Distributions
+
 using CombinatorialSpaces
+using DiagrammaticEquations.ThDEC
 
 function uuid_to_symb(decapode::SummationDecapode, vars::Dict{String, Int})
     Dict{String, Symbol}(key => (subpart(decapode, vars[key], :name)) for key ∈ keys(vars))
@@ -11,6 +14,7 @@ end
 
 struct DecapodesSystem
     pode::SummationDecapode
+    statevars::Vector{BasicSymbolic{<:DECQuantity}}
     geometry::Geometry
     init::ComponentArray
     duration::Int
@@ -49,6 +53,15 @@ const DEFAULT_ICS = Dict()
 function DecapodesSystem(pode::SummationDecapode; duration=DEFAULT_DURATION, mesh=nothing, constants=DEFAULT_CONSTANTS, ics=DEFAULT_ICS)
     
     geometry = Geometry(mesh)
+    d = dimension(geometry)
+
+    statevars = map(parts(pode, :Var)) do var
+        name = subpart(pode, var, :name)
+        # symtype accepts a space and dimension, which is the dimension of the space
+        type = symtype(DECQuantity, pode[var, :type], typeof(geometry), dimension=d)
+        SymbolicUtils.Sym{type}(name)
+    end
+
     u0 = initial_conditions(ics, geometry)
 
     ops = Operators()
@@ -56,7 +69,7 @@ function DecapodesSystem(pode::SummationDecapode; duration=DEFAULT_DURATION, mes
     
     plotVariables = Dict("n" => true, "w" => false, "Hydrodynamics_dX" => false)
 
-    return DecapodesSystem(pode, geometry, u0, duration, ops, plotVariables), constants
+    return DecapodesSystem(pode, statevars, geometry, u0, duration, ops, plotVariables), constants
 end
 
 function Base.show(io::IO, d::DecapodesSystem)
@@ -115,6 +128,12 @@ function DecapodesSystem(a::Types.Analysis; hodge=GeometricHodge())
     return DecapodesSystem(pode, geometry, u0, duration, ops, plotVariables) 
 end
 
+function symvar(pode::SummationDecapode, geometry::Geometry, name::Symbol)
+    idx = incident(pode, name, :name)
+    type = symtype(DECQuantity, pode[only(idx), :type], typeof(geometry), dimension=dimension(geometry))
+    SymbolicUtils.Sym{type}(name)
+end 
+
 # TODO this is just here until we can elaborate a diagram fully.
 function DecapodesSystem(uri::URIs.URI)
     params = HTTP.queryparams(uri)
@@ -160,18 +179,19 @@ function DecapodesSystem(uri::URIs.URI)
         isempty(p) ? base : base{p}
     end
 
+    pode = SummationDecapode(parse_decapode(Meta.parse("begin\n$pode\nend")))
+    infer_types!(pode)
+
     ics = map(params) do (k,v)
         m = match(r"initialConditions.(.+)", k)
         if isnothing(m)
             nothing
         else
-            var = only(m.captures)
-            Symbol(var) => resolve_ic(v)
+            name = only(m.captures)
+            symvar(pode, geometry, name) => resolve_ic(v)
         end
     end
     ics = Dict(filter(!isnothing, ics))
     
-    pode = SummationDecapode(parse_decapode(Meta.parse("begin\n$pode\nend")))
-    infer_types!(pode)
     DecapodesSystem(pode; duration=duration, constants=constants, ics=ics, mesh=mesh)
 end
