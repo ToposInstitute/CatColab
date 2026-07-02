@@ -9,15 +9,15 @@ model WeightedGraph := [
   weight : Attr[E, Weight]
 ]
 
-instance Edge : WeightedGraph := [
+instance WalkingEdge : WeightedGraph := [
     E := [e]
 ]
 
 instance I : WeightedGraph := [
     V := [v1, v2],
     Weight := [w],
-    we : Edge,
-    wf : Edge,
+    we : WalkingEdge,
+    wf : WalkingEdge,
     src(we.e) := v1,
     tgt(we.e) := v2,
     src(wf.e) := v2,
@@ -29,8 +29,8 @@ instance I : WeightedGraph := [
 instance I2 : WeightedGraph := [
     V := [v1, v2],
     Weight := [w],
-    we : Edge,
-    wf : Edge,
+    we : WalkingEdge,
+    wf : WalkingEdge,
     src := [we.e := v1, wf.e := v2],
     tgt := [we.e := v2, wf.e := v1],
     weight := [we.e := w, wf.e := w]

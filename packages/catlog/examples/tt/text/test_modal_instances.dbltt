@@ -1,0 +1,66 @@
+set_theory ThMulticategory
+
+model SigMonoid := [
+  M : Object,
+  op : Multihom[[M, M], M],
+  unit : Multihom[[], M]
+]
+
+model SigRig := [
+  R : Object,
+  Add : SigMonoid & [ .M := R ],
+  Mul : SigMonoid & [ .M := R ]
+]
+
+instance Z2 : SigMonoid := [
+    M := [x],
+    op([x,x]) := unit([]),
+    op([x,unit([])]) := x,
+    op([unit([]),x]) := x
+]
+
+instance Z2freeZ2 : SigMonoid := [
+    a : Z2,
+    b : Z2
+]
+
+instance klein : SigMonoid := [
+    p : Z2freeZ2,
+    op([p.a.x,p.b.x]) := op([p.b.x,p.a.x]),
+    op([op([p.a.x,p.b.x]),op([p.a.x,p.b.x])]) := unit([])
+]
+
+instance Z2TheRig : SigRig := [
+    Add.op([Mul.unit([]),Mul.unit([])]) := Add.unit([]),
+    Add.op([Mul.unit([]),Add.unit([])]) := Mul.unit([]),
+    Add.op([Add.unit([]),Mul.unit([])]) := Mul.unit([]),
+    Mul.op([Add.unit([]),Add.unit([])]) := Add.unit([]),
+    Mul.op([Mul.unit([]), Add.unit([])]) := Add.unit([]),
+    Mul.op([Add.unit([]), Mul.unit([])]) := Add.unit([])
+]
+
+set_theory ThSymMonoidalCategory
+
+model HMW := [
+  H : Object,
+  M : Object,
+  W : Object,
+  returns_w : (Hom Object)[H, W],
+  returns_d : (Hom Object)[H, @tensor []],
+  fight_h : (Hom Object) [@tensor [H,M], H],
+  fight_m : (Hom Object) [@tensor [H,M], M],
+  fight_mm : (Hom Object)[@tensor [H, M], @tensor [M, M]]
+]
+
+instance hm : HMW := [
+    H := [hercules,odysseus,beowulf],
+    M := [hydra,polyphemus,grendel,dragon],
+    W := [megara, penelope],
+    fight_h(@tensor [odysseus,polyphemus]) := odysseus,
+    fight_h(@tensor [beowulf,grendel]) := beowulf,
+    fight_m(@tensor [beowulf,dragon]) := dragon,
+    fight_mm(@tensor [hercules,hydra]) := @tensor [hydra,hydra],
+    returns_w(hercules) := megara,
+    returns_w(odysseus) := penelope,
+    returns_d(beowulf) := @tensor []
+]

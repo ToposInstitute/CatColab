@@ -1,0 +1,161 @@
+set_theory ThMulticategory
+#/ result: set theory to ThMulticategory
+
+model SigMonoid := [
+  M : Object,
+  op : Multihom[[M, M], M],
+  unit : Multihom[[], M]
+]
+#/ declared: SigMonoid
+
+model SigRig := [
+  R : Object,
+  Add : SigMonoid & [ .M := R ],
+  Mul : SigMonoid & [ .M := R ]
+]
+#/ declared: SigRig
+
+instance Z2 : SigMonoid := [
+    M := [x],
+    op([x,x]) := unit([]),
+    op([x,unit([])]) := x,
+    op([unit([]),x]) := x
+]
+#/ declared: Z2
+#/ instance generation failed: instance generation only supports discrete double theories
+
+instance Z2freeZ2 : SigMonoid := [
+    a : Z2,
+    b : Z2
+]
+#/ declared: Z2freeZ2
+#/ instance generation failed: instance generation only supports discrete double theories
+
+instance klein : SigMonoid := [
+    p : Z2freeZ2,
+    op([p.a.x,p.b.x]) := op([p.b.x,p.a.x]),
+    op([op([p.a.x,p.b.x]),op([p.a.x,p.b.x])]) := unit([])
+]
+#/ declared: klein
+#/ instance generation failed: instance generation only supports discrete double theories
+
+instance Z2TheRig : SigRig := [
+    Add.op([Mul.unit([]),Mul.unit([])]) := Add.unit([]),
+    Add.op([Mul.unit([]),Add.unit([])]) := Mul.unit([]),
+    Add.op([Add.unit([]),Mul.unit([])]) := Mul.unit([]),
+    Mul.op([Add.unit([]),Add.unit([])]) := Add.unit([]),
+    Mul.op([Mul.unit([]), Add.unit([])]) := Add.unit([]),
+    Mul.op([Add.unit([]), Mul.unit([])]) := Add.unit([])
+]
+#/ declared: Z2TheRig
+#/ instance generation failed: instance generation only supports discrete double theories
+#/ unexpected errors:
+#/ error[elab]: expected a fiber element: a generator, a projection `we.e`, a fiber list `[..]`, an object operation `@op [..]`, or a morphism application `f[..]`
+#/ --> examples/tt/text/test_modal_instances.dbltt:34:5
+#/ 34|     Add.op([Mul.unit([]),Mul.unit([])]) := Add.unit([]),
+#/ 34|     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+#/ error[elab]: expected a fiber element: a generator, a projection `we.e`, a fiber list `[..]`, an object operation `@op [..]`, or a morphism application `f[..]`
+#/ --> examples/tt/text/test_modal_instances.dbltt:34:44
+#/ 34|     Add.op([Mul.unit([]),Mul.unit([])]) := Add.unit([]),
+#/ 34|                                            ^^^^^^^^^^^^
+#/ error[elab]: fiber element has the wrong type:
+#/ over-types lie over different codomain objects: Holes ?3 and ?1 are not equal.
+#/ --> examples/tt/text/test_modal_instances.dbltt:34:5
+#/ 34|     Add.op([Mul.unit([]),Mul.unit([])]) := Add.unit([]),
+#/ 34|     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+#/ error[elab]: expected a fiber element: a generator, a projection `we.e`, a fiber list `[..]`, an object operation `@op [..]`, or a morphism application `f[..]`
+#/ --> examples/tt/text/test_modal_instances.dbltt:35:5
+#/ 35|     Add.op([Mul.unit([]),Add.unit([])]) := Mul.unit([]),
+#/ 35|     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+#/ error[elab]: expected a fiber element: a generator, a projection `we.e`, a fiber list `[..]`, an object operation `@op [..]`, or a morphism application `f[..]`
+#/ --> examples/tt/text/test_modal_instances.dbltt:35:44
+#/ 35|     Add.op([Mul.unit([]),Add.unit([])]) := Mul.unit([]),
+#/ 35|                                            ^^^^^^^^^^^^
+#/ error[elab]: fiber element has the wrong type:
+#/ over-types lie over different codomain objects: Holes ?8 and ?6 are not equal.
+#/ --> examples/tt/text/test_modal_instances.dbltt:35:5
+#/ 35|     Add.op([Mul.unit([]),Add.unit([])]) := Mul.unit([]),
+#/ 35|     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+#/ error[elab]: expected a fiber element: a generator, a projection `we.e`, a fiber list `[..]`, an object operation `@op [..]`, or a morphism application `f[..]`
+#/ --> examples/tt/text/test_modal_instances.dbltt:36:5
+#/ 36|     Add.op([Add.unit([]),Mul.unit([])]) := Mul.unit([]),
+#/ 36|     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+#/ error[elab]: expected a fiber element: a generator, a projection `we.e`, a fiber list `[..]`, an object operation `@op [..]`, or a morphism application `f[..]`
+#/ --> examples/tt/text/test_modal_instances.dbltt:36:44
+#/ 36|     Add.op([Add.unit([]),Mul.unit([])]) := Mul.unit([]),
+#/ 36|                                            ^^^^^^^^^^^^
+#/ error[elab]: fiber element has the wrong type:
+#/ over-types lie over different codomain objects: Holes ?13 and ?11 are not equal.
+#/ --> examples/tt/text/test_modal_instances.dbltt:36:5
+#/ 36|     Add.op([Add.unit([]),Mul.unit([])]) := Mul.unit([]),
+#/ 36|     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+#/ error[elab]: expected a fiber element: a generator, a projection `we.e`, a fiber list `[..]`, an object operation `@op [..]`, or a morphism application `f[..]`
+#/ --> examples/tt/text/test_modal_instances.dbltt:37:5
+#/ 37|     Mul.op([Add.unit([]),Add.unit([])]) := Add.unit([]),
+#/ 37|     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+#/ error[elab]: expected a fiber element: a generator, a projection `we.e`, a fiber list `[..]`, an object operation `@op [..]`, or a morphism application `f[..]`
+#/ --> examples/tt/text/test_modal_instances.dbltt:37:44
+#/ 37|     Mul.op([Add.unit([]),Add.unit([])]) := Add.unit([]),
+#/ 37|                                            ^^^^^^^^^^^^
+#/ error[elab]: fiber element has the wrong type:
+#/ over-types lie over different codomain objects: Holes ?18 and ?16 are not equal.
+#/ --> examples/tt/text/test_modal_instances.dbltt:37:5
+#/ 37|     Mul.op([Add.unit([]),Add.unit([])]) := Add.unit([]),
+#/ 37|     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+#/ error[elab]: expected a fiber element: a generator, a projection `we.e`, a fiber list `[..]`, an object operation `@op [..]`, or a morphism application `f[..]`
+#/ --> examples/tt/text/test_modal_instances.dbltt:38:5
+#/ 38|     Mul.op([Mul.unit([]), Add.unit([])]) := Add.unit([]),
+#/ 38|     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+#/ error[elab]: expected a fiber element: a generator, a projection `we.e`, a fiber list `[..]`, an object operation `@op [..]`, or a morphism application `f[..]`
+#/ --> examples/tt/text/test_modal_instances.dbltt:38:45
+#/ 38|     Mul.op([Mul.unit([]), Add.unit([])]) := Add.unit([]),
+#/ 38|                                             ^^^^^^^^^^^^
+#/ error[elab]: fiber element has the wrong type:
+#/ over-types lie over different codomain objects: Holes ?23 and ?21 are not equal.
+#/ --> examples/tt/text/test_modal_instances.dbltt:38:5
+#/ 38|     Mul.op([Mul.unit([]), Add.unit([])]) := Add.unit([]),
+#/ 38|     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+#/ error[elab]: expected a fiber element: a generator, a projection `we.e`, a fiber list `[..]`, an object operation `@op [..]`, or a morphism application `f[..]`
+#/ --> examples/tt/text/test_modal_instances.dbltt:39:5
+#/ 39|     Mul.op([Add.unit([]), Mul.unit([])]) := Add.unit([])
+#/ 39|     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+#/ error[elab]: expected a fiber element: a generator, a projection `we.e`, a fiber list `[..]`, an object operation `@op [..]`, or a morphism application `f[..]`
+#/ --> examples/tt/text/test_modal_instances.dbltt:39:45
+#/ 39|     Mul.op([Add.unit([]), Mul.unit([])]) := Add.unit([])
+#/ 39|                                             ^^^^^^^^^^^^
+#/ error[elab]: fiber element has the wrong type:
+#/ over-types lie over different codomain objects: Holes ?28 and ?26 are not equal.
+#/ --> examples/tt/text/test_modal_instances.dbltt:39:5
+#/ 39|     Mul.op([Add.unit([]), Mul.unit([])]) := Add.unit([])
+#/ 39|     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+set_theory ThSymMonoidalCategory
+#/ result: set theory to ThSymMonoidalCategory
+
+model HMW := [
+  H : Object,
+  M : Object,
+  W : Object,
+  returns_w : (Hom Object)[H, W],
+  returns_d : (Hom Object)[H, @tensor []],
+  fight_h : (Hom Object) [@tensor [H,M], H],
+  fight_m : (Hom Object) [@tensor [H,M], M],
+  fight_mm : (Hom Object)[@tensor [H, M], @tensor [M, M]]
+]
+#/ declared: HMW
+
+instance hm : HMW := [
+    H := [hercules,odysseus,beowulf],
+    M := [hydra,polyphemus,grendel,dragon],
+    W := [megara, penelope],
+    fight_h(@tensor [odysseus,polyphemus]) := odysseus,
+    fight_h(@tensor [beowulf,grendel]) := beowulf,
+    fight_m(@tensor [beowulf,dragon]) := dragon,
+    fight_mm(@tensor [hercules,hydra]) := @tensor [hydra,hydra],
+    returns_w(hercules) := megara,
+    returns_w(odysseus) := penelope,
+    returns_d(beowulf) := @tensor []
+]
+#/ declared: hm
+#/ instance generation failed: instance generation only supports discrete double theories
+
