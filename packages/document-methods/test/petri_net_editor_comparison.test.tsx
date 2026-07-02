@@ -184,7 +184,7 @@ type SolidStoreHandle = {
 };
 
 const solidStore: DocumentStore<SolidStoreHandle> = {
-    createHandle(initialDoc) {
+    async createHandle(initialDoc) {
         const [doc, setDoc] = createStore<ModelDocument>(initialDoc as ModelDocument);
         return { doc, setDoc };
     },
@@ -456,7 +456,7 @@ describe("Petri-net editor comparison", () => {
         container.remove();
     });
 
-    test("catcolab-documents, typed logic", () => {
+    test("catcolab-documents, typed logic", async () => {
         function InlinePlaceListEditor(props: { places: PlaceCell[] }) {
             return <span>[{props.places.map((place) => place.name).join(", ")}]</span>;
         }
@@ -528,7 +528,7 @@ describe("Petri-net editor comparison", () => {
             );
         }
 
-        const notebook = solidBinder.createNotebook(PetriNet, { name: "Petri net" });
+        const notebook = await solidBinder.createNotebook(PetriNet, { name: "Petri net" });
         const a = notebook.add(Place, { name: "A" });
         notebook.add(Place, { name: "B" });
         const c = notebook.add(Place, { name: "C" });
@@ -553,7 +553,7 @@ describe("Petri-net editor comparison", () => {
         container.remove();
     });
 
-    test("catcolab-documents, generic consumer", () => {
+    test("catcolab-documents, generic consumer", async () => {
         const basicObject = defineObject({ tag: "Basic", content: "Object" });
         const symmetricListMorphism = defineMorphism(
             { tag: "Hom", content: basicObject.obType },
@@ -644,7 +644,7 @@ describe("Petri-net editor comparison", () => {
             );
         }
 
-        const notebook = solidBinder.createNotebook(PetriNet, { name: "Petri net" });
+        const notebook = await solidBinder.createNotebook(PetriNet, { name: "Petri net" });
         const a = notebook.add(Place, { name: "A" });
         notebook.add(Place, { name: "B" });
         const c = notebook.add(Place, { name: "C" });

@@ -133,7 +133,7 @@ function badAddListMorphism(notebook: NotebookOfLists) {
 import { binder } from "catcolab-documents";
 import { PetriNet } from "catcolab-logics/petri-net";
 
-const petriNet = binder.createNotebook(PetriNet, { name: "example" });
+const petriNet = await binder.createNotebook(PetriNet, { name: "example" });
 
 addListMorphism(petriNet);
 ```
@@ -150,7 +150,7 @@ const EntityObjectShape = defineShape({
     morphisms: [ListMor],
 });
 
-const entityObjects = binder.createNotebook(EntityObjectShape, { name: "example" });
+const entityObjects = await binder.createNotebook(EntityObjectShape, { name: "example" });
 
 addListMorphism(entityObjects);
 ```
@@ -160,7 +160,7 @@ addListMorphism(entityObjects);
 ```ts
 import { SimpleOlog } from "catcolab-logics/simple-olog";
 
-const simpleOlog = binder.createNotebook(SimpleOlog, { name: "example" });
+const simpleOlog = await binder.createNotebook(SimpleOlog, { name: "example" });
 
 // @ts-expect-error A SimpleOlog notebook lacks the list-valued morphisms ListShape requires.
 addListMorphism(simpleOlog);
@@ -172,7 +172,7 @@ const JustObjectShape = defineShape({
     objects: [BasicObj],
 });
 
-const justObjects = binder.createNotebook(JustObjectShape, { name: "example" });
+const justObjects = await binder.createNotebook(JustObjectShape, { name: "example" });
 
 // @ts-expect-error We have no morphisms in `JustObjectShape`.
 addListMorphism(justObjects);
@@ -184,7 +184,7 @@ const JustMorphismShape = defineShape({
     morphisms: [ListMor],
 });
 
-const justMorphisms = binder.createNotebook(JustMorphismShape, { name: "example" });
+const justMorphisms = await binder.createNotebook(JustMorphismShape, { name: "example" });
 
 // @ts-expect-error We have no objects in `JustMorphismShape`.
 addListMorphism(justMorphisms);

@@ -48,7 +48,7 @@ type SolidStoreHandle = {
 };
 
 const solidStore: DocumentStore<SolidStoreHandle> = {
-    createHandle(initialDoc) {
+    async createHandle(initialDoc) {
         const [doc, setDoc] = createStore<ModelDocument>(initialDoc as ModelDocument);
         return { doc, setDoc, listeners: new Set() };
     },
@@ -112,7 +112,7 @@ describe("simple-schema completions consumer", () => {
         // is derived from it. `Mapping` exists only so the morphism-type filter
         // is meaningful: `obGeneratorsWithType(AttrType)` must exclude entities.
         void Mapping;
-        const notebook = solidBinder.createNotebook(SimpleSchema, { name: "Company schema" });
+        const notebook = await solidBinder.createNotebook(SimpleSchema, { name: "Company schema" });
         const person = notebook.add(Entity, { name: "Person" });
         const str = notebook.add(AttrType, { name: "String" });
         notebook.add(AttrType, { name: "Integer" });

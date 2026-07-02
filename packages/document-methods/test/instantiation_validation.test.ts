@@ -1,7 +1,7 @@
 import { binder, createBinder, type DocumentStore, Instantiation } from "catcolab-documents";
 import { PetriNet, Place } from "catcolab-logics/petri-net";
-import { Entity, SimpleSchema } from "catcolab-logics/simple-schema";
 import { SimpleOlog, Type } from "catcolab-logics/simple-olog";
+import { Entity, SimpleSchema } from "catcolab-logics/simple-schema";
 import { v7 } from "uuid";
 import { describe, expect, test } from "vitest";
 
@@ -31,7 +31,7 @@ function createResolvingStore(): {
     const failOnResolve = { value: false };
 
     const store: DocumentStore<ModelDocument> = {
-        createHandle: (initialDoc) => {
+        createHandle: async (initialDoc) => {
             const doc = initialDoc as ModelDocument;
             const id = v7();
             ids.set(doc, id);
@@ -56,12 +56,12 @@ describe("instantiation validation", () => {
         const { store } = createResolvingStore();
         const resolvingBinder = createBinder(store);
 
-        const imported = resolvingBinder.createNotebook(SimpleOlog, {
+        const imported = await resolvingBinder.createNotebook(SimpleOlog, {
             name: "Imported",
         });
         imported.add(Type, { name: "Thing" });
 
-        const notebook = resolvingBinder.createNotebook(SimpleOlog, {
+        const notebook = await resolvingBinder.createNotebook(SimpleOlog, {
             name: "Main",
         });
         notebook.add(Type, { name: "A" });
@@ -76,13 +76,13 @@ describe("instantiation validation", () => {
     });
 
     test("the plain store resolves an instantiation of a locally-validated model", async () => {
-        const imported = binder.createNotebook(SimpleOlog, { name: "Imported" });
+        const imported = await binder.createNotebook(SimpleOlog, { name: "Imported" });
         imported.add(Type, { name: "Thing" });
         // Validating the imported notebook elaborates it; the plain store caches
         // the resulting model so the instantiation below can resolve it.
         expect((await imported.validate()).issues).toBeUndefined();
 
-        const notebook = binder.createNotebook(SimpleOlog, { name: "Main" });
+        const notebook = await binder.createNotebook(SimpleOlog, { name: "Main" });
         notebook.add(Type, { name: "A" });
         notebook.add(Instantiation, { name: "ImportedOlog", model: imported });
 
@@ -95,12 +95,12 @@ describe("instantiation validation", () => {
         const { store, failOnResolve } = createResolvingStore();
         const resolvingBinder = createBinder(store);
 
-        const imported = resolvingBinder.createNotebook(SimpleOlog, {
+        const imported = await resolvingBinder.createNotebook(SimpleOlog, {
             name: "Imported",
         });
         imported.add(Type, { name: "Thing" });
 
-        const notebook = resolvingBinder.createNotebook(SimpleOlog, {
+        const notebook = await resolvingBinder.createNotebook(SimpleOlog, {
             name: "Main",
         });
         notebook.add(Instantiation, { name: "ImportedOlog", model: imported });
@@ -108,9 +108,7 @@ describe("instantiation validation", () => {
         failOnResolve.value = true;
         const result = await notebook.validate();
         expect(result.issues).toBeDefined();
-        expect(result.issues?.map((issue) => issue.message).join("; ")).toContain(
-            "unknown model",
-        );
+        expect(result.issues?.map((issue) => issue.message).join("; ")).toContain("unknown model");
     });
 
     test("resolution elaborates instantiations against the host notebook's theory", async () => {
@@ -120,12 +118,12 @@ describe("instantiation validation", () => {
         // A Petri-net notebook instantiating another Petri-net model: every
         // instantiation is validatable against the host's core theory
         // (`ThSymMonoidalCategory`), which `validate` threads through resolution.
-        const imported = resolvingBinder.createNotebook(PetriNet, {
+        const imported = await resolvingBinder.createNotebook(PetriNet, {
             name: "Imported",
         });
         imported.add(Place, { name: "S" });
 
-        const notebook = resolvingBinder.createNotebook(PetriNet, { name: "Main" });
+        const notebook = await resolvingBinder.createNotebook(PetriNet, { name: "Main" });
         notebook.add(Place, { name: "A" });
         notebook.add(Instantiation, { name: "ImportedNet", model: imported });
 
@@ -141,12 +139,12 @@ describe("instantiation validation", () => {
         // The olog's `ThCategory` embeds into the schema's `ThSchema`, so the
         // instantiated olog is validatable against the host schema's core
         // theory — the single theory `validate` threads through resolution.
-        const imported = resolvingBinder.createNotebook(SimpleOlog, {
+        const imported = await resolvingBinder.createNotebook(SimpleOlog, {
             name: "Imported",
         });
         imported.add(Type, { name: "Thing" });
 
-        const notebook = resolvingBinder.createNotebook(SimpleSchema, {
+        const notebook = await resolvingBinder.createNotebook(SimpleSchema, {
             name: "Main",
         });
         notebook.add(Entity, { name: "A" });
@@ -164,16 +162,16 @@ describe("instantiation validation", () => {
         // `inner` <- `imported` <- `main`: resolving `imported` must in turn
         // resolve its instantiation of `inner`, so it elaborates against a
         // populated map rather than an empty one.
-        const inner = resolvingBinder.createNotebook(SimpleOlog, { name: "Inner" });
+        const inner = await resolvingBinder.createNotebook(SimpleOlog, { name: "Inner" });
         inner.add(Type, { name: "Thing" });
 
-        const imported = resolvingBinder.createNotebook(SimpleOlog, {
+        const imported = await resolvingBinder.createNotebook(SimpleOlog, {
             name: "Imported",
         });
         imported.add(Type, { name: "B" });
         imported.add(Instantiation, { name: "InnerOlog", model: inner });
 
-        const notebook = resolvingBinder.createNotebook(SimpleOlog, {
+        const notebook = await resolvingBinder.createNotebook(SimpleOlog, {
             name: "Main",
         });
         notebook.add(Type, { name: "A" });
@@ -190,8 +188,8 @@ describe("instantiation validation", () => {
 
         // A instantiates C and C instantiates A: a cycle. The resolver tracks
         // ids whose resolution is in progress and rejects when one recurs.
-        const a = resolvingBinder.createNotebook(SimpleOlog, { name: "A" });
-        const c = resolvingBinder.createNotebook(SimpleOlog, { name: "C" });
+        const a = await resolvingBinder.createNotebook(SimpleOlog, { name: "A" });
+        const c = await resolvingBinder.createNotebook(SimpleOlog, { name: "C" });
         a.add(Type, { name: "TA" });
         c.add(Type, { name: "TC" });
         a.add(Instantiation, { name: "toC", model: c });

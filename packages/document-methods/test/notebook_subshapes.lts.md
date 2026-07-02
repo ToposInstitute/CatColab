@@ -39,7 +39,7 @@ accepted wherever a generic `Notebook` is expected.
 <!-- verifier:prepend-to-following -->
 
 ```ts
-const net = binder.createNotebook(PetriNet, { name: "Net" });
+const net = await binder.createNotebook(PetriNet, { name: "Net" });
 const a = net.add(Place, { name: "a" });
 const c = net.add(Place, { name: "c" });
 const transition = net.add(Transition, { name: "fires", from: [a], to: [c] });
@@ -88,7 +88,7 @@ function renderPlaces(places: PlaceCell[]): string {
     return places.map((place) => place.name).join(", ");
 }
 
-const schema = binder.createNotebook(SimpleSchema, { name: "Schema" });
+const schema = await binder.createNotebook(SimpleSchema, { name: "Schema" });
 const person = schema.add(Entity, { name: "Person" });
 
 // @ts-expect-error A `PlaceCell[]` prop rejects schema `Entity` cells.
@@ -103,7 +103,7 @@ same way, so appending a cell of another object type is rejected.
 ```ts
 import { Entity, SimpleSchema } from "catcolab-logics/simple-schema";
 
-const schema = binder.createNotebook(SimpleSchema, { name: "Schema" });
+const schema = await binder.createNotebook(SimpleSchema, { name: "Schema" });
 const entity = schema.add(Entity, { name: "Person" });
 
 // @ts-expect-error A transition's `from` is `PlaceCell[]`; an `Entity` cell is rejected.
@@ -123,5 +123,5 @@ const PlacesShape = defineShape({
 });
 
 // @ts-expect-error A shape without a `theory` cannot originate a document.
-binder.createNotebook(PlacesShape, { name: "Nope" });
+await binder.createNotebook(PlacesShape, { name: "Nope" });
 ```

@@ -21,7 +21,7 @@ type SolidStoreHandle = {
 };
 
 const solidStore: DocumentStore<SolidStoreHandle> = {
-    createHandle(initialDoc) {
+    async createHandle(initialDoc) {
         const [doc, setDoc] = createStore<ModelDocument>(initialDoc as ModelDocument);
         return { doc, setDoc };
     },
@@ -34,16 +34,17 @@ const solidStore: DocumentStore<SolidStoreHandle> = {
 
 const solidBinder = createBinder(solidStore);
 
-const notebook = solidBinder.createNotebook(SimpleOlog, { name: "An Olog" });
+const notebook = await solidBinder.createNotebook(SimpleOlog, { name: "An Olog" });
 ```
 
 A binder can also load an existing plain document instead of creating a fresh
 notebook. The store initializes its storage from the document.
 
 ```ts
-const existingSolidDoc = binder.createNotebook(SimpleOlog, { name: "Loaded Olog" }).document;
+const existingSolidDoc = (await binder.createNotebook(SimpleOlog, { name: "Loaded Olog" }))
+    .document;
 
-const loadedResult = solidBinder.loadNotebook(SimpleOlog, existingSolidDoc);
+const loadedResult = await solidBinder.loadNotebook(SimpleOlog, existingSolidDoc);
 console.log("issues:", loadedResult.issues ?? []);
 if (!loadedResult.issues) {
     const loadedSolidNotebook = loadedResult.value;
@@ -172,7 +173,7 @@ const makeHandle = (automergeHandle: DocHandle<ModelDocument>): AutomergeHandle 
 });
 
 const solidAutomergeStore: DocumentStore<AutomergeHandle> = {
-    createHandle: (initialDoc) =>
+    createHandle: async (initialDoc) =>
         makeHandle(repo.create<ModelDocument>(initialDoc as ModelDocument)),
     getReactiveProjection: (handle) => handle.projection,
     changeDocument: (handle, fn) => handle.automergeHandle.change(fn),
@@ -188,7 +189,7 @@ const solidAutomergeStore: DocumentStore<AutomergeHandle> = {
 
 const automergeBinder = createBinder(solidAutomergeStore);
 
-const notebook = automergeBinder.createNotebook(SimpleOlog, { name: "An Olog" });
+const notebook = await automergeBinder.createNotebook(SimpleOlog, { name: "An Olog" });
 ```
 
 ```ts
@@ -225,12 +226,12 @@ as `notebook.handle.url`. To work with an existing Automerge document, find its
 handle in the repo and load it using `loadNotebookFromHandle`.
 
 ```ts
-const sourceNotebook = automergeBinder.createNotebook(SimpleOlog, {
+const sourceNotebook = await automergeBinder.createNotebook(SimpleOlog, {
     name: "Automerge Olog",
 });
 
 const foundHandle = await repo.find<ModelDocument>(sourceNotebook.handle.automergeHandle.url);
-const result = automergeBinder.loadNotebookFromHandle(SimpleOlog, makeHandle(foundHandle));
+const result = await automergeBinder.loadNotebookFromHandle(SimpleOlog, makeHandle(foundHandle));
 console.log("issues:", result.issues ?? []);
 if (!result.issues) {
     const loadedNotebook = result.value;
@@ -251,7 +252,7 @@ migrated notebook keeps the very same Automerge `DocHandle` and URL as before.
 ```ts
 import { SimpleSchema } from "catcolab-logics/simple-schema";
 
-const migratable = automergeBinder.createNotebook(SimpleOlog, { name: "To migrate" });
+const migratable = await automergeBinder.createNotebook(SimpleOlog, { name: "To migrate" });
 const urlBefore = migratable.handle.automergeHandle.url;
 
 const migration = await migratable.migrateTo(SimpleSchema);
@@ -279,7 +280,7 @@ we simulate a remote collaborator by editing through a second handle on the same
 document found in the repo.
 
 ```ts
-const shared = automergeBinder.createNotebook(SimpleOlog, { name: "Shared Olog" });
+const shared = await automergeBinder.createNotebook(SimpleOlog, { name: "Shared Olog" });
 
 let observedChanges = 0;
 const unsubscribe = shared.onChange(() => {

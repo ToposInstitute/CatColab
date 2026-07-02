@@ -15,7 +15,7 @@ document store. The default `binder` uses the plain in-memory store.
 <!-- verifier:prepend-to-following -->
 
 ```ts
-const notebook = binder.createNotebook(SimpleOlog, { name: "An Olog" });
+const notebook = await binder.createNotebook(SimpleOlog, { name: "An Olog" });
 ```
 
 All cells are added with a single `add` method. The first argument selects
@@ -101,7 +101,7 @@ source copy: Source copy
 ```ts
 import { Instantiation } from "catcolab-documents";
 
-const anotherOlog = binder.createNotebook(SimpleOlog, { name: "Another Olog" });
+const anotherOlog = await binder.createNotebook(SimpleOlog, { name: "Another Olog" });
 const thing = anotherOlog.add(Type, { name: "Thing" });
 
 const instantiation = notebook.add(Instantiation, {
@@ -176,7 +176,7 @@ We can filter cells by their type, not just their kind and we provide some utili
 import { Attr, AttrType, Entity, Mapping, SimpleSchema } from "catcolab-logics/simple-schema";
 import { binder } from "catcolab-documents";
 
-const notebook = binder.createNotebook(SimpleSchema, { name: "Example schema" });
+const notebook = await binder.createNotebook(SimpleSchema, { name: "Example schema" });
 
 const person = notebook.add(Entity, { name: "Person" });
 const company = notebook.add(Entity, { name: "Company" });
@@ -204,7 +204,7 @@ mappings: employer
 ```ts
 import { Instantiation } from "catcolab-documents";
 
-const anotherSchema = binder.createNotebook(SimpleSchema, { name: "Another schema" });
+const anotherSchema = await binder.createNotebook(SimpleSchema, { name: "Another schema" });
 const enterprise = anotherSchema.add(Entity, { name: "Enterprise" });
 const building = anotherSchema.add(Entity, { name: "Building" });
 const owner = anotherSchema.add(Mapping, { name: "owner", from: enterprise, to: building });
@@ -242,7 +242,7 @@ mappings: employer
 import { Entity, Mapping, SimpleSchema } from "catcolab-logics/simple-schema";
 import { binder } from "catcolab-documents";
 
-const notebook = binder.createNotebook(SimpleSchema, { name: "Example schema" });
+const notebook = await binder.createNotebook(SimpleSchema, { name: "Example schema" });
 
 const person = notebook.add(Entity, { name: "Person" });
 const company = notebook.add(Entity, { name: "Company" });
@@ -298,7 +298,7 @@ wrong type: Cell "<our-random-uuid>" is not of the expected type.
 import { Aspect, SimpleOlog, Type } from "catcolab-logics/simple-olog";
 import { binder } from "catcolab-documents";
 
-const notebook = binder.createNotebook(SimpleOlog, { name: "An Olog" });
+const notebook = await binder.createNotebook(SimpleOlog, { name: "An Olog" });
 
 const source = notebook.add(Type, { name: "A" });
 const target = notebook.add(Type, { name: "B" });
@@ -321,7 +321,7 @@ notebook.add(Aspect, { name: "bad", from: [source, target], to: target });
 import { AttrType, Mapping, SimpleSchema } from "catcolab-logics/simple-schema";
 import { binder } from "catcolab-documents";
 
-const schema = binder.createNotebook(SimpleSchema, { name: "Example schema" });
+const schema = await binder.createNotebook(SimpleSchema, { name: "Example schema" });
 
 const str = schema.add(AttrType, { name: "String" });
 
@@ -343,7 +343,7 @@ But adapt to the underlying logic:
 import { PetriNet, Place, Transition } from "catcolab-logics/petri-net";
 import { binder } from "catcolab-documents";
 
-const notebook = binder.createNotebook(PetriNet, { name: "Example Petri-net" });
+const notebook = await binder.createNotebook(PetriNet, { name: "Example Petri-net" });
 
 const a = notebook.add(Place, { name: "A" });
 
@@ -379,7 +379,7 @@ notebook was edited after the handle was obtained.
 import { SimpleOlog, Type } from "catcolab-logics/simple-olog";
 import { binder, RichText } from "catcolab-documents";
 
-const notebook = binder.createNotebook(SimpleOlog, { name: "An Olog" });
+const notebook = await binder.createNotebook(SimpleOlog, { name: "An Olog" });
 
 const a = notebook.add(Type, { name: "A" });
 const b = notebook.add(Type, { name: "B" });
@@ -504,7 +504,7 @@ invalid notebooks can be handled without throwing.
 import { Aspect, SimpleOlog, Type } from "catcolab-logics/simple-olog";
 import { binder } from "catcolab-documents";
 
-const notebook = binder.createNotebook(SimpleOlog, { name: "An Olog" });
+const notebook = await binder.createNotebook(SimpleOlog, { name: "An Olog" });
 
 const source = notebook.add(Type, { name: "A" });
 const target = notebook.add(Type, { name: "B" });
@@ -562,8 +562,8 @@ An ill-formed notebook validates to a failure carrying `issues`.
 import { SimpleOlog, Type } from "catcolab-logics/simple-olog";
 import { binder, Instantiation } from "catcolab-documents";
 
-const first = binder.createNotebook(SimpleOlog, { name: "First" });
-const second = binder.createNotebook(SimpleOlog, { name: "Second" });
+const first = await binder.createNotebook(SimpleOlog, { name: "First" });
+const second = await binder.createNotebook(SimpleOlog, { name: "Second" });
 
 first.add(Type, { name: "A" });
 second.add(Type, { name: "B" });
@@ -592,7 +592,7 @@ issues: Instantiation cycle detected: "First" → "Second" → "First". A notebo
 import { PetriNet } from "catcolab-logics/petri-net";
 import { binder } from "catcolab-documents";
 
-const notebook = binder.createNotebook(PetriNet, { name: "Example Petri-net" });
+const notebook = await binder.createNotebook(PetriNet, { name: "Example Petri-net" });
 ```
 
 We can dump a notebook.
@@ -607,7 +607,7 @@ And load it. `loadNotebook` returns a [Standard Schema](https://standardschema.d
 result: a `{ value }` on success, or a `{ issues }` failure.
 
 ```ts
-const loaded = binder.loadNotebook(PetriNet, petriNetData);
+const loaded = await binder.loadNotebook(PetriNet, petriNetData);
 console.log("issues:", loaded.issues ?? []);
 if (!loaded.issues) {
     console.log("loaded:", loaded.value.name);
@@ -625,7 +625,7 @@ Trying to load a document with the wrong shape yields a failure result whose
 ```ts
 import { SimpleOlog } from "catcolab-logics/simple-olog";
 
-const wrong = binder.loadNotebook(SimpleOlog, petriNetData);
+const wrong = await binder.loadNotebook(SimpleOlog, petriNetData);
 console.log("issues:", wrong.issues?.map((issue) => issue.message).join("; "));
 ```
 
@@ -644,7 +644,7 @@ import { Aspect, SimpleOlog, Type } from "catcolab-logics/simple-olog";
 import { Entity, Mapping, SimpleSchema } from "catcolab-logics/simple-schema";
 import { binder } from "catcolab-documents";
 
-const olog = binder.createNotebook(SimpleOlog, { name: "An Olog" });
+const olog = await binder.createNotebook(SimpleOlog, { name: "An Olog" });
 
 const a = olog.add(Type, { name: "A" });
 const b = olog.add(Type, { name: "B" });
@@ -705,7 +705,7 @@ import { Aspect, SimpleOlog, Type } from "catcolab-logics/simple-olog";
 import { PetriNet } from "catcolab-logics/petri-net";
 import { binder } from "catcolab-documents";
 
-const olog = binder.createNotebook(SimpleOlog, { name: "An Olog" });
+const olog = await binder.createNotebook(SimpleOlog, { name: "An Olog" });
 
 const a = olog.add(Type, { name: "A" });
 const b = olog.add(Type, { name: "B" });

@@ -13,7 +13,7 @@ type SolidStoreHandle = {
 };
 
 const solidStore: DocumentStore<SolidStoreHandle> = {
-    createHandle(initialDoc) {
+    async createHandle(initialDoc) {
         const [doc, setDoc] = createStore<ModelDocument>(initialDoc as ModelDocument);
         return { doc, setDoc };
     },
@@ -26,7 +26,7 @@ const solidStore: DocumentStore<SolidStoreHandle> = {
 
 const solidBinder = createBinder(solidStore);
 
-const notebook = solidBinder.createNotebook(SimpleOlog, { name: "An Olog" });
+const notebook = await solidBinder.createNotebook(SimpleOlog, { name: "An Olog" });
 ```
 
 ```tsx

@@ -25,7 +25,7 @@ is written.
 import { binder } from "catcolab-documents";
 import { AttrType, Entity, Mapping, SimpleSchema } from "catcolab-logics/simple-schema";
 
-const notebook = binder.createNotebook(SimpleSchema, { name: "Schema" });
+const notebook = await binder.createNotebook(SimpleSchema, { name: "Schema" });
 const person = notebook.add(Entity, { name: "Person" });
 const age = notebook.add(AttrType, { name: "Age" });
 
@@ -45,7 +45,7 @@ list is required is rejected at compile time.
 import { binder } from "catcolab-documents";
 import { PetriNet, Place, Transition } from "catcolab-logics/petri-net";
 
-const notebook = binder.createNotebook(PetriNet, { name: "Net" });
+const notebook = await binder.createNotebook(PetriNet, { name: "Net" });
 const a = notebook.add(Place, { name: "A" });
 const c = notebook.add(Place, { name: "C" });
 
@@ -66,10 +66,10 @@ import { binder } from "catcolab-documents";
 import { PetriNet, Place } from "catcolab-logics/petri-net";
 import { Entity, Mapping, SimpleSchema } from "catcolab-logics/simple-schema";
 
-const net = binder.createNotebook(PetriNet, { name: "Net" });
+const net = await binder.createNotebook(PetriNet, { name: "Net" });
 const place = net.add(Place, { name: "A place" });
 
-const schema = binder.createNotebook(SimpleSchema, { name: "Schema" });
+const schema = await binder.createNotebook(SimpleSchema, { name: "Schema" });
 const person = schema.add(Entity, { name: "Person" });
 
 // @ts-expect-error `place` is a Place cell from another theory; a Mapping endpoint needs an Entity cell.

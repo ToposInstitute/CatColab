@@ -205,7 +205,7 @@ type SolidStoreHandle = {
 };
 
 const solidStore: DocumentStore<SolidStoreHandle> = {
-    createHandle(initialDoc) {
+    async createHandle(initialDoc) {
         const [doc, setDoc] = createStore<ModelDocument>(initialDoc as ModelDocument);
         return { doc, setDoc };
     },
@@ -253,7 +253,7 @@ function GenericOlogEditor(props: { notebook: Notebook<Shape, SolidStoreHandle> 
 ```
 
 ```tsx
-const notebook = solidBinder.createNotebook(Olog, { name: "An Olog" });
+const notebook = await solidBinder.createNotebook(Olog, { name: "An Olog" });
 const person = notebook.add(ologObjectType, { name: "Person" });
 const company = notebook.add(ologObjectType, { name: "Company" });
 notebook.add(ologAspectType, { name: "works for", from: person, to: company });
@@ -303,7 +303,7 @@ type SolidStoreHandle = {
 };
 
 const solidStore: DocumentStore<SolidStoreHandle> = {
-    createHandle(initialDoc) {
+    async createHandle(initialDoc) {
         const [doc, setDoc] = createStore<ModelDocument>(initialDoc as ModelDocument);
         return { doc, setDoc };
     },
@@ -341,7 +341,7 @@ function TypedOlogEditor(props: { notebook: TypedOlogNotebook }) {
 ```
 
 ```tsx
-const notebook = solidBinder.createNotebook(SimpleOlog, { name: "An Olog" });
+const notebook = await solidBinder.createNotebook(SimpleOlog, { name: "An Olog" });
 const person = notebook.add(Type, { name: "Person" });
 const company = notebook.add(Type, { name: "Company" });
 notebook.add(Aspect, { name: "works for", from: person, to: company });

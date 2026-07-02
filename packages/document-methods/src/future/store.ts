@@ -33,8 +33,13 @@ export class CyclicInstantiationError extends Error {
  * produced by `createHandle` and passed back into the other methods.
  */
 export interface DocumentStore<Handle> {
-    /** Initialize a store handle from an initial document. */
-    createHandle(initialDoc: Document): Handle;
+    /**
+     * Initialize a store handle from an initial document. Asynchronous so a
+     * store backed by a remote backend can register the document as it is
+     * created — e.g. push the content over RPC and resolve the returned ref to
+     * a handle. In-memory stores simply resolve immediately.
+     */
+    createHandle(initialDoc: Document): Promise<Handle>;
     /** Read view of the document for a handle (reactive where applicable). */
     getReactiveProjection(handle: Handle): Document;
     /** Apply a mutation by mutating a draft document. */
@@ -216,7 +221,7 @@ const plainChangeListeners = new WeakMap<Document, Set<() => void>>();
 
 /** A plain in-memory store whose handle is the document itself. */
 export const plainStore: DocumentStore<Document> = {
-    createHandle: (initialDoc) => {
+    createHandle: async (initialDoc) => {
         plainDocumentId(initialDoc);
         return initialDoc;
     },

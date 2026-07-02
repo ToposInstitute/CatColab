@@ -29,7 +29,7 @@ const Olog = defineShape({
     morphisms: [Aspect],
 });
 
-const notebook = binder.createNotebook(Olog, { name: "A generic notebook" });
+const notebook = await binder.createNotebook(Olog, { name: "A generic notebook" });
 
 // A wide view whose `cells()` yields the untyped `NotebookCell` union.
 const generic: Notebook = notebook;
@@ -139,7 +139,7 @@ morphisms: 1
 import { SimpleOlog, Type } from "catcolab-logics/simple-olog";
 import { binder, CellKind, type Notebook } from "catcolab-documents";
 
-const typed = binder.createNotebook(SimpleOlog, { name: "An Olog" });
+const typed = await binder.createNotebook(SimpleOlog, { name: "An Olog" });
 typed.add(Type, { name: "A" });
 
 // A notebook over the full Olog shape is assignable to a notebook over the
@@ -188,9 +188,9 @@ const WithCore = defineShape({
     morphisms: [Mor],
 });
 
-const noCore = binder.createNotebook(NoCore, { name: "No core theory" });
-const host = binder.createNotebook(WithCore, { name: "Host" });
-const core = binder.createNotebook(WithCore, { name: "Core model" });
+const noCore = await binder.createNotebook(NoCore, { name: "No core theory" });
+const host = await binder.createNotebook(WithCore, { name: "Host" });
+const core = await binder.createNotebook(WithCore, { name: "Core model" });
 
 // @ts-expect-error A shape without a `coreTheory` cannot be validated.
 await noCore.validate();

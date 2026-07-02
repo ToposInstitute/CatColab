@@ -128,23 +128,44 @@ const formalCellsSignature = (document: Document): string => {
 const modelErrorToIssue = (error: InvalidDblModel): Issue => {
     switch (error.tag) {
         case "Dom":
-            return { message: `Morphism "${error.content}" has an invalid domain`, path: [error.content] };
+            return {
+                message: `Morphism "${error.content}" has an invalid domain`,
+                path: [error.content],
+            };
         case "Cod":
-            return { message: `Morphism "${error.content}" has an invalid codomain`, path: [error.content] };
+            return {
+                message: `Morphism "${error.content}" has an invalid codomain`,
+                path: [error.content],
+            };
         case "ObType":
-            return { message: `Object "${error.content}" has an invalid type`, path: [error.content] };
+            return {
+                message: `Object "${error.content}" has an invalid type`,
+                path: [error.content],
+            };
         case "MorType":
-            return { message: `Morphism "${error.content}" has an invalid type`, path: [error.content] };
+            return {
+                message: `Morphism "${error.content}" has an invalid type`,
+                path: [error.content],
+            };
         case "DomType":
-            return { message: `Morphism "${error.content}" has an invalid domain type`, path: [error.content] };
+            return {
+                message: `Morphism "${error.content}" has an invalid domain type`,
+                path: [error.content],
+            };
         case "CodType":
-            return { message: `Morphism "${error.content}" has an invalid codomain type`, path: [error.content] };
+            return {
+                message: `Morphism "${error.content}" has an invalid codomain type`,
+                path: [error.content],
+            };
         case "Eqn":
             return { message: "An equation is invalid" };
         case "UnsupportedFeature":
             return { message: `Unsupported feature: ${error.content.tag}` };
         case "InvalidLink":
-            return { message: `Object "${error.content}" has an invalid link`, path: [error.content] };
+            return {
+                message: `Object "${error.content}" has an invalid link`,
+                path: [error.content],
+            };
     }
 };
 
@@ -293,7 +314,9 @@ function attachAnalysisNotebook<TShape extends AnalysisShape, Handle>(
                     return { value };
                 } catch (error) {
                     return {
-                        issues: [{ message: error instanceof Error ? error.message : String(error) }],
+                        issues: [
+                            { message: error instanceof Error ? error.message : String(error) },
+                        ],
                     };
                 }
             },
@@ -422,7 +445,8 @@ function attachDiagramNotebook<TShape extends DiagramShape, Handle>(
      * `getHandle` round-trip is needed for reactive reads, since the caller
      * already holds the model it is drawing in.
      */
-    const modelDocument = (): ModelDocument => store.getReactiveProjection(modelHandle) as ModelDocument;
+    const modelDocument = (): ModelDocument =>
+        store.getReactiveProjection(modelHandle) as ModelDocument;
 
     /** Read a model judgment by its generator id from the model document. */
     const modelJudgment = (id: string): ModelJudgment | undefined => {
@@ -822,12 +846,7 @@ function attachNotebook<TShape extends AnyShape, Handle>(
         if (modelHandle === undefined) {
             throw new Error("Diagram notebook requires the model handle it is drawn in.");
         }
-        return attachDiagramNotebook(
-            store,
-            handle,
-            shape,
-            modelHandle,
-        ) as Notebook<TShape, Handle>;
+        return attachDiagramNotebook(store, handle, shape, modelHandle) as Notebook<TShape, Handle>;
     }
     const doc = store.getReactiveProjection(handle) as ModelDocument;
     const change = (fn: (doc: ModelDocument) => void) =>
@@ -1848,7 +1867,7 @@ export interface Binder<Handle> {
     createNotebook<S extends AnalysisShape>(
         shape: S,
         data: { name: string; of: ValidatableNotebook<Handle> },
-    ): Notebook<S, Handle>;
+    ): Promise<Notebook<S, Handle>>;
     /**
      * Build a diagram notebook from fresh data. The `in` model must be
      * validatable (its shape must declare a `coreTheory`), so the diagram can be
@@ -1858,15 +1877,19 @@ export interface Binder<Handle> {
     createNotebook<S extends DiagramShape>(
         shape: S,
         data: { name: string; in: ValidatableNotebook<Handle> },
-    ): Notebook<S, Handle>;
+    ): Promise<Notebook<S, Handle>>;
     /**
      * Build a notebook from fresh data. The document seed is constructed
      * internally from `data.name` and the shape's `theory`.
+     *
+     * Asynchronous because it initializes store storage through
+     * {@link DocumentStore.createHandle}, which a backend-backed store fulfils
+     * by registering the new document remotely.
      */
     createNotebook<TShape extends CreatableShape>(
         shape: TShape,
         data: { name: string },
-    ): Notebook<TShape, Handle>;
+    ): Promise<Notebook<TShape, Handle>>;
     /**
      * Build a notebook around an existing plain document by initializing store
      * storage from it. Returns a [Standard Schema](https://standardschema.dev)
@@ -1876,7 +1899,7 @@ export interface Binder<Handle> {
     loadNotebook<TShape extends CreatableShape>(
         shape: TShape,
         document: ModelDocument,
-    ): Result<Notebook<TShape, Handle>>;
+    ): Promise<Result<Notebook<TShape, Handle>>>;
     /**
      * Build a notebook around an existing store handle, e.g. an Automerge
      * `DocHandle` found in a repo. No store storage is created.
@@ -1890,7 +1913,7 @@ export interface Binder<Handle> {
 /** Bind a store once, yielding the notebook entry points. */
 export function createBinder<Handle>(store: DocumentStore<Handle>): Binder<Handle> {
     const binder = {
-        createNotebook(
+        async createNotebook(
             shape: AnyShape,
             data: {
                 name: string;
@@ -1915,7 +1938,7 @@ export function createBinder<Handle>(store: DocumentStore<Handle>): Binder<Handl
                     analysisOf: { ...ref, type: "analysis-of" },
                     name: data.name,
                 });
-                return attachNotebook(store, store.createHandle(seed), shape);
+                return attachNotebook(store, await store.createHandle(seed), shape);
             }
             if (isDiagramShape(shape)) {
                 const model = data.in;
@@ -1933,19 +1956,19 @@ export function createBinder<Handle>(store: DocumentStore<Handle>): Binder<Handl
                     diagramIn: { ...ref, type: "diagram-in" },
                     name: data.name,
                 });
-                return attachNotebook(store, store.createHandle(seed), shape, model.handle);
+                return attachNotebook(store, await store.createHandle(seed), shape, model.handle);
             }
             const creatableShape = shape as CreatableShape;
             const seed = newModelDocument({ theory: creatableShape.theory });
             seed.name = data.name;
             // The seed is constructed with the shape's own theory, so loading
             // always succeeds.
-            return attachNotebook(store, store.createHandle(seed), creatableShape);
+            return attachNotebook(store, await store.createHandle(seed), creatableShape);
         },
-        loadNotebook<TShape extends CreatableShape>(
+        async loadNotebook<TShape extends CreatableShape>(
             shape: TShape,
             document: ModelDocument,
-        ): Result<Notebook<TShape, Handle>> {
+        ): Promise<Result<Notebook<TShape, Handle>>> {
             if (document.theory !== shape.theory) {
                 return {
                     issues: [
@@ -1958,7 +1981,7 @@ export function createBinder<Handle>(store: DocumentStore<Handle>): Binder<Handl
                     ],
                 };
             }
-            return { value: attachNotebook(store, store.createHandle(document), shape) };
+            return { value: attachNotebook(store, await store.createHandle(document), shape) };
         },
         loadNotebookFromHandle<TShape extends CreatableShape>(
             shape: TShape,

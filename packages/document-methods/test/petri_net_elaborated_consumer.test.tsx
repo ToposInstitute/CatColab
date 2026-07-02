@@ -65,7 +65,7 @@ type SolidStoreHandle = {
 };
 
 const solidStore: DocumentStore<SolidStoreHandle> = {
-    createHandle(initialDoc) {
+    async createHandle(initialDoc) {
         const [doc, setDoc] = createStore<ModelDocument>(initialDoc as ModelDocument);
         return { doc, setDoc };
     },
@@ -157,7 +157,7 @@ describe("Petri-net elaborated-model consumer", () => {
 
         // Build and edit the notebook through the typed document API, just as
         // the frontend does; the elaborated model below is derived from it.
-        const notebook = solidBinder.createNotebook(PetriNet, { name: "Petri net" });
+        const notebook = await solidBinder.createNotebook(PetriNet, { name: "Petri net" });
         const a = notebook.add(Place, { name: "A" });
         notebook.add(Place, { name: "B" });
         const c = notebook.add(Place, { name: "C" });

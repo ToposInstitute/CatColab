@@ -1,24 +1,31 @@
 // A full, production-shaped `DocumentStore` for the current frontend: Solid +
 // Automerge for reactivity and local state, and a real backend client for
-// `linkForHandle`/`getHandle`. This mirrors what the frontend's `Api` class
-// (packages/frontend/src/api/types.ts) does today — resolve a document ref id
-// to an Automerge `DocumentId` over RPC, then `repo.find` it — but expressed as
-// the `DocumentStore<Handle>` abstraction from `catcolab-documents`.
+// creation, linking, and resolution. This mirrors what the frontend's `Api`
+// class (packages/frontend/src/api/types.ts) does today — create a document
+// through `rpc.new_ref`, resolve a ref id to an Automerge `DocumentId` over
+// `rpc.get_doc`, then `repo.find` it — but expressed as the
+// `DocumentStore<Handle>` abstraction from `catcolab-documents`.
 //
 // The store's `Handle` is an Automerge `DocHandle<ModelDocument>` bundled with
 // the Solid projection built from it, exactly as
 // `notebook_with_automerge_solid_component.lts.md` sketches. What this example
-// adds over that sketch is the backend wiring: `linkForHandle` mints a stable
-// `{ _id, _version, _server }` reference (the analog of `Api.makeUnversionedRef`)
-// and `getHandle` walks a reference back to a handle by hitting the backend
-// (the analog of `Api.getDocHandle` -> `rpc.get_doc.query` -> `repo.find`), so a
-// notebook that instantiates another *backend* document can be validated.
+// adds over that sketch is the backend wiring:
+//
+//   * `createHandle` registers the new document with the backend as it is made
+//     (the analog of `Api.createDoc` -> `rpc.new_ref.mutate`), so every
+//     notebook created through this store is immediately backend-backed. This
+//     is why `createHandle` is asynchronous.
+//   * `linkForHandle` mints a stable `{ _id, _version, _server }` reference for
+//     a registered handle (the analog of `Api.makeUnversionedRef`).
+//   * `getHandle` walks a reference back to a handle by hitting the backend
+//     (the analog of `Api.getDocHandle` -> `rpc.get_doc.query` -> `repo.find`),
+//     so a notebook that instantiates another *backend* document can validate.
 //
 // Everything the store needs is written out inline in `createBackendStore`
-// below: there are no `makeHandle`/`materialize` helper functions and no
-// `Handle`/store type aliases. Read `createBackendStore` top to bottom as the
-// literal checklist of what someone integrating a real backend must supply for
-// each `DocumentStore` method.
+// below: there are no `makeHandle`/`materialize` helper functions and no store
+// type alias. Read `createBackendStore` top to bottom as the literal checklist
+// of what someone integrating a real backend must supply for each
+// `DocumentStore` method.
 /* oxlint-disable unicorn/consistent-function-scoping */
 import { getBackend, getObjectId } from "@automerge/automerge";
 import { type DocHandle, type DocumentId, Repo } from "@automerge/automerge-repo";
@@ -42,21 +49,23 @@ import { DblModel } from "catlog-wasm";
 // packages/backend/pkg/src/index.ts). Every method returns an `RpcResult<T>`,
 // a tagged `Ok`/`Err` union, and document reads come back as a `RefDoc`, a
 // tagged `Live`/`Readonly` union. We reproduce those shapes here so the store
-// below has to unwrap them exactly like `Api.fetchDocCacheEntry` does.
+// below has to unwrap them exactly like `Api.createDoc`/`Api.fetchDocCacheEntry`
+// do.
 //
-// The two methods the store actually uses:
+// The two methods the store uses:
 //
-//   * `new_ref(content)`: register a document under a fresh ref id, returning
-//     the ref id (the `_id` of a `StableRef`). Analog of `rpc.new_ref.mutate`.
+//   * `new_ref(content)`: create a document from `content` under a fresh ref id,
+//     returning the ref id (the `_id` of a `StableRef`). Analog of
+//     `rpc.new_ref.mutate`, called by `Api.createDoc`.
 //   * `get_doc(refId)`: resolve a ref id to the Automerge document behind it.
 //     Analog of `rpc.get_doc.query`, whose `docId` the frontend then `find`s.
 //
 // The backend holds its own networked `Repo` in production; here the store and
-// backend share one in-memory `Repo`, and every registered document is served
-// as `Live` (the store `find`s it by `docId`). The `Readonly` arm — where the
-// backend ships document bytes to be imported into a local repo — is modelled
-// too, so the store's unwrapping logic is complete, even though this fake only
-// ever returns `Live`.
+// backend share one in-memory `Repo`, and every document is served as `Live`
+// (the store `find`s it by `docId`). The `Readonly` arm — where the backend
+// ships document bytes to be imported into a local repo — is modelled too, so
+// the store's unwrapping logic is complete, even though this fake only ever
+// returns `Live`.
 // ---------------------------------------------------------------------------
 type RpcResult<T> = { tag: "Ok"; content: T } | { tag: "Err"; code: number; message: string };
 
@@ -75,30 +84,13 @@ class FakeBackend {
 
     /**
      * Analog of `rpc.new_ref.mutate`: take document *content*, create the repo
-     * document backend-side, and return the fresh ref id. This is what
-     * `Api.createDoc` calls. The store below does not use it, because the
-     * notebook binder has already created the handle locally with
-     * `store.createHandle` (see `publish`); it is here as the canonical way a
-     * brand-new document is registered.
+     * document backend-side, and return a fresh ref id. This is what
+     * `Api.createDoc` calls, and what the store's `createHandle` calls below.
      */
     async new_ref(content: Document): Promise<RpcResult<string>> {
         const handle = this.repo.create<ModelDocument>(content as ModelDocument);
         const refId = v7();
         this.refs.set(refId, handle.documentId);
-        return { tag: "Ok", content: refId };
-    }
-
-    /**
-     * Register an already-existing repo document under a fresh ref id. Because
-     * the store and backend share one repo here, a handle the binder created
-     * with `store.createHandle` already lives in the repo, so publishing it is
-     * just minting a ref for its `docId`. In a networked deployment this would
-     * instead push the document's content to the backend's own repo (i.e.
-     * `new_ref`), and the ref would point at the backend-side `docId`.
-     */
-    async publish(docId: DocumentId): Promise<RpcResult<string>> {
-        const refId = v7();
-        this.refs.set(refId, docId);
         return { tag: "Ok", content: refId };
     }
 
@@ -123,10 +115,10 @@ class FakeBackend {
 // ref id it was registered under, so `linkForHandle` can answer synchronously
 // and `getHandle` can skip a round-trip for handles it has already resolved.
 //
-// The returned object additionally exposes `register`, which pushes a locally
-// created handle to the backend (minting its ref id) — the notebook binder
-// creates handles with `store.createHandle` before they exist on the server, so
-// this is how a document becomes referenceable.
+// There is no separate "register" step: `createHandle` registers the document
+// with the backend as it creates it, so a notebook is referenceable the moment
+// it exists — matching `Api.createDoc`, which is how the frontend makes a new
+// document today.
 // ---------------------------------------------------------------------------
 function createBackendStore(backend: FakeBackend) {
     const repo = backend.repo;
@@ -142,18 +134,48 @@ function createBackendStore(backend: FakeBackend) {
     const refByDocId = new Map<DocumentId, string>();
     const handleByRefId = new Map<string, Handle>();
 
-    // Annotated as `DocumentStore<Handle>` (plus `register`) so all methods
-    // share the one handle type and the store is checked against the interface
-    // as it is written, not after the fact.
-    const store: DocumentStore<Handle> & { register(handle: Handle): Promise<string> } = {
-        // Local creation: a fresh Automerge document, projected once. It is not
-        // on the backend until `register` (or a notebook's own linking flow)
-        // pushes it, so it has no stable ref yet — exactly like a document the
-        // user just made. `makeDocumentProjection` is called here so that every
-        // later `getReactiveProjection` reuses this one Solid projection.
-        createHandle: (initialDoc: Document) => {
-            const automergeHandle = repo.create<ModelDocument>(initialDoc as ModelDocument);
-            return { automergeHandle, projection: makeDocumentProjection(automergeHandle) };
+    // Resolve a `RefDoc` to an Automerge handle: `Live` documents live in the
+    // shared repo (find by id); `Readonly` documents arrive as bytes and are
+    // imported into a local repo. This fake only serves `Live`, but the store
+    // handles both, exactly as `Api.fetchDocCacheEntry` does.
+    const handleForRefDoc = async (refDoc: RefDoc): Promise<DocHandle<ModelDocument>> => {
+        if (refDoc.tag === "Live") {
+            return await repo.find<ModelDocument>(refDoc.docId as DocumentId);
+        }
+        const binaryString = atob(refDoc.binaryData);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+        }
+        return repo.import<ModelDocument>(bytes);
+    };
+
+    // Annotated as `DocumentStore<Handle>` so all methods share the one handle
+    // type and the store is checked against the interface as it is written.
+    const store: DocumentStore<Handle> = {
+        // Creation is a backend round-trip: `new_ref` creates the document from
+        // its content and returns a ref id (analog of `Api.createDoc`), then
+        // `get_doc` + `repo.find` load the handle for it (analog of
+        // `Api.getDocHandle`). The handle is projected once, and both caches are
+        // primed so `linkForHandle` answers immediately afterwards. Because this
+        // is asynchronous, `Binder.createNotebook` is asynchronous too.
+        createHandle: async (initialDoc: Document) => {
+            const created = await backend.new_ref(initialDoc);
+            if (created.tag !== "Ok") {
+                throw new Error(created.message);
+            }
+            const refId = created.content;
+
+            const fetched = await backend.get_doc(refId);
+            if (fetched.tag !== "Ok") {
+                throw new Error(fetched.message);
+            }
+            const automergeHandle = await handleForRefDoc(fetched.content);
+
+            const handle = { automergeHandle, projection: makeDocumentProjection(automergeHandle) };
+            refByDocId.set(automergeHandle.documentId, refId);
+            handleByRefId.set(refId, handle);
+            return handle;
         },
 
         // Reactive read view: the projection made when the handle was minted, so
@@ -180,10 +202,10 @@ function createBackendStore(backend: FakeBackend) {
             return getBackend(doc).materialize(objId!) as typeof value;
         },
 
-        // The backend analog of `Api.makeUnversionedRef`: a handle we have
-        // registered has a stable, versionless reference on this server.
-        // Unregistered handles return `undefined`, per the interface — a
-        // document the user just made is not yet referenceable.
+        // The backend analog of `Api.makeUnversionedRef`: a handle the store
+        // created (and so registered) has a stable, versionless reference on
+        // this server. A handle unknown to this store returns `undefined`, per
+        // the interface — e.g. one minted by a different store instance.
         linkForHandle: (handle) => {
             const refId = refByDocId.get(handle.automergeHandle.documentId);
             if (!refId) {
@@ -193,9 +215,8 @@ function createBackendStore(backend: FakeBackend) {
         },
 
         // The backend analog of `Api.getDocHandle`: call `get_doc` over RPC,
-        // unwrap the `RpcResult`, then turn the `RefDoc` into a document id and
-        // `repo.find` it. Async, as backend access and `repo.find` are. Handles
-        // are cached so a resolved ref stays a single handle/projection.
+        // unwrap the `RpcResult`, then turn the `RefDoc` into a handle and cache
+        // it so a resolved ref stays a single handle/projection.
         getHandle: async (refId: string) => {
             const cached = handleByRefId.get(refId);
             if (cached) {
@@ -207,51 +228,11 @@ function createBackendStore(backend: FakeBackend) {
                 return undefined;
             }
 
-            const refDoc = result.content;
-            // `Live` documents live in the shared repo (find by id); `Readonly`
-            // documents arrive as bytes and are imported into a local repo.
-            // This fake only serves `Live`, but the store handles both, exactly
-            // as `Api.fetchDocCacheEntry` does.
-            let automergeHandle: DocHandle<ModelDocument>;
-            if (refDoc.tag === "Live") {
-                automergeHandle = await repo.find<ModelDocument>(refDoc.docId as DocumentId);
-            } else {
-                const binaryString = atob(refDoc.binaryData);
-                const bytes = new Uint8Array(binaryString.length);
-                for (let i = 0; i < binaryString.length; i++) {
-                    bytes[i] = binaryString.charCodeAt(i);
-                }
-                automergeHandle = repo.import<ModelDocument>(bytes);
-            }
-
+            const automergeHandle = await handleForRefDoc(result.content);
             const handle = { automergeHandle, projection: makeDocumentProjection(automergeHandle) };
             handleByRefId.set(refId, handle);
             refByDocId.set(automergeHandle.documentId, refId);
             return handle;
-        },
-
-        // Push a locally created handle to the backend, minting and caching its
-        // ref id. The notebook binder creates handles with `createHandle` before
-        // they are on the server, so a store integration exposes some flavour of
-        // this to publish them (analog of `Api.createDoc`; see `publish` above
-        // for why the shared-repo case only needs the `docId`).
-        register: async (handle) => {
-            const docId = handle.automergeHandle.documentId;
-            const existing = refByDocId.get(docId);
-            if (existing) {
-                return existing;
-            }
-            const result = await backend.publish(docId);
-            if (result.tag !== "Ok") {
-                throw new Error(result.message);
-            }
-            const refId = result.content;
-            refByDocId.set(docId, refId);
-            handleByRefId.set(refId, {
-                automergeHandle: handle.automergeHandle,
-                projection: makeDocumentProjection(handle.automergeHandle),
-            });
-            return refId;
         },
     };
 
@@ -259,12 +240,12 @@ function createBackendStore(backend: FakeBackend) {
 }
 
 describe("backend-backed Solid + Automerge DocumentStore", () => {
-    test("reactive rendering: notebook getters track Automerge changes via Solid", () => {
+    test("reactive rendering: notebook getters track Automerge changes via Solid", async () => {
         const backend = new FakeBackend();
         const store = createBackendStore(backend);
         const backendBinder = createBinder(store);
 
-        const notebook = backendBinder.createNotebook(SimpleOlog, { name: "An Olog" });
+        const notebook = await backendBinder.createNotebook(SimpleOlog, { name: "An Olog" });
 
         function Title(props: { title: string }) {
             return <h1>{props.title}</h1>;
@@ -312,20 +293,18 @@ describe("backend-backed Solid + Automerge DocumentStore", () => {
         container.remove();
     });
 
-    test("linkForHandle mints a backend ref only after registration", async () => {
+    test("createNotebook registers with the backend, so linkForHandle mints a ref", async () => {
         const backend = new FakeBackend();
         const store = createBackendStore(backend);
         const backendBinder = createBinder(store);
 
-        const notebook = backendBinder.createNotebook(SimpleOlog, { name: "Local" });
+        // `createNotebook` registers through `new_ref` as it creates the
+        // document, so the handle has a stable reference right away.
+        const notebook = await backendBinder.createNotebook(SimpleOlog, { name: "Local" });
 
-        // Not yet on the backend: no stable reference.
-        expect(store.linkForHandle(notebook.handle)).toBeUndefined();
-
-        // Push to the backend, then a reference is available on this server.
-        const refId = await store.register(notebook.handle);
-        expect(store.linkForHandle(notebook.handle)).toEqual({
-            _id: refId,
+        const link = store.linkForHandle(notebook.handle);
+        expect(link).toEqual({
+            _id: expect.any(String),
             _version: null,
             _server: backend.serverHost,
         });
@@ -336,14 +315,15 @@ describe("backend-backed Solid + Automerge DocumentStore", () => {
         const store = createBackendStore(backend);
         const backendBinder = createBinder(store);
 
-        const notebook = backendBinder.createNotebook(SimpleOlog, { name: "Shared" });
+        const notebook = await backendBinder.createNotebook(SimpleOlog, { name: "Shared" });
         notebook.add(Type, { name: "Thing" });
-        const refId = await store.register(notebook.handle);
+        const refId = store.linkForHandle(notebook.handle)?._id;
+        expect(refId).toBeDefined();
 
         // A fresh store over the same backend (e.g. a different browser tab)
         // resolves the ref by fetching it, and sees the same document.
         const otherStore = createBackendStore(backend);
-        const resolved = await otherStore.getHandle(refId);
+        const resolved = await otherStore.getHandle(refId!);
 
         expect(resolved).toBeDefined();
         const doc = otherStore.getReactiveProjection(resolved!);
@@ -358,21 +338,19 @@ describe("backend-backed Solid + Automerge DocumentStore", () => {
         const store = createBackendStore(backend);
         const backendBinder = createBinder(store);
 
-        // The imported model lives on the backend.
-        const imported = backendBinder.createNotebook(SimpleOlog, { name: "Imported" });
+        // The imported model lives on the backend the moment it is created.
+        const imported = await backendBinder.createNotebook(SimpleOlog, { name: "Imported" });
         imported.add(Type, { name: "Thing" });
-        await store.register(imported.handle);
 
         // The main notebook instantiates it. `Instantiation` mints a link via
         // `store.linkForHandle(imported.handle)`, and `validate` resolves it
         // back through `store.getHandle` — the backend round-trip under test.
-        // The main notebook must itself be on the backend, because `validate`
-        // resolves the notebook's *own* model by minting a link to its handle
-        // (see `resolveSelf`), which requires a stable ref.
-        const notebook = backendBinder.createNotebook(SimpleOlog, { name: "Main" });
+        // `validate` also resolves the notebook's *own* model by minting a link
+        // to its handle (see `resolveSelf`), which requires a stable ref; since
+        // `createNotebook` registered it, that link is available too.
+        const notebook = await backendBinder.createNotebook(SimpleOlog, { name: "Main" });
         notebook.add(Type, { name: "A" });
         notebook.add(Instantiation, { name: "ImportedOlog", model: imported });
-        await store.register(notebook.handle);
 
         const result = await notebook.validate();
         expect(result.issues).toBeUndefined();
@@ -383,11 +361,11 @@ describe("backend-backed Solid + Automerge DocumentStore", () => {
 // Keep `createRoot` imported and exercised so the reactive-primitives path is
 // covered even outside `render` (e.g. a headless consumer of `getReactiveProjection`).
 describe("headless reactive read", () => {
-    test("getReactiveProjection is reactive under createRoot", () => {
+    test("getReactiveProjection is reactive under createRoot", async () => {
         const backend = new FakeBackend();
         const store = createBackendStore(backend);
         const backendBinder = createBinder(store);
-        const notebook = backendBinder.createNotebook(SimpleOlog, { name: "Headless" });
+        const notebook = await backendBinder.createNotebook(SimpleOlog, { name: "Headless" });
 
         createRoot((dispose) => {
             expect(notebook.name).toBe("Headless");

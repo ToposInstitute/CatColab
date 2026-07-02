@@ -5,7 +5,7 @@ import { Visualization } from "catcolab-analyses";
 import { SimpleOlog, Type } from "catcolab-logics/simple-olog";
 import { binder, RichText } from "catcolab-documents";
 
-const model = binder.createNotebook(SimpleOlog, { name: "An Olog" });
+const model = await binder.createNotebook(SimpleOlog, { name: "An Olog" });
 
 const source = model.add(Type, { name: "A" });
 const target = model.add(Type, { name: "B" });
@@ -14,7 +14,7 @@ const target = model.add(Type, { name: "B" });
 <!-- verifier:prepend-to-following -->
 
 ```ts
-const analysis = binder.createNotebook(SimpleOlog.Analysis, {
+const analysis = await binder.createNotebook(SimpleOlog.Analysis, {
     name: "Olog analysis",
     of: model,
 });
@@ -87,14 +87,14 @@ import { MassActionDynamics } from "catcolab-analyses";
 import { PetriNet, Place, Transition } from "catcolab-logics/petri-net";
 import { binder } from "catcolab-documents";
 
-const petriNet = binder.createNotebook(PetriNet, { name: "SIR" });
+const petriNet = await binder.createNotebook(PetriNet, { name: "SIR" });
 
 const susceptible = petriNet.add(Place, { name: "S" });
 const infected = petriNet.add(Place, { name: "I" });
 
 petriNet.add(Transition, { name: "infection", from: [susceptible, infected], to: [infected] });
 
-const analysis = binder.createNotebook(PetriNet.Analysis, {
+const analysis = await binder.createNotebook(PetriNet.Analysis, {
     name: "Petri net analysis",
     of: petriNet,
 });
@@ -157,10 +157,10 @@ import { Visualization } from "catcolab-analyses";
 import { SimpleOlog, Type } from "catcolab-logics/simple-olog";
 import { binder, RichText } from "catcolab-documents";
 
-const model = binder.createNotebook(SimpleOlog, { name: "An Olog" });
+const model = await binder.createNotebook(SimpleOlog, { name: "An Olog" });
 model.add(Type, { name: "A" });
 
-const analysis = binder.createNotebook(SimpleOlog.Analysis, {
+const analysis = await binder.createNotebook(SimpleOlog.Analysis, {
     name: "Olog analysis",
     of: model,
 });
@@ -199,7 +199,7 @@ analysis: diagram
 import { SimpleOlog } from "catcolab-logics/simple-olog";
 import { binder, defineObject, defineShape } from "catcolab-documents";
 
-const model = binder.createNotebook(SimpleOlog, { name: "An Olog" });
+const model = await binder.createNotebook(SimpleOlog, { name: "An Olog" });
 
 // A creatable shape with a `theory` but no `coreTheory`: its notebooks cannot be
 // elaborated or validated, so they have no `validate()` method.
@@ -208,13 +208,13 @@ const Sketch = defineShape({
     objects: [defineObject({ tag: "Basic", content: "Object" })],
 });
 
-const sketch = binder.createNotebook(Sketch, { name: "A sketch" });
+const sketch = await binder.createNotebook(Sketch, { name: "A sketch" });
 ```
 
 A validatable model is accepted as `of`:
 
 ```ts
-binder.createNotebook(SimpleOlog.Analysis, { name: "Olog analysis", of: model });
+await binder.createNotebook(SimpleOlog.Analysis, { name: "Olog analysis", of: model });
 ```
 
 A non-validatable one is a type error:
@@ -222,5 +222,5 @@ A non-validatable one is a type error:
 ```ts
 // @ts-expect-error The `of` model must be validatable, but a notebook over a
 // shape without a `coreTheory` has no `validate()`.
-binder.createNotebook(SimpleOlog.Analysis, { name: "bad", of: sketch });
+await binder.createNotebook(SimpleOlog.Analysis, { name: "bad", of: sketch });
 ```

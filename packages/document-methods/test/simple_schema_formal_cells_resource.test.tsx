@@ -44,7 +44,7 @@ type SolidStoreHandle = {
 };
 
 const solidStore: DocumentStore<SolidStoreHandle> = {
-    createHandle(initialDoc) {
+    async createHandle(initialDoc) {
         const [doc, setDoc] = createStore<ModelDocument>(initialDoc as ModelDocument);
         return { doc, setDoc, listeners: new Set() };
     },
@@ -72,8 +72,8 @@ const solidStore: DocumentStore<SolidStoreHandle> = {
 const solidBinder = createBinder(solidStore);
 
 describe("simple-schema formalCells() validation resource", () => {
-    test("formalCells() returns a fresh array each call", () => {
-        const notebook = solidBinder.createNotebook(SimpleSchema, { name: "Company schema" });
+    test("formalCells() returns a fresh array each call", async () => {
+        const notebook = await solidBinder.createNotebook(SimpleSchema, { name: "Company schema" });
         const person = notebook.add(Entity, { name: "Person" });
         const str = notebook.add(AttrType, { name: "String" });
         notebook.add(Attr, { name: "name", from: person, to: str });
@@ -91,8 +91,8 @@ describe("simple-schema formalCells() validation resource", () => {
         expect(first[0]).not.toBe(second[0]);
     });
 
-    test("onChange fires for every change to the notebook", () => {
-        const notebook = solidBinder.createNotebook(SimpleSchema, { name: "Company schema" });
+    test("onChange fires for every change to the notebook", async () => {
+        const notebook = await solidBinder.createNotebook(SimpleSchema, { name: "Company schema" });
 
         let changes = 0;
         const unsubscribe = notebook.onChange(() => {
@@ -114,8 +114,8 @@ describe("simple-schema formalCells() validation resource", () => {
         expect(changes).toBe(3);
     });
 
-    test("onChange fires when an entity's name is updated", () => {
-        const notebook = solidBinder.createNotebook(SimpleSchema, { name: "Company schema" });
+    test("onChange fires when an entity's name is updated", async () => {
+        const notebook = await solidBinder.createNotebook(SimpleSchema, { name: "Company schema" });
         const person = notebook.add(Entity, { name: "Person" });
 
         let changes = 0;
@@ -139,8 +139,8 @@ describe("simple-schema formalCells() validation resource", () => {
         unsubscribe();
     });
 
-    test("onChangeFormalContent fires for formal-cell changes but not rich-text edits", () => {
-        const notebook = solidBinder.createNotebook(SimpleSchema, { name: "Company schema" });
+    test("onChangeFormalContent fires for formal-cell changes but not rich-text edits", async () => {
+        const notebook = await solidBinder.createNotebook(SimpleSchema, { name: "Company schema" });
 
         let changes = 0;
         const unsubscribe = notebook.onChangeFormalContent(() => {
@@ -170,7 +170,7 @@ describe("simple-schema formalCells() validation resource", () => {
     });
 
     test("keying validation on onChangeFormalContent dedupes unrelated edits", async () => {
-        const notebook = solidBinder.createNotebook(SimpleSchema, { name: "Company schema" });
+        const notebook = await solidBinder.createNotebook(SimpleSchema, { name: "Company schema" });
         const person = notebook.add(Entity, { name: "Person" });
         const str = notebook.add(AttrType, { name: "String" });
         notebook.add(Attr, { name: "name", from: person, to: str });

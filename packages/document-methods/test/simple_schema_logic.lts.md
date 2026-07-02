@@ -40,7 +40,7 @@ const SimpleSchema = defineShape({
 ```ts
 import { binder } from "catcolab-documents";
 
-const notebook = binder.createNotebook(SimpleSchema, { name: "Company schema" });
+const notebook = await binder.createNotebook(SimpleSchema, { name: "Company schema" });
 ```
 
 <!-- verifier:prepend-to-following -->

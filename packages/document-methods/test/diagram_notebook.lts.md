@@ -4,7 +4,7 @@
 import { Aspect, SimpleOlog, Type } from "catcolab-logics/simple-olog";
 import { binder, RichText } from "catcolab-documents";
 
-const model = binder.createNotebook(SimpleOlog, { name: "An Olog" });
+const model = await binder.createNotebook(SimpleOlog, { name: "An Olog" });
 
 const A = model.add(Type, { name: "A" });
 const B = model.add(Type, { name: "B" });
@@ -14,7 +14,7 @@ const has = model.add(Aspect, { name: "has", from: A, to: B });
 <!-- verifier:prepend-to-following -->
 
 ```ts
-const diagram = binder.createNotebook(SimpleOlog.Diagram, {
+const diagram = await binder.createNotebook(SimpleOlog.Diagram, {
     name: "Olog diagram",
     in: model,
 });
@@ -124,12 +124,12 @@ valid diagram with 2 objects
 import { Aspect, SimpleOlog, Type } from "catcolab-logics/simple-olog";
 import { binder, RichText } from "catcolab-documents";
 
-const model = binder.createNotebook(SimpleOlog, { name: "An Olog" });
+const model = await binder.createNotebook(SimpleOlog, { name: "An Olog" });
 const A = model.add(Type, { name: "A" });
 const B = model.add(Type, { name: "B" });
 const has = model.add(Aspect, { name: "has", from: A, to: B });
 
-const diagram = binder.createNotebook(SimpleOlog.Diagram, {
+const diagram = await binder.createNotebook(SimpleOlog.Diagram, {
     name: "Olog diagram",
     in: model,
 });
@@ -182,7 +182,7 @@ aspect over: has from: x to: y
 import { Aspect, SimpleOlog, Type } from "catcolab-logics/simple-olog";
 import { binder, defineObject, defineShape } from "catcolab-documents";
 
-const model = binder.createNotebook(SimpleOlog, { name: "An Olog" });
+const model = await binder.createNotebook(SimpleOlog, { name: "An Olog" });
 const A = model.add(Type, { name: "A" });
 const B = model.add(Type, { name: "B" });
 const has = model.add(Aspect, { name: "has", from: A, to: B });
@@ -194,11 +194,11 @@ const Sketch = defineShape({
     objects: [defineObject({ tag: "Basic", content: "Object" })],
 });
 
-const sketch = binder.createNotebook(Sketch, { name: "A sketch" });
+const sketch = await binder.createNotebook(Sketch, { name: "A sketch" });
 ```
 
 ```ts
-const diagram = binder.createNotebook(SimpleOlog.Diagram, {
+const diagram = await binder.createNotebook(SimpleOlog.Diagram, {
     name: "Olog diagram",
     in: model,
 });
@@ -207,11 +207,11 @@ const diagram = binder.createNotebook(SimpleOlog.Diagram, {
 ```ts
 // @ts-expect-error The `in` model must be validatable, but a notebook over a
 // shape without a `coreTheory` has no `validate()`.
-binder.createNotebook(SimpleOlog.Diagram, { name: "bad", in: sketch });
+await binder.createNotebook(SimpleOlog.Diagram, { name: "bad", in: sketch });
 ```
 
 ```ts
-const diagram = binder.createNotebook(SimpleOlog.Diagram, {
+const diagram = await binder.createNotebook(SimpleOlog.Diagram, {
     name: "Olog diagram",
     in: model,
 });
@@ -221,7 +221,7 @@ diagram.add(SimpleOlog.Diagram.Individual, { name: "bad", over: has });
 ```
 
 ```ts
-const diagram = binder.createNotebook(SimpleOlog.Diagram, {
+const diagram = await binder.createNotebook(SimpleOlog.Diagram, {
     name: "Olog diagram",
     in: model,
 });

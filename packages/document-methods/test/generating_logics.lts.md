@@ -32,7 +32,7 @@ const SimpleSchema = defineShape({
 <!-- verifier:prepend-to-following -->
 
 ```ts
-const notebook = binder.createNotebook(SimpleSchema, { name: "Company schema" });
+const notebook = await binder.createNotebook(SimpleSchema, { name: "Company schema" });
 
 const person = notebook.add(Entity, { name: "Person" });
 const company = notebook.add(Entity, { name: "Company" });
@@ -118,7 +118,7 @@ const PetriNet = defineShape({
 <!-- verifier:prepend-to-following -->
 
 ```ts
-const notebook = binder.createNotebook(PetriNet, { name: "Petri net" });
+const notebook = await binder.createNotebook(PetriNet, { name: "Petri net" });
 const a = notebook.add(Place, { name: "A" });
 const b = notebook.add(Place, { name: "B" });
 

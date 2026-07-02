@@ -37,15 +37,17 @@ function expectValidationError(fn) {
     expect(thrown.issues.length).toBeGreaterThan(0);
     for (const issue of thrown.issues) {
         expect(typeof issue.message).toBe("string");
-        if (issue.path !== undefined) {
-            expect(Array.isArray(issue.path)).toBe(true);
-        }
+        // `path` is optional; when present it must be an array. Asserted
+        // unconditionally (rather than inside an `if`) so the expectation always
+        // runs — the tests calling this are async, and a conditional `expect`
+        // there is flagged by `vitest/no-conditional-expect`.
+        expect(issue.path === undefined || Array.isArray(issue.path)).toBe(true);
     }
 }
 
 describe("documents API runtime validation from JS", () => {
-    test("Bug 1: an endpoint of the wrong object type is rejected at runtime", () => {
-        const notebook = binder.createNotebook(SimpleSchema, { name: "Schema" });
+    test("Bug 1: an endpoint of the wrong object type is rejected at runtime", async () => {
+        const notebook = await binder.createNotebook(SimpleSchema, { name: "Schema" });
         const person = notebook.add(Entity, { name: "Person" });
         const age = notebook.add(AttrType, { name: "Age" });
 
@@ -55,8 +57,8 @@ describe("documents API runtime validation from JS", () => {
         });
     });
 
-    test("Bug 2: a single object where an endpoint list is required is rejected at runtime", () => {
-        const notebook = binder.createNotebook(PetriNet, { name: "Net" });
+    test("Bug 2: a single object where an endpoint list is required is rejected at runtime", async () => {
+        const notebook = await binder.createNotebook(PetriNet, { name: "Net" });
         const a = notebook.add(Place, { name: "A" });
         const c = notebook.add(Place, { name: "C" });
 
@@ -66,11 +68,11 @@ describe("documents API runtime validation from JS", () => {
         });
     });
 
-    test("Bug 3: a cell from another theory is rejected at runtime", () => {
-        const net = binder.createNotebook(PetriNet, { name: "Net" });
+    test("Bug 3: a cell from another theory is rejected at runtime", async () => {
+        const net = await binder.createNotebook(PetriNet, { name: "Net" });
         const place = net.add(Place, { name: "A place" });
 
-        const schema = binder.createNotebook(SimpleSchema, { name: "Schema" });
+        const schema = await binder.createNotebook(SimpleSchema, { name: "Schema" });
         const person = schema.add(Entity, { name: "Person" });
 
         // `place` is a Place cell from another theory; a Mapping endpoint needs
@@ -80,8 +82,8 @@ describe("documents API runtime validation from JS", () => {
         });
     });
 
-    test("a missing required field is rejected at runtime", () => {
-        const notebook = binder.createNotebook(SimpleSchema, { name: "Schema" });
+    test("a missing required field is rejected at runtime", async () => {
+        const notebook = await binder.createNotebook(SimpleSchema, { name: "Schema" });
 
         // An object cell requires a `name`; omitting it should be a validation
         // error rather than a cell with `name: undefined`.
