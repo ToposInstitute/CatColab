@@ -17,6 +17,9 @@ deps/src/
 docs/build/
 docs/site/
 
+# Build artifacts from tests
+tests/build/
+
 # Julia sys images
 *.so
 
@@ -24,5 +27,6 @@ docs/site/
 LocalPreferences.toml
 
 # Julia
+Manifest.toml
 test/Manifest.toml
 test/Project.toml
