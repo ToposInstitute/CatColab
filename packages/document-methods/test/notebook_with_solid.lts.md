@@ -29,7 +29,7 @@ const solidStore: DocumentStore<SolidStoreHandle> = {
     changeDocument: (handle, fn) => handle.setDoc(produce<ModelDocument>(fn)),
     copyValue: (_handle, value) => structuredClone(unwrap(value)),
     linkForHandle: () => undefined,
-    getHandle: () => undefined,
+    getHandle: async () => undefined,
 };
 
 const solidBinder = createBinder(solidStore);
@@ -169,7 +169,7 @@ const solidAutomergeStore: DocumentStore<DocHandle<ModelDocument>> = {
     },
     copyValue: (handle, value) => materializeFromAutomerge(handle.doc(), value),
     linkForHandle: () => undefined,
-    getHandle: () => undefined,
+    getHandle: async () => undefined,
 };
 
 const automergeBinder = createBinder(solidAutomergeStore);

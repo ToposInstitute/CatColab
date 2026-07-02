@@ -407,6 +407,7 @@ function attachDiagramNotebook<TShape extends DiagramShape, Handle>(
     store: DocumentStore<Handle>,
     handle: Handle,
     shape: TShape,
+    modelHandle: Handle,
 ): Notebook<TShape, Handle> {
     const doc = store.viewDocument(handle) as DiagramDocument;
     const change = (fn: (doc: DiagramDocument) => void) =>
@@ -414,20 +415,18 @@ function attachDiagramNotebook<TShape extends DiagramShape, Handle>(
     const copy = <T>(value: T): T => store.copyValue(handle, value);
     const isPlainStore = (store as DocumentStore<unknown>) === plainStore;
 
-    /** The model document the diagram is drawn in, fetched through the store. */
-    const modelDocument = (): ModelDocument | undefined => {
-        const modelHandle = store.getHandle(doc.diagramIn._id);
-        return modelHandle === undefined
-            ? undefined
-            : (store.viewDocument(modelHandle) as ModelDocument);
-    };
+    /**
+     * The model document the diagram is drawn in. The model handle is threaded
+     * in from `createNotebook`'s `in` notebook (the diagram's only construction
+     * path), so the diagram reads the model directly and synchronously — no
+     * `getHandle` round-trip is needed for reactive reads, since the caller
+     * already holds the model it is drawing in.
+     */
+    const modelDocument = (): ModelDocument => store.viewDocument(modelHandle) as ModelDocument;
 
     /** Read a model judgment by its generator id from the model document. */
     const modelJudgment = (id: string): ModelJudgment | undefined => {
         const model = modelDocument();
-        if (!model) {
-            return undefined;
-        }
         for (const cellId of model.notebook.cellOrder) {
             const cell = model.notebook.cellContents[cellId];
             if (cell?.tag === "formal" && (cell.content as ModelJudgment).id === id) {
@@ -811,12 +810,24 @@ function attachNotebook<TShape extends AnyShape, Handle>(
     store: DocumentStore<Handle>,
     handle: Handle,
     shape: TShape,
+    // The model handle a diagram is drawn in. Required for diagram shapes (whose
+    // sole construction path, `createNotebook` with `in`, always has it), unused
+    // for model and analysis shapes.
+    modelHandle?: Handle,
 ): Notebook<TShape, Handle> {
     if (isAnalysisShape(shape)) {
         return attachAnalysisNotebook(store, handle, shape) as Notebook<TShape, Handle>;
     }
     if (isDiagramShape(shape)) {
-        return attachDiagramNotebook(store, handle, shape) as Notebook<TShape, Handle>;
+        if (modelHandle === undefined) {
+            throw new Error("Diagram notebook requires the model handle it is drawn in.");
+        }
+        return attachDiagramNotebook(
+            store,
+            handle,
+            shape,
+            modelHandle,
+        ) as Notebook<TShape, Handle>;
     }
     const doc = store.viewDocument(handle) as ModelDocument;
     const change = (fn: (doc: ModelDocument) => void) =>
@@ -1922,7 +1933,7 @@ export function createBinder<Handle>(store: DocumentStore<Handle>): Binder<Handl
                     diagramIn: { ...ref, type: "diagram-in" },
                     name: data.name,
                 });
-                return attachNotebook(store, store.createHandle(seed), shape);
+                return attachNotebook(store, store.createHandle(seed), shape, model.handle);
             }
             const creatableShape = shape as CreatableShape;
             const seed = newModelDocument({ theory: creatableShape.theory });

@@ -33,6 +33,6 @@ export function selfResolving<Handle extends WeakKey>(): Pick<
 
     return {
         linkForHandle: (handle) => ({ _id: idFor(handle), _version: null, _server: "" }),
-        getHandle: (id) => byId.get(id),
+        getHandle: async (id) => byId.get(id),
     };
 }

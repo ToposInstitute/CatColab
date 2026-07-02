@@ -77,8 +77,12 @@ export interface DocumentStore<Handle> {
      * notebook's *own* model by minting a link to its handle (via
      * {@link linkForHandle}), a store over validatable notebooks must be able to
      * return the handle for that link too.
+     *
+     * Asynchronous so a store backed by a remote backend can fetch the document
+     * — e.g. resolve a ref id to an Automerge document over RPC, then load it
+     * from the repo. In-memory stores simply resolve immediately.
      */
-    getHandle(id: string): Handle | undefined;
+    getHandle(id: string): Promise<Handle | undefined>;
 }
 
 /** The instantiation links a model document references in its own notebook. */
@@ -134,8 +138,8 @@ export async function resolveModelInStore<Handle>(
     const path: { id: string; name: string }[] = [];
 
     // A document's display name, or a short id fallback for an unnamed document.
-    const nameFor = (id: string): string => {
-        const handle = store.getHandle(id);
+    const nameFor = async (id: string): Promise<string> => {
+        const handle = await store.getHandle(id);
         const name = handle && (store.viewDocument(handle) as ModelDocument).name;
         return name && name.length > 0 ? `"${name}"` : `model ${id}`;
     };
@@ -150,16 +154,16 @@ export async function resolveModelInStore<Handle>(
             // e.g. `"First" → "Second" → "First"`, so the user can see exactly
             // which notebooks instantiate each other.
             const start = path.findIndex((entry) => entry.id === link._id);
-            const loop = [...path.slice(start).map((entry) => entry.name), nameFor(link._id)];
+            const loop = [...path.slice(start).map((entry) => entry.name), await nameFor(link._id)];
             throw new CyclicInstantiationError(loop.join(" → "));
         }
-        const handle = store.getHandle(link._id);
+        const handle = await store.getHandle(link._id);
         if (handle === undefined) {
             throw new Error(`unknown model ${link._id}`);
         }
         const doc = store.viewDocument(handle) as ModelDocument;
         resolving.add(link._id);
-        path.push({ id: link._id, name: nameFor(link._id) });
+        path.push({ id: link._id, name: await nameFor(link._id) });
         try {
             // Recursively resolve the document's own instantiations so it
             // elaborates against a populated map; `resolving` catches cycles.
@@ -216,7 +220,7 @@ export const plainStore: DocumentStore<Document> = {
         plainDocumentId(initialDoc);
         return initialDoc;
     },
-    getHandle: (id) => plainDocumentsById.get(id),
+    getHandle: async (id) => plainDocumentsById.get(id),
     viewDocument: (handle) => handle,
     changeDocument: (handle, fn) => {
         fn(handle);

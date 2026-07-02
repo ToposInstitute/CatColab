@@ -38,7 +38,7 @@ function createResolvingStore(): {
             byId.set(id, doc);
             return doc;
         },
-        getHandle: (id) => (failOnResolve.value ? undefined : byId.get(id)),
+        getHandle: async (id) => (failOnResolve.value ? undefined : byId.get(id)),
         viewDocument: (handle) => handle,
         changeDocument: (handle, fn) => fn(handle),
         copyValue: (_handle, value) => structuredClone(value),
@@ -109,7 +109,7 @@ describe("instantiation validation", () => {
         const result = await notebook.validate();
         expect(result.issues).toBeDefined();
         expect(result.issues?.map((issue) => issue.message).join("; ")).toContain(
-            "Failed to resolve",
+            "unknown model",
         );
     });
 
@@ -200,7 +200,7 @@ describe("instantiation validation", () => {
         const result = await a.validate();
         expect(result.issues).toBeDefined();
         expect(result.issues?.map((issue) => issue.message).join("; ")).toContain(
-            "Cyclic instantiation",
+            "Instantiation cycle detected",
         );
     });
 });

@@ -13,13 +13,9 @@
 // (the analog of `Api.getDocHandle` -> `rpc.get_doc.query` -> `repo.find`), so a
 // notebook that instantiates another *backend* document can be validated.
 //
-// This test is expected to FAIL for now: the interface's `getHandle` is
-// synchronous, but real backend access (and `repo.find`) is asynchronous. The
-// example is written against an async `getHandle` to make that mismatch
-// concrete; see the note above `getHandle` below and the `@ts-expect-error`ed
-// assignment to the current interface. Once `DocumentStore.getHandle` (and the
-// `resolveModelInStore` caller in src/future/store.ts) are made async, the
-// `@ts-expect-error` should be removed and the resolution test should pass.
+// `DocumentStore.getHandle` is asynchronous, so the store fetches a referenced
+// document from the backend (resolve a ref id to an Automerge document id over
+// RPC, then load it from the repo) directly, mirroring `Api.getDocHandle`.
 /* oxlint-disable unicorn/consistent-function-scoping */
 import { type Doc, getBackend, getObjectId } from "@automerge/automerge";
 import {
@@ -157,14 +153,9 @@ function createBackendStore(backend: FakeBackend): BackendDocumentStore {
         },
 
         // The backend analog of `Api.getDocHandle`: resolve a ref id to an
-        // Automerge document id over RPC, then `repo.find` it.
-        //
-        // NOTE: this is async because real backend + `repo.find` are async, but
-        // the current `DocumentStore.getHandle` (and its `resolveModelInStore`
-        // caller) are synchronous. Making them async is the change this example
-        // is written to motivate; hence the `@ts-expect-error` on the interface
-        // assignment below.
-        getHandle: (async (refId: string): Promise<DocHandle<ModelDocument> | undefined> => {
+        // Automerge document id over RPC, then `repo.find` it. Async, as backend
+        // access and `repo.find` are.
+        getHandle: async (refId) => {
             const cached = handleByRefId.get(refId);
             if (cached) {
                 return cached;
@@ -177,7 +168,7 @@ function createBackendStore(backend: FakeBackend): BackendDocumentStore {
             handleByRefId.set(refId, handle);
             refByDocId.set(handle.documentId, refId);
             return handle;
-        }) as unknown as DocumentStore<DocHandle<ModelDocument>>["getHandle"],
+        },
 
         register,
     };
@@ -267,9 +258,7 @@ describe("backend-backed Solid + Automerge DocumentStore", () => {
         // A fresh store over the same backend (e.g. a different browser tab)
         // resolves the ref by fetching it, and sees the same document.
         const otherStore = createBackendStore(backend);
-        const resolved = await (otherStore.getHandle as unknown as (
-            id: string,
-        ) => Promise<DocHandle<ModelDocument> | undefined>)(refId);
+        const resolved = await otherStore.getHandle(refId);
 
         expect(resolved).toBeDefined();
         const doc = otherStore.viewDocument(resolved!);
@@ -292,9 +281,13 @@ describe("backend-backed Solid + Automerge DocumentStore", () => {
         // The main notebook instantiates it. `Instantiation` mints a link via
         // `store.linkForHandle(imported.handle)`, and `validate` resolves it
         // back through `store.getHandle` — the backend round-trip under test.
+        // The main notebook must itself be on the backend, because `validate`
+        // resolves the notebook's *own* model by minting a link to its handle
+        // (see `resolveSelf`), which requires a stable ref.
         const notebook = backendBinder.createNotebook(SimpleOlog, { name: "Main" });
         notebook.add(Type, { name: "A" });
         notebook.add(Instantiation, { name: "ImportedOlog", model: imported });
+        await store.register(notebook.handle);
 
         const result = await notebook.validate();
         expect(result.issues).toBeUndefined();
