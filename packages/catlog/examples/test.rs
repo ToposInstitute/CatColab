@@ -138,6 +138,89 @@ struct Instance {
 }
 
 
+// ---------- SELF CHECKS ON SCHEMAS & INSTANCES (ie type/tag checks) ----------
+impl Schema {
+    // check that the keys of self.entities and self.morphisms don't overlap.
+    // check that every entity name used as dom/cod in a morphism type exists.
+    fn self_check(&self) {
+        for name in self.entities.iter() {
+            if self.morphisms.contains_key(name) {
+                panic!("Name {} used both as entity type and morphism", name)
+            }
+        }
+        for (morphism, (dom_entity, cod)) in self.morphisms.iter() {
+            if !self.entities.contains(dom_entity) {
+                panic!("domain of {morphism} is {dom_entity} but there is no such entity");
+            }
+            if let EntityOrAttr::Entity(cod_entity) = cod {
+                if !self.entities.contains(cod_entity) {
+                    panic!("codomain of {morphism} is {dom_entity} but there is no such entity");
+                }
+            }
+        }
+    }
+}
+
+impl Instance {
+    fn self_check(&self) {
+        self.schema.self_check();
+
+        // Check that everything in self.mappings is in the schema (no extraneous mappings).
+        for (name, _) in self.mappings.iter() {
+            if self.schema.entities.contains(name) { continue }
+            if self.schema.morphisms.contains_key(name) { continue }
+            panic!("Missing data for morphism {}", name);
+        }
+
+        // Check that everything in the schema is in self.mappings with the right type.
+        for entity_name in self.schema.entities.iter() {
+            let Some(mapping) = self.mappings.get(entity_name) else {
+                panic!("Missing data for entity {}", entity_name);
+            };
+            if !matches!(mapping.dom_cod(), (Repr::Usize, None)) {
+                panic!("Data for entity {} has wrong type", entity_name);
+            }
+        }
+
+        for (name, (dom, cod)) in self.schema.morphisms.iter() {
+            let _: &Name = dom;
+            let Some(mapping) = self.mappings.get(name) else {
+                panic!("Missing data for morphism {}", name);
+            };
+            let (actual_dom, actual_cod) = mapping.dom_cod();
+            if !matches!(actual_dom, Repr::Usize) {
+                panic!("Data for morphism {} has wrong domain type", name);
+            }
+            match (cod, actual_cod) {
+                (EntityOrAttr::Entity(_), Some(Repr::Usize)) => {}
+                (EntityOrAttr::Attr(want), Some(got)) if *want == got => {}
+                _ => panic!("Data for morphism {} has wrong codomain type", name),
+            }
+
+            match mapping {
+                TaggedMap::IdId(m) => self.check_domain(dom, name, m),
+                TaggedMap::IdString(m) => self.check_domain(dom, name, m),
+                TaggedMap::Id(_) => unimplemented!("impossible - morphism data is never TaggedMap::Id"),
+            }
+        }
+    }
+
+    fn check_domain<V>(&self, dom: &EntityName, morphism: &MorphismName, map: &Map<EntityId, V>) {
+        let domain: &Map<EntityId, ()> = (&self.mappings[dom]).into();
+        for id in domain.keys() {
+            if !map.contains_key(id) {
+                panic!("mapping ‘{morphism}’ lacks entry for ‘{dom}’ with id {id}")
+            }
+        }
+        for id in map.keys() {
+            if !domain.contains_key(id) {
+                panic!("mapping ‘{morphism}’ has entry for id {id}, but there is no ‘{dom}’ with id {id}");
+            }
+        }
+    }
+}
+
+
 // ---------- QUERYING, WORST-CASE OPTIMALLY ----------
 // A query "var" is an entity in self.mappings[map] for map ∈ schema.entities.
 // A query "atom" is a row in self.mappings[map] for map ∈ schema.morphisms.
@@ -577,89 +660,6 @@ impl Instance {
     fn execute(&self, database: &Instance, plan: WcoPlan) -> Vec<Binding> {
         assert!(Rc::ptr_eq(&self.schema, &database.schema));
         QueryContext::new(plan, database).execute()
-    }
-}
-
-
-// ---------- SELF CHECKS ON SCHEMAS & INSTANCES (ie type/tag checks) ----------
-impl Schema {
-    // check that the keys of self.entities and self.morphisms don't overlap.
-    // check that every entity name used as dom/cod in a morphism type exists.
-    fn self_check(&self) {
-        for name in self.entities.iter() {
-            if self.morphisms.contains_key(name) {
-                panic!("Name {} used both as entity type and morphism", name)
-            }
-        }
-        for (morphism, (dom_entity, cod)) in self.morphisms.iter() {
-            if !self.entities.contains(dom_entity) {
-                panic!("domain of {morphism} is {dom_entity} but there is no such entity");
-            }
-            if let EntityOrAttr::Entity(cod_entity) = cod {
-                if !self.entities.contains(cod_entity) {
-                    panic!("codomain of {morphism} is {dom_entity} but there is no such entity");
-                }
-            }
-        }
-    }
-}
-
-impl Instance {
-    fn self_check(&self) {
-        self.schema.self_check();
-
-        // Check that everything in self.mappings is in the schema (no extraneous mappings).
-        for (name, _) in self.mappings.iter() {
-            if self.schema.entities.contains(name) { continue }
-            if self.schema.morphisms.contains_key(name) { continue }
-            panic!("Missing data for morphism {}", name);
-        }
-
-        // Check that everything in the schema is in self.mappings with the right type.
-        for entity_name in self.schema.entities.iter() {
-            let Some(mapping) = self.mappings.get(entity_name) else {
-                panic!("Missing data for entity {}", entity_name);
-            };
-            if !matches!(mapping.dom_cod(), (Repr::Usize, None)) {
-                panic!("Data for entity {} has wrong type", entity_name);
-            }
-        }
-
-        for (name, (dom, cod)) in self.schema.morphisms.iter() {
-            let _: &Name = dom;
-            let Some(mapping) = self.mappings.get(name) else {
-                panic!("Missing data for morphism {}", name);
-            };
-            let (actual_dom, actual_cod) = mapping.dom_cod();
-            if !matches!(actual_dom, Repr::Usize) {
-                panic!("Data for morphism {} has wrong domain type", name);
-            }
-            match (cod, actual_cod) {
-                (EntityOrAttr::Entity(_), Some(Repr::Usize)) => {}
-                (EntityOrAttr::Attr(want), Some(got)) if *want == got => {}
-                _ => panic!("Data for morphism {} has wrong codomain type", name),
-            }
-
-            match mapping {
-                TaggedMap::IdId(m) => self.check_domain(dom, name, m),
-                TaggedMap::IdString(m) => self.check_domain(dom, name, m),
-                TaggedMap::Id(_) => unimplemented!("impossible - morphism data is never TaggedMap::Id"),
-            }
-        }
-    }
-
-    fn check_domain<V>(&self, dom: &EntityName, morphism: &MorphismName, map: &Map<EntityId, V>) {
-        let domain: &Map<EntityId, ()> = (&self.mappings[dom]).into();
-        for id in domain.keys() {
-            if !map.contains_key(id) {
-                panic!("mapping ‘{morphism}’ lacks entry for ‘{dom}’ with id {id}")
-            }
-        }
-        for id in map.keys() {
-            if !domain.contains_key(id) {
-                panic!("mapping ‘{morphism}’ has entry for id {id}, but there is no ‘{dom}’ with id {id}");
-            }
-        }
     }
 }
 
