@@ -60,15 +60,6 @@ macro_rules! tagged_map {
                 m
             }
         }
-        // impl From<TaggedMap> for Map<$Key, $Value> {
-        //     fn from(x: TaggedMap) -> Map<$Key, $Value> {
-        //         let TaggedMap::$constructor(m) = x else {
-        //             // TODO: better error message on panic
-        //             panic!("tag error")
-        //         };
-        //         m
-        //     }
-        // }
         impl From<Map<$Key, $Value>> for TaggedMap {
             fn from(m: Map<$Key, $Value>) -> TaggedMap {
                 TaggedMap::$constructor(m)
