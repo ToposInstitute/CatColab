@@ -226,6 +226,236 @@ enum Known<'a> {
 
 type WcoPlan<'a> = Vec<(Var<'a>, Vec<Wcop<'a>>)>;
 
+struct QueryContext<'a,'b> {
+    plan: WcoPlan<'a>,
+    database: &'b Instance,
+    index_reverse: HashMap<&'a Name, TaggedReverseIndex>,
+    index_diagonal: HashMap<&'a Name, HashSet<EntityId>>,
+}
+
+impl<'a,'b> QueryContext<'a,'b> {
+    fn new(plan: WcoPlan<'a>, database: &'b Instance) -> Self {
+        let mut cx = QueryContext {
+            plan,
+            database,
+            index_reverse: HashMap::new(),
+            index_diagonal: HashMap::new(),
+        };
+        // Build indexes on `database` needed for `plan`.
+        for (_var, wcops) in &cx.plan {
+            for &(morphism, ref strategy) in wcops {
+                match strategy {
+                    Strategy::Lookup(_) => {},
+                    Strategy::Preimage(_) | Strategy::Image => {
+                        cx.index_reverse.entry(morphism).or_insert_with(||
+                            cx.database.mappings[morphism].build_reverse_index()
+                        );
+                    }
+                    Strategy::Diagonal => {
+                        cx.index_diagonal.entry(morphism).or_insert_with(|| {
+                            let map: &Map<EntityId, EntityId> =
+                                (&cx.database.mappings[morphism]).into();
+                            map.iter()
+                            .filter_map(|(k, v)| if k == v { Some(*k) } else { None })
+                            .collect()
+                        });
+                    }
+                }
+            }
+        }
+        return cx
+    }
+
+    fn execute(&self) -> Vec<Binding> {
+        // Following the recipe from
+        // https://github.com/frankmcsherry/blog/blob/master/posts/2025-12-23.md#atomization
+        //
+        // 1 For each var in some order,
+        // 2   For each atom that mentions the var,
+        // 2a     For each binding of values to prior vars,
+        // 2b     Count the # of distinct values that extend that binding.
+        // 3   For each atom that mentions the var,
+        // 3a    For each binding of values to prior vars,
+        // 3b    If this atom had least count, enumerate new values.
+        // 4   For each atom that mentions the var,
+        // 4a    For each binding of values to prior and new vars,
+        // 4b    If the binding is not in the atom, discard the binding.
+        //
+        let mut bindings: Vec<Binding> = vec![Vec::new()];
+        for (var, wcops) in &self.plan { // 1 For each var in some order
+            if wcops.is_empty() {
+                // If all atoms that mention this var are of the form f(X) = V for unknown
+                // V, all we can do it enumerate its entity table.
+                let entities: &Map<EntityId, ()> = (&self.database.mappings[var.0]).into();
+                // TODO LATER: could easily pre-allocate the number of vectors we need here.
+                for binding in std::mem::take(&mut bindings) {
+                    for &x in entities.keys() {
+                        let mut b = binding.clone(); // DANGER! ALLOCATION IN INNER LOOP!
+                        b.push(x);
+                        bindings.push(b);
+                    }
+                }
+                continue;
+            }
+
+            // 3 For each atom that mentions this var,
+            // 3a For each binding of values to prior vars
+            // 3b If this atom had the least count, enumerate the new values.
+            //
+            // We assume the first atom mentioning us uniformly had smallest count, which
+            // makes this kind of wonky; eg we dispatch on `strategy` inside the `for
+            // binding in ...` loop even though we already know it -- because in the
+            // "correct" version we won't know it in advance.
+            //
+            // TODO: fix this and actually implement counting.
+            let &(morphism, ref strategy) = &wcops[0];
+            for binding in std::mem::take(&mut bindings) {
+                self.wco_propose(&wcops[0], binding, &mut bindings);
+            }
+
+            if DEBUG {
+                eprintln!("  bindings after proposing {var:?} via {morphism}/{strategy:?}:");
+                if bindings.is_empty() { eprintln!("    empty?!"); }
+                for b in &bindings { eprintln!("    {b:?}"); }
+            }
+
+            // 4   For each atom that mentions the var,
+            // (we exclude the one that enumerate it in this case because it's easy)
+            for wcop in &wcops[1..] {
+                // 4a    For each binding of values to prior and new vars,
+                // 4b    If the binding is not in the atom, discard the binding.
+                let &(morphism, ref strategy) = wcop;
+                let table = &self.database.mappings[morphism];
+                match strategy {
+                    Strategy::Image => { // NOT YET TESTED
+                        // f(V) = X: keep bindings whose X is in the image of f.
+                        // X is an entity, so f is entity->entity (IdId reverse index).
+                        let TaggedReverseIndex::IdId(index) = &self.index_reverse[morphism] else {
+                            panic!("reverse index tag error")
+                        };
+                        bindings.retain(|binding| index.contains_key(binding.last().unwrap()));
+                    }
+                    Strategy::Diagonal => { // NOT YET TESTED
+                        // f(X) = X: keep bindings whose X is on the diagonal of f.
+                        let index = &self.index_diagonal[morphism];
+                        bindings.retain(|binding| index.contains(binding.last().unwrap()));
+                    }
+                    Strategy::Lookup(k) => {
+                        // f(C) = X: check that f(C) equals the proposed X. X is an
+                        // entity, so f is an entity->entity map.
+                        let Known::Var(j) = k else {
+                            panic!("Lookup with constant key should not occur")
+                        };
+                        let map: &Map<EntityId, EntityId> = table.into();
+                        bindings.retain(|binding| map[&binding[*j]] == *binding.last().unwrap());
+                    }
+                    Strategy::Preimage(k) => {
+                        // f(X) = C: check that f(X) equals the known C.
+                        match k {
+                            Known::Var(j) => {
+                                let map: &Map<EntityId, EntityId> = table.into();
+                                bindings.retain(|binding| map[binding.last().unwrap()] == binding[*j]);
+                            }
+                            // TODO: macro-generate these branches once we have more than 2 types.
+                            Known::Usize(c) => {
+                                let map: &Map<EntityId, usize> = table.into();
+                                bindings.retain(|binding| map[binding.last().unwrap()] == *c);
+                            }
+                            Known::String(c) => {
+                                let map: &Map<EntityId, String> = table.into();
+                                bindings.retain(|binding| map[binding.last().unwrap()] == **c);
+                            }
+                        }
+                    }
+                }
+            }
+
+            if DEBUG && !&wcops[1..].is_empty() {
+                eprintln!("  bindings after filtering {var:?} through {:?}", &wcops[1..]);
+                for b in &bindings { eprintln!("    {b:?}"); }
+            }
+        }
+
+        return bindings;
+    }
+
+    fn wco_propose(&self, wcop: &Wcop, binding: Binding, bindings: &mut Vec<Binding>) {
+        fn extend_and_push(mut binding: Binding, x: EntityId, bindings: &mut Vec<Binding>) {
+            binding.push(x);
+            bindings.push(binding);
+        }
+
+        let &(morphism, ref strategy) = wcop;
+        match strategy {
+            // BRANCH NOT YET TESTED
+            Strategy::Image => { // use reverse index
+                // f(V) = X: X is an entity, so f is entity->entity (IdId reverse
+                // index), and its keys are exactly the image of f.
+                let TaggedReverseIndex::IdId(index) = &self.index_reverse[morphism] else {
+                    panic!("reverse index tag error")
+                };
+                for &x in index.keys() {
+                    // DANGER! ALLOCATION IN INNER LOOP!
+                    extend_and_push(binding.clone(), x, bindings)
+                }
+            }
+
+            // BRANCH NOT YET TESTED
+            Strategy::Diagonal => { // use diagonal index
+                let index = &self.index_diagonal[morphism];
+                for &x in index {
+                    // DANGER! ALLOCATION IN INNER LOOP!
+                    extend_and_push(binding.clone(), x, bindings);
+                }
+            }
+
+            Strategy::Lookup(known) => { // look `known` up in `mapping`
+                // f(C) = X, so it must be an entity-entity map.
+                let Known::Var(var_index) = known else {
+                    panic!("Lookup with attribute key shouldn't be possible");
+                };
+                let map: &Map<EntityId, EntityId> =
+                    (&self.database.mappings[morphism]).into();
+                // We can reuse the existing binding since we only generate one result
+                // from it.
+                let x = map[&binding[*var_index]];
+                extend_and_push(binding, x, bindings);
+            }
+
+            Strategy::Preimage(known) => { // look `known` up in reverse index
+                let index: &TaggedReverseIndex = &self.index_reverse[morphism];
+                // TODO: factor out the commonality between these three cases.
+                match *known {
+                    Known::Var(known_var_index) => {
+                        let k = &binding[known_var_index];
+                        let TaggedReverseIndex::IdId(index) = index else {
+                            panic!("reverse index tag error");
+                        };
+                        let entities: &HashSet<EntityId> = &index[k];
+                        for &entity in entities {
+                            // DANGER! ALLOCATION IN INNER LOOP!
+                            extend_and_push(binding.clone(), entity, bindings);
+                        }
+                    }
+                    Known::Usize(_k) => todo!("preimage usize"),
+                    Known::String(k) => {
+                        // TODO: this let-else should become a macro-generated .into() method.
+                        let TaggedReverseIndex::IdString(index) = index else {
+                            panic!("reverse index tag error")
+                        };
+                        let entities: &HashSet<EntityId> = &index[k];
+                        for &entity in entities {
+                            // DANGER! ALLOCATION IN INNER LOOP!
+                            extend_and_push(binding.clone(), entity, bindings);
+                        }
+                    }
+                }
+            } // Strategy::Preimage
+        } // match strategy
+    } // fn wco_propose
+
+} // impl QueryContext
+
 impl Instance {
     // In principle the var order could be chosen based on the database. For now, no.
     fn pick_var_order<'a>(&'a self) -> Vec<Var<'a>> {
@@ -340,217 +570,9 @@ impl Instance {
         return plan
     }
 
-    fn execute(&self, plan: WcoPlan, database: &Instance) -> Vec<Binding> {
+    fn execute(&self, database: &Instance, plan: WcoPlan) -> Vec<Binding> {
         assert!(Rc::ptr_eq(&self.schema, &database.schema));
-
-        // Determine the indexes we'll need.
-        let mut reverse_index: HashSet<&Name> = HashSet::new();
-        let mut diagonal_index: HashSet<&Name> = HashSet::new();
-
-        for (_var, wcops) in plan.iter() {
-            for (morphism, strategy) in wcops.iter() {
-                match strategy {
-                    Strategy::Lookup(_) => {},
-                    Strategy::Diagonal => { diagonal_index.insert(morphism); }
-                    Strategy::Preimage(_) | Strategy::Image => {
-                        reverse_index.insert(morphism);
-                    }
-                }
-            }
-        }
-
-        // Build the indexes.
-        let reverse_index: HashMap<&Name, TaggedReverseIndex> = reverse_index.into_iter()
-            .map(|morphism| (morphism, database.mappings[morphism].build_reverse_index()))
-            .collect();
-        let diagonal_index: HashMap<&Name, HashSet<usize>> = diagonal_index.into_iter()
-            .map(|morphism| {
-                let map: &Map<EntityId, EntityId> = (&database.mappings[morphism]).into();
-                ( morphism,
-                  map.iter().filter_map(|(k, v)| if k == v { Some(*k) } else { None }).collect() )
-            })
-            .collect();
-
-        // Following the recipe from
-        // https://github.com/frankmcsherry/blog/blob/master/posts/2025-12-23.md#atomization
-        //
-        // 1 For each var in some order,
-        // 2   For each atom that mentions the var,
-        // 2a     For each binding of values to prior vars,
-        // 2b     Count the # of distinct values that extend that binding.
-        // 3   For each atom that mentions the var,
-        // 3a    For each binding of values to prior vars,
-        // 3b    If this atom had least count, enumerate new values.
-        // 4   For each atom that mentions the var,
-        // 4a    For each binding of values to prior and new vars,
-        // 4b    If the binding is not in the atom, discard the binding.
-        //
-        let mut bindings: Vec<Binding> = vec![Vec::new()];
-        for (var, wcops) in plan { // 1 For each var in some order
-            if wcops.is_empty() {
-                // If all atoms that mention this var are of the form f(X) = V for unknown
-                // V, all we can do it enumerate its entity table.
-                let (var_entity, _var_id) = var;
-                let entities: &Map<EntityId, ()> = (&database.mappings[var_entity]).into();
-                // TODO LATER: could easily pre-allocate the number of vectors we need here.
-                for binding in std::mem::take(&mut bindings) {
-                    for &x in entities.keys() {
-                        // TODO: DANGER! ALLOCATION IN INNER LOOP!
-                        let mut b = binding.clone();
-                        b.push(x);
-                        // how do I avoid doing this? maybe: be more columnar?
-                        // go look at how Datatoad does it.
-                        bindings.push(b);
-                    }
-                }
-                continue;
-            }
-
-            // 3 For each atom that mentions this var,
-            // 3a For each binding of values to prior vars
-            // 3b If this atom had the least count, enumerate the new values.
-            //
-            // We assume the first atom mentioning us uniformly had smallest count, which
-            // makes this kind of wonky; eg we dispatch on `strategy` inside the `for
-            // binding in ...` loop even though we already know it -- because in the
-            // "correct" version we won't know it in advance.
-            //
-            // TODO: fix this and actually implement counting.
-            let &(morphism, ref strategy) = &wcops[0];
-            let table = &database.mappings[morphism];
-            for mut binding in std::mem::take(&mut bindings) {
-                match strategy {
-                    // BRANCH NOT YET TESTED
-                    Strategy::Image => { // use reverse index
-                        // f(V) = X: X is an entity, so f is entity->entity (IdId reverse
-                        // index), and its keys are exactly the image of f.
-                        let TaggedReverseIndex::IdId(index) = &reverse_index[morphism] else {
-                            panic!("reverse index tag error")
-                        };
-                        for &x in index.keys() {
-                            // DANGER! ALLOCATION IN INNER LOOP!
-                            let mut b = binding.clone();
-                            b.push(x);
-                            bindings.push(b);
-                        }
-                    }
-                    // BRANCH NOT YET TESTED
-                    Strategy::Diagonal => { // use diagonal index
-                        let index = &diagonal_index[morphism];
-                        for &x in index {
-                            // DANGER! ALLOCATION IN INNER LOOP!
-                            let mut b = binding.clone();
-                            b.push(x);
-                            bindings.push(b);
-                        }
-                    }
-                    Strategy::Lookup(known) => { // look `known` up in `mapping`
-                        // f(C) = X, so it must be an entity-entity map.
-                        let Known::Var(var_index) = known else {
-                            panic!("Lookup with attribute key shouldn't be possible");
-                        };
-                        let map: &Map<EntityId, EntityId> = table.into();
-                        // We can reuse the existing binding since we only generate one
-                        // result from it.
-                        let x = map[&binding[*var_index]];
-                        binding.push(x);
-                        bindings.push(binding);
-                    }
-                    Strategy::Preimage(known) => { // look `known` up in reverse index
-                        let index: &TaggedReverseIndex = &reverse_index[morphism];
-                        #[allow(unused_variables)]
-                        match *known {
-                            Known::Var(known_var_index) => todo!("preimage Var"),
-                            Known::Usize(k) => todo!("preimage usize"),
-                            Known::String(k) => {
-                                // TODO: this let-else should become a macro-generated .into() method.
-                                let TaggedReverseIndex::IdString(index) = index else {
-                                    panic!("reverse index tag error")
-                                };
-                                let entities: &HashSet<EntityId> = &index[k];
-                                for &entity in entities {
-                                    // DANGER! ALLOCATION IN INNER LOOP!
-                                    let mut b = binding.clone();
-                                    b.push(entity);
-                                    bindings.push(b);
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            if DEBUG {
-                eprintln!("  bindings after proposing {var:?} via {morphism}/{strategy:?}:");
-                if bindings.is_empty() { eprintln!("    empty?!"); }
-                for b in &bindings { eprintln!("    {b:?}"); }
-            }
-
-            // 4   For each atom that mentions the var,
-            // (we exclude the one that enumerate it in this case because it's easy)
-            for wcop in &wcops[1..] {
-                // 4a    For each binding of values to prior and new vars,
-                // 4b    If the binding is not in the atom, discard the binding.
-                let &(morphism, ref strategy) = wcop;
-                let table = &database.mappings[morphism];
-                match strategy {
-                    Strategy::Image => { // NOT YET TESTED
-                        // f(V) = X: keep bindings whose X is in the image of f.
-                        // X is an entity, so f is entity->entity (IdId reverse index).
-                        let TaggedReverseIndex::IdId(index) = &reverse_index[morphism] else {
-                            panic!("reverse index tag error")
-                        };
-                        bindings.retain(|binding| index.contains_key(binding.last().unwrap()));
-                    }
-                    Strategy::Diagonal => { // NOT YET TESTED
-                        // f(X) = X: keep bindings whose X is on the diagonal of f.
-                        let index = &diagonal_index[morphism];
-                        bindings.retain(|binding| index.contains(binding.last().unwrap()));
-                    }
-                    Strategy::Lookup(k) => {
-                        // f(C) = X: check that f(C) equals the proposed X. X is an
-                        // entity, so f is an entity->entity map.
-                        let Known::Var(j) = k else {
-                            panic!("Lookup with constant key should not occur")
-                        };
-                        let map: &Map<EntityId, EntityId> = table.into();
-                        bindings.retain(|binding| map[&binding[*j]] == *binding.last().unwrap());
-                    }
-                    Strategy::Preimage(k) => {
-                        // f(X) = C: check that f(X) equals the known C.
-                        match k {
-                            Known::Var(j) => {
-                                let map: &Map<EntityId, EntityId> = table.into();
-                                bindings.retain(|binding| map[binding.last().unwrap()] == binding[*j]);
-                            }
-                            // TODO: macro-generate these branches once we have more than 2 types.
-                            Known::Usize(c) => {
-                                let map: &Map<EntityId, usize> = table.into();
-                                bindings.retain(|binding| map[binding.last().unwrap()] == *c);
-                            }
-                            Known::String(c) => {
-                                let map: &Map<EntityId, String> = table.into();
-                                bindings.retain(|binding| map[binding.last().unwrap()] == **c);
-                            }
-                        }
-                    }
-                }
-            }
-
-            if DEBUG && !&wcops[1..].is_empty() {
-                eprintln!("  bindings after filtering {var:?} through {:?}", &wcops[1..]);
-                for b in &bindings { eprintln!("    {b:?}"); }
-            }
-        }
-
-        return bindings;
-    }
-
-    fn query(&self, database: &Instance) -> Vec<Binding> {
-        assert!(Rc::ptr_eq(&self.schema, &database.schema));
-        let var_order = self.pick_var_order();
-        let plan = self.plan(&var_order);
-        return self.execute(plan, database);
+        QueryContext::new(plan, database).execute()
     }
 }
 
@@ -614,20 +636,24 @@ impl Instance {
                 _ => panic!("Data for morphism {} has wrong codomain type", name),
             }
 
-            // FIXME: check morphism is defined over its entire domain!
-            let domain: &Map<EntityId, ()> = (&self.mappings[dom]).into();
-            for dom_id in domain.keys() {
-                use TaggedMap::*;
-                // This is inefficient; this tag check should be lifted out of the for
-                // loop.
-                let has_key = match mapping {
-                    IdId(m) => m.contains_key(dom_id),
-                    IdString(m) => m.contains_key(dom_id),
-                    Id(_) => unimplemented!(),
-                };
-                if !has_key {
-                    panic!("mapping `{name}' lacks entry for `{dom}' with id `{dom_id}'")
-                }
+            match mapping {
+                TaggedMap::IdId(m) => self.check_domain(dom, name, m),
+                TaggedMap::IdString(m) => self.check_domain(dom, name, m),
+                TaggedMap::Id(_) => unimplemented!("impossible - morphism data is never TaggedMap::Id"),
+            }
+        }
+    }
+
+    fn check_domain<V>(&self, dom: &EntityName, morphism: &MorphismName, map: &Map<EntityId, V>) {
+        let domain: &Map<EntityId, ()> = (&self.mappings[dom]).into();
+        for id in domain.keys() {
+            if !map.contains_key(id) {
+                panic!("mapping ‘{morphism}’ lacks entry for ‘{dom}’ with id {id}")
+            }
+        }
+        for id in map.keys() {
+            if !domain.contains_key(id) {
+                panic!("mapping ‘{morphism}’ has entry for id {id}, but there is no ‘{dom}’ with id {id}");
             }
         }
     }
@@ -649,7 +675,7 @@ fn main() {
     let dept = "dept".to_string();
     let name = "name".to_string();
 
-    let entities: Vec<EntityName> = vec![Employee.clone(), Dept.clone()];
+    let entities: Vec<EntityName> = vec![Dept.clone(), Employee.clone()];
     let morphisms: Map<MorphismName, (EntityName, EntityOrAttr)> = map! {
         dept.clone() => (Employee.clone(), EntityOrAttr::Entity(Dept.clone())),
         name.clone() => (Dept.clone(), EntityOrAttr::Attr(Repr::String)),
@@ -676,6 +702,7 @@ fn main() {
                                           2 => "hr".to_string()}),
     };
     let db = Instance { schema: schema.clone(), mappings: db_mappings };
+    db.self_check();
 
     println!("Planning.");
     let var_order = query.pick_var_order();
@@ -686,23 +713,7 @@ fn main() {
         println!("    {entity:>8} {id:>4}    {wcops:?}");
     }
 
-    // let table: Vec<_> = plan.iter()
-    //     .map(|((entity,id), wcops)|
-    //          vec![format!("{entity}:{id}"), format!("{wcops:?}")])
-    //     .collect();
-    // if table.is_empty() {
-    //     println!("  plan is empty?!");
-    // } else {
-    //     let colwidths = (0..table[0].len())
-    //         .map(|i| table.iter().map(|v| v[i].len()).max().unwrap());
-    //     for row in table {
-    //         let [x,y] = row.as_slice() else { panic!() };
-    //         println!("    {x}  {y}");
-    //     }
-    // }
-
-    // let's try finding automorphisms from the query to itself.
-    let bindings = query.execute(plan, &db);
+    let bindings = query.execute(&db, plan);
     println!("RESULT BINDINGS"); // TODO: Print column headers (variables)
     for b in bindings {
         println!("  {b:?}");
