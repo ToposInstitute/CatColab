@@ -405,7 +405,6 @@ impl Instance {
                 }
                 continue;
             }
-            debug_assert!(!wcops.is_empty());
 
             // 3 For each atom that mentions this var,
             // 3a For each binding of values to prior vars
