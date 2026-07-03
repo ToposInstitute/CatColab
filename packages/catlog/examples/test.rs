@@ -155,7 +155,7 @@ type Atom<'a> = (&'a MorphismName, EntityId);
 // Once we have multiple entity representations this may cause tagging overhead!
 type Binding = Vec<EntityId>;
 
-// ##### CONCRETE EXAMPLE OF A QUERY #####
+// ##### CONCRETE EXAMPLE OF SOLVING A QUERY #####
 // schema:
 //  entities   { Employee, Dept }
 //  morphisms  { dept: Employee -> Dept, name: Dept -> String }
@@ -171,21 +171,24 @@ type Binding = Vec<EntityId>;
 //   e = (&"Employee", 0)
 //
 // Our atoms are
-//   dept(e) = d                    (&"dept", 0)
-//   name(d) = "accounting"         (&"name", 0)
+//   dept(e) = d
+//   name(d) = "accounting"
 //
-// So if we're currently solving for var = d = ("Dept", 0) then
+// We start by solving for d = ("Dept", 0); there are two relevant atoms,
 //
-//   count_atom = (&"name", 0)
+//   1) name(d) = "accounting"
+//   2) dept(e) = d                (but e is unknown!)
 //
-// and we are trying to enumerate departments named "accounting".
+// so we can either 1) enumerate departments named "accounting"
+//               or 2) enumerate all departments in the image of `dept`.
+// and then filter by whichever condition we didn't enumerate by.
 //
-// Once we have picked such a d and are solving for var = e = ("Employee",
-// 0), then
+// Once we have picked such a d and are solving for e = ("Employee", 0), then the relevant
+// atom is
 //
-//   count_atom = (&"dept", 0)
+//   dept(e) = d
 //
-// and we are trying to enumerate employees whose department is d.
+// and we must enumerate employees whose department is d, i.e. the preimage dept^{-1}(d).
 
 // At each "step" of a WCO join, i.e. when solving for a particular variable, we examine
 // all atoms that touch this variable. These can have five different forms.
