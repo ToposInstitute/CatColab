@@ -56,12 +56,10 @@ struct ConstantIC <: AbstractInitialConditionSpec
 end
 export ConstantIC
 
-function default_values(c::ConstantIC, ::Geometry)
-    (value=1.0,)
-end
+default_values(::Type{ConstantIC}, dimension) = (value=1.0,)
 
 # The type of state variable is relevant. If it is a Form1, then we want to fill an array by edges 
-function initial_condition(var::BasicSymbolic{<:DECQuantity}, c::ConstantIC, geometry::Geometry; f::Function=identity) where D
+function initial_condition(var::BasicSymbolic{<:DECQuantity}, c::ConstantIC, geometry::Geometry; f::Function=identity)
     fill(c.value, nparts(geometry.dualmesh, :V))
 end
 
@@ -74,12 +72,12 @@ struct GaussianIC <: AbstractInitialConditionSpec
 end
 export GaussianIC
 
-function default_values(g::GaussianIC, geometry::Geometry)
-    (mean=zeros(dim(geometry)), variance=Diagonal(ones(dim(geometry))))
+function default_values(::Type{GaussianIC}, dimension::Int)
+    (mean=zeros(dimension), var=Diagonal(ones(dimension)))
 end
 
-function initial_condition(var::BasicSymbolic{DEC.DualForm{dim, Circle, spacedim}}, g::GaussianIC, geometry::Geometry; f::Function=identity)
-    @assert dim(var) == dimension(geometry) || error("!")
+function initial_condition(var::BasicSymbolic{DEC.DualForm{idx, Circle, spacedim}}, g::GaussianIC, geometry::Geometry; f::Function=identity) where {idx, spacedim}
+    @assert ThDEC.dim(var) == dimension(geometry) || error("!")
     dist = Normal(pi)
     # 7.2 multiplier allows the bands to develop above the soil line
     m(t) = Distributions.pdf(dist, t) * 7.2 * GAUSS_NORM |> f
@@ -87,31 +85,30 @@ function initial_condition(var::BasicSymbolic{DEC.DualForm{dim, Circle, spacedim
 end
 
 function initial_condition(::BasicSymbolic{DEC.DualForm{0, Rectangle, dim}}, g::GaussianIC, geometry::Geometry; f::Function=identity) where dim
-    pts  = dual0_points(geometry.dualmesh)
+    pts = dual0_points(geometry.dualmesh)
     dist = MvNormal(g.mean, g.var)
     m(p) = Distributions.pdf(dist, [p[1], p[2]]) |> f
     [m(p) for p in pts]
 end
 
 using LinearAlgebra: ⋅
-function constant_primal_1form(sd, α::AbstractVector)   # α length = embedding dim
+# α length = embedding dimfunction
+function constant_primal_1form(sd, v::AbstractVector)
     map(edges(sd)) do e
-        α ⋅ (sd[tgt(sd, e), :point] - sd[src(sd, e), :point])
+        v ⋅ (sd[tgt(sd, e), :point] - sd[src(sd, e), :point])
     end
 end
 
-function initial_condition(::BasicSymbolic{DEC.PrimalForm{1, Rectangle, dim}}, ic, g)
-    constant_primal_1form(geom.dualmesh, [1.0, 0.0])
+function initial_condition(::BasicSymbolic{DEC.PrimalForm{1, Rectangle, dim}}, ic::ConstantIC, geometry::Geometry) where dim
+    constant_primal_1form(geometry.dualmesh, [1.0, 0.0])
 end
 
 # w: near-uniform; ConstantIC is a clean stand-in for the docs' very broad Normal
-function initial_condition(::BasicSymbolic{DualForm{0, Rectangle, dim}}, c::ConstantIC, geom::Geometry) where dim
-    fill(c.value, ndual0(geom.dualmesh))
+function initial_condition(::BasicSymbolic{DEC.DualForm{0, Rectangle, dim}}, c::ConstantIC, geometry::Geometry) where dim
+    fill(c.value, ndual0(geometry.dualmesh))
 end
 
-
-
-"""  Taylor Vortices    
+"""  Taylor Vortices
 """
 struct TaylorVortexIC <: AbstractInitialConditionSpec
     lat::Float64
@@ -120,7 +117,7 @@ struct TaylorVortexIC <: AbstractInitialConditionSpec
 end
 export TaylorVortexIC
 
-function default_values(tv::TaylorVortexIC, geometry)
+function default_values(::Type{TaylorVortexIC}, dimension)
     (lat=0.2, vortices=2, p=TaylorVortexParams(0.5, 0.1))
 end
 

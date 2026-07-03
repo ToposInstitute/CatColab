@@ -6,6 +6,10 @@ export dimension
 
 abstract type AbstractMeshSpec end
 
+# A concrete instance from the mesh's own defaults, used only to read `dimension`
+# (avoids assuming a zero-arg constructor and avoids meshing a full Geometry).
+mesh_instance(::Type{M}) where {M<:AbstractMeshSpec} = M(values(default_values(M))...)
+
 name(::AbstractMeshSpec) = "No name provided"
 
 struct Geometry{D<:AbstractMeshSpec}
@@ -20,6 +24,7 @@ Geometry(domain, args...) = Geometry{typeof(domain)}(domain, args...)
 
 function Geometry(dict::AbstractDict)
     mesh = Symbol(dict["mesh"])
+    # TODO replace with Default
     domain = PREDEFINED_MESHES[mesh]
     Geometry(domain)
 end
@@ -32,6 +37,7 @@ end
 end
 
 dimension(::Circle) = 1
+dimension(::Type{Circle}) = 1
 
 function Geometry(c::Circle; division::SimplexCenter=Circumcenter())
     mesh = EmbeddedDeltaSet1D{Bool, Point2D}()
@@ -51,6 +57,7 @@ end
 end
 
 dimension(::Icosphere) = 2
+dimension(::Type{Icosphere}) = 2
 
 function Geometry(m::Icosphere; division::SimplexCenter=Circumcenter())
     s = loadmesh(Icosphere(m.order, m.radius))
@@ -74,6 +81,7 @@ end
 end
 
 dimension(::Rectangle) = 2
+dimension(::Type{Rectangle}) = 2
 
 function Geometry(r::Rectangle; division::SimplexCenter=Circumcenter())
     s = triangulated_grid(r.max_x, r.max_y, r.dx, r.dy, Point2{Float64})
