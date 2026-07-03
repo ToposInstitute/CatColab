@@ -324,50 +324,7 @@ impl<'a,'b> QueryContext<'a,'b> {
             for wcop in &wcops[1..] {
                 // 4a    For each binding of values to prior and new vars,
                 // 4b    If the binding is not in the atom, discard the binding.
-                let &(morphism, ref strategy) = wcop;
-                let table = &self.database.mappings[morphism];
-                match strategy {
-                    Strategy::Image => { // NOT YET TESTED
-                        // f(V) = X: keep bindings whose X is in the image of f.
-                        // X is an entity, so f is entity->entity (IdId reverse index).
-                        let TaggedReverseIndex::IdId(index) = &self.index_reverse[morphism] else {
-                            panic!("reverse index tag error")
-                        };
-                        bindings.retain(|binding| index.contains_key(binding.last().unwrap()));
-                    }
-                    Strategy::Diagonal => { // NOT YET TESTED
-                        // f(X) = X: keep bindings whose X is on the diagonal of f.
-                        let index = &self.index_diagonal[morphism];
-                        bindings.retain(|binding| index.contains(binding.last().unwrap()));
-                    }
-                    Strategy::Lookup(k) => {
-                        // f(C) = X: check that f(C) equals the proposed X. X is an
-                        // entity, so f is an entity->entity map.
-                        let Known::Var(j) = k else {
-                            panic!("Lookup with constant key should not occur")
-                        };
-                        let map: &Map<EntityId, EntityId> = table.into();
-                        bindings.retain(|binding| map[&binding[*j]] == *binding.last().unwrap());
-                    }
-                    Strategy::Preimage(k) => {
-                        // f(X) = C: check that f(X) equals the known C.
-                        match k {
-                            Known::Var(j) => {
-                                let map: &Map<EntityId, EntityId> = table.into();
-                                bindings.retain(|binding| map[binding.last().unwrap()] == binding[*j]);
-                            }
-                            // TODO: macro-generate these branches once we have more than 2 types.
-                            Known::Usize(c) => {
-                                let map: &Map<EntityId, usize> = table.into();
-                                bindings.retain(|binding| map[binding.last().unwrap()] == *c);
-                            }
-                            Known::String(c) => {
-                                let map: &Map<EntityId, String> = table.into();
-                                bindings.retain(|binding| map[binding.last().unwrap()] == **c);
-                            }
-                        }
-                    }
-                }
+                self.wco_filter(wcop, &mut bindings);
             }
 
             if DEBUG && !&wcops[1..].is_empty() {
@@ -453,6 +410,53 @@ impl<'a,'b> QueryContext<'a,'b> {
             } // Strategy::Preimage
         } // match strategy
     } // fn wco_propose
+
+    fn wco_filter(&self, wcop: &Wcop, bindings: &mut Vec<Binding>) {
+        let &(morphism, ref strategy) = wcop;
+        let table = &self.database.mappings[morphism];
+        match strategy {
+            Strategy::Image => { // NOT YET TESTED
+                // f(V) = X: keep bindings whose X is in the image of f.
+                // X is an entity, so f is entity->entity (IdId reverse index).
+                let TaggedReverseIndex::IdId(index) = &self.index_reverse[morphism] else {
+                    panic!("reverse index tag error")
+                };
+                bindings.retain(|binding| index.contains_key(binding.last().unwrap()));
+            }
+            Strategy::Diagonal => { // NOT YET TESTED
+                // f(X) = X: keep bindings whose X is on the diagonal of f.
+                let index = &self.index_diagonal[morphism];
+                bindings.retain(|binding| index.contains(binding.last().unwrap()));
+            }
+            Strategy::Lookup(k) => {
+                // f(C) = X: check that f(C) equals the proposed X. X is an
+                // entity, so f is an entity->entity map.
+                let Known::Var(j) = k else {
+                    panic!("Lookup with constant key should not occur")
+                };
+                let map: &Map<EntityId, EntityId> = table.into();
+                bindings.retain(|binding| map[&binding[*j]] == *binding.last().unwrap());
+            }
+            Strategy::Preimage(k) => {
+                // f(X) = C: check that f(X) equals the known C.
+                match k {
+                    Known::Var(j) => {
+                        let map: &Map<EntityId, EntityId> = table.into();
+                        bindings.retain(|binding| map[binding.last().unwrap()] == binding[*j]);
+                    }
+                    // TODO: macro-generate these branches once we have more than 2 types.
+                    Known::Usize(c) => {
+                        let map: &Map<EntityId, usize> = table.into();
+                        bindings.retain(|binding| map[binding.last().unwrap()] == *c);
+                    }
+                    Known::String(c) => {
+                        let map: &Map<EntityId, String> = table.into();
+                        bindings.retain(|binding| map[binding.last().unwrap()] == **c);
+                    }
+                }
+            } // Strategy::Preimage
+        } // match strategy
+    } // fn wco_filter
 
 } // impl QueryContext
 
