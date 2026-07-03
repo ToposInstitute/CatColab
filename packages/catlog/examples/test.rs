@@ -203,25 +203,21 @@ type Binding = Vec<EntityId>;
 //   4  f(V) = X        enumerate image(f) using a reverse index
 //   5  f(X) = X        use a diagonal index {x : f(x) = x}
 //
-// Of these, 3 and 4 need a reverse index, and 5 needs a diagonal index.
+// Of these, 1 needs forward lookup (no index needed), 3 and 4 need a reverse index, and 5
+// needs a diagonal index. 2 is weird: we could do it by enumerating the domain of the
+// function, but since all maps are total, this is equivalent to enumerating all entities
+// of that type (and does nothing when used as a filter). So we actually don't have a
+// WcoStrategy for this. Instead, if a particular entity/var ends up with *no* strategies,
+// we just enumerate all entity values.
 type Wcop<'a> = (&'a MorphismName, WcoStrategy<'a>); // worst-case optimal operator
-#[derive(Debug, Clone, Eq, PartialEq, PartialOrd, Ord)]
+#[derive(Debug, Clone)]
 enum WcoStrategy<'a> {
     Lookup(Known<'a>),
     Preimage(Known<'a>),
-    // TODO: Dom is dumb. We actually don't need the morphism for Dom, just the entity
-    // type. And if the same variable appears as the source of multiple atoms, we might
-    // get redundant Dom(f) wcops for it. So instead we should just emit a Wcop for
-    // enumerating the entity type, and deduplicate those before query execution.
-    // Moreover, we should only use a Dom/Entity enumeration if we have *no other bound*
-    // on the value. So in fact the plan for a variable should be *either* "enumerate its
-    // type" *or* a vector of Wcops. So the solution is just to drop Dom and enumerate if
-    // there are no entries in the Wcop vector.
-    Dom,
     Image,
     Diagonal,
 }
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone)]
 enum Known<'a> {
     Var(usize), // gives index of var in var order so we can look it up in existing binding
     String(&'a String),
@@ -298,10 +294,9 @@ impl Instance {
                         let tgt_i = var_position[&tgt];
                         match src_i.cmp(&tgt_i) {
                             // [Case A]  X precedes Y
-                            // so  X gets  f(X) = V     Dom
+                            // so  X gets  f(X) = V     fully enumerate; don't push a strategy
                             // and Y gets  f(C) = Y     Lookup(C)
                             Ordering::Less => {
-                                plan[src_i].1.push((morphism, WcoStrategy::Dom));
                                 plan[tgt_i].1.push((morphism, WcoStrategy::Lookup(Known::Var(src_i))));
                             }
                             // [Case B]  Y precedes X
@@ -355,7 +350,7 @@ impl Instance {
         for (_var, wcops) in plan.iter() {
             for (morphism, strategy) in wcops.iter() {
                 match strategy {
-                    WcoStrategy::Lookup(_) | WcoStrategy::Dom => {},
+                    WcoStrategy::Lookup(_) => {},
                     WcoStrategy::Diagonal => { diagonal_index.insert(morphism); }
                     WcoStrategy::Preimage(_) | WcoStrategy::Image => {
                         reverse_index.insert(morphism);
@@ -392,7 +387,25 @@ impl Instance {
         //
         let mut bindings: Vec<Binding> = vec![Vec::new()];
         for (var, wcops) in plan { // 1 For each var in some order
-            assert!(!wcops.is_empty());
+            if wcops.is_empty() {
+                // If all atoms that mention this var are of the form f(X) = V for unknown
+                // V, all we can do it enumerate its entity table.
+                let (var_entity, _var_id) = var;
+                let entities: &Map<EntityId, ()> = (&database.mappings[var_entity]).into();
+                // TODO LATER: could easily pre-allocate the number of vectors we need here.
+                for binding in std::mem::take(&mut bindings) {
+                    for &x in entities.keys() {
+                        // TODO: DANGER! ALLOCATION IN INNER LOOP!
+                        let mut b = binding.clone();
+                        b.push(x);
+                        // how do I avoid doing this? maybe: be more columnar?
+                        // go look at how Datatoad does it.
+                        bindings.push(b);
+                    }
+                }
+                continue;
+            }
+            debug_assert!(!wcops.is_empty());
 
             // 3 For each atom that mentions this var,
             // 3a For each binding of values to prior vars
@@ -405,21 +418,9 @@ impl Instance {
             //
             // TODO: fix this and actually implement counting.
             let &(morphism, ref strategy) = &wcops[0];
-            let (dom, _cod) = &self.schema.morphisms[morphism];
             let table = &database.mappings[morphism];
             for mut binding in std::mem::take(&mut bindings) {
                 match strategy {
-                    WcoStrategy::Dom => { // enumerate the domain entity type
-                        let entities: &Map<EntityId, ()> = (&database.mappings[dom]).into();
-                        for &x in entities.keys() {
-                            // TODO: DANGER! ALLOCATION IN INNER LOOP!
-                            let mut b = binding.clone();
-                            b.push(x);
-                            // how do I avoid doing this? maybe: be more columnar?
-                            // go look at how Datatoad does it.
-                            bindings.push(b);
-                        }
-                    }
                     // BRANCH NOT YET TESTED
                     WcoStrategy::Image => { // use reverse index
                         // f(V) = X: X is an entity, so f is entity->entity (IdId reverse
@@ -481,7 +482,7 @@ impl Instance {
             }
 
             if DEBUG {
-                eprintln!("  after proposing {var:?} via {morphism}/{strategy:?}, bindings are:");
+                eprintln!("  bindings after proposing {var:?} via {morphism}/{strategy:?}:");
                 if bindings.is_empty() { eprintln!("    empty?!"); }
                 for b in &bindings { eprintln!("    {b:?}"); }
             }
@@ -494,7 +495,6 @@ impl Instance {
                 let &(morphism, ref strategy) = wcop;
                 let table = &database.mappings[morphism];
                 match strategy {
-                    WcoStrategy::Dom => {}, // nothing to do; always holds
                     WcoStrategy::Image => { // NOT YET TESTED
                         // f(V) = X: keep bindings whose X is in the image of f.
                         // X is an entity, so f is entity->entity (IdId reverse index).
@@ -538,8 +538,8 @@ impl Instance {
                 }
             }
 
-            if DEBUG {
-                eprintln!("  after filtering {var:?} through {:?}", &wcops[1..]);
+            if DEBUG && !&wcops[1..].is_empty() {
+                eprintln!("  bindings after filtering {var:?} through {:?}", &wcops[1..]);
                 for b in &bindings { eprintln!("    {b:?}"); }
             }
         }
