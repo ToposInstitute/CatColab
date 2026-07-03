@@ -1,9 +1,13 @@
 using InteractiveUtils: subtypes
+import SymbolicUtils
 
 spec(::Type{T}) where T = Dict(string.(fieldnames(T)) .=> string.(nameof.(fieldtypes(T))))
 
 """
-    This contains the name of the initial conditions, its parameters, and a dictionary of defaults 
+Name of an initial condition and its default parameter values. `defaults` maps each
+parameter name to a numeric vector, matching the frontend's vector-valued fields.
+`params` is retained for the frontend schema but is always empty now that IC specs
+are no longer type-parameterized.
 """
 @struct_hash_equal struct IC
     ic::String
@@ -11,82 +15,72 @@ spec(::Type{T}) where T = Dict(string.(fieldnames(T)) .=> string.(nameof.(fieldt
     defaults::Dict
 end
 
-function IC(::Type{T}) where T
-    params = T.parameters
-    if isempty(params)
-        IC(string(nameof(T)), (;params...), default_values(T))
-    else
-        IC(string(nameof(T)), (;only(params)...), default_values(T))
-    end
+# ---- flatten a default value into the frontend's `number[]` shape ----
+as_vector(v::AbstractVector)       = collect(float.(v))
+as_vector(v::Diagonal)             = collect(float.(diag(v)))
+as_vector(v::Number)               = Float64[v]
+as_vector(p::AbstractVortexParams) = Float64[getfield(p, f) for f in fieldnames(typeof(p))]
+
+"""
+    Example:
+    ```julia
+        # IC(GaussianIC, Rectangle) =
+        IC("GaussianIC", (), Dict("mean" => [0.0], "var" => Diagonal([1.0])))
+        # IC(GaussianIC, Circle) =
+        IC("GaussianIC", (), Dict("mean" => [0.0, 0.0], "var" => Diagonal([1.0, 1.0]))) 
+    ```
+"""
+function IC(::Type{T}, dimension::Int) where T
+    d = default_values(T, dimension)
+    IC(string(nameof(T)), NamedTuple(), Dict(string(k) => as_vector(v) for (k, v) in pairs(d)))
 end
 
-# Walk `initial_condition` methods once. Each is (::IC, ::Geometry{Mesh}).
-# Yield (ic_type, mesh_param) where mesh_param is a Type or a TypeVar.
+function unwrap_sym(T)
+    U = Base.unwrap_unionall(T)
+    U isa DataType && nameof(U) === :BasicSymbolic || begin
+        @info "RETURNING FIRST: $U"
+        return nothing
+    end
+    form = U.parameters[1]
+    form isa DataType && length(form.parameters) >= 3 || begin
+        # THIS RETURNS BECAUSE <:DECQuantity
+        return nothing
+    end
+    form.parameters[3]
+end
+
+# Walk `initial_condition` methods once, yielding (ic_spec_type, mesh_or_nothing).
+# Signature layout: Tuple{typeof(initial_condition), var, ic, geometry}.
 function ic_method_sigs()
-    sigs = Tuple{Any,Any}[]
-    for m in methods(initial_condition, InitialConditions)
-        params = Base.unwrap_unionall(m.sig).parameters
-        length(params) >= 3 || continue
-        geom = params[3]
-        geom isa DataType && nameof(geom) === :Geometry || continue
-        push!(sigs, (params[2], geom.parameters[1]))
+    sigs = Tuple{DataType,Any}[]
+    for m in methods(initial_condition)
+        fname, vartype, ic, geometry = Base.unwrap_unionall(m.sig).parameters
+        push!(sigs, (ic, unwrap_sym(vartype)))
     end
     sigs
 end
 
-# "GaussianIC" => [ (params=(dim=1,), defaults=…), (params=(dim=2,), defaults=…) ]
-"""
-    Iterates over the signatures of `initial_condition` methods.
-"""
-function ic_info()
-    info = Dict{String, Vector{@NamedTuple{params::NamedTuple, defaults::Any}}}()
-    for (ic_type, _) in ic_method_sigs()
-        ic_type isa DataType || continue
-        ps = ic_type.parameters
-        key = if isempty(ps)
-            NamedTuple()
-        elseif length(ps) == 1 && only(ps) isa NamedTuple
-            only(ps)
-        else
-            continue
-        end
-        base = string(nameof(ic_type))
-        haskey(info, base) || (info[base] = valtype(info)[])
-        push!(info[base], (params = key, defaults = default_values(ic_type)))
-    end
-    info
-end
-
 struct MeshInfo{Mesh <: AbstractMeshSpec}
-    # field names and their types
-    specs::Dict{String, String}
-
-    # mapping between geometry fields and their defaults
-    # TODO embiggen to an Enum, later
-    defaults::Dict{String, Number}
-
-    # valid initial conditions
-    ics::Vector{IC}
+    specs::Dict{String,String}      # field name => type name
+    defaults::Dict{Symbol,Number}   # mesh field => default value
+    ics::Vector{IC}                 # ICs valid on this mesh
 end
 
-function MeshInfo(mesh_type::Type{Mesh}) where Mesh <: AbstractMeshSpec
-    specs = spec(mesh_type)
-    defaults = Dict(string(k) => v for (k,v) in pairs(default_values(mesh_type)))
+function MeshInfo(::Type{Mesh}) where Mesh <: AbstractMeshSpec
+    specs = spec(Mesh)
+    defaults = default_values(Mesh)
     ics = IC[]
-    for (ic_type, meshparam) in ic_method_sigs()
-        (meshparam isa TypeVar || meshparam === mesh_type) || continue
-        push!(ics, IC(ic_type))
+    for (ic_type, mesh) in ic_method_sigs()
+        (mesh === nothing || mesh === Mesh) || continue
+        ic = IC(ic_type, dimension(Mesh))
+        push!(ics, ic)
     end
     MeshInfo{Mesh}(specs, defaults, unique(ics))
 end
 
+
 function supported_options()
     mesh_types = subtypes(AbstractMeshSpec)
-
-    mesh_info = Dict(map(mesh_types) do mesh
-        string(nameof(mesh)) => MeshInfo(mesh)
-    end)
-
-    meshes = string.(nameof.(mesh_types))
-    Dict(:meshes => meshes, :mesh_info => mesh_info, :ic_info => ic_info())
+    mesh_info  = Dict(string(nameof(m)) => MeshInfo(m) for m in mesh_types)
+    Dict(:meshes => string.(nameof.(mesh_types)), :mesh_info => mesh_info)
 end

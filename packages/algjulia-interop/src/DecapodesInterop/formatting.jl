@@ -27,6 +27,57 @@ end
 
 # FORMATTER -----------------------------------------------------------------------------------
 
+
+
+function format(result::SolutionResult)
+    sd = result.system.geometry.dualmesh
+    points = sd[:point]
+
+    xs = sort(unique(p[1] for p in points))
+    ys = sort(unique(p[2] for p in points))
+    xi = Dict(x => i-1 for (i, x) in enumerate(xs))  # 0-indexed for JS
+    yi = Dict(y => i-1 for (i, y) in enumerate(ys))
+
+    nv = nparts(sd, :V)
+    plottable = [:n]
+
+    state = Dict{String, Vector}()
+    for var in plottable
+        frames = map(result.soln.u) do u
+            vals = getproperty(u, var)
+            [[xi[points[i][1]], yi[points[i][2]], vals[i]] for i in 1:nv]
+        end
+        state[string(var)] = frames
+    end
+
+    Dict("time" => result.soln.t, "x" => xs, "y" => ys, "state" => state)
+end
+
+function format(sd::EmbeddedDeltaDualComplex1D, result::SolutionResult)
+    lengths = sd[:length]                  # per-edge length, length == ne
+    xcoords = cumsum(lengths) .- lengths   # arc length: [0, l1, l1+l2, ...]
+    nx = length(xcoords)
+ 
+    plottable = [:n]
+ 
+    state = Dict{String, Vector}()
+    for var in plottable
+        frames = map(result.soln.u) do u
+            vals = getproperty(u, var)
+            @assert length(vals) == nx "state :$var has length $(length(vals)), expected $nx (ne); is it a DualForm0 on this 1D mesh?"
+            # (xIndex 0-based, yIndex, value); tuple keeps indices as integers in JSON
+            [(i - 1, 0, vals[i]) for i in 1:nx]
+        end
+        state[string(var)] = frames
+    end
+ 
+    Dict("time" => result.soln.t, "x" => xcoords, "y" => [0.0], "state" => state)
+end
+
+
+
+
+
 struct Projector{S,T}
     src::Geometry{S} # simulated on
     tgt::Geometry{T} # displayed on
