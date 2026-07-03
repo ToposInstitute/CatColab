@@ -138,21 +138,18 @@ struct Instance {
 }
 
 
-// ---------- QUERYING ----------
-// let's do WCO at first and do it badly
-
+// ---------- QUERYING, WORST-CASE OPTIMALLY ----------
 // A query "var" is an entity in self.mappings[map] for map ∈ schema.entities.
 // A query "atom" is a row in self.mappings[map] for map ∈ schema.morphisms.
 //
 // A var is represented as (entity_name: &EntityName, entity_id: EntityId).
-// An atom is represented as (map_name: &MorphismName, key: EntityId).
+// We don't need to represent atoms per se yet.
 type Var<'a> = (&'a EntityName, EntityId);
-type Atom<'a> = (&'a MorphismName, EntityId);
 
-// I'm going to need some structure to represent the partial var-entity bindings
-// so far. We go through vars in a fixed order, and each var gets mapped to a
-// particular EntityId, so a partial binding is just a Vec<EntityId>. TODO LATER:
-// Once we have multiple entity representations this may cause tagging overhead!
+// Binding represents a partial var-entity binding during a WCOJ. We go through vars in a
+// fixed order, and each var gets mapped to a particular EntityId, so a partial binding is
+// just a Vec<EntityId>. TODO LATER: Once we have multiple entity representations this may
+// cause tagging overhead!
 type Binding = Vec<EntityId>;
 
 // ##### CONCRETE EXAMPLE OF SOLVING A QUERY #####
@@ -210,11 +207,11 @@ type Binding = Vec<EntityId>;
 // needs a diagonal index. 2 is weird: we could do it by enumerating the domain of the
 // function, but since all maps are total, this is equivalent to enumerating all entities
 // of that type (and does nothing when used as a filter). So we actually don't have a
-// WcoStrategy for this. Instead, if a particular entity/var ends up with *no* strategies,
+// Strategy for this. Instead, if a particular entity/var ends up with *no* strategies,
 // we just enumerate all entity values.
-type Wcop<'a> = (&'a MorphismName, WcoStrategy<'a>); // worst-case optimal operator
+type Wcop<'a> = (&'a MorphismName, Strategy<'a>); // worst-case optimal operator
 #[derive(Debug, Clone)]
-enum WcoStrategy<'a> {
+enum Strategy<'a> {
     Lookup(Known<'a>),
     Preimage(Known<'a>),
     Image,
@@ -300,20 +297,20 @@ impl Instance {
                             // so  X gets  f(X) = V     fully enumerate; don't push a strategy
                             // and Y gets  f(C) = Y     Lookup(C)
                             Ordering::Less => {
-                                plan[tgt_i].1.push((morphism, WcoStrategy::Lookup(Known::Var(src_i))));
+                                plan[tgt_i].1.push((morphism, Strategy::Lookup(Known::Var(src_i))));
                             }
                             // [Case B]  Y precedes X
                             // so  Y gets  f(V) = Y     Image
                             // and X gets  f(X) = C     Preimage(C)
                             Ordering::Greater => {
-                                plan[tgt_i].1.push((morphism, WcoStrategy::Image));
+                                plan[tgt_i].1.push((morphism, Strategy::Image));
                                 plan[src_i].1
-                                    .push((morphism, WcoStrategy::Preimage(Known::Var(tgt_i))));
+                                    .push((morphism, Strategy::Preimage(Known::Var(tgt_i))));
                             }
                             // [Case C]  X == Y --> f(X) = X --> X gets Diagonal
                             Ordering::Equal => { // case 5, f(X) = x
                                 assert!(dom_entity == cod_entity && src == tgt);
-                                plan[src_i].1.push((morphism, WcoStrategy::Diagonal));
+                                plan[src_i].1.push((morphism, Strategy::Diagonal));
                             }
                         }
                     }
@@ -326,7 +323,7 @@ impl Instance {
                     for (&src_id, tgt_value) in map.iter() { // TODO: determinize!
                         // We have f(X) = C so we emit Preimage(C).
                         let i = var_position[&(dom_entity, src_id)];
-                        plan[i].1.push((morphism, WcoStrategy::Preimage(Known::Usize(*tgt_value))));
+                        plan[i].1.push((morphism, Strategy::Preimage(Known::Usize(*tgt_value))));
                     }
                 }
                 EntityOrAttr::Attr(Repr::String) => {
@@ -334,7 +331,7 @@ impl Instance {
                     for (&src_id, tgt_value) in map.iter() { // TODO: determinize!
                         // We have f(X) = C so we emit Preimage(C).
                         let i = var_position[&(dom_entity, src_id)];
-                        plan[i].1.push((morphism, WcoStrategy::Preimage(Known::String(tgt_value))));
+                        plan[i].1.push((morphism, Strategy::Preimage(Known::String(tgt_value))));
                     }
                 }
             }
@@ -353,9 +350,9 @@ impl Instance {
         for (_var, wcops) in plan.iter() {
             for (morphism, strategy) in wcops.iter() {
                 match strategy {
-                    WcoStrategy::Lookup(_) => {},
-                    WcoStrategy::Diagonal => { diagonal_index.insert(morphism); }
-                    WcoStrategy::Preimage(_) | WcoStrategy::Image => {
+                    Strategy::Lookup(_) => {},
+                    Strategy::Diagonal => { diagonal_index.insert(morphism); }
+                    Strategy::Preimage(_) | Strategy::Image => {
                         reverse_index.insert(morphism);
                     }
                 }
@@ -424,7 +421,7 @@ impl Instance {
             for mut binding in std::mem::take(&mut bindings) {
                 match strategy {
                     // BRANCH NOT YET TESTED
-                    WcoStrategy::Image => { // use reverse index
+                    Strategy::Image => { // use reverse index
                         // f(V) = X: X is an entity, so f is entity->entity (IdId reverse
                         // index), and its keys are exactly the image of f.
                         let TaggedReverseIndex::IdId(index) = &reverse_index[morphism] else {
@@ -438,7 +435,7 @@ impl Instance {
                         }
                     }
                     // BRANCH NOT YET TESTED
-                    WcoStrategy::Diagonal => { // use diagonal index
+                    Strategy::Diagonal => { // use diagonal index
                         let index = &diagonal_index[morphism];
                         for &x in index {
                             // DANGER! ALLOCATION IN INNER LOOP!
@@ -447,7 +444,7 @@ impl Instance {
                             bindings.push(b);
                         }
                     }
-                    WcoStrategy::Lookup(known) => { // look `known` up in `mapping`
+                    Strategy::Lookup(known) => { // look `known` up in `mapping`
                         // f(C) = X, so it must be an entity-entity map.
                         let Known::Var(var_index) = known else {
                             panic!("Lookup with attribute key shouldn't be possible");
@@ -459,7 +456,7 @@ impl Instance {
                         binding.push(x);
                         bindings.push(binding);
                     }
-                    WcoStrategy::Preimage(known) => { // look `known` up in reverse index
+                    Strategy::Preimage(known) => { // look `known` up in reverse index
                         let index: &TaggedReverseIndex = &reverse_index[morphism];
                         #[allow(unused_variables)]
                         match *known {
@@ -497,7 +494,7 @@ impl Instance {
                 let &(morphism, ref strategy) = wcop;
                 let table = &database.mappings[morphism];
                 match strategy {
-                    WcoStrategy::Image => { // NOT YET TESTED
+                    Strategy::Image => { // NOT YET TESTED
                         // f(V) = X: keep bindings whose X is in the image of f.
                         // X is an entity, so f is entity->entity (IdId reverse index).
                         let TaggedReverseIndex::IdId(index) = &reverse_index[morphism] else {
@@ -505,12 +502,12 @@ impl Instance {
                         };
                         bindings.retain(|binding| index.contains_key(binding.last().unwrap()));
                     }
-                    WcoStrategy::Diagonal => { // NOT YET TESTED
+                    Strategy::Diagonal => { // NOT YET TESTED
                         // f(X) = X: keep bindings whose X is on the diagonal of f.
                         let index = &diagonal_index[morphism];
                         bindings.retain(|binding| index.contains(binding.last().unwrap()));
                     }
-                    WcoStrategy::Lookup(k) => {
+                    Strategy::Lookup(k) => {
                         // f(C) = X: check that f(C) equals the proposed X. X is an
                         // entity, so f is an entity->entity map.
                         let Known::Var(j) = k else {
@@ -519,7 +516,7 @@ impl Instance {
                         let map: &Map<EntityId, EntityId> = table.into();
                         bindings.retain(|binding| map[&binding[*j]] == *binding.last().unwrap());
                     }
-                    WcoStrategy::Preimage(k) => {
+                    Strategy::Preimage(k) => {
                         // f(X) = C: check that f(X) equals the known C.
                         match k {
                             Known::Var(j) => {
