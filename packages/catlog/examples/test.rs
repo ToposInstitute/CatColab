@@ -1,4 +1,4 @@
-#![allow(missing_docs, dead_code)]
+#![allow(missing_docs)]
 
 // use catlog::zero::column::{Column, Mapping};
 use std::collections::HashMap;
@@ -37,8 +37,8 @@ enum TaggedMap {
 }
 
 impl TaggedMap {
-    fn dom(&self) -> Repr { self.dom_cod().0 }
-    fn cod(&self) -> Option<Repr> { self.dom_cod().1 }
+    // fn dom(&self) -> Repr { self.dom_cod().0 }
+    // fn cod(&self) -> Option<Repr> { self.dom_cod().1 }
     fn dom_cod(&self) -> (Repr, Option<Repr>) {
         use TaggedMap::*; use Repr::*;
         match self {
