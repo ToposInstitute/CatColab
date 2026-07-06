@@ -1,17 +1,30 @@
-#![allow(missing_docs)]
+#![allow(missing_docs,unused)]
 
 // use catlog::zero::column::{Column, Mapping};
+use std::io::prelude::*;
+use std::time::Instant;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::fmt::Display;
 use std::rc::Rc;
 use std::hash::Hash;
 use std::cmp::Ordering;
+use std::path::Path;
 
-const DEBUG: bool = true;
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
+enum Level { SILENT = 0, DEBUG = 1, TRACE = 2, }
+use Level::*;
+const LOGGING: Level = DEBUG;
 
+
+// ---------- MAPS & TAGGED MAPS ----------
 // TODO: use IndexMap for deterministic ordering? or BTreeMap?
 type Map<K, V> = HashMap<K, V>;
+
+macro_rules! map {
+    [$($x:expr => $y:expr),*,] => { [$(($x, $y)),*].into_iter().collect() };
+    [$($x:expr => $y:expr),*]  => { [$(($x, $y)),*].into_iter().collect() };
+}
 
 // Uniform representation for entity ids.
 // We will need to revisit this decision.
@@ -101,6 +114,7 @@ impl TaggedMap {
 }
 
 
+// ---------- SCHEMAS & INSTANCES ----------
 // TODO: I'm cloning strings all over the place, this is dumb.
 // TODO: make EntityName != MorphismName so the typechecker double-checks me.
 type Name = String;
@@ -113,9 +127,10 @@ type Mappings = HashMap<Name, TaggedMap>;
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
 enum EntityOrAttr { Entity(EntityName), Attr(Repr), }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 struct Schema {
-    /// Set of names for entity objects.
+    /// Set of names for entity objects. TODO: either make this a HashSet or manually
+    /// implement Eq so that equality is correct rather than caring about entity order.
     entities: Vec<EntityName>,
     /// A map from morphism names to their dom/cod types.
     /// All morphisms go from entities to either entities or attributes.
@@ -394,10 +409,12 @@ impl<'a,'b> QueryContext<'a,'b> {
                 self.wco_propose(&wcops[0], binding, &mut bindings);
             }
 
-            if DEBUG {
-                eprintln!("  bindings after proposing {var:?} via {morphism}/{strategy:?}:");
-                if bindings.is_empty() { eprintln!("    empty?!"); }
-                for b in &bindings { eprintln!("    {b:?}"); }
+            if LOGGING >= DEBUG {
+                let n = bindings.len();
+                eprintln!("  bindings after proposing {var:?} via {morphism}/{strategy:?}: {n}");
+                if LOGGING >= TRACE {
+                    for b in &bindings { eprintln!("    {b:?}"); }
+                }
             }
 
             // 4   For each atom that mentions the var,
@@ -408,9 +425,12 @@ impl<'a,'b> QueryContext<'a,'b> {
                 self.wco_filter(wcop, &mut bindings);
             }
 
-            if DEBUG && !&wcops[1..].is_empty() {
-                eprintln!("  bindings after filtering {var:?} through {:?}", &wcops[1..]);
-                for b in &bindings { eprintln!("    {b:?}"); }
+            if LOGGING >= DEBUG && !&wcops[1..].is_empty() {
+                let n = bindings.len();
+                eprintln!("  bindings after filtering {var:?} through {:?}: {n}", &wcops[1..]);
+                if LOGGING >= TRACE {
+                    for b in &bindings { eprintln!("    {b:?}"); }
+                }
             }
         }
 
@@ -662,13 +682,120 @@ impl Instance {
 }
 
 
-macro_rules! map {
-    [$($x:expr => $y:expr),*,] => { [$(($x, $y)),*].into_iter().collect() };
-    [$($x:expr => $y:expr),*]  => { [$(($x, $y)),*].into_iter().collect() };
+// ---------- Loading SNAP graph datasets ----------
+// Set EDGES environment variable to override; EDGES=all for no limit.
+const DEFAULT_MAX_EDGES: usize = 1_000;
+const DEFAULT_FILE: &str = "data/ca-GrQc.txt";
+
+macro_rules! print_flush {
+    ($($e:tt)*) => { { print!($($e)*); std::io::stdout().flush().unwrap() } }
 }
 
 #[allow(non_snake_case)]
-fn main() {
+fn graph_schema() -> Rc<Schema> {
+    let Node = "Node".to_string();
+    let Edge = "Edge".to_string();
+    Rc::new(Schema {
+        entities: vec![Node.clone(), Edge.clone()],
+        morphisms: map! {
+            "src".to_string() => (Edge.clone(), EntityOrAttr::Entity(Node.clone())),
+            "dst".to_string() => (Edge.clone(), EntityOrAttr::Entity(Node.clone())),
+            // "id".to_string() => (Node.clone(), EntityOrAttr::Attr(Repr::Usize)),
+        },
+    })
+}
+
+fn load_edges_from<R: std::io::Read>(source: R, max_edges: Option<usize>) -> Vec<(usize, usize)> {
+    if let Some(n) = max_edges {
+        println!("Reading at most {n} edges...");
+    } else {
+        println!("Reading all edges...");
+    }
+    use std::io::{BufRead, BufReader};
+    let file = BufReader::new(source);
+    let mut edges: Vec<(usize, usize)> = Vec::new();
+    for readline in file.lines() {
+        if max_edges.is_some_and(|n| n <= edges.len()) { break }
+        let line = readline.expect("read error");
+        if line.is_empty() { continue }
+        if line.starts_with('#') { continue }
+        let mut elts = line[..].split_whitespace();
+        let v: usize = elts.next().unwrap().parse().expect("malformed src");
+        let u: usize = elts.next().unwrap().parse().expect("malformed dst");
+        edges.push((v,u));
+    }
+    print_flush!("{} edges", edges.len());
+    if edges.is_sorted() {
+        println!(", already sorted");
+    } else {
+        println!(", sorting...");
+        edges.sort_unstable();
+        println!("sorted!");
+    }
+    return edges;
+}
+
+fn load_edges() -> Vec<(usize, usize)> {
+    use std::ffi::OsString;
+    use std::fs::File;
+    use std::env::{var, VarError};
+    let args = std::env::args_os();
+    let path: OsString = args.skip(1).next().unwrap_or(DEFAULT_FILE.into());
+    println!("Reading from {:?}", path);
+    let file = File::open(&path).expect("couldn't open file");
+    let max_edges: Option<usize> = match var("EDGES") {
+        Err(VarError::NotPresent) => Some(DEFAULT_MAX_EDGES), // default
+        Err(VarError::NotUnicode(_)) => panic!("EDGES not valid unicode"),
+        // explicit ways to set "no limit"
+        Ok(s) if s == "all" => None,
+        Ok(s) => Some({
+            let (factor, s) = if let Some(t) = s.strip_suffix("k") {
+                (1_000, t)
+            } else if let Some(t) = s.strip_suffix("M") {
+                (1_000_000, t)
+            } else if let Some(t) = s.strip_suffix("m") {
+                (1_000_000, t)
+            } else {
+                (1, &s[..])
+            };
+            factor * s.parse::<usize>().expect("malformed MAX_EDGES")
+        }),
+    };
+    return load_edges_from(file, max_edges)
+}
+
+fn graph_from_edges(schema: Rc<Schema>, edges: Vec<(usize, usize)>) -> Instance {
+    assert!(schema == graph_schema());
+    let max_node: usize = edges.iter()
+        .flat_map(|&(src,dst)| [src,dst])
+        .max()
+        .unwrap();
+    let mappings = map! {
+        "Node".to_string() => TaggedMap::Id((0..=max_node).map(|i| (i, ())).collect()),
+        "Edge".to_string() => TaggedMap::Id((0..edges.len()).map(|i| (i, ())).collect()),
+        // "id".to_string() => TaggedMap::IdId((0..=max_node).map(|i| (i,i)).collect()),
+        "src".to_string() => TaggedMap::IdId(
+            edges.iter().map(|x| x.0).enumerate().collect()
+        ),
+        "dst".to_string() => TaggedMap::IdId(
+            edges.iter().map(|x| x.1).enumerate().collect()
+        ),
+    };
+    let i = Instance { schema, mappings };
+    i.self_check();
+    return i;
+}
+
+
+// ---------- MAIN ----------
+macro_rules! entities {
+    [$($t:tt)*] => {
+        TaggedMap::Id(vec![$($t)*].into_iter().map(|x| (x, ())).collect())
+    }
+}
+
+#[allow(non_snake_case)]
+fn example_accounting_employees() {
     // Let's make a simple schema, a simple query, and try planning it.
     println!("hello, world!");
 
@@ -686,8 +813,8 @@ fn main() {
 
     use TaggedMap::*;
     let mappings: HashMap<Name, TaggedMap> = map! {
-        Employee.to_string() => Id(map!{1138 => ()}),
-        Dept.to_string() => Id(map!{0 => ()}),
+        Employee.to_string() => entities!(1138),
+        Dept.to_string() => entities!(0),
         dept.to_string() => IdId(map!{1138 => 0}),
         name.to_string() => IdString(map!{0 => "accounting".to_string()}),
     };
@@ -721,5 +848,57 @@ fn main() {
         println!("  {b:?}");
     }
 
-    println!("success!");
+    println!("success on basic query!");
+}
+
+fn example_snap() {
+    let cwd = std::env::current_dir();
+    println!("current working directory: {cwd:?}");
+
+    let schema = graph_schema();
+
+    use TaggedMap::*;
+    let triangle = Instance {
+        schema: schema.clone(),
+        mappings: map!{
+            "Node".to_string() => entities![0,1,2],
+            "Edge".to_string() => entities![01,12,20],
+            "src".to_string() => IdId(map! { 01 => 0, 12 => 1, 20 => 2 }),
+            "dst".to_string() => IdId(map! { 01 => 1, 12 => 2, 20 => 0 }),
+        }
+    };
+    triangle.self_check();
+    println!("Planning.");
+    let var_order = triangle.pick_var_order();
+    println!("  variable order  {var_order:?}");
+    let plan = triangle.plan(&var_order);
+    println!("  query plan:");
+    for ((entity,id), wcops) in plan.iter() {
+        println!("    {entity:>8} {id:>4}    {wcops:?}");
+    }
+
+    let load = Instant::now();
+    let edges: Vec<(usize, usize)> = load_edges();
+    // if DEBUG { println!("edges: {:?}", edges); }
+    let graph = graph_from_edges(schema.clone(), edges);
+    let load_ns = load.elapsed().as_nanos();
+
+    // Run the query.
+    println!("Executing query.");
+    let compute = Instant::now();
+    let bindings = triangle.execute(&graph, plan);
+    let compute_ns = compute.elapsed().as_nanos();
+    println!("Done!");
+
+    println!("  loading {:6}ms", load_ns / 1_000_000);
+    println!("    query {:6}ms", compute_ns / 1_000_000);
+}
+
+fn main() {
+    println!("---------- 1. EMPLOYEES OF DEPT NAMED ACCOUNTING ----------");
+    example_accounting_employees();
+    print!("\n\n");
+
+    println!("---------- 2. SNAP DATASET TRIANGLES ----------");
+    example_snap();
 }
