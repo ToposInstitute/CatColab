@@ -129,7 +129,10 @@ struct Instance {
 }
 
 
-// ---------- SELF CHECKS ON SCHEMAS & INSTANCES (ie type/tag checks) ----------
+// ---------- SELF CHECKS ON SCHEMAS & INSTANCES ----------
+// On a schema, we check:
+// 0. Entity & morphism names are disjoint.
+// 1. All names used as dom/cod types refer to entities.
 impl Schema {
     // check that the keys of self.entities and self.morphisms don't overlap.
     // check that every entity name used as dom/cod in a morphism type exists.
@@ -152,6 +155,10 @@ impl Schema {
     }
 }
 
+// On an instance, we also check:
+// 2. Everything in mappings is in the schema.
+// 3. Everything in the schema is in mappings, and its tag matches its type.
+// 4. Every morphism mapping is total (defined over its entire domain entity type).
 impl Instance {
     fn self_check(&self) {
         self.schema.self_check();
@@ -160,7 +167,7 @@ impl Instance {
         for (name, _) in self.mappings.iter() {
             if self.schema.entities.contains(name) { continue }
             if self.schema.morphisms.contains_key(name) { continue }
-            panic!("Missing data for morphism {}", name);
+            panic!("Unrecognized mapping ‘{name}’");
         }
 
         // Check that everything in the schema is in self.mappings with the right type.
