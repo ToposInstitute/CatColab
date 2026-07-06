@@ -11,8 +11,17 @@ use scopeguard::guard;
 use tattle::display::SourceInfo;
 use tattle::{Reporter, declare_error};
 
-use super::{modelgen::instance_from_def, text_elab::*, theory::std_theories, toplevel::*};
-use crate::dbl::discrete::{DiscreteDblModelInstance, DiscreteInstanceTerm};
+use super::{
+    modelgen::{ModelInstance, instance_from_def},
+    text_elab::*,
+    theory::std_theories,
+    toplevel::*,
+};
+use crate::dbl::discrete::DiscreteInstanceTerm;
+use crate::dbl::modal::{
+    ModalInstanceBase, ModalInstanceTerm, ModalMor, ModalOb, modal_mor_as_identity,
+};
+use crate::dbl::model_instance::{DblModelInstance, HasInstanceTerm};
 use crate::one::path::Path;
 use crate::zero::NameSegment;
 
@@ -66,32 +75,28 @@ impl BatchOutput {
         }
     }
 
-    fn instance_summary(&self, instance: &DiscreteDblModelInstance) {
+    fn instance_summary(&self, instance: &ModelInstance) {
         if let BatchOutput::Snapshot(out) = self {
             let mut out = out.borrow_mut();
-            let gens: Vec<_> = instance.generators().collect();
-            let eqns: Vec<_> = instance.equations().collect();
-            if gens.is_empty() && eqns.is_empty() {
-                writeln!(out, "#/ instance has no generators or equations").unwrap();
-                return;
-            }
-            if !gens.is_empty() {
-                writeln!(out, "#/ instance generators:").unwrap();
-                for (name, fiber) in &gens {
-                    writeln!(out, "#/   {name} : {fiber}").unwrap();
-                }
-            }
-            if !eqns.is_empty() {
-                writeln!(out, "#/ instance equations:").unwrap();
-                for (lhs, rhs) in &eqns {
-                    writeln!(
-                        out,
-                        "#/   {} == {}",
-                        format_instance_term(lhs),
-                        format_instance_term(rhs)
-                    )
-                    .unwrap();
-                }
+            match instance {
+                ModelInstance::Discrete(instance) => write_instance_summary(
+                    &mut out,
+                    instance,
+                    |fiber| format!("{fiber}"),
+                    format_instance_term,
+                ),
+                ModelInstance::ModalUnital(instance) => write_instance_summary(
+                    &mut out,
+                    instance,
+                    format_modal_ob,
+                    format_modal_instance_term,
+                ),
+                ModelInstance::ModalNonUnital(instance) => write_instance_summary(
+                    &mut out,
+                    instance,
+                    format_modal_ob,
+                    format_modal_instance_term,
+                ),
             }
         }
     }
@@ -301,4 +306,109 @@ fn format_instance_term(tm: &DiscreteInstanceTerm) -> String {
         }
     }
     s
+}
+
+/// Writes the generators and equations of an instance, using the given
+/// per-doctrine formatters for fibers and equation terms.
+fn write_instance_summary<M: HasInstanceTerm>(
+    out: &mut String,
+    instance: &DblModelInstance<M>,
+    fmt_ob: impl Fn(&M::Ob) -> String,
+    fmt_term: impl Fn(&M::Term) -> String,
+) {
+    let gens: Vec<_> = instance.generators().collect();
+    let eqns: Vec<_> = instance.equations().collect();
+    if gens.is_empty() && eqns.is_empty() {
+        writeln!(out, "#/ instance has no generators or equations").unwrap();
+        return;
+    }
+    if !gens.is_empty() {
+        writeln!(out, "#/ instance generators:").unwrap();
+        for (name, fiber) in &gens {
+            writeln!(out, "#/   {name} : {}", fmt_ob(fiber)).unwrap();
+        }
+    }
+    if !eqns.is_empty() {
+        writeln!(out, "#/ instance equations:").unwrap();
+        for (lhs, rhs) in &eqns {
+            writeln!(out, "#/   {} == {}", fmt_term(lhs), fmt_term(rhs)).unwrap();
+        }
+    }
+}
+
+/// Renders a modal object for snapshot output: generators by name, object
+/// operations as `op(inner)`, and lists as `[a, b, …]`.
+fn format_modal_ob(ob: &ModalOb) -> String {
+    match ob {
+        ModalOb::Generator(name) => format!("{name}"),
+        ModalOb::App(inner, op) => format!("{op}({})", format_modal_ob(inner)),
+        ModalOb::List(_, obs) => {
+            let inner: Vec<_> = obs.iter().map(format_modal_ob).collect();
+            format!("[{}]", inner.join(", "))
+        }
+    }
+}
+
+/// An applicative rendering of a modal instance term, reconstructed from its
+/// flat `(mor, base)` normal form so it prints back in surface syntax.
+enum Rendered {
+    Gen(String),
+    App(String, Box<Rendered>),
+    List(Vec<Rendered>),
+}
+
+impl Rendered {
+    fn render(&self) -> String {
+        match self {
+            Rendered::Gen(name) => name.clone(),
+            Rendered::App(name, inner) => format!("{name}({})", inner.render()),
+            Rendered::List(items) => {
+                let inner: Vec<_> = items.iter().map(Rendered::render).collect();
+                format!("[{}]", inner.join(", "))
+            }
+        }
+    }
+}
+
+/// Renders a modal instance term as e.g. `op([x, unit([])])`, re-interleaving
+/// the morphism with its base (the inverse of the flattening done during
+/// extraction).
+fn format_modal_instance_term(tm: &ModalInstanceTerm) -> String {
+    apply_mor(&tm.mor, base_rendered(&tm.base)).render()
+}
+
+fn base_rendered(base: &ModalInstanceBase) -> Rendered {
+    match base {
+        ModalInstanceBase::Generator(name) => Rendered::Gen(format!("{name}")),
+        ModalInstanceBase::List(_, bases) => {
+            Rendered::List(bases.iter().map(base_rendered).collect())
+        }
+    }
+}
+
+/// Applies a model morphism to an already-rendered argument, undoing the
+/// `Composite`/`List` tupling introduced by normalization: a `Composite` path
+/// folds its morphisms outermost-last, and a list morphism zips into a list
+/// argument.
+fn apply_mor(mor: &ModalMor, arg: Rendered) -> Rendered {
+    if modal_mor_as_identity(mor).is_some() {
+        return arg;
+    }
+    match mor {
+        ModalMor::Generator(name) => Rendered::App(format!("{name}"), Box::new(arg)),
+        ModalMor::App(_, op) | ModalMor::HomApp(_, op) => {
+            Rendered::App(format!("{op}"), Box::new(arg))
+        }
+        ModalMor::Composite(path) => match path.as_ref() {
+            Path::Id(_) => arg,
+            Path::Seq(edges) => edges.iter().fold(arg, |acc, mor| apply_mor(mor, acc)),
+        },
+        ModalMor::List(_, mors) => match arg {
+            Rendered::List(items) if items.len() == mors.len() => {
+                Rendered::List(mors.iter().zip(items).map(|(m, a)| apply_mor(m, a)).collect())
+            }
+            // Should not arise: a list morphism always applies to a list base.
+            other => other,
+        },
+    }
 }
