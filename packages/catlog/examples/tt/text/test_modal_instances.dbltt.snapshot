@@ -109,5 +109,22 @@ instance hm : HMW := [
     returns_d(beowulf) := @tensor []
 ]
 #/ declared: hm
-#/ instance generation failed: instance terms do not yet support object-operation applications (e.g. `@tensor`)
+#/ instance generators:
+#/   hercules : H
+#/   odysseus : H
+#/   beowulf : H
+#/   hydra : M
+#/   polyphemus : M
+#/   grendel : M
+#/   dragon : M
+#/   megara : W
+#/   penelope : W
+#/ instance equations:
+#/   fight_h(@tensor [odysseus, polyphemus]) == odysseus
+#/   fight_h(@tensor [beowulf, grendel]) == beowulf
+#/   fight_m(@tensor [beowulf, dragon]) == dragon
+#/   fight_mm(@tensor [hercules, hydra]) == @tensor [hydra, hydra]
+#/   returns_w(hercules) == megara
+#/   returns_w(odysseus) == penelope
+#/   returns_d(beowulf) == @tensor []
 

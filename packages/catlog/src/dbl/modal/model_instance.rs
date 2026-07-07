@@ -21,12 +21,14 @@ use super::theory::List;
 /// `base` directly, and that `Id` object must agree with the fiber of `base`
 /// in the surrounding instance.
 ///
-/// The only recursion that survives lives in [`base`](Self::base), and only
-/// through [`ModalInstanceBase::List`], mirroring [`ModalOb::List`]:
-/// this is what lets a generator over a nested list object be written inline
-/// as e.g. `[x, y]` rather than forced to be a single named generator. A base
-/// can never hold a morphism, so the "no application inside an application"
-/// invariant is enforced structurally.
+/// The only recursion that survives lives in [`base`](Self::base), through
+/// [`ModalInstanceBase::List`] (mirroring [`ModalOb::List`]) and
+/// [`ModalInstanceBase::ObApp`] (mirroring [`ModalOb::App`]): this is what
+/// lets a generator over a nested list object be written inline as e.g.
+/// `[x, y]`, or an element of a product object as `@tensor [x, y]`. A base
+/// holds only generators, lists, and object-operation applications — never a
+/// morphism — so the "no application inside an application" invariant is
+/// enforced structurally.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ModalInstanceTerm {
     /// Model morphism applied to `base`.
@@ -44,6 +46,11 @@ pub enum ModalInstanceBase {
     /// A list of bases in a [list modality](List), living over a
     /// [list object](super::model::ModalOb::List).
     List(List, Vec<ModalInstanceBase>),
+    /// An object operation applied to a base, e.g. `@tensor [x, y]`, living
+    /// over an [object-operation application](super::model::ModalOb::App).
+    /// Object operations are functorial actions on objects, not morphisms, so
+    /// this stays in the base rather than in the term's morphism.
+    ObApp(QualifiedName, Box<ModalInstanceBase>),
 }
 
 impl InstanceTerm for ModalInstanceTerm {

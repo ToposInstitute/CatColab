@@ -354,6 +354,7 @@ fn format_modal_ob(ob: &ModalOb) -> String {
 enum Rendered {
     Gen(String),
     App(String, Box<Rendered>),
+    ObApp(String, Box<Rendered>),
     List(Vec<Rendered>),
 }
 
@@ -362,6 +363,7 @@ impl Rendered {
         match self {
             Rendered::Gen(name) => name.clone(),
             Rendered::App(name, inner) => format!("{name}({})", inner.render()),
+            Rendered::ObApp(op, inner) => format!("@{op} {}", inner.render()),
             Rendered::List(items) => {
                 let inner: Vec<_> = items.iter().map(Rendered::render).collect();
                 format!("[{}]", inner.join(", "))
@@ -382,6 +384,9 @@ fn base_rendered(base: &ModalInstanceBase) -> Rendered {
         ModalInstanceBase::Generator(name) => Rendered::Gen(format!("{name}")),
         ModalInstanceBase::List(_, bases) => {
             Rendered::List(bases.iter().map(base_rendered).collect())
+        }
+        ModalInstanceBase::ObApp(op, inner) => {
+            Rendered::ObApp(format!("{op}"), Box::new(base_rendered(inner)))
         }
     }
 }
