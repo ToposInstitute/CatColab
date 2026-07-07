@@ -1,4 +1,4 @@
-import { addSets, scaleSet, type Sign, signSetEq, ZERO_SET } from "./sign_hyperfield";
+import { addSets, scaleSet, type Sign, signSetEq } from "./sign_hyperfield";
 
 /** A causal edge with a chosen influence sign, for sign propagation. */
 export type SignedEdge = {
@@ -10,16 +10,28 @@ export type SignedEdge = {
     sign: Sign;
 };
 
+/** The default seed polarity of an action given whether it is a source.
+
+Source actions (no incoming causal edge) default to `+` (present); internal
+actions default to `0`, the additive identity, so their seed is transparent and
+their polarity is computed purely from incoming influences unless overridden. */
+export function defaultSeed(isSource: boolean): Sign {
+    return isSource ? "+" : "0";
+}
+
 /** Compute the induced polarity of every action as a monotone fixpoint.
 
-`induced(X) = ⊕_{e: Y→X} ( sign(e) ∘ induced(Y) )`, folded from the additive
-identity `{0}`. Sources (no incoming edge) are seeded with `{+}`. Contributions
-from not-yet-computed predecessors are empty and simply add nothing this round;
-since the sets only grow, iterating to a fixpoint converges. This terminates on
-cyclic digraphs too (the toy example is acyclic, converging in one sweep). */
+`induced(X) = seed(X) ⊕ ⊕_{e: Y→X} ( sign(e) ∘ induced(Y) )`. Each action's own
+seed is the baseline of the hyper-sum (see [`defaultSeed`] for the default when a
+seed is not given in `seeds`), so a source's polarity *is* its seed, and an
+internal action's seed injects an exogenous contribution alongside its incoming
+influences. Contributions from not-yet-computed predecessors are empty and add
+nothing this round; iterating to a fixpoint converges (the toy example is acyclic,
+converging in one sweep). */
 export function inducedPolarities(
     actionIds: string[],
     edges: SignedEdge[],
+    seeds: Record<string, Sign> = {},
 ): Map<string, Set<Sign>> {
     const incoming = new Map<string, { src: string; sign: Sign }[]>();
     for (const id of actionIds) {
@@ -29,10 +41,13 @@ export function inducedPolarities(
         incoming.get(e.tgt)?.push({ src: e.src, sign: e.sign });
     }
 
+    const seedOf = (id: string): Sign => seeds[id] ?? defaultSeed(incoming.get(id)!.length === 0);
+
     const induced = new Map<string, Set<Sign>>();
     for (const id of actionIds) {
-        // Sources are seeded present (+); everything else starts empty.
-        induced.set(id, incoming.get(id)!.length === 0 ? new Set<Sign>(["+"]) : new Set<Sign>());
+        // Sources take their seed immediately; internal actions start empty and
+        // fill in as their predecessors are computed.
+        induced.set(id, incoming.get(id)!.length === 0 ? new Set<Sign>([seedOf(id)]) : new Set());
     }
 
     let changed = true;
@@ -42,9 +57,11 @@ export function inducedPolarities(
         for (const id of actionIds) {
             const ins = incoming.get(id)!;
             if (ins.length === 0) {
-                continue; // source: fixed seed
+                continue; // source: polarity is exactly its seed
             }
-            let acc: Set<Sign> = new Set(ZERO_SET);
+            // Fold from the seed as baseline (0 is the additive identity, so a
+            // default 0 seed is transparent).
+            let acc: Set<Sign> = new Set<Sign>([seedOf(id)]);
             for (const { src, sign } of ins) {
                 const contrib = scaleSet(sign, induced.get(src)!);
                 if (contrib.size > 0) {

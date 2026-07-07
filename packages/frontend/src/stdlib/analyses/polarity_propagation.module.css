@@ -4,6 +4,12 @@
     gap: 0.5rem;
 }
 
+.tableLabel {
+    font-size: 0.85em;
+    font-weight: 600;
+    opacity: 0.7;
+}
+
 /* Action nodes coloured by their induced polarity. */
 .pos rect {
     fill: #d9f2d9;

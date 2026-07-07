@@ -6,7 +6,12 @@ import type { ModelAnalysisProps } from "../../analysis";
 import type { GraphSpec } from "../../visualization";
 import { GraphVisualizationAnalysis } from "./graph_visualization";
 import type { PolarityContent } from "./polarity_propagation_config";
-import { inducedPolarities, polarityClass, signKey } from "./polarity_propagation_core";
+import {
+    defaultSeed,
+    inducedPolarities,
+    polarityClass,
+    signKey,
+} from "./polarity_propagation_core";
 import { type Sign, signGlyph, SIGNS, signSetToString } from "./sign_hyperfield";
 
 import styles from "./polarity_propagation.module.css";
@@ -39,12 +44,15 @@ the two hyperring operations working along the two structural axes:
 - **`∘` along each causal edge** — an edge acts on its source action's polarity by
   multiplication (`scaleSet`). This is composition of influences.
 - **`⊕` at each fan-in** — an action fed by several causal edges hyper-adds their
-  contributions (`addSets`). At a genuine merge of conflicting signs this is
-  *set-valued*: `A5` fed by `+` and `−` becomes `{+, 0, −}`, drawn ambiguous.
+  contributions (`addSets`), together with the action's own seed. At a genuine
+  merge of conflicting signs this is *set-valued*: `A5` fed by `+` and `−` becomes
+  `{+, 0, −}`, drawn ambiguous.
 
-Source actions (no incoming causal edge) are seeded with `{+}`. The computation is
-a monotone fixpoint, so it also terminates on cyclic digraphs (the toy example is
-acyclic, converging in one topological sweep). */
+Each action also carries an editable **seed** polarity (their `A → P`): source
+actions default to `+` and *are* their seed; internal actions default to `0`
+(transparent) but can be given an exogenous seed. The computation is a monotone
+fixpoint, so it also terminates on cyclic digraphs (the toy example is acyclic,
+converging in one topological sweep). */
 export default function PolarityPropagation(
     props: ModelAnalysisProps<PolarityContent> & { title?: string },
 ) {
@@ -84,10 +92,16 @@ export default function PolarityPropagation(
 
     const signOf = (edgeId: string): Sign => props.content.signs?.[edgeId] ?? "+";
 
+    // An action is a source iff no causal edge targets it.
+    const targetedIds = createMemo(() => new Set(edges().map((e) => e.tgt)));
+    const seedOf = (actionId: string): Sign =>
+        props.content.seeds?.[actionId] ?? defaultSeed(!targetedIds().has(actionId));
+
     const induced = createMemo(() =>
         inducedPolarities(
             actions().map((a) => a.id),
             edges().map((e) => ({ src: e.src, tgt: e.tgt, sign: signOf(e.id) })),
+            Object.fromEntries(actions().map((a) => [a.id, seedOf(a.id)])),
         ),
     );
 
@@ -116,7 +130,34 @@ export default function PolarityPropagation(
         return { nodes, edges: graphEdges };
     });
 
-    const schema: ColumnSchema<{ id: string; label: string }>[] = [
+    const actionSchema: ColumnSchema<{ id: string; label: string }>[] = [
+        {
+            contentType: "string",
+            header: true,
+            content: (a) => a.label,
+        },
+        {
+            contentType: "enum",
+            name: "Seed",
+            variants: () => [...SIGNS],
+            content: (a) => seedOf(a.id),
+            setContent: (a, content) =>
+                props.changeContent((c) => {
+                    if (!c.seeds) {
+                        c.seeds = {};
+                    }
+                    c.seeds[a.id] = (content ?? "+") as Sign;
+                }),
+        },
+        {
+            // Read-only: the computed polarity (a set, ambiguous at merges).
+            contentType: "string",
+            name: "Induced",
+            content: (a) => signSetToString(induced().get(a.id) ?? new Set<Sign>()),
+        },
+    ];
+
+    const edgeSchema: ColumnSchema<{ id: string; label: string }>[] = [
         {
             contentType: "string",
             header: true,
@@ -140,7 +181,10 @@ export default function PolarityPropagation(
     return (
         <div class={styles.container}>
             <PanelHeader title={props.title ?? "Polarity propagation"} />
-            <FixedTableEditor rows={edges()} schema={schema} />
+            <div class={styles.tableLabel}>{"Action seeds"}</div>
+            <FixedTableEditor rows={actions()} schema={actionSchema} />
+            <div class={styles.tableLabel}>{"Causal edge influences"}</div>
+            <FixedTableEditor rows={edges()} schema={edgeSchema} />
             <GraphVisualizationAnalysis
                 graph={graph()}
                 config={props.content}

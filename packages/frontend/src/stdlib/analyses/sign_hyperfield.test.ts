@@ -66,6 +66,23 @@ describe("polarity propagation on the toy example", () => {
         expect(sorted(induced.get("A3")!)).toEqual(["+"]);
     });
 
+    test("a source's seed sets (and propagates from) its polarity", () => {
+        // Default: A1 is a source, seeded +. Override it to −.
+        const induced = inducedPolarities(actions, toyEdges({}), { A1: "-" });
+        expect(sorted(induced.get("A1")!)).toEqual(["-"]);
+        // A3 = a:+ ∘ A1:− = −.
+        expect(sorted(induced.get("A3")!)).toEqual(["-"]);
+        // A2 (the other source) keeps its default +.
+        expect(sorted(induced.get("A2")!)).toEqual(["+"]);
+    });
+
+    test("an internal action's seed injects an exogenous contribution", () => {
+        // A5's default seed is 0 (transparent). Seed it − and it hyper-adds to
+        // the all-+ incoming influences: {+} ⊕ {−} = {+, 0, −}.
+        const induced = inducedPolarities(actions, toyEdges({}), { A5: "-" });
+        expect(sorted(induced.get("A5")!)).toEqual(["+", "-", "0"].toSorted());
+    });
+
     test("composition along a path multiplies signs (no spurious ambiguity)", () => {
         // A1 --a:−--> A3 --d:−--> A5 (single input each): (−)∘(−) = +.
         const induced = inducedPolarities(
