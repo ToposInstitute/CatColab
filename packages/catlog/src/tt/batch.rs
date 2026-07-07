@@ -401,13 +401,19 @@ fn apply_mor(mor: &ModalMor, arg: Rendered) -> Rendered {
     }
     match mor {
         ModalMor::Generator(name) => Rendered::App(format!("{name}"), Box::new(arg)),
-        ModalMor::App(_, op) | ModalMor::HomApp(_, op) => {
-            Rendered::App(format!("{op}"), Box::new(arg))
-        }
-        ModalMor::Composite(path) => match path.as_ref() {
-            Path::Id(_) => arg,
-            Path::Seq(edges) => edges.iter().fold(arg, |acc, mor| apply_mor(mor, acc)),
+        ModalMor::App(_, op) => Rendered::App(format!("{op}"), Box::new(arg)),
+        // The functorial action of an object operation: it applies to an
+        // `@op [..]` base, and the lifted morphisms act on the operation's
+        // content, so we push them inside the existing wrapper rather than
+        // adding another.
+        ModalMor::HomApp(path, _op) => match arg {
+            Rendered::ObApp(op_name, inner) => {
+                Rendered::ObApp(op_name, Box::new(apply_path(path, *inner)))
+            }
+            // Should not arise: a hom operation applies to an object-op base.
+            other => other,
         },
+        ModalMor::Composite(path) => apply_path(path, arg),
         ModalMor::List(_, mors) => match arg {
             Rendered::List(items) if items.len() == mors.len() => {
                 Rendered::List(mors.iter().zip(items).map(|(m, a)| apply_mor(m, a)).collect())
@@ -415,5 +421,14 @@ fn apply_mor(mor: &ModalMor, arg: Rendered) -> Rendered {
             // Should not arise: a list morphism always applies to a list base.
             other => other,
         },
+    }
+}
+
+/// Applies a path of morphisms to a rendered argument, folding outermost-last
+/// (so `[m1, m2]` renders as `m2(m1(arg))`).
+fn apply_path(path: &Path<ModalOb, ModalMor>, arg: Rendered) -> Rendered {
+    match path {
+        Path::Id(_) => arg,
+        Path::Seq(edges) => edges.iter().fold(arg, |acc, mor| apply_mor(mor, acc)),
     }
 }
