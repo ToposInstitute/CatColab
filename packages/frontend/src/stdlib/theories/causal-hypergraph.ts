@@ -79,6 +79,14 @@ export default function createCausalHypergraphTheory(theoryMeta: TheoryMeta): Th
                 vertexMorType: { tag: "Basic", content: "Causal" },
                 hyperedgeMorType: { tag: "Hom", content: tabCausal },
             }),
+            analyses.polarityPropagation({
+                id: "polarity",
+                name: "Polarity propagation",
+                description:
+                    "Assign sign-hyperfield polarities to causal edges and propagate them: " +
+                    "compose along paths, hyper-add at merges",
+                help: "visualization",
+            }),
         ],
     });
 }

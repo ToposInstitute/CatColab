@@ -1,0 +1,60 @@
+.container {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+/* Action nodes coloured by their induced polarity. */
+.pos rect {
+    fill: #d9f2d9;
+    stroke: #2ca02c;
+    rx: 8px;
+}
+
+.neg rect {
+    fill: #ffd9d9;
+    stroke: #d05a5a;
+    rx: 8px;
+}
+
+.zero rect {
+    fill: #ececec;
+    stroke: #999999;
+    rx: 8px;
+}
+
+/* A genuine set-valued merge: the sign is undetermined. */
+.ambiguous rect {
+    fill: #fde8c8;
+    stroke: #e08e1b;
+    stroke-dasharray: 5 3;
+    rx: 8px;
+}
+
+/* No incoming influence has reached this action yet. */
+.unknown rect {
+    fill: var(--color-background);
+    stroke: #bbbbbb;
+    stroke-dasharray: 2 3;
+    rx: 8px;
+}
+
+/* Causal edges coloured by their chosen influence sign. */
+.edge_pos path {
+    fill: none;
+    stroke: #2ca02c;
+    stroke-width: 2.5;
+}
+
+.edge_neg path {
+    fill: none;
+    stroke: #d05a5a;
+    stroke-width: 2.5;
+}
+
+.edge_zero path {
+    fill: none;
+    stroke: #999999;
+    stroke-width: 2;
+    stroke-dasharray: 4 3;
+}
