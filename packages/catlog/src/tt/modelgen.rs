@@ -613,19 +613,20 @@ impl<'a> ModelGenerator<'a> {
                 let dom_ty: ObType = instance.model().theory().ob_op_dom(&ob_op).into();
                 let (inner_mor, inner_base) =
                     self.modal_mor_base(instance, inner, &dom_ty, prefix)?;
-                // TODO: pure case only. The argument must be a base (identity
-                // morphism). Applying an object operation to a term that
-                // contains morphisms is its functorial action (a HomApp),
-                // which is not yet supported.
-                let Some(inner_ob) = modal::modal_mor_as_identity(&inner_mor) else {
-                    return Err(format!(
-                        "instance terms do not yet support the functorial action of an object \
-                         operation `@{op}` on a term containing morphism applications"
-                    ));
+                // If the argument is a pure base (identity morphism), the
+                // object operation lands on data and the morphism stays the
+                // identity on the resulting `App` object. Otherwise the
+                // operation acts functorially on the argument's morphism,
+                // yielding a `HomApp`.
+                let mor = match modal::modal_mor_as_identity(&inner_mor).cloned() {
+                    Some(inner_ob) => {
+                        let app_ob = ModalOb::App(Box::new(inner_ob), op_name.clone());
+                        instance.model().id(app_ob)
+                    }
+                    None => ModalMor::HomApp(Box::new(inner_mor.into()), op_name.clone()),
                 };
-                let app_ob = ModalOb::App(Box::new(inner_ob.clone()), op_name.clone());
                 let base = ModalInstanceBase::ObApp(op_name, Box::new(inner_base));
-                Ok((instance.model().id(app_ob), base))
+                Ok((mor, base))
             }
             FiberTmV_::Meta(_) => Err("instance term contains an unresolved metavariable".into()),
         }
@@ -982,5 +983,45 @@ instance i : AB := [
         let a_fiber = modal::ModalOb::Generator(vec![name_seg("A")].into());
         assert_eq!(instance.fiber_of(&a_qname), Some(&a_fiber));
         assert_eq!(instance.equations().count(), 1);
+    }
+
+    /// A symmetric-monoidal instance whose equation feeds a *morphism*
+    /// application through `@tensor`, exercising the functorial action of the
+    /// object operation (a `HomApp`) rather than a pure object-op base.
+    #[test]
+    fn instance_over_symmetric_monoidal_functorial() {
+        let src = r#"
+set_theory ThSymMonoidalCategory
+
+model Chain := [
+  X : Object,
+  Y : Object,
+  s : (Hom Object)[X, Y],
+  t : (Hom Object)[@tensor [Y, Y], X]
+]
+
+instance chain : Chain := [
+    X := [x0],
+    t(@tensor [s(x0), s(x0)]) := x0
+]
+"#;
+        let toplevel = elaborate_to_toplevel(src);
+        let def = match toplevel.declarations.get(&name_seg("chain")) {
+            Some(TopDecl::Instance(i)) => i.clone(),
+            _ => panic!("expected chain to be an instance declaration"),
+        };
+        let (instance, _ns) = instance_from_def(&toplevel, &def.theory.definition, &def).unwrap();
+        let ModelInstance::ModalUnital(instance) = instance else {
+            panic!("expected a unital modal instance");
+        };
+        assert_eq!(instance.equations().count(), 1);
+
+        // The left-hand side's morphism is a HomApp: the object operation
+        // `tensor` acting on the list morphism `[s, s]`.
+        let (lhs, _) = instance.equations().next().unwrap();
+        assert!(
+            matches!(&lhs.mor, modal::ModalMor::Composite(_)),
+            "expected the applied morphism to compose `t` after the tensor's HomApp"
+        );
     }
 }

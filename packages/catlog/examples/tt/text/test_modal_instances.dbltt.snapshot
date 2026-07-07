@@ -128,3 +128,21 @@ instance hm : HMW := [
 #/   returns_w(odysseus) == penelope
 #/   returns_d(beowulf) == @tensor []
 
+model Chain := [
+  X : Object,
+  Y : Object,
+  s : (Hom Object)[X, Y],
+  t : (Hom Object)[@tensor [Y, Y], X]
+]
+#/ declared: Chain
+
+instance chain : Chain := [
+    X := [x0],
+    t(@tensor [s(x0), s(x0)]) := x0
+]
+#/ declared: chain
+#/ instance generators:
+#/   x0 : X
+#/ instance equations:
+#/   t(@tensor [s(x0), s(x0)]) == x0
+
