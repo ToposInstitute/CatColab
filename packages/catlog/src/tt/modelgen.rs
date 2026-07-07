@@ -605,9 +605,28 @@ impl<'a> ModelGenerator<'a> {
                 };
                 Ok((full, base))
             }
-            FiberTmV_::ObApp(op, _) => Err(format!(
-                "instance terms do not yet support object-operation applications (e.g. `@{op}`)"
-            )),
+            FiberTmV_::ObApp(op, inner) => {
+                let op_name: QualifiedName = [*op].into();
+                // Recurse into the argument at the object operation's domain
+                // type, so a list argument recovers its modality.
+                let ob_op = modal::ModalObOp::generator(op_name.clone());
+                let dom_ty: ObType = instance.model().theory().ob_op_dom(&ob_op).into();
+                let (inner_mor, inner_base) =
+                    self.modal_mor_base(instance, inner, &dom_ty, prefix)?;
+                // TODO: pure case only. The argument must be a base (identity
+                // morphism). Applying an object operation to a term that
+                // contains morphisms is its functorial action (a HomApp),
+                // which is not yet supported.
+                let Some(inner_ob) = modal::modal_mor_as_identity(&inner_mor) else {
+                    return Err(format!(
+                        "instance terms do not yet support the functorial action of an object \
+                         operation `@{op}` on a term containing morphism applications"
+                    ));
+                };
+                let app_ob = ModalOb::App(Box::new(inner_ob.clone()), op_name.clone());
+                let base = ModalInstanceBase::ObApp(op_name, Box::new(inner_base));
+                Ok((instance.model().id(app_ob), base))
+            }
             FiberTmV_::Meta(_) => Err("instance term contains an unresolved metavariable".into()),
         }
     }
@@ -928,5 +947,40 @@ instance Z2 : SigMonoid := [
         let m_fiber = modal::ModalOb::Generator(vec![name_seg("M")].into());
         assert_eq!(instance.fiber_of(&x_qname), Some(&m_fiber));
         assert_eq!(instance.equations().count(), 2);
+    }
+
+    /// A symmetric-monoidal instance: equation terms feed generators through
+    /// the `@tensor` object operation into unary homs between product objects.
+    #[test]
+    fn instance_over_symmetric_monoidal() {
+        let src = r#"
+set_theory ThSymMonoidalCategory
+
+model AB := [
+  A : Object,
+  B : Object,
+  f : (Hom Object)[@tensor [A, B], A]
+]
+
+instance i : AB := [
+    A := [a],
+    B := [b],
+    f(@tensor [a, b]) := a
+]
+"#;
+        let toplevel = elaborate_to_toplevel(src);
+        let def = match toplevel.declarations.get(&name_seg("i")) {
+            Some(TopDecl::Instance(i)) => i.clone(),
+            _ => panic!("expected i to be an instance declaration"),
+        };
+        let (instance, _ns) = instance_from_def(&toplevel, &def.theory.definition, &def).unwrap();
+        let ModelInstance::ModalUnital(instance) = instance else {
+            panic!("expected a unital modal instance");
+        };
+
+        let a_qname: QualifiedName = vec![name_seg("a")].into();
+        let a_fiber = modal::ModalOb::Generator(vec![name_seg("A")].into());
+        assert_eq!(instance.fiber_of(&a_qname), Some(&a_fiber));
+        assert_eq!(instance.equations().count(), 1);
     }
 }
