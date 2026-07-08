@@ -48,7 +48,8 @@ pub struct AnalysisDocumentContent {
     pub version: String,
 }
 
-#[derive(PartialEq, Eq, Debug, Serialize, Deserialize)]
+#[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Tsify)]
+#[tsify(into_wasm_abi, from_wasm_abi)]
 pub struct InstanceDocumentContent {
     pub name: String,
     #[serde(rename = "instanceOf")]
