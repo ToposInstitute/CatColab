@@ -37,6 +37,8 @@ import { getLiveDiagram, type LiveDiagramDoc } from "../diagram";
 import { DiagramNotebookEditor } from "../diagram/diagram_editor";
 import { DiagramInfo } from "../diagram/diagram_info";
 import { getLiveInstance, type LiveInstanceDoc } from "../instance";
+import { InstanceNotebookEditor } from "../instance/instance_editor";
+import { InstanceInfo } from "../instance/instance_info";
 import { type LiveModelDoc, type ModelLibrary, ModelLibraryContext } from "../model";
 import { ModelNotebookEditor } from "../model/model_editor";
 import { ModelDocumentHead } from "../model/model_info";

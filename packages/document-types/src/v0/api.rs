@@ -57,6 +57,9 @@ pub enum LinkType {
     #[serde(rename = "diagram-in")]
     DiagramIn,
 
+    #[serde(rename = "instance-in")]
+    InstanceIn,
+
     #[serde(rename = "instantiation")]
     Instantiation,
 }
