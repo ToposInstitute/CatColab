@@ -6,6 +6,7 @@ pub mod cell;
 pub mod document;
 pub mod instance;
 pub mod notebook;
+pub mod instance_judgment;
 
 pub use analysis::*;
 pub use api::*;

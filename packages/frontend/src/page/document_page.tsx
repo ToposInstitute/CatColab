@@ -36,6 +36,7 @@ import { type Api, type DocRef, type DocumentType, useApi } from "../api";
 import { getLiveDiagram, type LiveDiagramDoc } from "../diagram";
 import { DiagramNotebookEditor } from "../diagram/diagram_editor";
 import { DiagramInfo } from "../diagram/diagram_info";
+import { getLiveInstance, type LiveInstanceDoc } from "../instance";
 import { type LiveModelDoc, type ModelLibrary, ModelLibraryContext } from "../model";
 import { ModelNotebookEditor } from "../model/model_editor";
 import { ModelDocumentHead } from "../model/model_info";
@@ -51,7 +52,7 @@ import { useSnapshotHistory } from "./use_snapshot_history";
 
 import "./document_page.css";
 
-type AnyLiveDoc = LiveModelDoc | LiveDiagramDoc | LiveAnalysisDoc;
+type AnyLiveDoc = LiveModelDoc | LiveDiagramDoc | LiveAnalysisDoc | LiveInstanceDoc;
 
 /** A Live*Document bundled with its backend DocRef.
  *
@@ -505,6 +506,13 @@ export function DocumentPane(props: {
                                     </DocumentHead>
                                 )}
                             </Match>
+                            <Match keyed when={props.doc.type === "instance" && props.doc}>
+                                {(liveInstance) => (
+                                    <DocumentHead liveDoc={liveInstance.liveDoc}>
+                                        <InstanceInfo liveInstance={liveInstance} />
+                                    </DocumentHead>
+                                )}
+                            </Match>
                             <Match keyed when={props.doc.type === "analysis" && props.doc}>
                                 {(liveAnalysis) => (
                                     <DocumentHead liveDoc={liveAnalysis.liveDoc}>
@@ -526,6 +534,14 @@ export function DocumentPane(props: {
                                 {(liveDiagram) => (
                                     <DiagramNotebookEditor
                                         liveDiagram={liveDiagram}
+                                        focus={props.focus}
+                                    />
+                                )}
+                            </Match>
+                            <Match keyed when={props.doc.type === "instance" && props.doc}>
+                                {(liveInstance) => (
+                                    <InstanceNotebookEditor
+                                        liveInstance={liveInstance}
                                         focus={props.focus}
                                     />
                                 )}
@@ -570,6 +586,10 @@ async function getLiveDocument(
         case "analysis": {
             const { liveAnalysis, docRef } = await getLiveAnalysis(refId, api, models);
             return { liveDoc: liveAnalysis, docRef };
+        }
+        case "instance": {
+            const { liveInstance, docRef } = await getLiveInstance(refId, api, models);
+            return { liveDoc: liveInstance, docRef };
         }
         default:
             assertExhaustive(documentType);

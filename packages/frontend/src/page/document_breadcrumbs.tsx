@@ -39,6 +39,8 @@ export function getParentRefId(document: Document): string | null {
             return null;
         case "diagram":
             return document.diagramIn._id;
+        case "instance":
+            return document.instanceIn._id;
         case "analysis":
             return document.analysisOf._id;
         default:

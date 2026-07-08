@@ -2,11 +2,12 @@ import ChartSpline from "lucide-solid/icons/chart-spline";
 import File from "lucide-solid/icons/file";
 import FileX from "lucide-solid/icons/file-x";
 import Network from "lucide-solid/icons/network";
+import Table from "lucide-solid/icons/table";
 import { Match, Switch } from "solid-js";
 
 import { ModelFileIcon } from "./model_file_icon";
 
-export type DocumentType = "model" | "diagram" | "analysis";
+export type DocumentType = "model" | "diagram" | "analysis" | "instance";
 
 export function DocumentTypeIcon(props: {
     documentType: DocumentType;
@@ -29,6 +30,9 @@ export function DocumentTypeIcon(props: {
             </Match>
             <Match when={props.documentType === "analysis"}>
                 <ChartSpline />
+            </Match>
+            <Match when={props.documentType === "instance"}>
+                <Table />
             </Match>
         </Switch>
     );

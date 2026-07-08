@@ -38,6 +38,16 @@ pub struct DiagramDocumentContent {
 
 #[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Tsify)]
 #[tsify(into_wasm_abi, from_wasm_abi)]
+pub struct InstanceDocumentContent {
+    pub name: String,
+    #[serde(rename = "instanceIn")]
+    pub instance_in: Link,
+    pub notebook: Notebook<super::instance_judgment::InstanceJudgment>,
+    pub version: String,
+}
+
+#[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Tsify)]
+#[tsify(into_wasm_abi, from_wasm_abi)]
 pub struct AnalysisDocumentContent {
     pub name: String,
     #[serde(rename = "analysisType")]
@@ -45,15 +55,6 @@ pub struct AnalysisDocumentContent {
     #[serde(rename = "analysisOf")]
     pub analysis_of: Link,
     pub notebook: Notebook<Analysis>,
-    pub version: String,
-}
-
-#[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Tsify)]
-#[tsify(into_wasm_abi, from_wasm_abi)]
-pub struct InstanceDocumentContent {
-    pub name: String,
-    #[serde(rename = "instanceOf")]
-    pub instance_of: Link,
     pub version: String,
 }
 
