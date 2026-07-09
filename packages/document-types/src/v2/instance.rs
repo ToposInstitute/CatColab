@@ -26,6 +26,8 @@ pub struct TableRow {
 
 #[derive(PartialEq, Debug, Serialize, Deserialize, Tsify)]
 pub struct Table {
+    // The uuid of the table.
+    id: Uuid,
     // The uuid of the entity to which this table corresponds.
     entity: Uuid,
     // The rows of the table.
