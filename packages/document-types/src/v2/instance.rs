@@ -6,6 +6,7 @@ use uuid::Uuid;
 #[derive(PartialEq, Debug, Serialize, Deserialize, Tsify)]
 pub enum CellValue {
     // If the column corresponds to an attribute morphism then we provide the value of the type.
+    Null,
     Bool(bool),
     Int(i32),
     Float(f32),
