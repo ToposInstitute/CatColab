@@ -16,8 +16,6 @@ using Distributions
 using LinearAlgebra
 using SymbolicUtils
 
-using TraitInterfaces: TraitInterfaces as TI
-
 using ACSets
 using Catlab
 using CombinatorialSpaces
@@ -25,7 +23,7 @@ using DiagrammaticEquations.ThDEC
 using DiagrammaticEquations: ThDEC as DEC
 
 import ..DecapodesInterop: AbstractMeshSpec, Geometry, Circle, Rectangle, Icosphere
-import ..DecapodesInterop: AbstractVortexParams, TaylorVortexParams, dimension
+import ..DecapodesInterop: AbstractVortexParams, TaylorVortexParams, dimension, embedding_dimension
 import ..Defaults: @default, default_values
 
 const GAUSS_NORM = sqrt(2*pi)
@@ -56,7 +54,7 @@ struct ConstantIC <: AbstractInitialConditionSpec
 end
 export ConstantIC
 
-default_values(::Type{ConstantIC}, dimension) = (value=1.0,)
+default_values(::Type{ConstantIC}, ::Type{<:AbstractMeshSpec}) = (value=1.0,)
 
 # The type of state variable is relevant. If it is a Form1, then we want to fill an array by edges 
 function initial_condition(var::BasicSymbolic{<:DECQuantity}, c::ConstantIC, geometry::Geometry; f::Function=identity)
@@ -72,12 +70,12 @@ struct GaussianIC <: AbstractInitialConditionSpec
 end
 export GaussianIC
 
-function default_values(::Type{GaussianIC}, dimension::Int)
-    (mean=zeros(dimension), var=Diagonal(ones(dimension)))
+function default_values(::Type{GaussianIC}, ::Type{M}) where {M<:AbstractMeshSpec}
+    d = embedding_dimension(M)
+    (mean=zeros(d), var=Diagonal(ones(d)))
 end
 
 function initial_condition(var::BasicSymbolic{DEC.DualForm{idx, Circle, spacedim}}, g::GaussianIC, geometry::Geometry; f::Function=identity) where {idx, spacedim}
-    @assert ThDEC.dim(var) == dimension(geometry) || error("!")
     dist = Normal(pi)
     # 7.2 multiplier allows the bands to develop above the soil line
     m(t) = Distributions.pdf(dist, t) * 7.2 * GAUSS_NORM |> f
@@ -90,6 +88,14 @@ function initial_condition(::BasicSymbolic{DEC.DualForm{0, Rectangle, dim}}, g::
     m(p) = Distributions.pdf(dist, [p[1], p[2]]) |> f
     [m(p) for p in pts]
 end
+
+function initial_condition(::BasicSymbolic{DEC.PrimalForm{1, Circle, n}},
+                           ::GaussianIC, geometry::Geometry; f::Function=identity) where {n}
+    dist = Normal(pi)
+    m(t) = Distributions.pdf(dist, t) * 7.2 * GAUSS_NORM |> f
+    [m(t) for t in range(0, 2pi; length=ne(geometry.dualmesh))]
+end
+
 
 using LinearAlgebra: ⋅
 # α length = embedding dimfunction
@@ -117,25 +123,30 @@ struct TaylorVortexIC <: AbstractInitialConditionSpec
 end
 export TaylorVortexIC
 
-function default_values(::Type{TaylorVortexIC}, dimension)
+default_values(::Type{TaylorVortexIC}, ::Type{Icosphere}) =
     (lat=0.2, vortices=2, p=TaylorVortexParams(0.5, 0.1))
+
+function initial_condition(::BasicSymbolic{DEC.DualForm{0, Icosphere, dim}},
+                           tv::TaylorVortexIC, geometry::Geometry;
+                           division=GeometricHodge()) where {dim}
+    s0 = dec_hodge_star(0, geometry.dualmesh, division)
+    X  = vort_ring(geometry.domain, tv.lat, tv.vortices, tv.p,
+                   geometry.dualmesh, taylor_vortex)
+    s0 * X
 end
 
-function initial_condition(::BasicSymbolic{DEC.DualForm{0, Icosphere, dim}}, tv::TaylorVortexIC, geometry::Geometry; f::Function=identity, division=GeometricHodge()) where dim
-    s0 = dec_hodge_star(0, geometry.dualmesh, division)
-    vort_ring(tv::TaylorVortexIC, geometry::Geometry) = vort_ring(tv.d, tv.ξ.lat, tv.ξ.vortices, tv.ξ.p, geometry.dualmesh, taylor_vortex)
-    X = vort_ring(ics, geometry)
-    du = s0 * X
-    du
-end
 
 """    Associates the values in a dictionary to their initial condition flags, and passes the output to initial_conditions
 """
-function initial_conditions(ics::Dict{BasicSymbolic{<:DECQuantity}, <:AbstractInitialConditionSpec}, geometry::Geometry) 
-    vals = Dict(var => initial_condition(var, ic[var], geometry) for var ∈ keys(ics))
-    u0 = ComponentArray(; vals...)
-    return u0
+function initial_conditions(ics::AbstractDict{<:BasicSymbolic, <:AbstractInitialConditionSpec},
+                            geometry::Geometry)
+    ComponentArray(; (nameof(var) => initial_condition(var, spec, geometry)
+                      for (var, spec) in ics)...)
 end
 export initial_conditions
+
+instantiate(::Type{T}, nt::NamedTuple) where {T<:AbstractInitialConditionSpec} = T(values(nt)...)
+export instantiate
+
 
 end  # module

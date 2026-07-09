@@ -94,10 +94,18 @@ function make_progress_callback(stream::HTTP.Stream, tspan)
     )
 end
 
+function run_decapodes_string(dict::Dict{String, Any})
+
+
+end
+
+
 function endpoint(::Val{:DecapodesString})
     @post "/decapodes-string" function(stream::HTTP.Stream)
-        payload = JSON3.read(read(stream), Dict{String,Any})
-        system, params = DecapodesSystem(payload)
+        # payload = JSON3.read(read(stream), Dict{String,Any})
+        payload = JSON3.read(HTTP.payload(stream.message), Dict{String,Any})
+        @info payload
+        system = DecapodesSystem(payload)
 
         @info "Starting"
         HTTP.setheader(stream, "Content-Type" => "application/x-ndjson")
@@ -108,7 +116,7 @@ function endpoint(::Val{:DecapodesString})
         flush(stream)
 
         callback = make_progress_callback(stream, (0, system.duration))
-        result = run(system, params; callback=callback)
+        result = run(system; callback=callback)
         formatted = format(system.geometry.dualmesh, result)
         write(stream, JSON3.write(Dict("progress" => 1.0, "data" => formatted)) * "\n")
         closewrite(stream)
