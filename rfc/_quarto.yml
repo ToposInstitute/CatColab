@@ -26,6 +26,11 @@ format:
     respect-user-color-scheme: true
     # RFC rendering
     html-math-method: katex
+    # Syntax highlighting: add TSX (TypeScript + JSX) grammar, which is not
+    # bundled with Pandoc/Skylighting. Resolves `##TypeScript`/`##JavaScript`
+    # references against Skylighting's built-in grammars.
+    syntax-definitions:
+      - _typescript-react.xml
     toc: true
     toc-depth: 5
     toc-expand: true
