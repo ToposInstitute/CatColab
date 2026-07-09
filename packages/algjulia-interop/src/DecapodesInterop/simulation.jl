@@ -2,7 +2,7 @@
 
 const MAX_FRAMES = 1000
 
-using SymbolicUtils: BasicSymbolic, symtype
+using SymbolicUtils: BasicSymbolic
 using Distributions
 
 using CombinatorialSpaces
@@ -12,14 +12,15 @@ function uuid_to_symb(decapode::SummationDecapode, vars::Dict{String, Int})
     Dict{String, Symbol}(key => (subpart(decapode, vars[key], :name)) for key ∈ keys(vars))
 end
 
-struct DecapodesSystem
-    pode::SummationDecapode
-    statevars::Vector{BasicSymbolic{<:DECQuantity}}
-    geometry::Geometry
-    init::ComponentArray
-    duration::Int
-    generate::Any
-    plotVariables::Dict{String, Any}
+mutable struct DecapodesSystem
+    const pode::SummationDecapode
+    const statevars::Vector{BasicSymbolic}
+    const geometry::Geometry
+    const init::ComponentArray
+    const duration::Int
+    const generate::Any
+    const plotVariables::Dict{String, Any}
+    params::ComponentArray
 end
 
 mutable struct Operators
@@ -50,18 +51,25 @@ const DEFAULT_DURATION = 10
 const DEFAULT_CONSTANTS = ComponentArray()
 const DEFAULT_ICS = Dict()
 
+
+function symvar(pode::SummationDecapode, geometry::Geometry, var::Int)
+    M = meshtype(geometry)
+    t = SymbolicUtils.symtype(DECQuantity, pode[var, :type], M, dimension(M))
+    SymbolicUtils.Sym{t}(subpart(pode, var, :name))
+end
+
+symvar(pode::SummationDecapode, geometry::Geometry, name::Symbol) =
+    symvar(pode, geometry, only(incident(pode, name, :name)))
+
+statevars(pode, geometry) = BasicSymbolic[symvar(pode, geometry, v) for v in parts(pode, :Var)]
+
 function DecapodesSystem(pode::SummationDecapode; duration=DEFAULT_DURATION, mesh=nothing, constants=DEFAULT_CONSTANTS, ics=DEFAULT_ICS)
     
     geometry = Geometry(mesh)
+    # TODO mesh params are not being consumed
     d = dimension(geometry)
 
-    statevars = map(parts(pode, :Var)) do var
-        name = subpart(pode, var, :name)
-        # symtype accepts a space and dimension, which is the dimension of the space
-        type = symtype(DECQuantity, pode[var, :type], typeof(geometry), dimension=d)
-        SymbolicUtils.Sym{type}(name)
-    end
-
+    vars = statevars(pode, geometry)
     u0 = initial_conditions(ics, geometry)
 
     ops = Operators()
@@ -69,7 +77,7 @@ function DecapodesSystem(pode::SummationDecapode; duration=DEFAULT_DURATION, mes
     
     plotVariables = Dict("n" => true, "w" => false, "Hydrodynamics_dX" => false)
 
-    return DecapodesSystem(pode, statevars, geometry, u0, duration, ops, plotVariables), constants
+    return DecapodesSystem(pode, vars, geometry, u0, duration, ops, plotVariables, constants)
 end
 
 function Base.show(io::IO, d::DecapodesSystem)
@@ -77,20 +85,18 @@ function Base.show(io::IO, d::DecapodesSystem)
 end
 
 dimension(system::DecapodesSystem) = dimension(system.geometry)
-
 points(system::DecapodesSystem) = system.geometry.dualmesh[:point]
 
-""" This stores the result of the simulation. 
-"""
+""" This stores the result of the simulation. """
 struct SolutionResult
     soln::ODESolution  
     system::DecapodesSystem
 end
 
-function Base.run(system::DecapodesSystem, params::ComponentArray; callback=nothing)::SolutionResult
+function Base.run(system::DecapodesSystem; callback=nothing)::SolutionResult
     simulator = evalsim(system.pode; dimension=dimension(system))
     f = Base.invokelatest(simulator, system.geometry.dualmesh, system.generate, GeometricHodge())
-    prob = ODEProblem(f, system.init, system.duration, params)
+    prob = ODEProblem(f, system.init, system.duration, system.params)
     # dt = max(0.01, system.duration / MAX_FRAMES)
     soln = solve(prob, Tsit5(), saveat=0.01; callback=callback)
     # soln
@@ -128,70 +134,38 @@ function DecapodesSystem(a::Types.Analysis; hodge=GeometricHodge())
     return DecapodesSystem(pode, geometry, u0, duration, ops, plotVariables) 
 end
 
-function symvar(pode::SummationDecapode, geometry::Geometry, name::Symbol)
-    idx = incident(pode, name, :name)
-    type = symtype(DECQuantity, pode[only(idx), :type], typeof(geometry), dimension=dimension(geometry))
-    SymbolicUtils.Sym{type}(name)
-end 
+# TODO this method exists until we send an Analysis JSON over
+function DecapodesSystem(payload::AbstractDict)
+    pode_src = payload["pode"]
+    duration = Int(payload["duration"])
 
-# TODO this is just here until we can elaborate a diagram fully.
-function DecapodesSystem(uri::URIs.URI)
-    params = HTTP.queryparams(uri)
-    pode = pop!(params, "pode")
-    duration = parse(Int, pop!(params, "duration"))
-    mesh = pop!(params, "mesh")
-    params = collect(params)
+    tonum(v::Integer) = v
+    tonum(v::Real) = isinteger(v) ? Int(v) : Float64(v)
 
-    meshdata = map(params) do (k, v)
-        m = match(r"mesh.(.+)", k)
-        if isnothing(m)
-            nothing
-        else
-            Symbol(only(m.captures)) => try
-                parse(Int64, v)
-            catch
-                parse(Float64, v)
-            end
-        end
-    end
-    meshdata = filter(!isnothing, meshdata)
-    mesh = getproperty(DecapodesInterop, Symbol(mesh))
-    mesh = mesh(;meshdata...)
-    
-    constants = map(enumerate(params)) do (i, (k,v))
-        m = match(r"constants\.(.+)", k)
-        if isnothing(m)
-            nothing
-        else
-            Symbol(only(m.captures)) => parse(Float64, v)
-        end
-    end
-    constants = ComponentArray(; filter(!isnothing, constants)...)
+    meshdata = Dict(Symbol(k) => tonum(v) for (k, v) in get(payload, "meshParams", Dict()))
+    mesh = getproperty(DecapodesInterop, Symbol(payload["mesh"]))(; meshdata...)
+
+    constants = ComponentArray(;
+        (Symbol(k) => Float64(v) for (k, v) in get(payload, "constants", Dict()))...)
 
     mesh_type = typeof(mesh)
     valid_ics = MeshInfo(mesh_type).ics
 
-    function resolve_ic(name::String)
-        hit = findfirst(ic -> ic.ic == name, valid_ics)
-        isnothing(hit) && error("IC $name not valid for mesh $(nameof(mesh_type))")
-        base = getproperty(DecapodesInterop, Symbol(name))
-        p = valid_ics[hit].params
-        isempty(p) ? base : base{p}
-    end
-
-    pode = SummationDecapode(parse_decapode(Meta.parse("begin\n$pode\nend")))
+    pode = SummationDecapode(parse_decapode(Meta.parse("begin\n$pode_src\nend")))
     infer_types!(pode)
 
-    ics = map(params) do (k,v)
-        m = match(r"initialConditions.(.+)", k)
-        if isnothing(m)
-            nothing
-        else
-            name = only(m.captures)
-            symvar(pode, geometry, name) => resolve_ic(v)
-        end
-    end
-    ics = Dict(filter(!isnothing, ics))
+    geometry = Geometry(mesh)
+
+    ic_entry(e::AbstractString) = (String(e), Dict{String,Any}())
+    ic_entry(e::AbstractDict)   = (String(e["ic"]), get(e, "params", Dict{String,Any}()))
     
+    # in DecapodesSystem(payload::AbstractDict), after `geometry = Geometry(mesh)`:
+    ics = Dict{BasicSymbolic, AbstractInitialConditionSpec}()
+    for (var, entry) in get(payload, "initialConditions", Dict())
+        name, params = ic_entry(entry)
+        ics[symvar(pode, geometry, Symbol(var))] = build_ic(name, params, mesh_type)
+    end
+        
+
     DecapodesSystem(pode; duration=duration, constants=constants, ics=ics, mesh=mesh)
 end

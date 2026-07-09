@@ -1,13 +1,12 @@
 using .Defaults: @default, default_values
 
-
-function dimension end
-export dimension
-
 abstract type AbstractMeshSpec end
 
+
+dimension(::Type{M}) where {M<:AbstractMeshSpec} = dimension(mesh_instance(M))
+export dimension
+
 # A concrete instance from the mesh's own defaults, used only to read `dimension`
-# (avoids assuming a zero-arg constructor and avoids meshing a full Geometry).
 mesh_instance(::Type{M}) where {M<:AbstractMeshSpec} = M(values(default_values(M))...)
 
 name(::AbstractMeshSpec) = "No name provided"
@@ -18,6 +17,7 @@ struct Geometry{D<:AbstractMeshSpec}
     dualmesh::HasDeltaSet
 end
 
+meshtype(::Geometry{D}) where D = D
 dimension(g::Geometry) = dimension(g.domain)
 
 Geometry(domain, args...) = Geometry{typeof(domain)}(domain, args...)
@@ -37,7 +37,6 @@ end
 end
 
 dimension(::Circle) = 1
-dimension(::Type{Circle}) = 1
 
 function Geometry(c::Circle; division::SimplexCenter=Circumcenter())
     mesh = EmbeddedDeltaSet1D{Bool, Point2D}()
@@ -57,7 +56,6 @@ end
 end
 
 dimension(::Icosphere) = 2
-dimension(::Type{Icosphere}) = 2
 
 function Geometry(m::Icosphere; division::SimplexCenter=Circumcenter())
     s = loadmesh(Icosphere(m.order, m.radius))
@@ -81,7 +79,6 @@ end
 end
 
 dimension(::Rectangle) = 2
-dimension(::Type{Rectangle}) = 2
 
 function Geometry(r::Rectangle; division::SimplexCenter=Circumcenter())
     s = triangulated_grid(r.max_x, r.max_y, r.dx, r.dy, Point2{Float64})
@@ -102,6 +99,18 @@ indexing_bounds(m::Icosphere) = (x=100, y=100)
 
 # """ helper function for UV """
 # makeSphere(m::UV) = makeSphere(m.minlat, m.maxlat, m.dlat, m.minlong, m.maxlong, m.dlong, m.radius)
+
+
+
+function embedding_dimension end
+export embedding_dimension
+
+embedding_dimension(::Type{M}) where {M<:AbstractMeshSpec} = embedding_dimension(mesh_instance(M))
+embedding_dimension(g::Geometry) = embedding_dimension(g.domain)
+
+embedding_dimension(::Circle) = 2
+embedding_dimension(::Rectangle) = 2
+embedding_dimension(::Icosphere) = 3
 
 const PREDEFINED_MESHES = Dict(
     :Rectangle => Rectangle(100, 100, 2, 2),
