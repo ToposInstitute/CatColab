@@ -1,4 +1,5 @@
-import { createMemo } from "solid-js";
+import RotateCcw from "lucide-solid/icons/rotate-ccw";
+import { createMemo, createSignal } from "solid-js";
 
 import {
     BlockTitle,
@@ -6,6 +7,7 @@ import {
     createNumericalColumn,
     FixedTableEditor,
     Foldable,
+    IconButton,
 } from "catcolab-ui-components";
 import type {
     DblModel,
@@ -98,14 +100,29 @@ export default function StochasticMassAction(
         }),
     ];
 
+    // Bump this counter to trigger re-run of stochastic simulation.
+    const [rerunCount, setRerunCount] = createSignal(0);
+
     const plotResult = createModelODEPlot(
         () => props.liveModel.validatedModel(),
-        (model: DblModel) => props.simulate(model, props.content),
+        (model: DblModel) => {
+            rerunCount();
+            return props.simulate(model, props.content);
+        },
+    );
+
+    const RerunButton = () => (
+        <IconButton
+            onClick={() => setRerunCount((count) => count + 1)}
+            tooltip="Re-run the stochastic simulation"
+        >
+            <RotateCcw size={16} />
+        </IconButton>
     );
 
     return (
         <div class="simulation">
-            <BlockTitle title={props.title} />
+            <BlockTitle title={props.title} actions={RerunButton()} />
             <Foldable title="Parameters" defaultExpanded>
                 <div class="parameters">
                     <FixedTableEditor rows={obGenerators()} schema={obSchema} />
