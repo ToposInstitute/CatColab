@@ -94,18 +94,12 @@ function make_progress_callback(stream::HTTP.Stream, tspan)
     )
 end
 
-function run_decapodes_string(dict::Dict{String, Any})
-
-
-end
-
-
 function endpoint(::Val{:DecapodesString})
     @post "/decapodes-string" function(stream::HTTP.Stream)
-        # payload = JSON3.read(read(stream), Dict{String,Any})
-        payload = JSON3.read(HTTP.payload(stream.message), Dict{String,Any})
-        @info payload
-        system = DecapodesSystem(payload)
+        payload = HTTP.payload(stream.message)
+        @info String(copy(payload))
+        analysis = JSON3.read(payload, Analysis)
+        system = DecapodesSystem(analysis)
 
         @info "Starting"
         HTTP.setheader(stream, "Content-Type" => "application/x-ndjson")
