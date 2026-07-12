@@ -1,11 +1,13 @@
 """
     This module defines structs which specify initial conditions. The available initial conditions are dependent on the mesh, which we track as a methods of the `initial_condition` function.
 
-    The motivation behind this design is to compile initial condition "specs" into dictionaries which contain the information a frontend component needs to construct the appropriate component.
+    Initial conditions dispatch on...
 
-    IC specs may have type parameters. The motivation for this is parameterizing over the dimension of the mesh.
+    1. a symbolic variable typed by its place in the DEC
+    2. an initial condition spec,
+    3. the underlying geometry
 
-    Specs implement `@default`, which is just fancy code-gen for a `default_values(::T)::NamedTuple` which returns the default values for that struct.
+    Since the symbolic variable also stores the type of the geometry it lives on, we do not need to expose the AbstractMeshSpec type also stored by the Geometry struct. 
 """
 module InitialConditions
 
@@ -71,12 +73,13 @@ end
 export GaussianIC
 
 function default_values(::Type{GaussianIC}, ::Type{M}) where {M<:AbstractMeshSpec}
-    d = embedding_dimension(M)
+    d = dimension(M)
     (mean=zeros(d), var=Diagonal(ones(d)))
 end
 
 function initial_condition(var::BasicSymbolic{DEC.DualForm{idx, Circle, spacedim}}, g::GaussianIC, geometry::Geometry; f::Function=identity) where {idx, spacedim}
-    dist = Normal(pi)
+    # dist = Normal(pi)
+    dist = Normal(only(g.mean), sqrt(only(g.var.diag)))
     # 7.2 multiplier allows the bands to develop above the soil line
     m(t) = Distributions.pdf(dist, t) * 7.2 * GAUSS_NORM |> f
     [m(t) for t in range(0, 2*pi; length=ne(geometry.dualmesh))]
@@ -96,7 +99,6 @@ function initial_condition(::BasicSymbolic{DEC.PrimalForm{1, Circle, n}},
     [m(t) for t in range(0, 2pi; length=ne(geometry.dualmesh))]
 end
 
-
 using LinearAlgebra: ⋅
 # α length = embedding dimfunction
 function constant_primal_1form(sd, v::AbstractVector)
@@ -109,7 +111,6 @@ function initial_condition(::BasicSymbolic{DEC.PrimalForm{1, Rectangle, dim}}, i
     constant_primal_1form(geometry.dualmesh, [1.0, 0.0])
 end
 
-# w: near-uniform; ConstantIC is a clean stand-in for the docs' very broad Normal
 function initial_condition(::BasicSymbolic{DEC.DualForm{0, Rectangle, dim}}, c::ConstantIC, geometry::Geometry) where dim
     fill(c.value, ndual0(geometry.dualmesh))
 end

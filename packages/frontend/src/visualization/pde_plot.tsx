@@ -1,5 +1,7 @@
 import { makeTimer } from "@solid-primitives/timer";
 import type { EChartsOption } from "echarts";
+import { encode } from "modern-gif";
+import workerUrl from "modern-gif/worker?url";
 import { createMemo, createSignal, lazy } from "solid-js";
 import invariant from "tiny-invariant";
 
@@ -113,10 +115,52 @@ export function PDEPlot2D(props: { data: PDEPlotData2D }) {
         };
     }
 
+    async function exportGif(chart: echarts.ECharts, data: PDEPlotData2D) {
+        const frames = [];
+        for (let i = 0; i < data.time.length; i++) {
+            chart.setOption(options(i));
+            frames.push({
+                data: chart.getDataURL({ pixelRatio: 1, backgroundColor: "#fff" }),
+                delay: 100,
+            });
+        }
+        const output = await encode({ workerUrl, width: 500, height: 500, frames });
+        const blob = new Blob([output], { type: "image/gif" });
+        const a = Object.assign(document.createElement("a"), {
+            href: URL.createObjectURL(blob),
+            download: "simulation.gif",
+        });
+        a.click();
+        return new Blob([output], { type: "image/gif" });
+    }
+
+    const [chart, setChart] = createSignal<echarts.ECharts>();
+    const [exporting, setExporting] = createSignal(false);
+
+    const downloadGif = async () => {
+        const c = chart();
+        if (!c || exporting()) return;
+        setExporting(true);
+        try {
+            const blob = await exportGif(c, props.data);
+            console.log("gif blob", blob.size, blob.type);
+            const url = URL.createObjectURL(blob);
+            const a = Object.assign(document.createElement("a"), {
+                href: url,
+                download: "simulation.gif",
+            });
+            a.click();
+            URL.revokeObjectURL(url);
+        } finally {
+            setExporting(false);
+        }
+    };
+
     return (
         <div>
             <span>t = {props.data.time[timeIndex()]?.toFixed(2)}</span>
-            <ECharts option={options(timeIndex())} width={500} height={500} />
+            <ECharts option={options(timeIndex())} width={500} height={500} onReady={setChart} />
+            <button onClick={downloadGif}>{exporting() ? "Exporting..." : "Download GIF"}</button>
         </div>
     );
 }

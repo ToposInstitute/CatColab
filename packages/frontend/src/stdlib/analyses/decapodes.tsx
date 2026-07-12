@@ -296,24 +296,32 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
     const [res] = createResource(runPayload, async ({ pode, constants, duration }) => {
         setProgress(0);
 
-        const params = new URLSearchParams({ pode });
-        for (const [k, v] of Object.entries(constants)) {
-            params.set(`constants.${k}`, String(v));
-        }
-        params.set("mesh", String(props.content.mesh));
-
         const valid = new Set(fieldNames(String(props.content.mesh)));
-        for (const [k, v] of Object.entries(meshParams())) {
-            if (valid.has(k)) params.set(`mesh.${k}`, String(v));
-        }
+        const meshParamsPayload = Object.fromEntries(
+            Object.entries(meshParams()).filter(([k]) => valid.has(k)),
+        );
 
-        for (const [k, v] of Object.entries(props.content.initialConditions)) {
-            params.set(`initialConditions.${k}`, String(v));
-        }
-        params.set("duration", String(duration));
-        const url = `${juliaUrl}/decapodes-string?${params.toString()}`;
-
-        const response = await fetch(url);
+        const response = await fetch(`${juliaUrl}/decapodes-string`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                model: null,
+                diagram: null,
+                analysis: {
+                    pode,
+                    duration,
+                    mesh: String(props.content.mesh),
+                    meshParams: meshParamsPayload,
+                    constants,
+                    initialConditions: Object.fromEntries(
+                        Object.entries(props.content.initialConditions).map(([v, ic]) => [
+                            v,
+                            { ic, params: icValues[v] ?? {} },
+                        ]),
+                    ),
+                },
+            }),
+        });
         if (!response.ok) throw new Error(`HTTP error! status ${response.status}`);
 
         let resultData = null;
@@ -345,7 +353,7 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
 
     const isDisabled = () => {
         console.log("initialConditions", unwrap(props.content.initialConditions));
-    return !icRows.every(isConfigured)
+        return !icRows.every(isConfigured);
     };
 
     type ICTab = { name: string; ic: IC };
@@ -386,7 +394,7 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
                                     })
                                 }
                             >
-                                <For each={opts().meshes}>
+                                <For each={Object.keys(opts().mesh_info)}>
                                     {(mesh) => <option value={mesh}>{mesh}</option>}
                                 </For>
                             </select>
@@ -508,7 +516,6 @@ type MeshInfo = {
 
 /** Options supported by Decapodes, defined by the Julia service. */
 type SimulationOptions = {
-    meshes: string[];
     mesh_info: Record<string, MeshInfo>;
 };
 

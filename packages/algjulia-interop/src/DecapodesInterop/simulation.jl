@@ -108,34 +108,35 @@ function Base.getindex(result::SolutionResult, state_var::Symbol, t::Int, nth=no
     isnothing(nth) ? out : out[nth]
 end
 
-function DecapodesSystem(a::Types.Analysis; hodge=GeometricHodge())
-    pode, vars = diagram_to_pode(a.model, a.diagram)
-    analysis = a.analysis
-    # @assert Set([:duration, :plotVariables, :domain, :mesh, :initialConditions, :scalars]) == keys(analysis)
+# function DecapodesSystem(a::Types.Analysis; hodge=GeometricHodge())
+#     pode, vars = diagram_to_pode(a.model, a.diagram)
+#     analysis = a.analysis
+#     # @assert Set([:duration, :plotVariables, :domain, :mesh, :initialConditions, :scalars]) == keys(analysis)
   
-    duration = analysis["duration"]
-    plotVariables = Dict(key => key ∈ keys(vars) for key in analysis["plotVariables"])
-    geometry = Geometry(analysis)
+#     duration = analysis["duration"]
+#     plotVariables = Dict(key => key ∈ keys(vars) for key in analysis["plotVariables"])
+#     geometry = Geometry(analysis)
 
-    # define the generate function
-    ops = Operators()
-    ops.operators[:♭♯_m] = ♭♯_mat(geometry.dualmesh)
-    ops.operators[:Δ0] = Δ(0,geometry.dualmesh)
-    # TODO we are fixing the hodge here
-    ops.operators[:s0inv] = dec_inv_hodge_star(0, geometry.dualmesh, GeometricHodge())
+#     # define the generate function
+#     ops = Operators()
+#     ops.operators[:♭♯_m] = ♭♯_mat(geometry.dualmesh)
+#     ops.operators[:Δ0] = Δ(0,geometry.dualmesh)
+#     # TODO we are fixing the hodge here
+#     ops.operators[:s0inv] = dec_inv_hodge_star(0, geometry.dualmesh, GeometricHodge())
 
-    # dot_rename!(pode)
-    uuid2symb = uuid_to_symb(pode, vars)
+#     # dot_rename!(pode)
+#     uuid2symb = uuid_to_symb(pode, vars)
 
-    # initial conditions
-    u0 = initial_conditions(analysis["initialConditions"], geometry, uuid2symb)
+#     # initial conditions
+#     u0 = initial_conditions(analysis["initialConditions"], geometry, uuid2symb)
     
-    # return the system
-    return DecapodesSystem(pode, geometry, u0, duration, ops, plotVariables) 
-end
+#     # return the system
+#     return DecapodesSystem(pode, geometry, u0, duration, ops, plotVariables) 
+# end
 
 # TODO this method exists until we send an Analysis JSON over
-function DecapodesSystem(payload::AbstractDict)
+function DecapodesSystem(analysis::Types.Analysis)
+    payload = analysis.analysis
     pode_src = payload["pode"]
     duration = Int(payload["duration"])
 
@@ -151,6 +152,7 @@ function DecapodesSystem(payload::AbstractDict)
     mesh_type = typeof(mesh)
     valid_ics = MeshInfo(mesh_type).ics
 
+    # this should be pode, vars = diagram_to_pode(analysis["pode"])
     pode = SummationDecapode(parse_decapode(Meta.parse("begin\n$pode_src\nend")))
     infer_types!(pode)
 

@@ -13,128 +13,32 @@ function Base.show(io::IO, res::SimulationResult)
   println(io, "State variables: $(keys(res.state))")
 end
 
-# """ Given a simulation, a domain, and a variable, gets the state values over the duration of a simulation. 
-# Called by `var_to_state`[@ref] 
-
-# ## Usage:
-
-# result[:u] # = [result[i][:u] for i in 1:length(result.soln.t)]
-
-# """
-# function Base.getproperty(result::SolutionResult, var::Symbol)
-#     [result.soln[i][var] for i in 1:length(result.soln.t)]
-# end
-
 # FORMATTER -----------------------------------------------------------------------------------
 
+symvar_of(system, name::Symbol) = system.statevars[findfirst(v -> nameof(v) == name, system.statevars)]
 
-
-function format(result::SolutionResult)
-    sd = result.system.geometry.dualmesh
-    points = sd[:point]
-
-    xs = sort(unique(p[1] for p in points))
-    ys = sort(unique(p[2] for p in points))
-    xi = Dict(x => i-1 for (i, x) in enumerate(xs))  # 0-indexed for JS
-    yi = Dict(y => i-1 for (i, y) in enumerate(ys))
-
-    nv = nparts(sd, :V)
-    plottable = [:n]
-
-    state = Dict{String, Vector}()
-    for var in plottable
-        frames = map(result.soln.u) do u
-            vals = getproperty(u, var)
-            [[xi[points[i][1]], yi[points[i][2]], vals[i]] for i in 1:nv]
-        end
-        state[string(var)] = frames
-    end
-
-    Dict("time" => result.soln.t, "x" => xs, "y" => ys, "state" => state)
-end
-
+"""
+    Formats the result as simulated on an EmbeddedDeltaDualComplex1D
+"""
 function format(sd::EmbeddedDeltaDualComplex1D, result::SolutionResult)
-    lengths = sd[:length]                  # per-edge length, length == ne
-    xcoords = cumsum(lengths) .- lengths   # arc length: [0, l1, l1+l2, ...]
+    lengths = sd[:length]
+    xcoords = cumsum(lengths) .- lengths
     nx = length(xcoords)
  
     plottable = [:n]
- 
+
+    # every variable has a vector of states indexed by time
+    # each state is a vector parameterized by points on the simulation mesh
     state = Dict{String, Vector}()
     for var in plottable
         frames = map(result.soln.u) do u
             vals = getproperty(u, var)
             @assert length(vals) == nx "state :$var has length $(length(vals)), expected $nx (ne); is it a DualForm0 on this 1D mesh?"
-            # (xIndex 0-based, yIndex, value); tuple keeps indices as integers in JSON
+            # (xIndex 0-based, yIndex, value)
             [(i - 1, 0, vals[i]) for i in 1:nx]
         end
         state[string(var)] = frames
     end
  
     Dict("time" => result.soln.t, "x" => xcoords, "y" => [0.0], "state" => state)
-end
-
-
-
-
-
-struct Projector{S,T}
-    src::Geometry{S} # simulated on
-    tgt::Geometry{T} # displayed on
-end
-
-# function project(p::Projector, result::SolutionResult, var::Symbol)
-#     [project(p, result, var, t) for t in 1:length(result.soln.t)]
-# end
-
-# TODO need a method for projecting without specifying time. this will substitute out the method above
-    
-# function project(::Projector{Rectangle, Rectangle}, result::SolutionResult, var::Symbol, t::Int)
-#     (x, y) = indexing_bounds(result.system.geometry.domain)
-#     coord(i, j) = (x+1)*(i-1) + j
-#     # TODO scale
-#     [SVector(i, j, result[var, t, coord(i,j)]) for i in 1:x+1, j in 1:y+1]
-# end
-
-# indexing_bounds(p::Projector{Rectangle, Rectangle}) = indexing_bounds(p.tgt)
-
-# function project(p::Projector{Sphere, Rectangle}, result::SolutionResult, var::Symbol, t::Int)
-#     function grid(pt3::Point3, grid_size::Vector{Int})
-#         pt2 = [(pt3[1]+1)/2, (pt3[2]+1)/2]
-#         [round(Int, pt2[1]*grid_size[1]), round(Int, pt2[2]*grid_size[2])]
-#     end   
-#     pts = points(result.system)
-#     l , _ = indexing_bounds(p.tgt)
-#     northern_indices = filter(i -> pts[i][3] > 0, keys(pts))
-#     map(northern_indices) do n
-#         i, j = grid(pts[n], [l, l]) # TODO
-#         SVector(i, j, result[var, t, n])
-#     end
-# end
-
-# indexing_bounds(p::Projector{Sphere, Rectangle}) = indexing_bounds(p.tgt)
-
-# -----
-
-# TODO in the simple wedge case, we might want to simulate \dot{u} of \dot{u} = [u, v]
-""" For the variables in a system, associate them to their state values over the duration of the simulation 
-"""
-# function var_to_state(p::Projector, result::SolutionResult)
-# 	Dict(var => project(p, result, var) for var in keys(result.system.init))
-# end
-# function var_to_state(p::Projector, result::SolutionResult)
-#     sd = result.system.geometry.dualmesh
-#     nv = nparts(sd, :V)
-#     plottable = filter(keys(result.system.init)) do var
-#         length(getproperty(result.system.init, var)) == nv
-#     end
-#     Dict(var => project(p, result, var) for var in plottable)
-# end
-
-
-function SimulationResult(result::SolutionResult)
-    # p = Projector(result.system.geometry.domain, PREDEFINED_MESHES[:Rectangle]) # TODO frontend should let us choose
-    # idx_bounds = indexing_bounds(p.tgt)
-    # var_to_formatted_state = var_to_state(p, result) # Dict("UUID1" => VectorMatrixSVectr...)
-    # SimulationResult(result.soln.t, var_to_formatted_state, 0:idx_bounds.x, 0:idx_bounds.y)
 end

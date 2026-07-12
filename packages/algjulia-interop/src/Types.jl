@@ -83,10 +83,12 @@ end
 StructTypes.StructType(::Type{ModelDiagram}) = StructTypes.Struct()
 
 struct Analysis
-	model::Model
-	diagram::Diagram
+	model::Union{Model, Nothing}
+	diagram::Union{Diagram, Nothing}
 	analysis::Dict
 end
+Analysis(analysis::Dict) = Analysis(nothing, nothing, analysis)
 StructTypes.StructType(::Type{Analysis}) = StructTypes.Struct()
+
 
 end # module
