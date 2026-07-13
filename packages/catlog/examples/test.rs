@@ -11,10 +11,13 @@ use std::hash::Hash;
 use std::cmp::Ordering;
 use std::path::Path;
 
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
-enum Level { SILENT = 0, DEBUG = 1, TRACE = 2, }
-use Level::*;
-const LOGGING: Level = DEBUG;
+const DEBUG: bool = true;
+// Debug-print vectors of length <= PRINTMAX.
+const PRINTMAX: usize = 40;
+
+macro_rules! print_flush {
+    ($($e:tt)*) => { { print!($($e)*); std::io::stdout().flush().unwrap() } }
+}
 
 
 // ---------- MAPS & TAGGED MAPS ----------
@@ -380,6 +383,7 @@ impl<'a,'b> QueryContext<'a,'b> {
         let mut bindings: Vec<Binding> = vec![Vec::new()];
         for (var, wcops) in &self.plan { // 1 For each var in some order
             if wcops.is_empty() {
+                print_flush!("enumerating {var:?}...");
                 // If all atoms that mention this var are of the form f(X) = V for unknown
                 // V, all we can do it enumerate its entity table.
                 let entities: &Map<EntityId, ()> = (&self.database.mappings[var.0]).into();
@@ -391,6 +395,7 @@ impl<'a,'b> QueryContext<'a,'b> {
                         bindings.push(b);
                     }
                 }
+                println!(" ");
                 continue;
             }
 
@@ -409,11 +414,11 @@ impl<'a,'b> QueryContext<'a,'b> {
                 self.wco_propose(&wcops[0], binding, &mut bindings);
             }
 
-            if LOGGING >= DEBUG {
+            if DEBUG {
                 let n = bindings.len();
-                eprintln!("  bindings after proposing {var:?} via {morphism}/{strategy:?}: {n}");
-                if LOGGING >= TRACE {
-                    for b in &bindings { eprintln!("    {b:?}"); }
+                println!("  bindings after proposing {var:?} via {morphism}/{strategy:?}: {n}");
+                if n <= PRINTMAX {
+                    for b in &bindings { println!("    {b:?}"); }
                 }
             }
 
@@ -425,11 +430,11 @@ impl<'a,'b> QueryContext<'a,'b> {
                 self.wco_filter(wcop, &mut bindings);
             }
 
-            if LOGGING >= DEBUG && !&wcops[1..].is_empty() {
+            if DEBUG && !&wcops[1..].is_empty() {
                 let n = bindings.len();
-                eprintln!("  bindings after filtering {var:?} through {:?}: {n}", &wcops[1..]);
-                if LOGGING >= TRACE {
-                    for b in &bindings { eprintln!("    {b:?}"); }
+                println!("  bindings after filtering {var:?} through {:?}: {n}", &wcops[1..]);
+                if n <= PRINTMAX {
+                    for b in &bindings { println!("    {b:?}"); }
                 }
             }
         }
@@ -771,9 +776,8 @@ fn graph_from_edges(schema: Rc<Schema>, edges: Vec<(usize, usize)>) -> Instance 
         .max()
         .unwrap();
     let mappings = map! {
-        "Node".to_string() => TaggedMap::Id((0..=max_node).map(|i| (i, ())).collect()),
+        "Node".to_string() => TaggedMap::Id(edges.iter().flat_map(|e| [(e.0, ()), (e.1, ())]).collect()),
         "Edge".to_string() => TaggedMap::Id((0..edges.len()).map(|i| (i, ())).collect()),
-        // "id".to_string() => TaggedMap::IdId((0..=max_node).map(|i| (i,i)).collect()),
         "src".to_string() => TaggedMap::IdId(
             edges.iter().map(|x| x.0).enumerate().collect()
         ),
@@ -860,16 +864,31 @@ fn example_snap() {
     use TaggedMap::*;
     let triangle = Instance {
         schema: schema.clone(),
+        // edge(z,y) edge(y,x) edge(z,x)
         mappings: map!{
-            "Node".to_string() => entities![0,1,2],
-            "Edge".to_string() => entities![01,12,20],
-            "src".to_string() => IdId(map! { 01 => 0, 12 => 1, 20 => 2 }),
-            "dst".to_string() => IdId(map! { 01 => 1, 12 => 2, 20 => 0 }),
+            "Node".to_string() => entities![0, 1, 2],
+            "Edge".to_string() => entities![21, 10, 20],
+            "src".to_string() => IdId(map! { 21 => 2, 10 => 1, 20 => 2 }),
+            "dst".to_string() => IdId(map! { 21 => 1, 10 => 0, 20 => 0 }),
         }
     };
     triangle.self_check();
     println!("Planning.");
-    let var_order = triangle.pick_var_order();
+
+    let var_order = if false {
+        triangle.pick_var_order()
+    } else {                    // sensible variable order
+        #[allow(non_snake_case)]
+        let Edge: &EntityName = triangle.schema.entities.iter().find(|x| *x == "Edge").unwrap();
+        #[allow(non_snake_case)]
+        let Node: &EntityName = triangle.schema.entities.iter().find(|x| *x == "Node").unwrap();
+        vec![
+            (Edge, 21), (Node, 2), (Node, 1),
+            (Edge, 10), (Node, 0),
+            (Edge, 20)
+        ]
+    };
+
     println!("  variable order  {var_order:?}");
     let plan = triangle.plan(&var_order);
     println!("  query plan:");
@@ -878,17 +897,48 @@ fn example_snap() {
     }
 
     let load = Instant::now();
-    let edges: Vec<(usize, usize)> = load_edges();
-    // if DEBUG { println!("edges: {:?}", edges); }
+    let mut edges: Vec<(usize, usize)> = load_edges();
+    // We redirect all edges x -> y to point from low to high vertex numbers. This should
+    // make our directed triangle query find all *undirected* triangles in the original
+    // graph. TODO: this is not finding the same results as triangle.rs in dijkstralog.
+    //
+    //   dijkstralog$ EDGES=5k cargo run --release --example triangle ~1/data/ca-GrQc.txt
+    //   > finds 3477 triangles
+    //
+    //   catlog$ EDGES=5k cargo run --release --example test
+    //   > finds 15798 triangles
+    //
+    // What's going on?
+    //
+    // ANSWER: we've failed to deduplicate! we can now have multiple edges.
+    for edge in edges.iter_mut() {
+        if edge.1 < edge.0 {
+            *edge = (edge.1, edge.0);
+        }
+    }
+    // Remove duplicate edges by sorting & dedup()ing.
+    edges.sort_unstable();
+    edges.dedup();
+    println!("Removed duplicate edges, yielding {} edges.", edges.len());
+    let small_graph = edges.len() <= PRINTMAX;
+    if DEBUG && small_graph {
+        println!("edges:");
+        for (a,b) in &edges { println!("  {a} {b}"); }
+    }
     let graph = graph_from_edges(schema.clone(), edges);
     let load_ns = load.elapsed().as_nanos();
+    if DEBUG && small_graph { dbg!(&graph); };
 
     // Run the query.
     println!("Executing query.");
     let compute = Instant::now();
     let bindings = triangle.execute(&graph, plan);
     let compute_ns = compute.elapsed().as_nanos();
-    println!("Done!");
+    println!("Done! Found {} triangles.", bindings.len());
+    if DEBUG && bindings.len() < PRINTMAX {
+        println!("bindings for var order: {var_order:?}");
+        for b in &bindings { println!("  {b:?}"); }
+    }
 
     println!("  loading {:6}ms", load_ns / 1_000_000);
     println!("    query {:6}ms", compute_ns / 1_000_000);
