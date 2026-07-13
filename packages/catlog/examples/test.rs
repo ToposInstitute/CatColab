@@ -383,7 +383,7 @@ impl<'a,'b> QueryContext<'a,'b> {
         let mut bindings: Vec<Binding> = vec![Vec::new()];
         for (var, wcops) in &self.plan { // 1 For each var in some order
             if wcops.is_empty() {
-                print_flush!("enumerating {var:?}...");
+                if DEBUG { print_flush!("  {var:?}\tenumerate {}", var.0); }
                 // If all atoms that mention this var are of the form f(X) = V for unknown
                 // V, all we can do it enumerate its entity table.
                 let entities: &Map<EntityId, ()> = (&self.database.mappings[var.0]).into();
@@ -395,7 +395,9 @@ impl<'a,'b> QueryContext<'a,'b> {
                         bindings.push(b);
                     }
                 }
-                println!(" ");
+                if DEBUG {
+                    println!(": {}", bindings.len());
+                }
                 continue;
             }
 
@@ -410,13 +412,14 @@ impl<'a,'b> QueryContext<'a,'b> {
             //
             // TODO: fix this and actually implement counting.
             let &(morphism, ref strategy) = &wcops[0];
+            if DEBUG { print_flush!("  {var:?}\tpropose {morphism}/{strategy:?}"); }
             for binding in std::mem::take(&mut bindings) {
                 self.wco_propose(&wcops[0], binding, &mut bindings);
             }
 
             if DEBUG {
                 let n = bindings.len();
-                println!("  bindings after proposing {var:?} via {morphism}/{strategy:?}: {n}");
+                println!(": {n}");
                 if n <= PRINTMAX {
                     for b in &bindings { println!("    {b:?}"); }
                 }
@@ -424,6 +427,9 @@ impl<'a,'b> QueryContext<'a,'b> {
 
             // 4   For each atom that mentions the var,
             // (we exclude the one that enumerate it in this case because it's easy)
+            if DEBUG && !&wcops[1..].is_empty() {
+                print_flush!("  {var:?}\tfilter {:?}", &wcops[1..]);
+            }
             for wcop in &wcops[1..] {
                 // 4a    For each binding of values to prior and new vars,
                 // 4b    If the binding is not in the atom, discard the binding.
@@ -432,7 +438,7 @@ impl<'a,'b> QueryContext<'a,'b> {
 
             if DEBUG && !&wcops[1..].is_empty() {
                 let n = bindings.len();
-                println!("  bindings after filtering {var:?} through {:?}: {n}", &wcops[1..]);
+                println!(": {n}");
                 if n <= PRINTMAX {
                     for b in &bindings { println!("    {b:?}"); }
                 }
@@ -911,11 +917,26 @@ fn example_snap() {
     // What's going on?
     //
     // ANSWER: we've failed to deduplicate! we can now have multiple edges.
-    for edge in edges.iter_mut() {
+    //
+    // PROBLEM: nope! this brings the counts much closer but they're still not always the same.
+    //
+    //   dijkstralog$ EDGES=10k cargo run --release --example triangle ~1/data/ca-GrQc.txt
+    //   > finds 10962 triangles
+    //
+    //   catlog$ EDGES=10k cargo run --release --example test
+    //   > finds 10977 triangles
+    //
+    // Also note that without choosing the smallest one to propose the timing is HIGHLY
+    // VARIABLE, fastest I've seen is 57ms, but often ~1200ms, slowest 8895ms!
+    // Propose-smallest is crucial!
+    //
+    // Smallest # of edges so far to yield a difference: EDGES=7500 yields 8006 test.rs/8003 triangle.rs
+    edges.retain_mut(|edge| {
         if edge.1 < edge.0 {
             *edge = (edge.1, edge.0);
         }
-    }
+        edge.0 != edge.1
+    });
     // Remove duplicate edges by sorting & dedup()ing.
     edges.sort_unstable();
     edges.dedup();
@@ -935,13 +956,19 @@ fn example_snap() {
     let bindings = triangle.execute(&graph, plan);
     let compute_ns = compute.elapsed().as_nanos();
     println!("Done! Found {} triangles.", bindings.len());
-    if DEBUG && bindings.len() < PRINTMAX {
+    if (DEBUG && bindings.len() < PRINTMAX) {
         println!("bindings for var order: {var_order:?}");
         for b in &bindings { println!("  {b:?}"); }
     }
 
     println!("  loading {:6}ms", load_ns / 1_000_000);
     println!("    query {:6}ms", compute_ns / 1_000_000);
+
+    // // PRINT THE ACTUAL TRIANGLES
+    // println!();
+    // let mut triangles: Vec<_> = bindings.into_iter().map(|x| (x[1], x[2], x[4])).collect();
+    // triangles.sort_unstable();
+    // for (x,y,z) in triangles { println!("{x} {y} {z}"); }
 }
 
 fn main() {
