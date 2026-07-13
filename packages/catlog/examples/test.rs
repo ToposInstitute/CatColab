@@ -904,33 +904,12 @@ fn example_snap() {
 
     let load = Instant::now();
     let mut edges: Vec<(usize, usize)> = load_edges();
-    // We redirect all edges x -> y to point from low to high vertex numbers. This should
-    // make our directed triangle query find all *undirected* triangles in the original
-    // graph. TODO: this is not finding the same results as triangle.rs in dijkstralog.
+    // We redirect all edges x -> y to point from low to high vertex numbers, and drop self-loops x
+    // -> x. This should make our directed triangle query find all undirected triangles in the
+    // original graph, just as SNAP and Dijkstralog do.
     //
-    //   dijkstralog$ EDGES=5k cargo run --release --example triangle ~1/data/ca-GrQc.txt
-    //   > finds 3477 triangles
-    //
-    //   catlog$ EDGES=5k cargo run --release --example test
-    //   > finds 15798 triangles
-    //
-    // What's going on?
-    //
-    // ANSWER: we've failed to deduplicate! we can now have multiple edges.
-    //
-    // PROBLEM: nope! this brings the counts much closer but they're still not always the same.
-    //
-    //   dijkstralog$ EDGES=10k cargo run --release --example triangle ~1/data/ca-GrQc.txt
-    //   > finds 10962 triangles
-    //
-    //   catlog$ EDGES=10k cargo run --release --example test
-    //   > finds 10977 triangles
-    //
-    // Also note that without choosing the smallest one to propose the timing is HIGHLY
-    // VARIABLE, fastest I've seen is 57ms, but often ~1200ms, slowest 8895ms!
-    // Propose-smallest is crucial!
-    //
-    // Smallest # of edges so far to yield a difference: EDGES=7500 yields 8006 test.rs/8003 triangle.rs
+    // Note that the timing is HIGHLY VARIABLE, eg with 10k edges fastest I've seen is 57ms, usual
+    // ~1200ms, slowest 8895ms! Propose-smallest is crucial!
     edges.retain_mut(|edge| {
         if edge.1 < edge.0 {
             *edge = (edge.1, edge.0);
