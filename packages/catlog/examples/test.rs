@@ -382,7 +382,8 @@ impl<'a,'b> QueryContext<'a,'b> {
         //
         let mut bindings: Vec<Binding> = vec![Vec::new()];
         for (var, wcops) in &self.plan { // 1 For each var in some order
-            if wcops.is_empty() {
+            let n_wcops = wcops.len();
+            if n_wcops == 0 {
                 if DEBUG { print_flush!("  {var:?}\tenumerate {}", var.0); }
                 // If all atoms that mention this var are of the form f(X) = V for unknown
                 // V, all we can do it enumerate its entity table.
@@ -401,22 +402,30 @@ impl<'a,'b> QueryContext<'a,'b> {
                 continue;
             }
 
-            // TODO: implement step 2, counting
+            // 2   For each atom that mentions the var,
+            // 2a    For each binding of values to prior vars,
+            // 2b    Count the # of distinct values that extend that binding.
+            //
+            // We also find which one is the minimum in this step: `wcops[proposers[i]]` is used to
+            // propose new bindings extending `bindings[i]`; the other wcops are used to filter.
+            let counts: Vec<Vec<usize>> =
+                wcops.iter().map(|w| self.wco_count(w, &bindings)).collect();
+            let proposers: Vec<usize> = (0..bindings.len())
+                .map(|i| (0..n_wcops).min_by_key(|&j| counts[j][i]).unwrap())
+                .collect();
 
             // 3 For each atom that mentions this var,
             // 3a For each binding of values to prior vars
             // 3b If this atom had the least count, enumerate the new values.
-            //
-            // We assume the first atom mentioning us uniformly had smallest count, which
-            // makes this kind of wonky; eg we dispatch on `strategy` inside the `for
-            // binding in ...` loop even though we already know it -- because in the
-            // "correct" version we won't know it in advance.
-            //
-            // TODO: fix this and actually implement counting.
-            let &(morphism, ref strategy) = &wcops[0];
-            if DEBUG { print_flush!("  {var:?}\tpropose {morphism}/{strategy:?}"); }
-            for binding in std::mem::take(&mut bindings) {
-                self.wco_propose(&wcops[0], binding, &mut bindings);
+            if DEBUG {
+                print_flush!("  {var:?}\tpropose {wcops:?}");
+            }
+
+            let n_bindings_before = bindings.len();
+            let mut n_bindings: usize = 0;
+            for (i, binding) in std::mem::take(&mut bindings).into_iter().enumerate() {
+                let wcop = &wcops[proposers[i]];
+                self.wco_propose(wcop, binding, &mut bindings);
             }
 
             if DEBUG {
@@ -429,16 +438,16 @@ impl<'a,'b> QueryContext<'a,'b> {
 
             // 4   For each atom that mentions the var,
             // (we exclude the one that enumerate it in this case because it's easy)
-            if DEBUG && !&wcops[1..].is_empty() {
-                print_flush!("  {var:?}\tfilter {:?}", &wcops[1..]);
+            if DEBUG && n_wcops > 1 {
+                print_flush!("  {var:?}\tfilter {:?}", &wcops);
             }
-            for wcop in &wcops[1..] {
+            for wcop in wcops {
                 // 4a    For each binding of values to prior and new vars,
                 // 4b    If the binding is not in the atom, discard the binding.
                 self.wco_filter(wcop, &mut bindings);
             }
 
-            if DEBUG && !&wcops[1..].is_empty() {
+            if DEBUG && n_wcops > 1 {
                 let n = bindings.len();
                 println!(": {n}");
                 if n <= PRINTMAX {
@@ -474,9 +483,10 @@ impl<'a,'b> QueryContext<'a,'b> {
                 };
                 vec![index.get(s).map_or(0, |set| set.len()); bindings.len()]
             }
-            // only this actually depends on the binding. TODO LATER: in future, we could optimize
-            // this by pre-computing strategies that don't depend on the binding. In particular, if
-            // any strategy is Lookup, we should use that one to propose and the others to filter.
+            // NB. only this case actually depends on the binding. TODO LATER: in future, we could
+            // optimize this by pre-computing strategies that don't depend on the binding. In
+            // particular, if any strategy is Lookup, we should use that one to propose and the
+            // others to filter.
             &Strategy::Preimage(Known::Var(known_idx)) => {
                 let TaggedReverseIndex::IdId(index) = &self.index_reverse[morphism] else {
                     panic!("reverse index tag error")
@@ -900,6 +910,7 @@ fn example_accounting_employees() {
 }
 
 fn example_snap() {
+    let total = Instant::now();
     let cwd = std::env::current_dir();
     println!("current working directory: {cwd:?}");
 
@@ -978,8 +989,10 @@ fn example_snap() {
         for b in &bindings { println!("  {b:?}"); }
     }
 
+    let total_ns = total.elapsed().as_nanos();
     println!("  loading {:6}ms", load_ns / 1_000_000);
     println!("    query {:6}ms", compute_ns / 1_000_000);
+    println!("    total {:6}ms", total_ns / 1_000_000);
 
     // // PRINT THE ACTUAL TRIANGLES
     // println!();
