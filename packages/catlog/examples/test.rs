@@ -371,8 +371,8 @@ impl<'a,'b> QueryContext<'a,'b> {
         //
         // 1 For each var in some order,
         // 2   For each atom that mentions the var,
-        // 2a     For each binding of values to prior vars,
-        // 2b     Count the # of distinct values that extend that binding.
+        // 2a    For each binding of values to prior vars,
+        // 2b    Count the # of distinct values that extend that binding.
         // 3   For each atom that mentions the var,
         // 3a    For each binding of values to prior vars,
         // 3b    If this atom had least count, enumerate new values.
@@ -400,6 +400,8 @@ impl<'a,'b> QueryContext<'a,'b> {
                 }
                 continue;
             }
+
+            // TODO: implement step 2, counting
 
             // 3 For each atom that mentions this var,
             // 3a For each binding of values to prior vars
@@ -446,6 +448,42 @@ impl<'a,'b> QueryContext<'a,'b> {
         }
 
         return bindings;
+    }
+
+    fn wco_count(&self, wcop: &Wcop, bindings: &Vec<Binding>) -> Vec<usize> {
+        let &(morphism, ref strategy) = wcop;
+        match strategy {
+            &Strategy::Image => {
+                let TaggedReverseIndex::IdId(index) = &self.index_reverse[morphism] else {
+                    panic!("reverse index tag error")
+                };
+                vec![index.len(); bindings.len()]
+            }
+            &Strategy::Diagonal => vec![self.index_diagonal[morphism].len(); bindings.len()],
+            &Strategy::Lookup(_) => vec![1; bindings.len()],
+            // TODO: macro-generate these branches?
+            &Strategy::Preimage(Known::Usize(ref v))  => {
+                let TaggedReverseIndex::IdId(index) = &self.index_reverse[morphism] else {
+                    panic!("reverse index tag error")
+                };
+                vec![index.get(v).map_or(0, |set| set.len()); bindings.len()]
+            }
+            &Strategy::Preimage(Known::String(s)) => {
+                let TaggedReverseIndex::IdString(index) = &self.index_reverse[morphism] else {
+                    panic!("reverse index tag error")
+                };
+                vec![index.get(s).map_or(0, |set| set.len()); bindings.len()]
+            }
+            // only this actually depends on the binding. TODO LATER: in future, we could optimize
+            // this by pre-computing strategies that don't depend on the binding. In particular, if
+            // any strategy is Lookup, we should use that one to propose and the others to filter.
+            &Strategy::Preimage(Known::Var(known_idx)) => {
+                let TaggedReverseIndex::IdId(index) = &self.index_reverse[morphism] else {
+                    panic!("reverse index tag error")
+                };
+                bindings.iter().map(|b| index[&b[known_idx]].len()).collect()
+            }
+        }
     }
 
     fn wco_propose(&self, wcop: &Wcop, binding: Binding, bindings: &mut Vec<Binding>) {
@@ -919,7 +957,7 @@ fn example_snap() {
     // Remove duplicate edges by sorting & dedup()ing.
     edges.sort_unstable();
     edges.dedup();
-    println!("Removed duplicate edges, yielding {} edges.", edges.len());
+    println!("Removed duplicate and self edges, yielding {} edges.", edges.len());
     let small_graph = edges.len() <= PRINTMAX;
     if DEBUG && small_graph {
         println!("edges:");
