@@ -95,12 +95,17 @@ impl ThSchema {
         analyses::sql::SQLBackend::try_from(backend)
             .and_then(|backend| {
                 analyses::sql::SQLAnalysis::new(backend)
-                    .render(
+                    .execute(
                         model.discrete()?,
                         |id| model.ob_namespace.label_string(id),
                         |id| model.mor_namespace.label_string(id),
                     )
-                    .map_err(|e| format!("{}", e))
+                    .map_err(|errs| {
+                        errs.into_iter()
+                            .map(|e| format!("- {e}"))
+                            .collect::<Vec<String>>()
+                            .join("\n\n")
+                    })
             })
             .into()
     }
