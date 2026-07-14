@@ -249,6 +249,7 @@ export function stochasticMassAction(
         initialContent: () => ({
             rates: {},
             initialValues: {},
+            seed: null,
             duration: 10,
         }),
     };

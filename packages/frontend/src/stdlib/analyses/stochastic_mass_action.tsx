@@ -8,6 +8,8 @@ import {
     FixedTableEditor,
     Foldable,
     IconButton,
+    CheckboxField,
+    FormGroup,
 } from "catcolab-ui-components";
 import type {
     DblModel,
@@ -122,7 +124,16 @@ export default function StochasticMassAction(
 
     return (
         <div class="simulation">
-            <BlockTitle title={props.title} actions={RerunButton()} />
+            <BlockTitle
+                title={props.title}
+                settingsPane={
+                    <StochasticMassActionConfigForm
+                        config={props.content}
+                        changeConfig={props.changeContent}
+                        useSetSeed={props.content.seed === null}
+                    />
+                }
+                actions={RerunButton()} />
             <Foldable title="Parameters" defaultExpanded>
                 <div class="parameters">
                     <FixedTableEditor rows={obGenerators()} schema={obSchema} />
@@ -132,5 +143,33 @@ export default function StochasticMassAction(
             </Foldable>
             <ODEResultPlot result={plotResult()} />
         </div>
+    );
+}
+
+
+/** Form to configure a mass-action analysis. */
+export function StochasticMassActionConfigForm(props: {
+    config: StochasticMassActionProblemData;
+    changeConfig: (f: (config: StochasticMassActionProblemData) => void) => void;
+    useSetSeed: boolean;
+}) {
+    return (
+        <FormGroup compact style={{ "min-width": "286px" }}>
+            <CheckboxField
+                label="Set random seed"
+                checked={props.config.seed !== null}
+                onChange={(evt) => {
+                    props.changeConfig((content) => {
+                        if (evt.currentTarget.checked) {
+                            // TODO: this should work for e.g. 18446744073709551615
+                            content.seed = 12;
+                        } else {
+                            content.seed = null;
+                        }
+                    });
+                }}
+            />
+            {/*TODO: form to set custom seed*/}
+        </FormGroup>
     );
 }
