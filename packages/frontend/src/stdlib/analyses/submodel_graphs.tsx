@@ -25,7 +25,9 @@ export default function SubmodelGraphs(
                 return [];
             }
             return props.findSubmodels(validated.model, {
-                maxPathLength: props.content.maxPathLength ?? null,
+                maxPathLength: props.content.enableMaxPathLength
+                    ? props.content.maxPathLength
+                    : null,
             });
         },
         [],
@@ -80,11 +82,11 @@ export default function SubmodelGraphs(
                             checked={props.content.maxPathLength != null}
                             onChange={(evt) =>
                                 props.changeContent((content) => {
-                                    content.maxPathLength = evt.currentTarget.checked ? 1 : null;
+                                    content.enableMaxPathLength = evt.currentTarget.checked;
                                 })
                             }
                         />
-                        <Show when={props.content.maxPathLength != null}>
+                        <Show when={props.content.enableMaxPathLength}>
                             <InputField
                                 type="number"
                                 min="0"
@@ -92,7 +94,10 @@ export default function SubmodelGraphs(
                                 value={props.content.maxPathLength ?? ""}
                                 onChange={(evt) =>
                                     props.changeContent((content) => {
-                                        content.maxPathLength = evt.currentTarget.valueAsNumber;
+                                        content.maxPathLength =
+                                            evt.currentTarget.valueAsNumber > 0
+                                                ? evt.currentTarget.valueAsNumber
+                                                : null;
                                     })
                                 }
                             />

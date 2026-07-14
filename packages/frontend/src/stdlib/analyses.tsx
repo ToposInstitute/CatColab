@@ -288,6 +288,7 @@ export function motifFinding(
         component: (props) => <SubmodelGraphs title={name} findSubmodels={findMotifs} {...props} />,
         initialContent: () => ({
             activeIndex: 0,
+            enableMaxPathLength: true,
             maxPathLength: 5,
         }),
     };
