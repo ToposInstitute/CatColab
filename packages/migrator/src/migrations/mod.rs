@@ -12,6 +12,7 @@ mod m20251006141026_get_ref_stubs;
 mod m20260124120000_add_user_fk_cascade;
 mod m20260320000000_add_user_state_doc_id;
 mod m20260414000000_snapshot_history;
+mod m20260714000000_add_inference_keys;
 
 pub fn migrations() -> Vec<Box<dyn Migration<Postgres>>> {
     vec_box![
@@ -25,5 +26,6 @@ pub fn migrations() -> Vec<Box<dyn Migration<Postgres>>> {
         m20260124120000_add_user_fk_cascade::AddUserFkCascade,
         m20260320000000_add_user_state_doc_id::AddUserStateDocId,
         m20260414000000_snapshot_history::SnapshotHistory,
+        m20260714000000_add_inference_keys::AddInferenceKeys,
     ]
 }
