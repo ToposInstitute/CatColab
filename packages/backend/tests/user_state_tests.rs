@@ -1113,6 +1113,8 @@ mod integration_tests {
                 initialized_user_states: Arc::new(RwLock::new(HashMap::new())),
                 http_client: reqwest::Client::new(),
                 julia_url: None,
+                openrouter_provisioning_key: None,
+                openrouter_base_url: backend::inference::OPENROUTER_API_URL.to_string(),
             };
 
             let expected_state =

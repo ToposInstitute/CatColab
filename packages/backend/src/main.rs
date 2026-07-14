@@ -20,7 +20,7 @@ use tower_http::cors::CorsLayer;
 use tracing::{error, info};
 use tracing_subscriber::filter::{EnvFilter, LevelFilter};
 
-use backend::{app, auth, rpc, storage, user_state};
+use backend::{app, auth, inference, rpc, storage, user_state};
 
 /// Port for the web server providing the RPC API.
 fn web_port() -> String {
@@ -43,6 +43,11 @@ enum Command {
     Serve,
     /// Generate TypeScript bindings for the RPC API.
     GenerateBindings,
+    /// Invalidate inference keys for the given users.
+    InvalidateInferenceKeys {
+        /// User identifiers (usernames or Firebase UIDs).
+        identifiers: Vec<String>,
+    },
 }
 
 #[tokio::main]
@@ -102,6 +107,34 @@ async fn main() {
 
         Command::GenerateBindings => unreachable!(),
 
+        Command::InvalidateInferenceKeys { identifiers } => {
+            let http_client = reqwest::Client::builder()
+                .timeout(std::time::Duration::from_secs(120))
+                .build()
+                .expect("Failed to build HTTP client");
+
+            let provisioning_key =
+                dotenvy::var("OPENROUTER_PROVISIONING_KEY").ok().unwrap_or_else(|| {
+                    error!("OPENROUTER_PROVISIONING_KEY not set; cannot invalidate keys");
+                    std::process::exit(1);
+                });
+
+            for identifier in &identifiers {
+                match inference::invalidate_inference_key(
+                    &db,
+                    &http_client,
+                    inference::OPENROUTER_API_URL,
+                    &provisioning_key,
+                    identifier,
+                )
+                .await
+                {
+                    Ok(()) => info!("Invalidated inference key for: {identifier}"),
+                    Err(e) => error!("Failed to invalidate inference key for {identifier}: {e}"),
+                }
+            }
+        }
+
         Command::Serve => {
             info!("Applying database migrations...");
             let mut conn = db.acquire().await.expect("Failed to acquire DB connection");
@@ -140,6 +173,8 @@ async fn main() {
                 initialized_user_states: Arc::new(RwLock::new(HashMap::new())),
                 http_client,
                 julia_url,
+                openrouter_provisioning_key: dotenvy::var("OPENROUTER_PROVISIONING_KEY").ok(),
+                openrouter_base_url: inference::OPENROUTER_API_URL.to_string(),
             };
 
             // We need to wrap FirebaseAuth in an Arc because if it's ever dropped the process which updates it's

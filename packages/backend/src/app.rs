@@ -51,6 +51,15 @@ pub struct AppState {
 
     /// Base URL for the Julia compute service, if configured.
     pub julia_url: Option<String>,
+
+    /// OpenRouter provisioning key for minting per-user inference keys.
+    /// `None` when `OPENROUTER_PROVISIONING_KEY` is not set, in which case
+    /// inference-related operations return `AppError::InferenceUnavailable`.
+    pub openrouter_provisioning_key: Option<String>,
+
+    /// Base URL for the OpenRouter key-management API. In production this is
+    /// the public endpoint; tests override it to point at a mock server.
+    pub openrouter_base_url: String,
 }
 
 /// Context available to RPC procedures.
@@ -102,4 +111,12 @@ pub enum AppError {
     /// document ref.
     #[error("Not authorized to access ref: {0}")]
     Forbidden(Uuid),
+
+    /// Error from the OpenRouter key-management API.
+    #[error("OpenRouter error: {0}")]
+    OpenRouter(String),
+
+    /// The inference service is not configured.
+    #[error("Inference service is unavailable")]
+    InferenceUnavailable,
 }
