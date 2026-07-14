@@ -2,6 +2,7 @@ import { lazy } from "solid-js";
 
 import type {
     MassActionEquationsData,
+    ModelicaExportData,
     MorType,
     ObType,
     PolynomialODEEquationsData,
@@ -423,3 +424,31 @@ export function polynomialODESimulation(
 }
 
 const PolynomialODESimulation = lazy(() => import("./analyses/polynomial_ode_simulation"));
+
+export function modelicaExport(
+    options: Partial<AnalysisOptions> & {
+        generate: import("./analyses/modelica_export").ModelicaExporter;
+    },
+): ModelAnalysisMeta<ModelicaExportData> {
+    const {
+        id = "modelica-export",
+        name = "Modelica code",
+        description = "Export the ODE system as a Modelica model",
+        help = "modelica-export",
+        generate,
+    } = options;
+    return {
+        id,
+        name,
+        description,
+        help,
+        component: (props) => <ModelicaExport generate={generate} title={name} {...props} />,
+        initialContent: () => ({
+            modelName: "Model",
+            startTime: 0,
+            stopTime: 10,
+        }),
+    };
+}
+
+const ModelicaExport = lazy(() => import("./analyses/modelica_export"));

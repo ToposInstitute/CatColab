@@ -79,6 +79,18 @@ export default function createCausalLoopTheory(theoryMeta: TheoryMeta): Theory {
             analyses.lotkaVolterra({
                 simulate: (model, data) => thSignedCategory.lotkaVolterra(model, data),
             }),
+            analyses.modelicaExport({
+                id: "modelica-export-linear",
+                name: "Modelica code (linear ODE)",
+                description: "Export the linear ODE system as a Modelica model",
+                generate: (model, data) => thSignedCategory.linearODEModelica(model, data),
+            }),
+            analyses.modelicaExport({
+                id: "modelica-export-lotka-volterra",
+                name: "Modelica code (Lotka-Volterra)",
+                description: "Export the Lotka-Volterra ODE system as a Modelica model",
+                generate: (model, data) => thSignedCategory.lotkaVolterraModelica(model, data),
+            }),
         ],
     });
 }

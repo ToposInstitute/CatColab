@@ -74,6 +74,15 @@ export default function createPrimitiveStockFlowTheory(theoryMeta: TheoryMeta): 
                     return thCategoryLinks.massActionEquations(model, data);
                 },
             }),
+            analyses.modelicaExport({
+                generate(model, data) {
+                    return thCategoryLinks.massActionModelica(
+                        model,
+                        { massConservationType: { type: "Balanced" } },
+                        data,
+                    );
+                },
+            }),
         ],
     });
 }

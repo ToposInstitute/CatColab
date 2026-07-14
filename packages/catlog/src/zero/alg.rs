@@ -67,6 +67,11 @@ where
         self.0.variables()
     }
 
+    /// Iterates over the `(coefficient, monomial)` terms of the polynomial.
+    pub fn terms(&self) -> impl Iterator<Item = (&Coef, &Monomial<Var, Exp>)> {
+        (&self.0).into_iter()
+    }
+
     /// Maps the coefficients of the polynomial.
     ///
     /// In the usual situations when the coefficients from commutative rigs and the

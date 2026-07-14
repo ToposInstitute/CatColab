@@ -83,6 +83,15 @@ export default function createPetriNetTheory(theoryMeta: TheoryMeta): Theory {
                     return thSymMonoidalCategory.massActionEquations(model, data);
                 },
             }),
+            analyses.modelicaExport({
+                generate(model, data) {
+                    return thSymMonoidalCategory.massActionModelica(
+                        model,
+                        { massConservationType: { type: "Balanced" } },
+                        data,
+                    );
+                },
+            }),
             analyses.stochasticMassAction({
                 id: "stochastic-mass-action",
                 name: "Stochastic mass-action dynamics",

@@ -50,6 +50,7 @@ expect-test = "1.5"
 textplots = "0.8.7"
 similar = "2.7.0"
 serde_json = "1.0.145"
+rumoca = { version = "0.7", default-features = false }
 
 [[example]]
 name = "tt"
