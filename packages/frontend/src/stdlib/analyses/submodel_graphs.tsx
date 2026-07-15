@@ -11,6 +11,10 @@ import { modelToGraph } from "./model_graph";
 
 import "./submodel_graphs.css";
 
+function isNumber(length: number | null): length is number {
+    return (length as number) !== undefined;
+}
+
 /** Find submodels of a model and visualize them as graphs. */
 export default function SubmodelGraphs(
     props: {
@@ -18,6 +22,19 @@ export default function SubmodelGraphs(
         title?: string;
     } & ModelAnalysisProps<MotifFindingAnalysisContent>,
 ) {
+    // For compatibility with notebooks created before the `enableMaxPathLength` field was introduced.
+    function enableMaxPathLength(): boolean {
+        if (props.content.enableMaxPathLength === undefined) {
+            if (isNumber(props.content.maxPathLength)) {
+                return true;
+            } else {
+                return false;
+            }
+        } else {
+            return props.content.enableMaxPathLength;
+        }
+    }
+
     const submodels = createMemo<MotifOccurrence[]>(
         () => {
             const validated = props.liveModel.validatedModel();
@@ -25,9 +42,7 @@ export default function SubmodelGraphs(
                 return [];
             }
             return props.findSubmodels(validated.model, {
-                maxPathLength: props.content.enableMaxPathLength
-                    ? props.content.maxPathLength
-                    : null,
+                maxPathLength: enableMaxPathLength() ? props.content.maxPathLength : null,
             });
         },
         [],
@@ -79,14 +94,14 @@ export default function SubmodelGraphs(
                         <InputField
                             type="checkbox"
                             label="Limit length of paths"
-                            checked={props.content.maxPathLength != null}
+                            checked={enableMaxPathLength()}
                             onChange={(evt) =>
                                 props.changeContent((content) => {
                                     content.enableMaxPathLength = evt.currentTarget.checked;
                                 })
                             }
                         />
-                        <Show when={props.content.enableMaxPathLength}>
+                        <Show when={enableMaxPathLength()}>
                             <InputField
                                 type="number"
                                 min="0"
@@ -95,7 +110,8 @@ export default function SubmodelGraphs(
                                 onChange={(evt) =>
                                     props.changeContent((content) => {
                                         content.maxPathLength =
-                                            evt.currentTarget.valueAsNumber > 0
+                                            evt.currentTarget.valueAsNumber > 0 &&
+                                            Number.isInteger(evt.currentTarget.valueAsNumber)
                                                 ? evt.currentTarget.valueAsNumber
                                                 : null;
                                     })
