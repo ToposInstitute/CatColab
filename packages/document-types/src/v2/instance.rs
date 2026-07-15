@@ -3,33 +3,32 @@ use std::collections::HashMap;
 use tsify::Tsify;
 use uuid::Uuid;
 
-#[derive(PartialEq, Debug, Serialize, Deserialize, Tsify)]
+#[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Tsify)]
 pub enum CellValue {
     // If the column corresponds to an attribute morphism then we provide the value of the type.
     Null,
     Bool(bool),
     Int(i32),
-    Float(f32),
     String(String),
-    // If the column corresponds to a mapping morphism then we provide the uuid of the entity.
-    EntityRef(Uuid),
+    // If the column corresponds to a mapping morphism then we provide the uuid of the entity (i.e. row).
+    RowRef(Uuid),
 }
 
-#[derive(PartialEq, Debug, Serialize, Deserialize, Tsify)]
+#[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Tsify)]
 pub struct TableRow {
     // The row "number".
-    id: Uuid,
+    pub id: Uuid,
     // The content of the row, thought of as the predicate-object parts of a semantic triple, i.e. the
     // column and the value.
-    content: HashMap<Uuid, CellValue>,
+    pub content: HashMap<Uuid, CellValue>,
 }
 
-#[derive(PartialEq, Debug, Serialize, Deserialize, Tsify)]
+#[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Tsify)]
 pub struct Table {
     // The uuid of the table.
-    id: Uuid,
+    pub id: Uuid,
     // The uuid of the entity to which this table corresponds.
-    entity: Uuid,
+    pub entity: Uuid,
     // The rows of the table.
-    rows: Vec<TableRow>,
+    pub rows: Vec<TableRow>,
 }

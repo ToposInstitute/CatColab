@@ -1,3 +1,4 @@
+use crate::current::instance::Table;
 use crate::v0::AnalysisType;
 use crate::v1;
 pub use crate::v1::DocumentType;
@@ -42,7 +43,7 @@ pub struct InstanceDocumentContent {
     pub name: String,
     #[serde(rename = "instanceIn")]
     pub instance_in: Link,
-    pub notebook: Notebook<super::instance_judgment::InstanceJudgment>,
+    pub tables: Vec<Table>,
     pub version: String,
 }
 
