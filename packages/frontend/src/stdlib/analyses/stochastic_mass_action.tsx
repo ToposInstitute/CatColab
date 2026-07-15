@@ -38,6 +38,14 @@ export default function StochasticMassAction(
 ) {
     const elaboratedModel = () => props.liveModel.elaboratedModel();
 
+    // For backwards compatibility with notebooks created before the `seed` field was introduced.
+    const seed = () => {
+        if (props.content.seed === undefined) {
+            props.content.seed = null;
+        }
+        return props.content.seed;
+    };
+
     const obGenerators = createMemo<QualifiedName[]>(() => {
         const model = elaboratedModel();
         if (!model) {
@@ -131,10 +139,11 @@ export default function StochasticMassAction(
                     <StochasticMassActionConfigForm
                         config={props.content}
                         changeConfig={props.changeContent}
-                        useSetSeed={props.content.seed === null}
+                        useSetSeed={seed() === null}
                     />
                 }
-                actions={RerunButton()} />
+                actions={RerunButton()}
+            />
             <Foldable title="Parameters" defaultExpanded>
                 <div class="parameters">
                     <FixedTableEditor rows={obGenerators()} schema={obSchema} />
@@ -146,7 +155,6 @@ export default function StochasticMassAction(
         </div>
     );
 }
-
 
 /** Form to configure a mass-action analysis. */
 export function StochasticMassActionConfigForm(props: {
@@ -162,8 +170,7 @@ export function StochasticMassActionConfigForm(props: {
                 onChange={(evt) => {
                     props.changeConfig((content) => {
                         if (evt.currentTarget.checked) {
-                            // TODO: replace this with something using Math.random()
-                            content.seed = 12;
+                            content.seed = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
                         } else {
                             content.seed = null;
                         }
@@ -174,11 +181,13 @@ export function StochasticMassActionConfigForm(props: {
                 label="Random seed"
                 value={props.config.seed ?? ""}
                 onChange={(evt) => {
-                    const value = evt.currentTarget.valueAsNumber;
+                    const value = Number(evt.currentTarget.value);
                     if (Number.isInteger(value) && value >= 0) {
                         props.changeConfig((content) => {
+                            // TODO: fix reactivity, so that this reruns the simulation on key-up
+                            //       (at the moment it requires hitting the enter key)
                             content.seed = value;
-                        })
+                        });
                     }
                 }}
             />
