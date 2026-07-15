@@ -363,7 +363,7 @@ mod tests {
 mod property_tests {
     use super::*;
     use crate::common_test::{doc_from_json, doc_to_json};
-    use crate::v1::notebook::ModelNotebook;
+    use crate::current::notebook::ModelNotebook;
     use automerge::ReadDoc;
     use test_strategy::proptest;
 

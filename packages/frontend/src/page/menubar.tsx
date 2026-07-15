@@ -1,3 +1,4 @@
+import { next as Automerge } from "@automerge/automerge";
 import Popover from "@corvu/popover";
 import { useNavigate } from "@solidjs/router";
 import { getAuth, signOut } from "firebase/auth";
@@ -20,9 +21,11 @@ import { useAuth, useFirebaseApp } from "solid-firebase";
 import { type JSX, Show, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
+import { serializeAutomergeDocument } from "catcolab-document-types";
 import { IconButton } from "catcolab-ui-components";
 import type { Document } from "catlog-wasm";
 import { useApi } from "../api";
+import type { LiveDoc } from "../api/document";
 import { createModel } from "../model/document";
 import { TheoryLibraryContext } from "../theory";
 import { downloadJson } from "../util/json_export";
@@ -166,19 +169,22 @@ export function NewModelItem() {
 }
 
 /** Menu item to duplicate a document. */
-export function DuplicateMenuItem(props: { doc: Document }) {
+export function DuplicateMenuItem(props: { liveDoc: LiveDoc }) {
     const api = useApi();
     const navigate = useNavigate();
 
     const onDuplicate = async () => {
-        const newRef = await api.duplicateDoc(props.doc);
-        navigate(`/${props.doc.type}/${newRef}`);
+        const doc = serializeAutomergeDocument(
+            Automerge.save(props.liveDoc.docHandle.doc()),
+        ) as Document;
+        const newRef = await api.duplicateDoc(doc);
+        navigate(`/${doc.type}/${newRef}`);
     };
 
     return (
         <MenuItem onSelect={onDuplicate}>
             <Copy />
-            <MenuItemLabel>{`Duplicate ${props.doc.type}`}</MenuItemLabel>
+            <MenuItemLabel>{`Duplicate ${props.liveDoc.doc.type}`}</MenuItemLabel>
         </MenuItem>
     );
 }
@@ -197,25 +203,35 @@ export function ImportMenuItem() {
 }
 
 /** Menu item to export document as JSON. */
-export function ExportJSONMenuItem(props: { doc: Document }) {
-    const onExportJSON = () => downloadJson(JSON.stringify(props.doc), `${props.doc.name}.json`);
+export function ExportJSONMenuItem(props: { liveDoc: LiveDoc }) {
+    const onExportJSON = () => {
+        const doc = serializeAutomergeDocument(
+            Automerge.save(props.liveDoc.docHandle.doc()),
+        ) as Document;
+        downloadJson(JSON.stringify(doc), `${doc.name}.json`);
+    };
 
     return (
         <MenuItem onSelect={onExportJSON}>
             <Export />
-            <MenuItemLabel>{`Export ${props.doc.type}`}</MenuItemLabel>
+            <MenuItemLabel>{`Export ${props.liveDoc.doc.type}`}</MenuItemLabel>
         </MenuItem>
     );
 }
 
 /** Menu item to copy document to clipboard in JSON format. */
-export function CopyJSONMenuItem(props: { doc: Document }) {
-    const onCopyJSON = () => navigator.clipboard.writeText(JSON.stringify(props.doc));
+export function CopyJSONMenuItem(props: { liveDoc: LiveDoc }) {
+    const onCopyJSON = () =>
+        navigator.clipboard.writeText(
+            JSON.stringify(
+                serializeAutomergeDocument(Automerge.save(props.liveDoc.docHandle.doc())),
+            ),
+        );
 
     return (
         <MenuItem onSelect={onCopyJSON}>
             <CopyToClipboard />
-            <MenuItemLabel>{`Copy ${props.doc.type} to clipboard`}</MenuItemLabel>
+            <MenuItemLabel>{`Copy ${props.liveDoc.doc.type} to clipboard`}</MenuItemLabel>
         </MenuItem>
     );
 }
