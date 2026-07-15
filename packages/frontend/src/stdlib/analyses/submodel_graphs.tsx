@@ -107,15 +107,14 @@ export default function SubmodelGraphs(
                                 min="0"
                                 label="Maximum length of path"
                                 value={props.content.maxPathLength ?? ""}
-                                onChange={(evt) =>
-                                    props.changeContent((content) => {
-                                        content.maxPathLength =
-                                            evt.currentTarget.valueAsNumber > 0 &&
-                                            Number.isInteger(evt.currentTarget.valueAsNumber)
-                                                ? evt.currentTarget.valueAsNumber
-                                                : null;
-                                    })
-                                }
+                                onChange={(evt) => {
+                                    const value = evt.currentTarget.valueAsNumber;
+                                    if (value > 0 && Number.isInteger(value)) {
+                                        props.changeContent((content) => {
+                                            content.maxPathLength = value;
+                                        });
+                                    }
+                                }}
                             />
                         </Show>
                     </FormGroup>

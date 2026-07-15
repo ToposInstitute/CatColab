@@ -15,10 +15,10 @@ export type MotifFindingAnalysisContent = {
     activeIndex: number;
 
     /** Whether or not to search up to a maximum length of paths. */
-    enableMaxPathLength: boolean;
+    enableMaxPathLength?: boolean;
 
     /** Maximum length of paths used in morphism search. */
-    maxPathLength: number | null;
+    maxPathLength?: number | null;
 };
 
 export type ReachabilityChecker = (model: DblModel, data: ReachabilityProblemData) => boolean;
