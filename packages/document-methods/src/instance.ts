@@ -1,6 +1,5 @@
-import type { InstanceJudgment, Document, StableRef } from "catcolab-document-types";
+import type { Document, StableRef } from "catcolab-document-types";
 import { currentVersion } from "catcolab-document-types";
-import { newNotebook } from "./notebook";
 
 /** A document defining a instance in a model. */
 export type InstanceDocument = Document & { type: "instance" };
@@ -13,6 +12,6 @@ export const newInstanceDocument = (modelRef: StableRef): InstanceDocument => ({
         ...modelRef,
         type: "instance-in",
     },
-    notebook: newNotebook<InstanceJudgment>(),
+    tables: [],
     version: currentVersion(),
 });

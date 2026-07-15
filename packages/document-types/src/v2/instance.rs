@@ -3,18 +3,19 @@ use std::collections::HashMap;
 use tsify::Tsify;
 use uuid::Uuid;
 
-#[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Tsify)]
+#[derive(PartialEq, Debug, Serialize, Deserialize, Tsify)]
 pub enum CellValue {
     // If the column corresponds to an attribute morphism then we provide the value of the type.
     Null,
     Bool(bool),
     Int(i32),
+    Float(f32),
     String(String),
     // If the column corresponds to a mapping morphism then we provide the uuid of the entity (i.e. row).
     RowRef(Uuid),
 }
 
-#[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Tsify)]
+#[derive(PartialEq, Debug, Serialize, Deserialize, Tsify)]
 pub struct TableRow {
     // The row "number".
     pub id: Uuid,
@@ -23,7 +24,7 @@ pub struct TableRow {
     pub content: HashMap<Uuid, CellValue>,
 }
 
-#[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Tsify)]
+#[derive(PartialEq, Debug, Serialize, Deserialize, Tsify)]
 pub struct Table {
     // The uuid of the table.
     pub id: Uuid,

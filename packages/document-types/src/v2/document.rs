@@ -37,7 +37,7 @@ pub struct DiagramDocumentContent {
     pub version: String,
 }
 
-#[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Tsify)]
+#[derive(PartialEq, Debug, Serialize, Deserialize, Tsify)]
 #[tsify(into_wasm_abi, from_wasm_abi)]
 pub struct InstanceDocumentContent {
     pub name: String,
@@ -59,7 +59,7 @@ pub struct AnalysisDocumentContent {
     pub version: String,
 }
 
-#[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Tsify)]
+#[derive(PartialEq, Debug, Serialize, Deserialize, Tsify)]
 #[serde(tag = "type")]
 #[tsify(into_wasm_abi, from_wasm_abi)]
 pub enum Document {
