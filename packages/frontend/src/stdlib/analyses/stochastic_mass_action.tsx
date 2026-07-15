@@ -10,6 +10,7 @@ import {
     IconButton,
     CheckboxField,
     FormGroup,
+    InputField,
 } from "catcolab-ui-components";
 import type {
     DblModel,
@@ -156,12 +157,12 @@ export function StochasticMassActionConfigForm(props: {
     return (
         <FormGroup compact style={{ "min-width": "286px" }}>
             <CheckboxField
-                label="Set random seed"
+                label="Fixed random seed"
                 checked={props.config.seed !== null}
                 onChange={(evt) => {
                     props.changeConfig((content) => {
                         if (evt.currentTarget.checked) {
-                            // TODO: this should work for e.g. 18446744073709551615
+                            // TODO: replace this with something using Math.random()
                             content.seed = 12;
                         } else {
                             content.seed = null;
@@ -169,7 +170,18 @@ export function StochasticMassActionConfigForm(props: {
                     });
                 }}
             />
-            {/*TODO: form to set custom seed*/}
+            <InputField
+                label="Random seed"
+                value={props.config.seed ?? ""}
+                onChange={(evt) => {
+                    const value = evt.currentTarget.valueAsNumber;
+                    if (Number.isInteger(value) && value >= 0) {
+                        props.changeConfig((content) => {
+                            content.seed = value;
+                        })
+                    }
+                }}
+            />
         </FormGroup>
     );
 }
