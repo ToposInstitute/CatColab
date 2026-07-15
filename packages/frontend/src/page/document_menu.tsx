@@ -57,29 +57,11 @@ export function DocumentMenu(props: {
         handleDocCreated("diagram", newRef);
     };
 
-    const onNewInstance = async () => {
-        let modelRefId: string | undefined;
-        switch (props.liveDoc.doc.type) {
-            case "instance":
-                modelRefId = props.liveDoc.doc.instanceIn._id;
-                invariant(modelRefId, "To create instance, parent model should have a ref ID");
-                break;
-            case "model":
-                modelRefId = props.docRef.refId;
-                break;
-            default:
-                throw `Can't create instance for ${props.liveDoc.doc.type}`;
-        }
-
-        const newRef = await createDiagram(api, api.makeUnversionedRef(modelRefId));
-        handleDocCreated("diagram", newRef);
-    };
-
     const onNewAnalysis = async () => {
         const docRefId = props.docRef.refId;
         const docType = props.liveDoc.doc.type;
         invariant(docType !== "analysis", "Analysis cannot be created on other analysis");
-        invariant(docType !== "instance", "Analysis cannot yet be created on instance");
+        invariant(docType !== "instance", "Analysis cannot yet be created on an instance");
 
         const newRef = await createAnalysis(api, docType, api.makeUnversionedRef(docRefId));
         handleDocCreated("analysis", newRef);
@@ -124,10 +106,6 @@ export function DocumentMenu(props: {
                             <MenuItem onSelect={() => onNewDiagram()}>
                                 <DocumentTypeIcon documentType="diagram" />
                                 <MenuItemLabel>{"New diagram in this model"}</MenuItemLabel>
-                            </MenuItem>
-                            <MenuItem onSelect={() => onNewInstance()}>
-                                <DocumentTypeIcon documentType="instance" />
-                                <MenuItemLabel>{"New instance in this model"}</MenuItemLabel>
                             </MenuItem>
                         </Match>
                         <Match when={docType() === "diagram"}>
