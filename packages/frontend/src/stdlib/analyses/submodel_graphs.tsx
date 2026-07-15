@@ -11,8 +11,8 @@ import { modelToGraph } from "./model_graph";
 
 import "./submodel_graphs.css";
 
-function isNumber(length: number | null): length is number {
-    return (length as number) !== undefined;
+function isNumber(num: number | null | undefined): num is number {
+    return (num as number) !== undefined;
 }
 
 /** Find submodels of a model and visualize them as graphs. */
@@ -23,17 +23,18 @@ export default function SubmodelGraphs(
     } & ModelAnalysisProps<MotifFindingAnalysisContent>,
 ) {
     // For compatibility with notebooks created before the `enableMaxPathLength` field was introduced.
-    function enableMaxPathLength(): boolean {
+    const enableMaxPathLength = () => {
+        // If `enableMaxPathLength` has not been set, then set it to be true iff `maxPathLength`
+        // already has a (numerical) value.
         if (props.content.enableMaxPathLength === undefined) {
             if (isNumber(props.content.maxPathLength)) {
-                return true;
+                props.content.enableMaxPathLength = true;
             } else {
-                return false;
+                props.content.enableMaxPathLength = false;
             }
-        } else {
-            return props.content.enableMaxPathLength;
         }
-    }
+        return props.content.enableMaxPathLength;
+    };
 
     const submodels = createMemo<MotifOccurrence[]>(
         () => {
@@ -42,7 +43,10 @@ export default function SubmodelGraphs(
                 return [];
             }
             return props.findSubmodels(validated.model, {
-                maxPathLength: enableMaxPathLength() ? props.content.maxPathLength : null,
+                maxPathLength:
+                    enableMaxPathLength() && isNumber(props.content.maxPathLength)
+                        ? props.content.maxPathLength
+                        : null,
             });
         },
         [],
