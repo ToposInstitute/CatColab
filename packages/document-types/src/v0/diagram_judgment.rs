@@ -83,12 +83,12 @@ pub enum DiagramJudgment {
     #[serde(rename = "equation")]
     Equation(DiagramEqnDecl),
 
-    /// Declares an instantiated diagram
+    /// Declares an instantiated diagram.
     #[serde(rename = "instantiation")]
     Instantiation(InstantiatedDiagram),
 }
 
-/// Instantiates an existing diagram into the current diagram
+/// Instantiates an existing diagram into the current diagram.
 #[derive(Debug, PartialEq, Eq, Serialize, Deserialize, Tsify)]
 #[tsify(into_wasm_abi, from_wasm_abi, missing_as_null)]
 pub struct InstantiatedDiagram {

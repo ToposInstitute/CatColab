@@ -486,7 +486,7 @@ impl<'a> Elaborator<'a> {
         &mut self,
         model: &RecordV,
         ob_decl: &nb::DiagramObDecl,
-    ) -> (NameSegment, LabelSegment, TyS, TyV) {
+    ) -> (NameSegment, LabelSegment, BaseTyS, BaseTyV) {
         let name = NameSegment::Uuid(ob_decl.id);
         let label = LabelSegment::Text(ustr(&ob_decl.name));
 
@@ -500,14 +500,14 @@ impl<'a> Elaborator<'a> {
         };
 
         let path = vec![(over_name, *over_label)];
-        (name, label, TyS::over(path.clone()), TyV::over(path))
+        (name, label, BaseTyS::over(path.clone()), BaseTyV::over(path))
     }
 
     fn diag_morphism_cell_ty(
         &mut self,
         model: &RecordV,
         mor_decl: &nb::DiagramMorDecl,
-    ) -> (TyS, TyV, Vec<(TmS, TmS)>, Vec<(TmV, TmV)>) {
+    ) -> (BaseTyS, BaseTyV, Vec<(BaseTmS, BaseTmS)>, Vec<(BaseTmV, BaseTmV)>) {
         let over_uuid = match &mor_decl.over {
             Some(nb::Mor::Basic(id)) => id,
             _ => panic!("expected basic over reference"),
@@ -517,12 +517,12 @@ impl<'a> Elaborator<'a> {
         else {
             panic!("over morphism not found in codomain");
         };
-        let TyS_::Morphism(mt, cod_dom_s, _cod_cod_s) = &**mor_ty_s else {
+        let BaseTyS_::Morphism(mt, cod_dom_s, _cod_cod_s) = &**mor_ty_s else {
             panic!("over reference is not a morphism");
         };
 
         let ob_op = match &**cod_dom_s {
-            TmS_::ObApp(op, _) => Some(*op),
+            BaseTmS_::ObApp(op, _) => Some(*op),
             _ => None,
         };
 
@@ -563,11 +563,11 @@ impl<'a> Elaborator<'a> {
 
         let (dom_s, dom_v) = if let Some(op) = ob_op {
             (
-                TmS::ob_app(op, TmS::list(dom_stxs.clone())),
-                TmV::app(op, TmV::list(dom_vals.clone())),
+                BaseTmS::ob_app(op, BaseTmS::list(dom_stxs.clone())),
+                BaseTmV::app(op, BaseTmV::list(dom_vals.clone())),
             )
         } else {
-            (TmS::list(dom_stxs.clone()), TmV::list(dom_vals.clone()))
+            (BaseTmS::list(dom_stxs.clone()), BaseTmV::list(dom_vals.clone()))
         };
 
         let mut cod_stxs = Vec::new();
@@ -604,7 +604,7 @@ impl<'a> Elaborator<'a> {
         }
 
         let tgt_path = match &*cod_tys[0] {
-            TyV_::Over(path) => path.clone(),
+            BaseTyV_::Over(path) => path.clone(),
             _ => panic!("codomain element is not @over-typed"),
         };
 
@@ -612,29 +612,29 @@ impl<'a> Elaborator<'a> {
         let mut eqns_v = Vec::new();
         for (d_s, c_s) in dom_stxs.iter().zip(cod_stxs.iter()) {
             eqns_s.push((
-                TmS::over_app(over_name, *over_label, tgt_path.clone(), d_s.clone()),
+                BaseTmS::over_app(over_name, *over_label, tgt_path.clone(), d_s.clone()),
                 c_s.clone(),
             ));
         }
         for (d_v, c_v) in dom_vals.iter().zip(cod_vals.iter()) {
             eqns_v.push((
-                TmV::over_app(over_name, *over_label, tgt_path.clone(), d_v.clone()),
+                BaseTmV::over_app(over_name, *over_label, tgt_path.clone(), d_v.clone()),
                 c_v.clone(),
             ));
         }
 
         let (cod_s, cod_v) = if let Some(op) = ob_op {
             (
-                TmS::ob_app(op, TmS::list(cod_stxs.clone())),
-                TmV::app(op, TmV::list(cod_vals.clone())),
+                BaseTmS::ob_app(op, BaseTmS::list(cod_stxs.clone())),
+                BaseTmV::app(op, BaseTmV::list(cod_vals.clone())),
             )
         } else {
-            (TmS::list(cod_stxs.clone()), TmV::list(cod_vals.clone()))
+            (BaseTmS::list(cod_stxs.clone()), BaseTmV::list(cod_vals.clone()))
         };
 
         (
-            TyS::morphism(mt.clone(), dom_s, cod_s),
-            TyV::morphism(mt.clone(), dom_v, cod_v),
+            BaseTyS::morphism(mt.clone(), dom_s, cod_s),
+            BaseTyV::morphism(mt.clone(), dom_v, cod_v),
             eqns_s,
             eqns_v,
         )
@@ -644,7 +644,14 @@ impl<'a> Elaborator<'a> {
         &mut self,
         model: &RecordV,
         mor_decl: &nb::DiagramMorDecl,
-    ) -> (NameSegment, LabelSegment, TyS, TyV, Vec<(TmS, TmS)>, Vec<(TmV, TmV)>) {
+    ) -> (
+        NameSegment,
+        LabelSegment,
+        BaseTyS,
+        BaseTyV,
+        Vec<(BaseTmS, BaseTmS)>,
+        Vec<(BaseTmV, BaseTmV)>,
+    ) {
         let name = NameSegment::Uuid(mor_decl.id);
         // let label = LabelSegment::Text(ustr(&mor_decl.name));
 
@@ -661,7 +668,10 @@ impl<'a> Elaborator<'a> {
         (name, over_label.clone(), ty_s, ty_v, eqns_s, eqns_v)
     }
 
-    fn diag_instantiation_cell_ty(&mut self, i_decl: &nb::InstantiatedDiagram) -> (TyS, TyV) {
+    fn diag_instantiation_cell_ty(
+        &mut self,
+        i_decl: &nb::InstantiatedDiagram,
+    ) -> (BaseTyS, BaseTyV) {
         let name = QualifiedName::single(NameSegment::Uuid(i_decl.id));
         let link = match &i_decl.diagram {
             Some(l) => l,
@@ -676,7 +686,7 @@ impl<'a> Elaborator<'a> {
             return self.ty_error(InvalidDblModel::InvalidLink(name));
         };
         let mut specializations = Vec::new();
-        let TyV_::Record(r) = &*diag_def.body_ty else {
+        let BaseTyV_::Record(r) = &*diag_def.body_ty else {
             return self.ty_error(InvalidDblModel::InvalidLink(name));
         };
         let mut r = r.clone();
@@ -694,14 +704,14 @@ impl<'a> Elaborator<'a> {
                     continue;
                 };
                 match (&**field_ty, &*ob_ty) {
-                    (TyS_::Over(_), TyV_::Over(path)) => {
+                    (BaseTyS_::Over(_), BaseTyV_::Over(path)) => {
                         specializations.push((
                             vec![(field_name, *field_label)],
-                            TyS::sing(TyS::over(path.clone()), ob_s),
+                            BaseTyS::sing(BaseTyS::over(path.clone()), ob_s),
                         ));
                         r = r.add_specialization(
                             &[(field_name, *field_label)],
-                            TyV::sing(TyV::over(path.clone()), ob_v),
+                            BaseTyV::sing(BaseTyV::over(path.clone()), ob_v),
                         );
                     }
                     _ => continue,
@@ -709,17 +719,17 @@ impl<'a> Elaborator<'a> {
             }
         }
         let ty_s = if specializations.is_empty() {
-            TyS::topvar(topname)
+            BaseTyS::topvar(topname)
         } else {
-            TyS::specialize(TyS::topvar(topname), specializations)
+            BaseTyS::specialize(BaseTyS::topvar(topname), specializations)
         };
-        (ty_s, TyV::record(r))
+        (ty_s, BaseTyV::record(r))
     }
 
     fn diag_instantiation_cell(
         &mut self,
         i_decl: &nb::InstantiatedDiagram,
-    ) -> (NameSegment, LabelSegment, TyS, TyV) {
+    ) -> (NameSegment, LabelSegment, BaseTyS, BaseTyV) {
         let name = NameSegment::Uuid(i_decl.id);
         let label = LabelSegment::Text(ustr(&i_decl.name));
         let (ty_s, ty_v) = self.diag_instantiation_cell_ty(i_decl);
@@ -729,13 +739,14 @@ impl<'a> Elaborator<'a> {
     /// Elaborates diagram and its accompanying model into a quadruple
     ///
     /// (Instance Term Syntax, Instance Term Value, Record Type Syntax, Record Type Value)
-    ///
     pub fn diagram_notebook<'b>(
         &mut self,
-        model: TyV,
+        model: BaseTyV,
         cells: impl Iterator<Item = &'b nb::DiagramJudgment>,
-    ) -> (TmS, TmV, TyS, TyV) {
-        let TyV_::Record(r) = &*model else { panic!() };
+    ) -> (BaseTmS, BaseTmV, BaseTyS, BaseTyV) {
+        let BaseTyV_::Record(r) = &*model else {
+            panic!()
+        };
 
         // Process the cells in dependency order. This is important because the
         // UI allows users to reorder cells freely and that shouldn't affect the
@@ -754,10 +765,10 @@ impl<'a> Elaborator<'a> {
         let mut generators: IndexMap<FieldName, (LabelSegment, Vec<(FieldName, LabelSegment)>)> =
             IndexMap::new();
 
-        let mut eqns_s: Vec<(TmS, TmS)> = Vec::new();
-        let mut eqns_v: Vec<(TmV, TmV)> = Vec::new();
-        let mut subs_s: IndexMap<FieldName, (LabelSegment, TmS)> = IndexMap::new();
-        let mut subs_v: IndexMap<FieldName, (LabelSegment, TmV)> = IndexMap::new();
+        let mut eqns_s: Vec<(BaseTmS, BaseTmS)> = Vec::new();
+        let mut eqns_v: Vec<(BaseTmV, BaseTmV)> = Vec::new();
+        let mut subs_s: IndexMap<FieldName, (LabelSegment, BaseTmS)> = IndexMap::new();
+        let mut subs_v: IndexMap<FieldName, (LabelSegment, BaseTmV)> = IndexMap::new();
 
         let self_var = self.intro(name_seg("self"), label_seg("self"), None).unwrap_neu();
         let c = self.checkpoint();
@@ -766,7 +777,7 @@ impl<'a> Elaborator<'a> {
             let (name, label, _, ty_v) = match &cell {
                 nb::DiagramJudgment::Object(ob_decl) => {
                     let result = self.diag_object_cell(r, ob_decl);
-                    if let TyV_::Over(path) = &*result.3 {
+                    if let BaseTyV_::Over(path) = &*result.3 {
                         generators.insert(result.0, (result.1, path.clone()));
                     }
                     result
@@ -795,7 +806,7 @@ impl<'a> Elaborator<'a> {
             field_ty_vs.push((name, (label, ty_v.clone())));
             self.ctx.scope.push(VarInContext::new(name, label, Some(ty_v.clone())));
             self.ctx.env =
-                self.ctx.env.snoc(TmV::neu(TmN::proj(self_var.clone(), name, label), ty_v));
+                self.ctx.env.snoc(BaseTmV::neu(TmN::proj(self_var.clone(), name, label), ty_v));
         }
 
         self.reset_to(c);
@@ -817,10 +828,10 @@ impl<'a> Elaborator<'a> {
 
         let r_v = RecordV::new(self.ctx.env.clone(), field_tys.clone(), Dtry::empty());
         (
-            TmS::instance(body_s),
-            TmV::instance(body_v),
-            TyS::record(field_tys),
-            TyV::record(r_v),
+            BaseTmS::instance(body_s),
+            BaseTmV::instance(body_v),
+            BaseTyS::record(field_tys),
+            BaseTyV::record(r_v),
         )
     }
 }

@@ -12,10 +12,10 @@ use tsify::Tsify;
 use crate::stdlib::th_multicategory;
 use crate::tt::eval::Evaluator;
 use crate::tt::notebook_elab::Elaborator;
-use crate::tt::stx::{TmS, TmS_, TyS_};
+use crate::tt::stx::{BaseTmS, BaseTmS_, BaseTyS_};
 use crate::tt::theory::{Theory, TheoryDef};
 use crate::tt::toplevel::{Diag, TopDecl, Toplevel};
-use crate::tt::val::{TmV, TyV, TyV_};
+use crate::tt::val::{BaseTmV, BaseTyV, BaseTyV_};
 use crate::zero::{NameSegment, name};
 use catcolab_document_types::current as nb;
 
@@ -42,7 +42,7 @@ pub trait JuliaTranspiler {
 }
 
 pub struct Decapodes {
-    pub pode: TyV,
+    pub pode: BaseTyV,
 }
 
 impl Decapodes {
@@ -83,7 +83,7 @@ impl Decapodes {
 
 impl JuliaTranspiler for Decapodes {
     fn transpile(&self) -> Target {
-        let TyV_::Record(_) = &*self.pode else {
+        let BaseTyV_::Record(_) = &*self.pode else {
             panic!()
         };
         let toplevel = Toplevel::new(Default::default());
@@ -138,14 +138,14 @@ impl JuliaTranspiler for Decapodes {
 
 fn collect_fields(
     eval: &Evaluator,
-    ty: &TyV,
-    self_v: &TmV,
+    ty: &BaseTyV,
+    self_v: &BaseTmV,
     prefix: &str,
     obs: &mut IndexMap<String, String>,
     mors: &mut IndexSet<(String, String)>,
     subs: &mut HashMap<String, String>,
 ) {
-    let TyV_::Record(r) = &**ty else { return };
+    let BaseTyV_::Record(r) = &**ty else { return };
     for (name, (label, _)) in r.fields.iter() {
         let field_ty = eval.field_ty(ty, self_v, *name);
         let field_v = eval.proj(self_v, *name, *label);
@@ -157,7 +157,7 @@ fn collect_fields(
             format!("{}_{}", prefix, label)
         };
         match &*qt {
-            TyS_::Over(path) => {
+            BaseTyS_::Over(path) => {
                 let p: String = path.iter().map(|(_, l)| l.to_string()).collect();
                 if subs.get(&full_label).is_none() {
                     let ty = match p.to_owned() {
@@ -178,7 +178,7 @@ fn collect_fields(
                     obs.insert(full_label, ty);
                 }
             }
-            TyS_::Morphism(_, dom, cod) => {
+            BaseTyS_::Morphism(_, dom, cod) => {
                 let dom = to_plain_text(dom);
                 let cod = to_plain_text(cod);
                 let op = &format!("{label}");
@@ -204,16 +204,16 @@ fn collect_fields(
                     mors.insert((cod, format!("{op}({dom})")));
                 }
             }
-            TyS_::Sing(_, tm) => {
+            BaseTyS_::Sing(_, tm) => {
                 let target = to_plain_text(tm);
                 subs.insert(full_label, target);
             }
-            TyS_::Record(_) => {
+            BaseTyS_::Record(_) => {
                 // Recurse into sub-diagram
                 collect_fields(eval, &field_ty, &field_v, &full_label, obs, mors, subs);
             }
             // TODO whither the specializations?
-            TyS_::Specialize(_, _) => {
+            BaseTyS_::Specialize(_, _) => {
                 collect_fields(eval, &field_ty, &field_v, &full_label, obs, mors, subs);
             }
             _ => {}
@@ -232,13 +232,13 @@ static INV_STAR: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"inv_star_(.+)$"
 static EQ: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"eq_(.+)$").unwrap());
 static LIE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"lie_(.+)$").unwrap());
 
-fn to_plain_text(tm: &TmS) -> String {
+fn to_plain_text(tm: &BaseTmS) -> String {
     match &**tm {
-        TmS_::Var(_, name, _) => {
+        BaseTmS_::Var(_, name, _) => {
             let s = name.to_string();
             if s == "self" { String::new() } else { s }
         }
-        TmS_::Proj(inner, _, label) => {
+        BaseTmS_::Proj(inner, _, label) => {
             let prefix = to_plain_text(inner);
             let n = label.to_string();
             if prefix.is_empty() {
@@ -247,7 +247,7 @@ fn to_plain_text(tm: &TmS) -> String {
                 format!("{prefix}_{n}")
             }
         }
-        TmS_::ObApp(op, args) => {
+        BaseTmS_::ObApp(op, args) => {
             let op = &format!("{op}");
             let op = match op {
                 _ if ADD.is_match(op) => "+",
@@ -263,7 +263,9 @@ fn to_plain_text(tm: &TmS) -> String {
             };
             format!("{op}({})", to_plain_text(args))
         }
-        TmS_::List(args) => args.iter().map(|a| to_plain_text(a)).collect::<Vec<_>>().join(", "),
+        BaseTmS_::List(args) => {
+            args.iter().map(|a| to_plain_text(a)).collect::<Vec<_>>().join(", ")
+        }
         _ => format!("{}", tm),
     }
 }
