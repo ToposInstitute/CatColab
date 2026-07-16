@@ -229,8 +229,38 @@ impl TopElaborator {
                 )))
             }
             "norm" => {
-                let theory = self.get_theory(tn.loc)?;
                 let (ctx_ns, n) = self.expr_with_context(tn.body);
+                // `norm [inst] <fiber-term>`: normalize a single instance
+                // term in the scope of the existing instance `inst`, showing
+                // its flat (composite) normal form. A fiber term is neutral
+                // at the type-theory level; the composition happens when it is
+                // extracted to a model-instance term (see
+                // [`normalize_instance_term`]).
+                if let [single] = ctx_ns
+                    && let Var(inst_name) = single.ast0()
+                    && let Some(TopDecl::Instance(inst)) =
+                        toplevel.declarations.get(&name_seg(*inst_name))
+                {
+                    let mut elab = self.elaborator(&inst.theory, toplevel);
+                    elab.enter_instance(inst)?;
+                    let (_, tm_v, ty_v) = elab.fiber_syn(n);
+                    let FiberTyV_::Over(over) = &*ty_v else {
+                        return elab
+                            .error("norm expects an instance element (a term over an object)");
+                    };
+                    let over = over.clone();
+                    return match normalize_instance_term(
+                        toplevel,
+                        &inst.theory.definition,
+                        inst,
+                        &tm_v,
+                        &over,
+                    ) {
+                        Ok(nt) => Some(TopElabResult::Output(nt.render())),
+                        Err(msg) => self.error(tn.loc, msg),
+                    };
+                }
+                let theory = self.get_theory(tn.loc)?;
                 let mut elab = self.elaborator(&theory, toplevel);
                 for ctx_n in ctx_ns {
                     let (name, label, _, ty_v) = elab.binding(ctx_n)?;
@@ -743,6 +773,35 @@ impl<'a> Elaborator<'a> {
         let result = self.instance_body_inner(n);
         self.reset_to(c);
         result
+    }
+
+    /// Re-establish the scope of an already-elaborated instance so a fresh
+    /// term can be elaborated against it (see the `norm [inst] <term>`
+    /// command): bind the codomain model as `self` — so codomain-morphism
+    /// syntax like `t(..)` resolves — and introduce each generator and
+    /// sub-instance import into the fiber scope by its original name.
+    fn enter_instance(&mut self, inst: &Instance) -> Option<()> {
+        self.intro(
+            name_seg(Self::CODOMAIN_BINDER),
+            label_seg(Self::CODOMAIN_BINDER),
+            Some(inst.codomain.clone()),
+        );
+        let FiberTyV_::Record(fields) = &*inst.val else {
+            return self.error("instance value is not a fiber record");
+        };
+        for (name, (label, field_ty)) in fields.iter() {
+            match &**field_ty {
+                // Generators (`Over`) and sub-instance imports (`Record`)
+                // become fiber-scope bindings; projections into an import
+                // resolve against the record type. Equations (`Id`) are not
+                // in scope as terms.
+                FiberTyV_::Over(_) | FiberTyV_::Record(_) => {
+                    self.intro_fiber(*name, *label, field_ty.clone());
+                }
+                FiberTyV_::Id(_, _, _) => {}
+            }
+        }
+        Some(())
     }
 
     /// Elaborate the clauses of an instance body (the f-notation `n`) into a
