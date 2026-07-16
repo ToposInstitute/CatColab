@@ -670,6 +670,144 @@ pub fn instance_from_def(
     Ok((instance, namespace))
 }
 
+/// The flat normal form of a single instance term, as produced by
+/// [`normalize_instance_term`]: a composite model morphism applied to a base
+/// of generators. Doctrine-specific because each has its own term type.
+pub enum NormalizedInstanceTerm {
+    /// A term of an instance of a discrete double model.
+    Discrete(DiscreteInstanceTerm),
+    /// A term of an instance of a modal double model (unital or non-unital).
+    Modal(modal::ModalInstanceTerm),
+}
+
+impl NormalizedInstanceTerm {
+    /// Renders the term in its flat normal form `mor @ base`, exposing the
+    /// single (composite) model morphism acting on a base of generators. A
+    /// term whose morphism is the identity (a pure base) is rendered as just
+    /// its base. This is deliberately distinct from the applicative
+    /// reconstruction used in instance summaries: the point of `norm` is to
+    /// *show* the composite, e.g. `t(@tensor [s(x0), s(x0)])` normalizing to
+    /// `(@tensor [s, s] ; t) @ @tensor [x0, x0]`.
+    pub fn render(&self) -> String {
+        match self {
+            NormalizedInstanceTerm::Discrete(t) => match &t.path {
+                Path::Id(_) => format!("{}", t.base),
+                Path::Seq(edges) => {
+                    let parts: Vec<_> = edges.iter().map(|mor| format!("{mor}")).collect();
+                    if parts.len() == 1 {
+                        format!("{} @ {}", parts[0], t.base)
+                    } else {
+                        format!("({}) @ {}", parts.join(" ; "), t.base)
+                    }
+                }
+            },
+            NormalizedInstanceTerm::Modal(t) => {
+                let base = render_modal_base(&t.base);
+                match modal::modal_mor_as_identity(&t.mor) {
+                    Some(_) => base,
+                    None => format!("{} @ {}", render_modal_mor(&t.mor), base),
+                }
+            }
+        }
+    }
+}
+
+/// Renders the base of a flat modal term: generators by name, lists as
+/// `[a, b, …]`, and object operations as `@op <base>`.
+fn render_modal_base(base: &modal::ModalInstanceBase) -> String {
+    match base {
+        modal::ModalInstanceBase::Generator(name) => format!("{name}"),
+        modal::ModalInstanceBase::List(_, bases) => {
+            let inner: Vec<_> = bases.iter().map(render_modal_base).collect();
+            format!("[{}]", inner.join(", "))
+        }
+        modal::ModalInstanceBase::ObApp(op, inner) => {
+            format!("@{op} {}", render_modal_base(inner))
+        }
+    }
+}
+
+/// Renders a model morphism in a flat term. A composite of length ≥ 2 is
+/// shown parenthesized as `(m1 ; m2 ; …)`, applied left-to-right; the
+/// functorial `HomApp` of an object operation shows as `@op <path>`.
+fn render_modal_mor(mor: &modal::ModalMor) -> String {
+    match mor {
+        modal::ModalMor::Generator(name) => format!("{name}"),
+        modal::ModalMor::Composite(path) => {
+            let parts = render_modal_mor_path(path);
+            match parts.len() {
+                0 => "id".to_string(),
+                1 => parts.into_iter().next().unwrap(),
+                _ => format!("({})", parts.join(" ; ")),
+            }
+        }
+        modal::ModalMor::App(path, op) => {
+            format!("{op}({})", render_modal_mor_path(path).join(" ; "))
+        }
+        modal::ModalMor::HomApp(path, op) => {
+            format!("@{op} {}", render_modal_mor_path(path).join(" ; "))
+        }
+        modal::ModalMor::List(_, mors) => {
+            let inner: Vec<_> = mors.iter().map(render_modal_mor).collect();
+            format!("[{}]", inner.join(", "))
+        }
+    }
+}
+
+/// The morphisms along a path, each flat-rendered; empty for an identity path.
+fn render_modal_mor_path(path: &Path<modal::ModalOb, modal::ModalMor>) -> Vec<String> {
+    match path {
+        Path::Id(_) => Vec::new(),
+        Path::Seq(edges) => edges.iter().map(render_modal_mor).collect(),
+    }
+}
+
+/// Normalizes a single already-elaborated fiber term `tm` (lying over the
+/// codomain object `over`) in the context of the instance `inst`, returning
+/// its flat normal form.
+///
+/// This is what backs `norm [inst] <term>`: the term is elaborated against
+/// `inst`'s fiber scope elsewhere (in `text_elab`), then handed here to run
+/// the same extraction that turns an instance body's equations into
+/// [`modal::ModalInstanceTerm`]s — which is where nested morphism applications
+/// get composed into a single (`Composite`/`List`) morphism.
+pub fn normalize_instance_term(
+    toplevel: &Toplevel,
+    th: &TheoryDef,
+    inst: &Instance,
+    tm: &FiberTmV,
+    over: &BaseTmV,
+) -> Result<NormalizedInstanceTerm, String> {
+    let mut generator = ModelGenerator::new(toplevel, th);
+    generator.generate(&inst.codomain);
+    let FiberTyV_::Record(fields) = &*inst.val else {
+        return Err("expected an instance (a fiber record)".into());
+    };
+    // Build the instance first, so every generator the term may mention is
+    // registered before we extract (extraction resolves generators by name).
+    let mut namespace = Namespace::new_for_uuid();
+    match generator.instance(fields, &mut namespace)? {
+        ModelInstance::Discrete(instance) => {
+            let term = fiber_tm_to_discrete_instance_term(&instance, tm, &[])?;
+            Ok(NormalizedInstanceTerm::Discrete(term))
+        }
+        ModelInstance::ModalUnital(instance) => {
+            let (_, ob_type) = generator
+                .make_ob_synth_type(over)
+                .ok_or_else(|| "cannot determine the object the term lies over".to_string())?;
+            let term = generator.modal_instance_term(&instance, tm, &ob_type, &[])?;
+            Ok(NormalizedInstanceTerm::Modal(term))
+        }
+        ModelInstance::ModalNonUnital(instance) => {
+            let (_, ob_type) = generator
+                .make_ob_synth_type(over)
+                .ok_or_else(|| "cannot determine the object the term lies over".to_string())?;
+            let term = generator.modal_instance_term(&instance, tm, &ob_type, &[])?;
+            Ok(NormalizedInstanceTerm::Modal(term))
+        }
+    }
+}
+
 /// Register the contents of an instance (a fiber record) into the model
 /// instance under construction, recursing into sub-instance imports under
 /// their prefix.

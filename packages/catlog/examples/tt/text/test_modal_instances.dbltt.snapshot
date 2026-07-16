@@ -146,3 +146,12 @@ instance chain : Chain := [
 #/ instance equations:
 #/   t(@tensor [s(x0), s(x0)]) == x0
 
+norm [chain] x0
+#/ result: x0
+
+norm [chain] s(x0)
+#/ result: s @ x0
+
+norm [chain] t(@tensor [s(x0), s(x0)])
+#/ result: (@tensor [s, s] ; t) @ @tensor [x0, x0]
+

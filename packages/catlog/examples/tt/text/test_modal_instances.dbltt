@@ -75,3 +75,9 @@ instance chain : Chain := [
     X := [x0],
     t(@tensor [s(x0), s(x0)]) := x0
 ]
+
+norm [chain] x0
+
+norm [chain] s(x0)
+
+norm [chain] t(@tensor [s(x0), s(x0)])
