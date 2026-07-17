@@ -1,0 +1,457 @@
+{
+  "instanceOf": {
+    "_id": "dec_model",
+    "_server": "catcolab.org",
+    "_version": null,
+    "type": "instance-of"
+  },
+  "name": "Hydrodynamics",
+  "notebook": {
+    "cellContents": {
+      "106a6abd-e027-55d4-96ca-df15f575f482": {
+        "content": {
+          "id": "d91b49f2-5b1c-5419-b04f-62b74aabc526",
+          "lhs": {
+            "content": {
+              "arg": {
+                "content": {
+                  "modality": "SymmetricList",
+                  "terms": [
+                    {
+                      "content": "ea1e412c-4f98-5826-ae11-73d616b455ae",
+                      "tag": "Generator"
+                    }
+                  ]
+                },
+                "tag": "List"
+              },
+              "mor": {
+                "content": "3a4f308f-ba91-55af-b87d-629f48b206ec",
+                "tag": "Basic"
+              }
+            },
+            "tag": "App"
+          },
+          "name": "dt_w",
+          "rhs": {
+            "content": {
+              "arg": {
+                "content": {
+                  "modality": "SymmetricList",
+                  "terms": [
+                    {
+                      "content": "b1c8325a-de26-5e0d-bf0e-0d9e7b1d6fbf",
+                      "tag": "Generator"
+                    },
+                    {
+                      "content": "3ab01ae1-7f00-5109-b6bc-1d4e0d05a8a6",
+                      "tag": "Generator"
+                    }
+                  ]
+                },
+                "tag": "List"
+              },
+              "mor": {
+                "content": "e8308841-9bc2-5bd9-8558-1d3fbd9a1071",
+                "tag": "Basic"
+              }
+            },
+            "tag": "App"
+          },
+          "tag": "equation"
+        },
+        "id": "106a6abd-e027-55d4-96ca-df15f575f482",
+        "tag": "formal"
+      },
+      "1fe18bb5-699d-598f-bebf-f83df924759d": {
+        "content": {
+          "id": "e514acf8-4d3e-57e7-ad75-2d0244044889",
+          "name": "n",
+          "over": {
+            "content": "5b62880f-6702-5485-9605-78a964901750",
+            "tag": "Basic"
+          },
+          "tag": "generator"
+        },
+        "id": "1fe18bb5-699d-598f-bebf-f83df924759d",
+        "tag": "formal"
+      },
+      "20683357-ac91-5ef8-8015-5e3252f6ad65": {
+        "content": {
+          "id": "3e813cda-2117-5bdf-b792-3b2c8ed6cf2b",
+          "lhs": {
+            "content": "cd84f055-bf0d-5df7-bee6-d1ba424a25d1",
+            "tag": "Generator"
+          },
+          "name": "x0",
+          "rhs": {
+            "content": {
+              "arg": {
+                "content": {
+                  "modality": "SymmetricList",
+                  "terms": [
+                    {
+                      "content": "ea1e412c-4f98-5826-ae11-73d616b455ae",
+                      "tag": "Generator"
+                    },
+                    {
+                      "content": "e4484d37-8168-5710-92f2-7763561cf694",
+                      "tag": "Generator"
+                    }
+                  ]
+                },
+                "tag": "List"
+              },
+              "mor": {
+                "content": "1184aae2-c2e9-5a8a-8c1b-c9adc42c3dd4",
+                "tag": "Basic"
+              }
+            },
+            "tag": "App"
+          },
+          "tag": "equation"
+        },
+        "id": "20683357-ac91-5ef8-8015-5e3252f6ad65",
+        "tag": "formal"
+      },
+      "32ddb0e8-1f7c-5e8f-bc61-7bce6ba40ed3": {
+        "content": {
+          "id": "cd84f055-bf0d-5df7-bee6-d1ba424a25d1",
+          "name": "x0",
+          "over": {
+            "content": "5b62880f-6702-5485-9605-78a964901750",
+            "tag": "Basic"
+          },
+          "tag": "generator"
+        },
+        "id": "32ddb0e8-1f7c-5e8f-bc61-7bce6ba40ed3",
+        "tag": "formal"
+      },
+      "3ce4f25a-ca15-5293-b421-8d993395ad74": {
+        "content": {
+          "id": "3bfa0def-532d-528e-b101-6785c6ceeefd",
+          "name": "x4",
+          "over": {
+            "content": "5b62880f-6702-5485-9605-78a964901750",
+            "tag": "Basic"
+          },
+          "tag": "generator"
+        },
+        "id": "3ce4f25a-ca15-5293-b421-8d993395ad74",
+        "tag": "formal"
+      },
+      "4eec6679-5ef8-5280-a3ec-4ba69b9edbb9": {
+        "content": {
+          "id": "36fa1566-b334-5517-929a-71ca3fb3f4f7",
+          "name": "dX",
+          "over": {
+            "content": "b20812f2-5c13-5b5b-b22e-4d6116b70cfb",
+            "tag": "Basic"
+          },
+          "tag": "generator"
+        },
+        "id": "4eec6679-5ef8-5280-a3ec-4ba69b9edbb9",
+        "tag": "formal"
+      },
+      "626865e9-c3ca-57a3-9d2b-ebdb272f1e3b": {
+        "content": {
+          "id": "b5d25f13-4513-50d5-be7f-3d14b35a6536",
+          "name": "x1",
+          "over": {
+            "content": "5b62880f-6702-5485-9605-78a964901750",
+            "tag": "Basic"
+          },
+          "tag": "generator"
+        },
+        "id": "626865e9-c3ca-57a3-9d2b-ebdb272f1e3b",
+        "tag": "formal"
+      },
+      "64317784-ab2c-5a2c-b8a7-3a9f0398563d": {
+        "content": {
+          "id": "3ab01ae1-7f00-5109-b6bc-1d4e0d05a8a6",
+          "name": "x5",
+          "over": {
+            "content": "5b62880f-6702-5485-9605-78a964901750",
+            "tag": "Basic"
+          },
+          "tag": "generator"
+        },
+        "id": "64317784-ab2c-5a2c-b8a7-3a9f0398563d",
+        "tag": "formal"
+      },
+      "75e02274-df1b-52f6-a5b4-6ce1f440cf16": {
+        "content": {
+          "id": "a40b2b97-958b-5590-a1c4-ca4a4e2a1a48",
+          "lhs": {
+            "content": "3bfa0def-532d-528e-b101-6785c6ceeefd",
+            "tag": "Generator"
+          },
+          "name": "x4",
+          "rhs": {
+            "content": {
+              "arg": {
+                "content": {
+                  "modality": "SymmetricList",
+                  "terms": [
+                    {
+                      "content": "36fa1566-b334-5517-929a-71ca3fb3f4f7",
+                      "tag": "Generator"
+                    },
+                    {
+                      "content": "ea1e412c-4f98-5826-ae11-73d616b455ae",
+                      "tag": "Generator"
+                    }
+                  ]
+                },
+                "tag": "List"
+              },
+              "mor": {
+                "content": "15a851ab-9d76-568d-941b-f2141845e792",
+                "tag": "Basic"
+              }
+            },
+            "tag": "App"
+          },
+          "tag": "equation"
+        },
+        "id": "75e02274-df1b-52f6-a5b4-6ce1f440cf16",
+        "tag": "formal"
+      },
+      "76ed6707-49e0-51c3-a7fc-596e15290107": {
+        "content": {
+          "id": "ea1e412c-4f98-5826-ae11-73d616b455ae",
+          "name": "w",
+          "over": {
+            "content": "5b62880f-6702-5485-9605-78a964901750",
+            "tag": "Basic"
+          },
+          "tag": "generator"
+        },
+        "id": "76ed6707-49e0-51c3-a7fc-596e15290107",
+        "tag": "formal"
+      },
+      "778c841a-5e5a-525a-84d8-2a4ce600c05b": {
+        "content": {
+          "id": "e7ea8f5a-1cee-5ed3-acd7-6cc2eacf4938",
+          "lhs": {
+            "content": "b1c8325a-de26-5e0d-bf0e-0d9e7b1d6fbf",
+            "tag": "Generator"
+          },
+          "name": "x3",
+          "rhs": {
+            "content": {
+              "arg": {
+                "content": {
+                  "modality": "SymmetricList",
+                  "terms": [
+                    {
+                      "content": "cd84f055-bf0d-5df7-bee6-d1ba424a25d1",
+                      "tag": "Generator"
+                    },
+                    {
+                      "content": "d2f4cedc-9a9c-5dcb-9191-bbe22b19c047",
+                      "tag": "Generator"
+                    }
+                  ]
+                },
+                "tag": "List"
+              },
+              "mor": {
+                "content": "55b1c6ab-28b3-5554-a387-237cea9a8db8",
+                "tag": "Basic"
+              }
+            },
+            "tag": "App"
+          },
+          "tag": "equation"
+        },
+        "id": "778c841a-5e5a-525a-84d8-2a4ce600c05b",
+        "tag": "formal"
+      },
+      "794a91df-b9d8-5de6-9701-404bee687d42": {
+        "content": {
+          "id": "e4484d37-8168-5710-92f2-7763561cf694",
+          "name": "a",
+          "over": {
+            "content": "0b11fe33-a54c-5ce3-90b4-c6fb951beb92",
+            "tag": "Basic"
+          },
+          "tag": "generator"
+        },
+        "id": "794a91df-b9d8-5de6-9701-404bee687d42",
+        "tag": "formal"
+      },
+      "921c7498-6735-5657-927d-d1e073833250": {
+        "content": {
+          "id": "d2f4cedc-9a9c-5dcb-9191-bbe22b19c047",
+          "name": "x2",
+          "over": {
+            "content": "5b62880f-6702-5485-9605-78a964901750",
+            "tag": "Basic"
+          },
+          "tag": "generator"
+        },
+        "id": "921c7498-6735-5657-927d-d1e073833250",
+        "tag": "formal"
+      },
+      "9bc3cde3-c0ce-553c-aca5-78db66ddc1ab": {
+        "content": {
+          "id": "32b7e9b6-3be2-5efc-837b-9ddcc294758f",
+          "name": "k",
+          "over": {
+            "content": "0b11fe33-a54c-5ce3-90b4-c6fb951beb92",
+            "tag": "Basic"
+          },
+          "tag": "generator"
+        },
+        "id": "9bc3cde3-c0ce-553c-aca5-78db66ddc1ab",
+        "tag": "formal"
+      },
+      "aed296df-42b8-523c-93a1-8ead9b476bdb": {
+        "content": {
+          "id": "b1c8325a-de26-5e0d-bf0e-0d9e7b1d6fbf",
+          "name": "x3",
+          "over": {
+            "content": "5b62880f-6702-5485-9605-78a964901750",
+            "tag": "Basic"
+          },
+          "tag": "generator"
+        },
+        "id": "aed296df-42b8-523c-93a1-8ead9b476bdb",
+        "tag": "formal"
+      },
+      "c218d84b-1230-5240-8dc3-034107307805": {
+        "content": {
+          "id": "99131db7-a212-5332-ba6f-60c01b9b15e6",
+          "lhs": {
+            "content": "3ab01ae1-7f00-5109-b6bc-1d4e0d05a8a6",
+            "tag": "Generator"
+          },
+          "name": "x5",
+          "rhs": {
+            "content": {
+              "arg": {
+                "content": {
+                  "modality": "SymmetricList",
+                  "terms": [
+                    {
+                      "content": "32b7e9b6-3be2-5efc-837b-9ddcc294758f",
+                      "tag": "Generator"
+                    },
+                    {
+                      "content": "3bfa0def-532d-528e-b101-6785c6ceeefd",
+                      "tag": "Generator"
+                    }
+                  ]
+                },
+                "tag": "List"
+              },
+              "mor": {
+                "content": "3a1b19df-9345-585a-b673-93383680e0ff",
+                "tag": "Basic"
+              }
+            },
+            "tag": "App"
+          },
+          "tag": "equation"
+        },
+        "id": "c218d84b-1230-5240-8dc3-034107307805",
+        "tag": "formal"
+      },
+      "daa0f4cb-b2a9-5bb7-93ba-2c509cc66b5d": {
+        "content": {
+          "id": "249b9f4b-757e-5172-b314-9882256ca9f9",
+          "lhs": {
+            "content": "b5d25f13-4513-50d5-be7f-3d14b35a6536",
+            "tag": "Generator"
+          },
+          "name": "x1",
+          "rhs": {
+            "content": {
+              "arg": {
+                "content": {
+                  "modality": "SymmetricList",
+                  "terms": [
+                    {
+                      "content": "e514acf8-4d3e-57e7-ad75-2d0244044889",
+                      "tag": "Generator"
+                    }
+                  ]
+                },
+                "tag": "List"
+              },
+              "mor": {
+                "content": "3bbb63e3-45cd-50a7-835e-200dbaf249d8",
+                "tag": "Basic"
+              }
+            },
+            "tag": "App"
+          },
+          "tag": "equation"
+        },
+        "id": "daa0f4cb-b2a9-5bb7-93ba-2c509cc66b5d",
+        "tag": "formal"
+      },
+      "f4c7a514-5705-5e31-9ec0-fd4c529e9184": {
+        "content": {
+          "id": "08301ffc-4f50-51de-a30a-bc5392735faa",
+          "lhs": {
+            "content": "d2f4cedc-9a9c-5dcb-9191-bbe22b19c047",
+            "tag": "Generator"
+          },
+          "name": "x2",
+          "rhs": {
+            "content": {
+              "arg": {
+                "content": {
+                  "modality": "SymmetricList",
+                  "terms": [
+                    {
+                      "content": "ea1e412c-4f98-5826-ae11-73d616b455ae",
+                      "tag": "Generator"
+                    },
+                    {
+                      "content": "b5d25f13-4513-50d5-be7f-3d14b35a6536",
+                      "tag": "Generator"
+                    }
+                  ]
+                },
+                "tag": "List"
+              },
+              "mor": {
+                "content": "8347d8cf-c755-523a-b260-db827bc05af7",
+                "tag": "Basic"
+              }
+            },
+            "tag": "App"
+          },
+          "tag": "equation"
+        },
+        "id": "f4c7a514-5705-5e31-9ec0-fd4c529e9184",
+        "tag": "formal"
+      }
+    },
+    "cellOrder": [
+      "794a91df-b9d8-5de6-9701-404bee687d42",
+      "9bc3cde3-c0ce-553c-aca5-78db66ddc1ab",
+      "4eec6679-5ef8-5280-a3ec-4ba69b9edbb9",
+      "76ed6707-49e0-51c3-a7fc-596e15290107",
+      "1fe18bb5-699d-598f-bebf-f83df924759d",
+      "32ddb0e8-1f7c-5e8f-bc61-7bce6ba40ed3",
+      "626865e9-c3ca-57a3-9d2b-ebdb272f1e3b",
+      "921c7498-6735-5657-927d-d1e073833250",
+      "aed296df-42b8-523c-93a1-8ead9b476bdb",
+      "3ce4f25a-ca15-5293-b421-8d993395ad74",
+      "64317784-ab2c-5a2c-b8a7-3a9f0398563d",
+      "20683357-ac91-5ef8-8015-5e3252f6ad65",
+      "daa0f4cb-b2a9-5bb7-93ba-2c509cc66b5d",
+      "f4c7a514-5705-5e31-9ec0-fd4c529e9184",
+      "778c841a-5e5a-525a-84d8-2a4ce600c05b",
+      "75e02274-df1b-52f6-a5b4-6ce1f440cf16",
+      "c218d84b-1230-5240-8dc3-034107307805",
+      "106a6abd-e027-55d4-96ca-df15f575f482"
+    ]
+  },
+  "type": "instance",
+  "version": "2"
+}
