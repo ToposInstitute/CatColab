@@ -592,6 +592,22 @@ mod test {
         );
     }
 
+    /// The Klausmeier instance-notebook fixtures deserialize against the
+    /// document schema. Elaboration of instance notebooks is not implemented
+    /// yet; this test pins schema/fixture agreement in the meantime.
+    #[test]
+    fn klausmeier_fixtures_deserialize() {
+        use catcolab_document_types::current::InstanceDocumentContent;
+        let src = fs::read_to_string("examples/tt/notebook/klausmeier/dec_model.json").unwrap();
+        let _: ModelDocumentContent = serde_json::from_str(&src).unwrap();
+        for name in ["hydrodynamics", "phytodynamics", "klausmeier"] {
+            let src =
+                fs::read_to_string(format!("examples/tt/notebook/klausmeier/{name}.json")).unwrap();
+            let doc: InstanceDocumentContent = serde_json::from_str(&src).unwrap();
+            assert!(doc.notebook.formal_content().count() > 0);
+        }
+    }
+
     /// Test a notebook with an equation.
     #[test]
     fn commutative_square() {
