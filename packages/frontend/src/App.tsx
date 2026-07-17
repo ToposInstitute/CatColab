@@ -18,6 +18,7 @@ import { ErrorBoundaryDialog } from "./page/error_boundary";
 import { PageContainer } from "./page/page_container";
 import { stdTheories } from "./stdlib";
 import { TheoryLibraryContext } from "./theory";
+import { InferenceKeyProvider } from "./user/inference_key_provider";
 import { UserStateProvider } from "./user/user_state_provider";
 
 const serverUrl = import.meta.env.VITE_SERVER_URL;
@@ -52,6 +53,7 @@ const Root = (props: RouteSectionProps) => {
                     [TheoryLibraryContext, theories],
                     [ModelLibraryContext, models],
                     UserStateProvider,
+                    InferenceKeyProvider,
                 ]}
             >
                 <MetaProvider>

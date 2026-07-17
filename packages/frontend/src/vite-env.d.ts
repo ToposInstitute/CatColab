@@ -6,6 +6,7 @@ interface ImportMetaEnv {
     readonly VITE_AUTOMERGE_REPO_URL: string;
     readonly VITE_FIREBASE_OPTIONS: string;
     readonly VITE_JULIA_URL?: string;
+    readonly VITE_RUN_INFERENCE_TESTS?: string;
 }
 
 interface ImportMeta {
