@@ -985,6 +985,45 @@ mod test {
         );
     }
 
+    /// Every notebook fixture under `examples/tt/notebook` deserializes
+    /// against the document schema for its declared `type`. Elaboration
+    /// coverage is per-file opt-in (each fixture needs a theory and, for
+    /// instances, a populated toplevel), but this sweep catches schema
+    /// drift and orphaned fixtures that no named test reads.
+    #[test]
+    fn notebook_fixtures_deserialize() {
+        fn walk(dir: &std::path::Path, checked: &mut usize) {
+            for entry in fs::read_dir(dir).unwrap().flatten() {
+                let path = entry.path();
+                if path.is_dir() {
+                    walk(&path, checked);
+                    continue;
+                }
+                if path.extension().is_none_or(|e| e != "json") {
+                    continue;
+                }
+                let src = fs::read_to_string(&path).unwrap();
+                let value: serde_json::Value = serde_json::from_str(&src).unwrap();
+                let display = path.display();
+                match value.get("type").and_then(|t| t.as_str()) {
+                    Some("model") => {
+                        serde_json::from_str::<ModelDocumentContent>(&src)
+                            .unwrap_or_else(|e| panic!("{display}: {e}"));
+                    }
+                    Some("instance") => {
+                        serde_json::from_str::<InstanceDocumentContent>(&src)
+                            .unwrap_or_else(|e| panic!("{display}: {e}"));
+                    }
+                    other => panic!("{display}: unexpected document type {other:?}"),
+                }
+                *checked += 1;
+            }
+        }
+        let mut checked = 0;
+        walk(std::path::Path::new("examples/tt/notebook"), &mut checked);
+        assert!(checked >= 8, "expected at least 8 fixtures, found {checked}");
+    }
+
     /// Elaborate a model document and install it in the toplevel under the
     /// given ref id, so instance documents can link to it.
     fn install_model(toplevel: &mut Toplevel, theory: &Theory, ref_id: &str, src: &str) {
