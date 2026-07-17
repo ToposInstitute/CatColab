@@ -1,0 +1,9 @@
+{
+    "extends": ["./tsconfig.json", "@tsconfig/strictest/tsconfig.json"],
+    "compilerOptions": {
+        "noEmit": true,
+        "types": ["node"],
+        "lib": ["ES2023", "DOM", "DOM.Iterable"]
+    },
+    "include": ["vite.config.ts", "test/**/*.ts"]
+}
