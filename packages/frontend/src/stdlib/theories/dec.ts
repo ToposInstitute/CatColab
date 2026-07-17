@@ -1,7 +1,7 @@
 import { lazy } from "solid-js";
 
 import { ThDEC } from "catlog-wasm";
-import { type DiagramAnalysisMeta, Theory, type TheoryMeta } from "../../theory";
+import { Theory, type TheoryMeta } from "../../theory";
 import * as analyses from "../analyses";
 
 const ObjectCellEditor = lazy(() => import("../../model/object_cell_editor"));

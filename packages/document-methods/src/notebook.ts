@@ -33,8 +33,8 @@ export function getCells<T>(notebook: Notebook<T>): Array<Cell<T>> {
     return notebook.cellOrder.map((cellId) => getCellById(notebook, cellId));
 }
 
-export function getFormalCells<T>(notebook: Notebook<T>): Array<Cell<T> & { tag: "formal" }> {
-    return getCells(notebook).filter((cell) => cell.tag === "formal");
+export function getFormalCells<T>(notebook: Notebook<T>): Array<FormalCell<T>> {
+    return getCells(notebook).filter((cell): cell is FormalCell<T> => cell.tag === "formal");
 }
 
 export function getFormalContent<T>(notebook: Notebook<T>): Array<T> {

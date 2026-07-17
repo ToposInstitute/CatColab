@@ -3,6 +3,7 @@ import { v7 } from "uuid";
 import type {
     Document,
     DiagramJudgment,
+    Link,
     Mor,
     MorType,
     Ob,
@@ -63,7 +64,6 @@ export const newInstantiatedDiagram = (
     diagram: diagram ?? null,
     specializations: [],
 });
-
 
 /** Duplicate a diagram judgment, creating a fresh UUID. */
 export const duplicateDiagramJudgment = (jgmt: DiagramJudgment): DiagramJudgment => ({

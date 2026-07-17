@@ -96,14 +96,13 @@ export const createNumericalColumn = <Row,>(args: {
     name: args.name,
     header: args.header,
     content(row) {
-        let value = args.data(row);
+        const value = args.data(row);
         if (value === undefined) {
-        const def = typeof args.default === "function"
-            ? args.default(row)
-            : (args.default ?? 0);
-        args.setData?.(row, def);
-        return def.toString();
-    }
+            const def =
+                typeof args.default === "function" ? args.default(row) : (args.default ?? 0);
+            args.setData?.(row, def);
+            return def.toString();
+        }
         return value.toString();
     },
     validate(row, text) {
@@ -127,7 +126,7 @@ export const createVectorColumn = <Row,>(args: {
     name?: string;
     header?: boolean;
     data: (row: Row) => number[] | undefined;
-    length?: (row: Row) => number;          // expected arity, if known
+    length?: (row: Row) => number; // expected arity, if known
     default?: (row: Row) => number[];
     setData?: (row: Row, data: number[]) => void;
 }): TextColumnSchema<Row> => ({
@@ -136,12 +135,16 @@ export const createVectorColumn = <Row,>(args: {
     header: args.header,
     content(row) {
         const v = args.data(row) ?? args.default?.(row);
-        if (v === undefined) return "";
+        if (v === undefined) {
+            return "";
+        }
         return v.join(", ");
     },
     validate(row, text) {
         const parts = text.split(",").map((s) => Number(s.trim()));
-        if (parts.some(Number.isNaN)) return false;
+        if (parts.some(Number.isNaN)) {
+            return false;
+        }
         const n = args.length?.(row);
         return n === undefined || parts.length === n;
     },
@@ -149,14 +152,17 @@ export const createVectorColumn = <Row,>(args: {
         args.setData &&
         ((row, text) => {
             const parts = text.split(",").map((s) => Number(s.trim()));
-            if (parts.some(Number.isNaN)) return false;
+            if (parts.some(Number.isNaN)) {
+                return false;
+            }
             const n = args.length?.(row);
-            if (n !== undefined && parts.length !== n) return false;
+            if (n !== undefined && parts.length !== n) {
+                return false;
+            }
             args.setData?.(row, parts);
             return true;
         }),
 });
-
 
 /** Edit tabular data given by a fixed list of rows.
 

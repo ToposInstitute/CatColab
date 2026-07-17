@@ -238,13 +238,17 @@ export class DiagramLibrary<RefId> {
     private async _getLiveDiagramWithInstantiations(
         key: DiagramKey,
         notebook: DiagramNotebook,
-        theory: DblTheory,
+        _theory: DblTheory,
     ): Promise<[LiveDiagramDoc, Map<string, Document>]> {
         const subDiagrams = new Map<string, Document>();
         for (const cell of Nb.getFormalContent(notebook)) {
-            if (!(cell.tag === "instantiation" && cell.diagram)) continue;
+            if (!(cell.tag === "instantiation" && cell.diagram)) {
+                continue;
+            }
             const refId = cell.diagram._id;
-            if (subDiagrams.has(refId)) continue;
+            if (subDiagrams.has(refId)) {
+                continue;
+            }
             await this.addDiagram(refId as RefId);
             const handleEntry = this.handles.get(this.params.canonicalize(refId as RefId));
             invariant(handleEntry);
@@ -306,9 +310,9 @@ export class DiagramLibrary<RefId> {
 
     // Inner method actually elaborates. Do not call directly!
     private async _elaborateAndValidate(
-        key: DiagramKey,
-        notebook: DiagramNotebook,
-        theory: DblTheory,
+        _key: DiagramKey,
+        _notebook: DiagramNotebook,
+        _theory: DblTheory,
     ): Promise<ValidatedDiagram> {
         return {
             tag: "Illformed",
@@ -340,7 +344,7 @@ export class DiagramLibrary<RefId> {
 }
 
 /** Elaborate and then validate a diagram notebook. */
-function elaborateAndValidateDiagram(
+function _elaborateAndValidateDiagram(
     notebook: DiagramNotebook,
     instantiated: DblDiagramMap,
     theory: DblTheory,

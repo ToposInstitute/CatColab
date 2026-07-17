@@ -3,20 +3,25 @@ import { batch, createEffect, Index, Show, splitProps, untrack, useContext } fro
 import invariant from "tiny-invariant";
 
 import { Nb } from "catcolab-document-methods";
+import type { DiagramJudgment } from "catcolab-document-types";
 import {
     type FocusHandle,
     NameInput,
     type TextInputOptions,
     useChildFocus,
 } from "catcolab-ui-components";
-import type { DblDiagram, InstantiatedDiagram, Ob, SpecializeDiagram } from "catlog-wasm";
+import type {
+    InstantiatedDiagram,
+    NameLookup,
+    QualifiedLabel,
+    SpecializeDiagram,
+} from "catlog-wasm";
 import { useApi } from "../api";
 import { DocumentPicker, IdInput, IdInputPlaceholder } from "../components";
 import type { CellActions } from "../notebook";
 import { DocRefIdContext } from "../page/context";
 import { useUserState } from "../user/user_state_context";
 import { LiveDiagramContext, DiagramLibraryContext } from "./context";
-import { ObInput } from "./object_input";
 
 import "./instantiation_cell_editor.css";
 
@@ -39,7 +44,7 @@ export function InstantiationCellEditor(props: {
         if (docRefId && refId === docRefId()) {
             return false;
         }
-        const theory = liveDiagram?.().liveDoc.doc.theory;
+        const theory = liveDiagram?.().liveModel.liveDoc.doc.theory;
         if (theory && doc.theory !== theory) {
             return false;
         }
@@ -161,7 +166,9 @@ export function InstantiationCellEditor(props: {
 
     const instantiatedJudgments = (): DiagramJudgment[] => {
         const live = instantiated();
-        if (!live) return [];
+        if (!live) {
+            return [];
+        }
         return Nb.getFormalContent(live.liveDoc.doc.notebook);
     };
 
@@ -169,37 +176,49 @@ export function InstantiationCellEditor(props: {
 
     const obGenerators = () => obJudgments().map((j) => j.id);
 
-    const obIdToLabel = (id: string): string[] | undefined => {
+    const obIdToLabel = (id: string): QualifiedLabel | undefined => {
         const j = obJudgments().find((j) => j.id === id);
         return j?.name ? [j.name] : undefined;
     };
 
-    const obLabelToId = (label: string[]) => {
+    const obLabelToId = (label: QualifiedLabel): NameLookup => {
         const name = label[0];
         const matches = obJudgments().filter((j) => j.name === name);
-        if (matches.length === 1) return { tag: "Unique" as const, content: matches[0].id };
-        if (matches.length > 1) return { tag: "Ambiguous" as const };
-        return { tag: "None" as const };
+        const first = matches[0];
+        if (!first) {
+            return { tag: "None" };
+        }
+        if (matches.length === 1) {
+            return { tag: "Unique", content: first.id };
+        }
+        return { tag: "Arbitrary", content: first.id };
     };
 
     const currentJudgments = (): DiagramJudgment[] => {
         const live = liveDiagram?.();
-        if (!live) return [];
+        if (!live) {
+            return [];
+        }
         return Nb.getFormalContent(live.liveDoc.doc.notebook);
     };
 
     const currentObJudgments = () => currentJudgments().filter((j) => j.tag === "object");
     const currentObGenerators = () => currentObJudgments().map((j) => j.id);
-    const currentObIdToLabel = (id: string): string[] | undefined => {
+    const currentObIdToLabel = (id: string): QualifiedLabel | undefined => {
         const j = currentObJudgments().find((j) => j.id === id);
         return j?.name ? [j.name] : undefined;
     };
-    const currentObLabelToId = (label: string[]) => {
+    const currentObLabelToId = (label: QualifiedLabel): NameLookup => {
         const name = label[0];
         const matches = currentObJudgments().filter((j) => j.name === name);
-        if (matches.length === 1) return { tag: "Unique" as const, content: matches[0].id };
-        if (matches.length > 1) return { tag: "Ambiguous" as const };
-        return { tag: "None" as const };
+        const first = matches[0];
+        if (!first) {
+            return { tag: "None" };
+        }
+        if (matches.length === 1) {
+            return { tag: "Unique", content: first.id };
+        }
+        return { tag: "Arbitrary", content: first.id };
     };
 
     return (
@@ -328,12 +347,12 @@ function SpecializationEditor(
         specialization: SpecializeDiagram;
         modifySpecialization: (f: (spec: SpecializeDiagram) => void) => void;
         completions?: string[];
-        idToLabel: (id: string) => string[] | undefined;
-        labelToId: (label: string[]) => NameLookup | undefined;
+        idToLabel: (id: string) => QualifiedLabel | undefined;
+        labelToId: (label: QualifiedLabel) => NameLookup | undefined;
         /** Called when the displayed text of the id input changes. */
         currentCompletions?: string[];
-        currentIdToLabel: (id: string) => string[] | undefined;
-        currentLabelToId: (label: string[]) => NameLookup | undefined;
+        currentIdToLabel: (id: string) => QualifiedLabel | undefined;
+        currentLabelToId: (label: QualifiedLabel) => NameLookup | undefined;
         onIdTextChange?: (text: string) => void;
         focus: FocusHandle;
     } & Pick<TextInputOptions, "createBelow" | "deleteBackward" | "exitDown" | "exitUp">,

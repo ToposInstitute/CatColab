@@ -1,11 +1,11 @@
 import { makeTimer } from "@solid-primitives/timer";
-import type { EChartsOption } from "echarts";
+import type { EChartsOption, EChartsType } from "echarts";
 import { encode } from "modern-gif";
 import workerUrl from "modern-gif/worker?url";
 import { createMemo, createSignal, lazy } from "solid-js";
 import invariant from "tiny-invariant";
 
-const ECharts = lazy(() => import("./echarts"));
+const ECharts = lazy(async () => ({ default: (await import("./echarts")).ECharts }));
 
 /** Data plotted by `PDEPlot2D` component. */
 export type PDEPlotData2D = {
@@ -115,7 +115,7 @@ export function PDEPlot2D(props: { data: PDEPlotData2D }) {
         };
     }
 
-    async function exportGif(chart: echarts.ECharts, data: PDEPlotData2D) {
+    async function exportGif(chart: EChartsType, data: PDEPlotData2D) {
         const frames = [];
         for (let i = 0; i < data.time.length; i++) {
             chart.setOption(options(i));
@@ -134,16 +134,18 @@ export function PDEPlot2D(props: { data: PDEPlotData2D }) {
         return new Blob([output], { type: "image/gif" });
     }
 
-    const [chart, setChart] = createSignal<echarts.ECharts>();
+    const [chart, setChart] = createSignal<EChartsType>();
     const [exporting, setExporting] = createSignal(false);
 
     const downloadGif = async () => {
         const c = chart();
-        if (!c || exporting()) return;
+        if (!c || exporting()) {
+            return;
+        }
         setExporting(true);
         try {
             const blob = await exportGif(c, props.data);
-            console.log("gif blob", blob.size, blob.type);
+            console.debug("gif blob", blob.size, blob.type);
             const url = URL.createObjectURL(blob);
             const a = Object.assign(document.createElement("a"), {
                 href: url,
@@ -159,7 +161,7 @@ export function PDEPlot2D(props: { data: PDEPlotData2D }) {
     return (
         <div>
             <span>t = {props.data.time[timeIndex()]?.toFixed(2)}</span>
-            <ECharts option={options(timeIndex())} width={500} height={500} onReady={setChart} />
+            <ECharts option={options(timeIndex())} width={500} height={500} onInit={setChart} />
             <button onClick={downloadGif}>{exporting() ? "Exporting..." : "Download GIF"}</button>
         </div>
     );

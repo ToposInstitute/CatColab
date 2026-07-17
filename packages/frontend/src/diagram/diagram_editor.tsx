@@ -3,11 +3,16 @@ import { Match, Switch, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
 import { Diagram, Nb } from "catcolab-document-methods";
-import type { DiagramJudgment, DiagramMorDecl, DiagramObDecl } from "catcolab-document-types";
+import type {
+    DiagramJudgment,
+    DiagramMorDecl,
+    DiagramObDecl,
+    InstantiatedDiagram,
+} from "catcolab-document-types";
 import { type FocusHandle } from "catcolab-ui-components";
 import { LiveModelContext } from "../model";
 import { type CellConstructor, type FormalCellEditorProps, NotebookEditor } from "../notebook";
-import type { InstanceTypeMeta } from "../theory";
+import type { InstanceTypeMeta, Theory } from "../theory";
 import { LiveDiagramContext } from "./context";
 import type { LiveDiagramDoc } from "./document";
 import { InstantiationCellEditor } from "./instantiation_cell_editor";

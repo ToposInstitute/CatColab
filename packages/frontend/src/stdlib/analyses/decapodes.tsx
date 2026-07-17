@@ -9,7 +9,6 @@ import {
     Show,
     Switch,
     createSignal,
-    createEffect,
 } from "solid-js";
 import { unwrap, createStore, reconcile } from "solid-js/store";
 import invariant from "tiny-invariant";
@@ -25,13 +24,13 @@ import {
     IconButton,
     Warning,
     ProgressBar,
+    type StreamMsg,
 } from "catcolab-ui-components";
-import type { ModelDiagramPresentation, ModelPresentation, QualifiedName } from "catlog-wasm";
+import type { ModelDiagramPresentation, ModelPresentation } from "catlog-wasm";
 import { ThDEC } from "catlog-wasm";
 import type { DiagramAnalysisProps } from "../../analysis";
-import { useApi } from "../../api";
 import { LiveDiagramDoc, DiagramLibraryContext } from "../../diagram";
-import { PDEPlot2D } from "../../visualization";
+import { PDEPlot2D, type PDEPlotData2D } from "../../visualization";
 import type { DecapodesAnalysisContent } from "./simulator_types";
 
 import "./decapodes.css";
@@ -47,13 +46,14 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
     const juliaUrl = "http://127.0.0.1:8080"; // TODO replace with vite
     const [options] = createResource<SimulationOptions>(async () => {
         const response = await fetch(`${juliaUrl}/decapodes-options`);
-        if (!response.ok) throw new Error(`HTTP error! status ${response.status}`);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status ${response.status}`);
+        }
         return (await response.json()) as SimulationOptions;
     });
 
     // Step 3: Run the simulation in the kernel!
     const [result, { refetch: rerunSimulation }] = createResource(() => undefined);
-    const api = useApi();
 
     const diagrams = useContext(DiagramLibraryContext);
     invariant(diagrams);
@@ -63,7 +63,7 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
 
     const instantiatedRefIds = createMemo(() => {
         const js = unwrap(props.liveDiagram.formalJudgments());
-        return js.filter((j) => "diagram" in j && j.diagram).map((j) => j.diagram._id);
+        return js.flatMap((j) => (j.tag === "instantiation" && j.diagram ? [j.diagram._id] : []));
     });
 
     // this is a shim to get nested diagrams
@@ -91,8 +91,10 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
             name: "Initial condition",
             variants: () => {
                 const mesh = props.content.mesh;
-                if (!mesh) return [];
-                return options()?.mesh_info[mesh].ics.map((ic) => ic.ic) ?? [];
+                if (!mesh) {
+                    return [];
+                }
+                return options()?.mesh_info[mesh]?.ics.map((ic) => ic.ic) ?? [];
             },
             content: (name) => props.content.initialConditions[name] ?? null,
             setContent: (name, value) =>
@@ -111,26 +113,28 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
     const selectedIC = (name: string): IC | undefined => {
         const mesh = props.content.mesh,
             chosen = props.content.initialConditions[name];
-        if (!mesh || !chosen) return undefined;
-        return options()?.mesh_info[mesh].ics.find((ic) => ic.ic === chosen);
+        if (!mesh || !chosen) {
+            return undefined;
+        }
+        return options()?.mesh_info[mesh]?.ics.find((ic) => ic.ic === chosen);
     };
 
     const icFieldSchema = (
         varName: string,
         defaults: Record<string, number[]>,
     ): ColumnSchema<string>[] => {
-        console.log("icFieldSchema", varName, defaults);
+        console.debug("icFieldSchema", varName, defaults);
         return [
             { contentType: "string", header: true, name: "Parameter", content: (f) => f },
             createVectorColumn({
                 name: "Value",
-                data: (f) => icValues[varName]?.[f],
+                data: (f) => icValues[varName]?.[f] ?? [],
                 default: (f) => {
                     const d = defaults[f];
-                    return Array.isArray(d) ? d : [d];
+                    return Array.isArray(d) ? d : d !== undefined ? [d] : [];
                 },
-                length: (f) => defaults[f]?.length,
-                setData: (f, v) => setICValues(varName, (prev) => ({ ...(prev ?? {}), [f]: v })),
+                length: (f) => defaults[f]?.length ?? 0,
+                setData: (f, v) => setICValues(varName, (prev) => ({ ...prev, [f]: v })),
             }),
         ];
     };
@@ -223,10 +227,14 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
         const model = props.liveDiagram.liveModel.liveDoc.doc;
         const diagram = props.liveDiagram.liveDoc.doc;
         const subDiagrams = subDiagramDocs();
-        if (!model || !diagram || !subDiagrams) return undefined;
+        if (!model || !diagram || !subDiagrams) {
+            return undefined;
+        }
         try {
             const result = ThDEC.simulatePode(model, diagram, subDiagrams);
-            if (!result) return undefined;
+            if (!result) {
+                return undefined;
+            }
             const { pode, constants } = result as { pode: string; constants: string[] };
             return { pode, constants };
         } catch (e) {
@@ -253,7 +261,7 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
 
     const [meshParams, setMeshParams] = createSignal<Record<string, number>>({});
 
-    const fieldSchema = (default_value: Record<string, unknown>): ColumnSchema<string>[] => [
+    const fieldSchema = (default_value: Record<string, number>): ColumnSchema<string>[] => [
         {
             contentType: "string",
             header: true,
@@ -263,13 +271,13 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
         createNumericalColumn({
             name: "Value",
             data: (field) => meshParams()[field],
-            default: (field) => default_value[field],
+            default: (field) => default_value[field] ?? 0,
             setData: (field, v) => setMeshParams((prev) => ({ ...prev, [field]: v })),
         }),
     ];
 
     const fieldNames = (mesh: string): string[] =>
-        Object.keys(options()?.mesh_info[mesh].specs ?? {});
+        Object.keys(options()?.mesh_info[mesh]?.specs ?? {});
 
     const [runPayload, setRunPayload] = createSignal<
         { pode: string; constants: Record<string, number>; duration: number } | undefined
@@ -282,17 +290,26 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
         try {
             while (true) {
                 const { done, value } = await reader.read();
-                if (done) break;
+                if (done) {
+                    break;
+                }
                 buf += decoder.decode(value, { stream: true });
                 const lines = buf.split("\n");
                 buf = lines.pop()!;
-                for (const line of lines) if (line.trim()) yield JSON.parse(line) as StreamMsg;
+                for (const line of lines) {
+                    if (line.trim()) {
+                        yield JSON.parse(line) as StreamMsg;
+                    }
+                }
             }
         } finally {
             reader.releaseLock();
         }
     }
 
+    // The fetcher deliberately reads current parameter values at the moment a
+    // run is triggered via runPayload.
+    // oxlint-disable-next-line solid/reactivity
     const [res] = createResource(runPayload, async ({ pode, constants, duration }) => {
         setProgress(0);
 
@@ -322,26 +339,37 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
                 },
             }),
         });
-        if (!response.ok) throw new Error(`HTTP error! status ${response.status}`);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status ${response.status}`);
+        }
 
-        let resultData = null;
+        let resultData: PDEPlotData2D | null = null;
         for await (const msg of ndjson(response.body!)) {
-            if ("status" in msg) setStatus(msg.status);
+            if ("status" in msg) {
+                setStatus(msg.status);
+            }
             if ("progress" in msg) {
                 setStatus(null);
                 setProgress(msg.progress);
             }
-            if ("data" in msg) resultData = msg.data;
+            // The simulation service's data payload is the plotted PDE data.
+            if ("data" in msg) {
+                resultData = msg.data as PDEPlotData2D;
+            }
         }
 
         setProgress(null);
-        if (!resultData) throw new Error("No simulation result received");
+        if (!resultData) {
+            throw new Error("No simulation result received");
+        }
         return { pode, data: resultData };
     });
 
     const runSimulation = () => {
         const pd = podeData();
-        if (!pd) return;
+        if (!pd) {
+            return;
+        }
         setRunPayload({
             pode: pd.pode,
             constants: constantValues(),
@@ -352,7 +380,7 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
     const isConfigured = (name: string) => selectedIC(name) !== undefined;
 
     const isDisabled = () => {
-        console.log("initialConditions", unwrap(props.content.initialConditions));
+        console.debug("initialConditions", unwrap(props.content.initialConditions));
         return !icRows.every(isConfigured);
     };
 
@@ -368,9 +396,11 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
 
     const effectiveTab = createMemo(() => {
         const tabs = icTabs();
-        if (tabs.length === 0) return null;
+        if (tabs.length === 0) {
+            return null;
+        }
         const current = activeTab();
-        return tabs.some((t) => t.name === current) ? current : tabs[0].name;
+        return tabs.some((t) => t.name === current) ? current : (tabs[0]?.name ?? null);
     });
 
     const activeTabData = createMemo(() => icTabs().find((t) => t.name === effectiveTab()));
@@ -404,7 +434,7 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
                                         <FixedTableEditor
                                             rows={fieldNames(mesh())}
                                             schema={fieldSchema(
-                                                options()?.mesh_info[mesh()].defaults,
+                                                options()?.mesh_info[mesh()]?.defaults ?? {},
                                             )}
                                         />
                                     );
