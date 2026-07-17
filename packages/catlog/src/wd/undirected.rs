@@ -3,9 +3,9 @@
 use derivative::Derivative;
 use std::{fmt, hash::Hash};
 
-use crate::tt::util::{Row, pretty::*};
 use crate::validate::{self, Validate};
 use crate::zero::{Column, HashColumn, LabelSegment, Mapping, MutMapping, NameSegment};
+use crate::zero::{pretty::*, row::Row};
 
 /// Ports of a wiring diagram.
 ///

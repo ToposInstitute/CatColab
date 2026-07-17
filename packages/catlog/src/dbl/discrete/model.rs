@@ -7,8 +7,8 @@ use derivative::Derivative;
 use super::theory::DiscreteDblTheory;
 use crate::dbl::{category::*, model::*, theory::DblTheory};
 use crate::one::{fp_category::QualifiedFpCategory, *};
-use crate::tt::util::pretty::*;
 use crate::validate::{self, Validate};
+use crate::zero::pretty::*;
 use crate::zero::*;
 
 /// A finitely presented model of a discrete double theory.

@@ -4,12 +4,15 @@ use derivative::Derivative;
 use derive_more::From;
 use std::ops::Index;
 
-use crate::{tt::prelude::*, zero::LabelSegment};
+use indexmap::IndexMap;
 
-/// An insertion-ordered map from `FieldName` to `T`.
+use super::qualified::{LabelSegment, NameSegment, label_seg, name_seg};
+use ustr::Ustr;
+
+/// An insertion-ordered map from `NameSegment` to `T`.
 ///
 /// Also stores a "label" for each entry, which may not be the same as the
-/// FieldName in the case that the FieldName is a UUID.
+/// NameSegment in the case that the NameSegment is a UUID.
 ///
 /// This is called "row" because it's a short name, and it corresponds to the idea
 /// of a row in a database, which is a map from fields to values.
@@ -17,11 +20,11 @@ use crate::{tt::prelude::*, zero::LabelSegment};
 /// Create this using the [FromIterator] implementation.
 #[derive(Clone, Derivative, PartialEq, Eq, From)]
 #[derivative(Default(bound = ""))]
-pub struct Row<T>(IndexMap<FieldName, (LabelSegment, T)>);
+pub struct Row<T>(IndexMap<NameSegment, (LabelSegment, T)>);
 
-impl<T> Index<FieldName> for Row<T> {
+impl<T> Index<NameSegment> for Row<T> {
     type Output = T;
-    fn index(&self, index: FieldName) -> &Self::Output {
+    fn index(&self, index: NameSegment) -> &Self::Output {
         self.get(index).unwrap()
     }
 }
@@ -30,22 +33,22 @@ impl<T> Row<T> {
     /// Lookup the field `name` if it exists.
     ///
     /// Also see the [Index] implementation, which just `unwrap`s this.
-    pub fn get(&self, name: FieldName) -> Option<&T> {
+    pub fn get(&self, name: NameSegment) -> Option<&T> {
         self.0.get(&name).map(|p| &p.1)
     }
 
     /// Lookup the field `name` by mutable reference.
-    pub fn get_mut(&mut self, name: FieldName) -> Option<&mut T> {
+    pub fn get_mut(&mut self, name: NameSegment) -> Option<&mut T> {
         self.0.get_mut(&name).map(|p| &mut p.1)
     }
 
     /// Lookup the field `name` if it exists, and get its value and label.
-    pub fn get_with_label(&self, name: FieldName) -> Option<&(LabelSegment, T)> {
+    pub fn get_with_label(&self, name: NameSegment) -> Option<&(LabelSegment, T)> {
         self.0.get(&name)
     }
 
     /// Iterate through the fields in insertion order.
-    pub fn iter(&self) -> impl Iterator<Item = (&FieldName, &(LabelSegment, T))> {
+    pub fn iter(&self) -> impl Iterator<Item = (&NameSegment, &(LabelSegment, T))> {
         self.0.iter()
     }
 
@@ -60,7 +63,7 @@ impl<T> Row<T> {
     }
 
     /// Return whether the row contains the given field.
-    pub fn has(&self, field_name: FieldName) -> bool {
+    pub fn has(&self, field_name: NameSegment) -> bool {
         self.0.contains_key(&field_name)
     }
 
@@ -75,13 +78,13 @@ impl<T> Row<T> {
     }
 
     ///  Insert a new field.
-    pub fn insert(&mut self, field: FieldName, label: LabelSegment, value: T) {
+    pub fn insert(&mut self, field: NameSegment, label: LabelSegment, value: T) {
         self.0.insert(field, (label, value));
     }
 }
 
-impl<T> FromIterator<(FieldName, (LabelSegment, T))> for Row<T> {
-    fn from_iter<I: IntoIterator<Item = (FieldName, (LabelSegment, T))>>(iter: I) -> Self {
+impl<T> FromIterator<(NameSegment, (LabelSegment, T))> for Row<T> {
+    fn from_iter<I: IntoIterator<Item = (NameSegment, (LabelSegment, T))>>(iter: I) -> Self {
         Row(iter.into_iter().collect())
     }
 }
