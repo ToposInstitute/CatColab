@@ -92,4 +92,13 @@ export default defineConfig({
             },
         ],
     },
+    overrides: [
+        {
+            files: ["packages/documents/test/**/*.{ts,tsx}", "packages/logics/test/**/*.ts"],
+            rules: {
+                // These RFC-derived suites specify packages that have not been implemented yet.
+                "vitest/no-disabled-tests": "off",
+            },
+        },
+    ],
 });
