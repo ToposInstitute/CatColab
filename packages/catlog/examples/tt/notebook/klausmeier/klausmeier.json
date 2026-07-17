@@ -1,0 +1,85 @@
+{
+  "instanceOf": {
+    "_id": "dec_model",
+    "_server": "catcolab.org",
+    "_version": null,
+    "type": "instance-of"
+  },
+  "name": "Klausmeier",
+  "notebook": {
+    "cellContents": {
+      "04346fd8-836f-5f2d-ac8d-ed4c2db7de9d": {
+        "content": {
+          "id": "2efa1069-f315-5d31-bbed-4ac4bbafb42a",
+          "lhs": {
+            "content": "0ef9dd0c-e099-5897-b2bf-213af44f8f4a.e514acf8-4d3e-57e7-ad75-2d0244044889",
+            "tag": "Generator"
+          },
+          "name": "glue_n",
+          "rhs": {
+            "content": "217c4878-87ad-560b-a992-c66db09212a2.471460c5-a2ee-5e44-8c57-8034ad370593",
+            "tag": "Generator"
+          },
+          "tag": "equation"
+        },
+        "id": "04346fd8-836f-5f2d-ac8d-ed4c2db7de9d",
+        "tag": "formal"
+      },
+      "6f756822-6698-5ef3-b054-7e2142d4cd60": {
+        "content": {
+          "id": "0ef9dd0c-e099-5897-b2bf-213af44f8f4a",
+          "instance": {
+            "_id": "hydrodynamics",
+            "_server": "catcolab.org",
+            "_version": null,
+            "type": "instantiation"
+          },
+          "name": "hydro",
+          "tag": "import"
+        },
+        "id": "6f756822-6698-5ef3-b054-7e2142d4cd60",
+        "tag": "formal"
+      },
+      "f3a29761-7bf0-50e6-b164-6a2d19ab981c": {
+        "content": {
+          "id": "217c4878-87ad-560b-a992-c66db09212a2",
+          "instance": {
+            "_id": "phytodynamics",
+            "_server": "catcolab.org",
+            "_version": null,
+            "type": "instantiation"
+          },
+          "name": "phyto",
+          "tag": "import"
+        },
+        "id": "f3a29761-7bf0-50e6-b164-6a2d19ab981c",
+        "tag": "formal"
+      },
+      "fc199e1f-e2b2-59db-bdb8-0a35235315c7": {
+        "content": {
+          "id": "f4b19c42-0541-5050-9425-f7c4242ea2b9",
+          "lhs": {
+            "content": "0ef9dd0c-e099-5897-b2bf-213af44f8f4a.ea1e412c-4f98-5826-ae11-73d616b455ae",
+            "tag": "Generator"
+          },
+          "name": "glue_w",
+          "rhs": {
+            "content": "217c4878-87ad-560b-a992-c66db09212a2.4bf26d23-ad3c-5cec-9c9a-d49c35bd0f64",
+            "tag": "Generator"
+          },
+          "tag": "equation"
+        },
+        "id": "fc199e1f-e2b2-59db-bdb8-0a35235315c7",
+        "tag": "formal"
+      }
+    },
+    "cellOrder": [
+      "6f756822-6698-5ef3-b054-7e2142d4cd60",
+      "f3a29761-7bf0-50e6-b164-6a2d19ab981c",
+      "04346fd8-836f-5f2d-ac8d-ed4c2db7de9d",
+      "fc199e1f-e2b2-59db-bdb8-0a35235315c7"
+    ]
+  },
+  "type": "instance",
+  "version": "2"
+}
