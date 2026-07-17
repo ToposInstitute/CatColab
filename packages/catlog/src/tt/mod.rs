@@ -195,6 +195,7 @@
 pub mod batch;
 pub mod context;
 pub mod eval;
+pub(in crate::tt) mod fiber_elab;
 pub mod modelgen;
 pub mod notebook_elab;
 pub mod prelude;
