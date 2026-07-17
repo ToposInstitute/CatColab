@@ -23,7 +23,7 @@ use crate::dbl::modal::{
 };
 use crate::dbl::model_instance::{DblModelInstance, HasInstanceTerm};
 use crate::one::path::Path;
-use crate::zero::NameSegment;
+use crate::zero::{NameSegment, Namespace};
 
 declare_error!(TOP_ERROR, "top", "an error at the top-level");
 
@@ -75,27 +75,30 @@ impl BatchOutput {
         }
     }
 
-    fn instance_summary(&self, instance: &ModelInstance) {
+    fn instance_summary(&self, instance: &ModelInstance, ns: &Namespace) {
         if let BatchOutput::Snapshot(out) = self {
             let mut out = out.borrow_mut();
             match instance {
                 ModelInstance::Discrete(instance) => write_instance_summary(
                     &mut out,
                     instance,
-                    |fiber| format!("{fiber}"),
-                    format_instance_term,
+                    ns,
+                    |fiber| ns.label_string(fiber),
+                    |tm| format_instance_term(tm, ns),
                 ),
                 ModelInstance::ModalUnital(instance) => write_instance_summary(
                     &mut out,
                     instance,
-                    format_modal_ob,
-                    format_modal_instance_term,
+                    ns,
+                    |ob| format_modal_ob(ob, ns),
+                    |tm| format_modal_instance_term(tm, ns),
                 ),
                 ModelInstance::ModalNonUnital(instance) => write_instance_summary(
                     &mut out,
                     instance,
-                    format_modal_ob,
-                    format_modal_instance_term,
+                    ns,
+                    |ob| format_modal_ob(ob, ns),
+                    |tm| format_modal_instance_term(tm, ns),
                 ),
             }
         }
@@ -230,7 +233,7 @@ pub fn elaborate(src: &str, path: &str, output: &BatchOutput) -> io::Result<bool
                                     toplevel.declarations.get(&name_segment)
                             {
                                 match instance_from_def(&toplevel, &def.theory.definition, def) {
-                                    Ok((instance, _)) => output.instance_summary(&instance),
+                                    Ok((instance, ns)) => output.instance_summary(&instance, &ns),
                                     Err(msg) => output.instance_error(&msg),
                                 }
                             }
@@ -298,11 +301,11 @@ fn snapshot_examples() {
 
 /// Render an instance term for snapshot output as `f(g(base))`, with
 /// `f` the outermost (last-applied) model morphism in the path.
-fn format_instance_term(tm: &DiscreteInstanceTerm) -> String {
-    let mut s = format!("{}", tm.base);
+pub(crate) fn format_instance_term(tm: &DiscreteInstanceTerm, ns: &Namespace) -> String {
+    let mut s = ns.label_string(&tm.base);
     if let Path::Seq(edges) = &tm.path {
         for mor in edges.iter() {
-            s = format!("{}({})", mor, s);
+            s = format!("{}({})", ns.label_string(mor), s);
         }
     }
     s
@@ -310,9 +313,10 @@ fn format_instance_term(tm: &DiscreteInstanceTerm) -> String {
 
 /// Writes the generators and equations of an instance, using the given
 /// per-doctrine formatters for fibers and equation terms.
-fn write_instance_summary<M: HasInstanceTerm>(
+pub(crate) fn write_instance_summary<M: HasInstanceTerm>(
     out: &mut String,
     instance: &DblModelInstance<M>,
+    ns: &Namespace,
     fmt_ob: impl Fn(&M::Ob) -> String,
     fmt_term: impl Fn(&M::Term) -> String,
 ) {
@@ -325,7 +329,7 @@ fn write_instance_summary<M: HasInstanceTerm>(
     if !gens.is_empty() {
         writeln!(out, "#/ instance generators:").unwrap();
         for (name, fiber) in &gens {
-            writeln!(out, "#/   {name} : {}", fmt_ob(fiber)).unwrap();
+            writeln!(out, "#/   {} : {}", ns.label_string(name), fmt_ob(fiber)).unwrap();
         }
     }
     if !eqns.is_empty() {
@@ -338,12 +342,12 @@ fn write_instance_summary<M: HasInstanceTerm>(
 
 /// Renders a modal object for snapshot output: generators by name, object
 /// operations as `op(inner)`, and lists as `[a, b, …]`.
-fn format_modal_ob(ob: &ModalOb) -> String {
+pub(crate) fn format_modal_ob(ob: &ModalOb, ns: &Namespace) -> String {
     match ob {
-        ModalOb::Generator(name) => format!("{name}"),
-        ModalOb::App(inner, op) => format!("{op}({})", format_modal_ob(inner)),
+        ModalOb::Generator(name) => ns.label_string(name),
+        ModalOb::App(inner, op) => format!("{op}({})", format_modal_ob(inner, ns)),
         ModalOb::List(_, obs) => {
-            let inner: Vec<_> = obs.iter().map(format_modal_ob).collect();
+            let inner: Vec<_> = obs.iter().map(|ob| format_modal_ob(ob, ns)).collect();
             format!("[{}]", inner.join(", "))
         }
     }
@@ -375,18 +379,18 @@ impl Rendered {
 /// Renders a modal instance term as e.g. `op([x, unit([])])`, re-interleaving
 /// the morphism with its base (the inverse of the flattening done during
 /// extraction).
-fn format_modal_instance_term(tm: &ModalInstanceTerm) -> String {
-    apply_mor(&tm.mor, base_rendered(&tm.base)).render()
+pub(crate) fn format_modal_instance_term(tm: &ModalInstanceTerm, ns: &Namespace) -> String {
+    apply_mor(&tm.mor, base_rendered(&tm.base, ns), ns).render()
 }
 
-fn base_rendered(base: &ModalInstanceBase) -> Rendered {
+fn base_rendered(base: &ModalInstanceBase, ns: &Namespace) -> Rendered {
     match base {
-        ModalInstanceBase::Generator(name) => Rendered::Gen(format!("{name}")),
+        ModalInstanceBase::Generator(name) => Rendered::Gen(ns.label_string(name)),
         ModalInstanceBase::List(_, bases) => {
-            Rendered::List(bases.iter().map(base_rendered).collect())
+            Rendered::List(bases.iter().map(|b| base_rendered(b, ns)).collect())
         }
         ModalInstanceBase::ObApp(op, inner) => {
-            Rendered::ObApp(format!("{op}"), Box::new(base_rendered(inner)))
+            Rendered::ObApp(format!("{op}"), Box::new(base_rendered(inner, ns)))
         }
     }
 }
@@ -395,12 +399,12 @@ fn base_rendered(base: &ModalInstanceBase) -> Rendered {
 /// `Composite`/`List` tupling introduced by normalization: a `Composite` path
 /// folds its morphisms outermost-last, and a list morphism zips into a list
 /// argument.
-fn apply_mor(mor: &ModalMor, arg: Rendered) -> Rendered {
+fn apply_mor(mor: &ModalMor, arg: Rendered, ns: &Namespace) -> Rendered {
     if modal_mor_as_identity(mor).is_some() {
         return arg;
     }
     match mor {
-        ModalMor::Generator(name) => Rendered::App(format!("{name}"), Box::new(arg)),
+        ModalMor::Generator(name) => Rendered::App(ns.label_string(name), Box::new(arg)),
         ModalMor::App(_, op) => Rendered::App(format!("{op}"), Box::new(arg)),
         // The functorial action of an object operation: it applies to an
         // `@op [..]` base, and the lifted morphisms act on the operation's
@@ -408,15 +412,15 @@ fn apply_mor(mor: &ModalMor, arg: Rendered) -> Rendered {
         // adding another.
         ModalMor::HomApp(path, _op) => match arg {
             Rendered::ObApp(op_name, inner) => {
-                Rendered::ObApp(op_name, Box::new(apply_path(path, *inner)))
+                Rendered::ObApp(op_name, Box::new(apply_path(path, *inner, ns)))
             }
             // Should not arise: a hom operation applies to an object-op base.
             other => other,
         },
-        ModalMor::Composite(path) => apply_path(path, arg),
+        ModalMor::Composite(path) => apply_path(path, arg, ns),
         ModalMor::List(_, mors) => match arg {
             Rendered::List(items) if items.len() == mors.len() => {
-                Rendered::List(mors.iter().zip(items).map(|(m, a)| apply_mor(m, a)).collect())
+                Rendered::List(mors.iter().zip(items).map(|(m, a)| apply_mor(m, a, ns)).collect())
             }
             // Should not arise: a list morphism always applies to a list base.
             other => other,
@@ -426,9 +430,9 @@ fn apply_mor(mor: &ModalMor, arg: Rendered) -> Rendered {
 
 /// Applies a path of morphisms to a rendered argument, folding outermost-last
 /// (so `[m1, m2]` renders as `m2(m1(arg))`).
-fn apply_path(path: &Path<ModalOb, ModalMor>, arg: Rendered) -> Rendered {
+fn apply_path(path: &Path<ModalOb, ModalMor>, arg: Rendered, ns: &Namespace) -> Rendered {
     match path {
         Path::Id(_) => arg,
-        Path::Seq(edges) => edges.iter().fold(arg, |acc, mor| apply_mor(mor, acc)),
+        Path::Seq(edges) => edges.iter().fold(arg, |acc, mor| apply_mor(mor, acc, ns)),
     }
 }

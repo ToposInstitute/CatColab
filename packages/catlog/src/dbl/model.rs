@@ -308,6 +308,18 @@ pub enum InvalidDblModel {
 
     /// No link provided for instantiation cell, or wrong type of link.
     InvalidLink(QualifiedName),
+
+    /// Reference to an undefined generator or import in an instance term.
+    FiberElement(QualifiedName),
+
+    /// Instance term has an invalid fiber type: an application to an
+    /// argument over the wrong object, or an equation between elements
+    /// with inconvertible fiber types.
+    FiberType(QualifiedName),
+
+    /// Imported instance has a codomain model different from the enclosing
+    /// instance's.
+    ImportCodomain(QualifiedName),
 }
 
 /// A failure of an equation in a model of a double theory to be well defined.
@@ -355,4 +367,7 @@ pub enum Feature {
     ComplexMorType,
     /// Equation between one or more undefined morphisms.
     PartialEquation,
+    /// Application of a composite morphism in an instance term. Nested
+    /// applications express the same thing.
+    CompositeApplication,
 }
