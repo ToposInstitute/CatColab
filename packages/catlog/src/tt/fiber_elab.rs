@@ -12,6 +12,16 @@
 //!
 //! Everything here is `pub(in crate::tt)`. The module boundary enforced today
 //! is the crate boundary of a prospective standalone `tt` crate.
+//!
+//! The *base* world has an analogous but so-far-unextracted duplication: the
+//! notebook elaborator's composite-morphism typing (`mor_syn`), equation
+//! formation (`equation_cell_ty`), and instantiation specialization each
+//! parallel text-side logic, with the same split between `Reporter` strings
+//! and typed `InvalidDblModel` values — and the notebook's base errors are
+//! *coarser* (bare `DomType`/`CodType` with no detail). This trait plus its
+//! neutral error enum is the template for a future `BaseElab`/`BaseError`
+//! pass, worth doing when notebook model diagnostics need text-quality
+//! precision; the same snapshot byte-stability constraint applies.
 
 use super::{context::*, eval::*, prelude::*, stx::*, theory::*, val::*};
 

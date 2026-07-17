@@ -43,7 +43,7 @@ use tsify::Tsify;
 
 use super::theory::DblTheory;
 use crate::one::{Category, FgCategory, InvalidPathEq, Path};
-use crate::tt::util::pretty::*;
+use crate::zero::pretty::*;
 use crate::zero::{Namespace, QualifiedName};
 
 pub use super::discrete::model::*;

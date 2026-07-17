@@ -1,8 +1,9 @@
 //! Extract wiring diagrams from record types.
 
-use super::{eval::*, theory::*, toplevel::*, util::*, val::*};
+use super::{eval::*, theory::*, toplevel::*, val::*};
 use crate::wd::UWD;
 use crate::zero::QualifiedName;
+use crate::zero::dtry::*;
 
 /// Extracts an undirected wiring diagram from a record type.
 ///

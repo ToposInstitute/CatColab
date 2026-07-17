@@ -1,10 +1,10 @@
 //! Common imports for [`tt`](crate::tt).
 
-pub use crate::tt::util::*;
 pub use crate::zero::{
     LabelSegment,
     qualified::{label_seg, name_seg},
 };
+pub use crate::zero::{dtry::*, idx::*, pretty::*, row::*};
 pub use crate::{one::Path, zero::NameSegment};
 pub use indexmap::IndexMap;
 pub use std::collections::HashMap;

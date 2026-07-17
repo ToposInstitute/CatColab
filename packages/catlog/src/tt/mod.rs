@@ -203,7 +203,6 @@ pub mod stx;
 pub mod text_elab;
 pub mod theory;
 pub mod toplevel;
-pub mod util;
 pub mod val;
 pub mod wd;
 
