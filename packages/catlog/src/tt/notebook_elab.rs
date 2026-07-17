@@ -10,6 +10,7 @@ use nonempty::NonEmpty;
 use std::str::FromStr;
 use uuid::Uuid;
 
+use super::fiber_elab::{CODOMAIN_BINDER, FiberElab, FiberError};
 use super::{context::*, eval::*, prelude::*, stx::*, theory::*, toplevel::*, val::*};
 use crate::dbl::{
     modal,
@@ -27,6 +28,8 @@ pub struct Elaborator<'a> {
     errors: Vec<InvalidDblModel>,
     ref_id: Ustr,
     next_meta: usize,
+    /// The cell currently being elaborated, for error attribution.
+    current_cell: Option<QualifiedName>,
 }
 
 struct ElaboratorCheckpoint {
@@ -43,6 +46,7 @@ impl<'a> Elaborator<'a> {
             errors: Vec::new(),
             ref_id,
             next_meta: 0,
+            current_cell: None,
         }
     }
 
@@ -489,63 +493,6 @@ impl<'a> Elaborator<'a> {
 /// with typed errors; extracting a shared core is planned once the error
 /// channels unify.
 impl<'a> Elaborator<'a> {
-    /// Reserved name binding the codomain model in an instance notebook.
-    ///
-    /// Kept identical to the text elaborator's private `CODOMAIN_BINDER`:
-    /// both pipelines bind the codomain first in an empty context, so fiber
-    /// values from either root at the same de Bruijn level, and the shared
-    /// name keeps their display consistent. Cell names are UUIDs, so the
-    /// binder can never be shadowed.
-    const CODOMAIN_BINDER: &'static str = "instance self";
-
-    /// Introduce a fiber variable (a generator or import) into the fiber
-    /// scope, returning its neutral value.
-    fn intro_fiber(&mut self, name: VarName, label: LabelSegment, ty: FiberTyV) -> FiberTmV {
-        let v = FiberTmV::var(self.ctx.fiber_scope.len().into(), name, label);
-        self.ctx.fiber_env = self.ctx.fiber_env.snoc(v.clone());
-        self.ctx.push_fiber(name, label, ty);
-        v
-    }
-
-    /// Look up a fiber variable by name, returning its syntax, value, and
-    /// fiber type.
-    fn lookup_fiber_tm(&self, name: VarName) -> Option<(FiberTmS, FiberTmV, FiberTyV)> {
-        let (i, label, ty) = self.ctx.lookup_fiber(name)?;
-        Some((FiberTmS::var(i, name, label), self.ctx.fiber_env.get(*i).unwrap().clone(), ty))
-    }
-
-    fn fiber_syn_hole(&mut self) -> (FiberTmS, FiberTmV, FiberTyV) {
-        let tm_m = self.fresh_meta();
-        let obj_m = self.fresh_meta();
-        (FiberTmS::meta(tm_m), FiberTmV::meta(tm_m), FiberTyV::over(BaseTmV::meta(obj_m)))
-    }
-
-    fn fiber_syn_error(&mut self, error: InvalidDblModel) -> (FiberTmS, FiberTmV, FiberTyV) {
-        self.errors.push(error);
-        self.fiber_syn_hole()
-    }
-
-    fn fiber_chk_error(&mut self, error: InvalidDblModel) -> (FiberTmS, FiberTmV) {
-        self.errors.push(error);
-        let tm_m = self.fresh_meta();
-        (FiberTmS::meta(tm_m), FiberTmV::meta(tm_m))
-    }
-
-    /// Whether two codomain models agree closely enough to import an
-    /// instance of one into an instance of the other. Duplicates the text
-    /// elaborator's `codomains_match`; see there for why this is stricter
-    /// than record convertibility.
-    fn codomains_match(&self, a: &BaseTyV, b: &BaseTyV) -> bool {
-        if let (BaseTyV_::Record(r1), BaseTyV_::Record(r2)) = (&**a, &**b) {
-            let names_a: Vec<_> = r1.fields.iter().map(|(n, _)| n).collect();
-            let names_b: Vec<_> = r2.fields.iter().map(|(n, _)| n).collect();
-            if names_a != names_b {
-                return false;
-            }
-        }
-        self.evaluator().convertible_ty(a, b).is_ok()
-    }
-
     /// Resolve a qualified name to a codomain morphism: the path (with
     /// labels, for [`FiberTmS::over_app`]) and the morphism's type. The
     /// codomain's fields are in the base scope (see
@@ -592,70 +539,53 @@ impl<'a> Elaborator<'a> {
         Some((tm_s, tm_v, ty_v))
     }
 
-    /// Apply a codomain morphism to an already-elaborated fiber argument.
-    /// Duplicates the text elaborator's `apply_codomain_morphism` with typed
-    /// errors: the argument's `Over` object must equal the morphism's domain
-    /// object (compared as base objects, so modal domains need no special
-    /// handling); the result lies over the morphism's codomain object.
+    /// Apply a codomain morphism to an already-elaborated fiber argument:
+    /// resolve the morphism against the codomain fields in scope, then
+    /// delegate the checks and construction to the shared
+    /// [`FiberElab::fiber_mor_app`].
     fn apply_codomain_morphism(
         &mut self,
-        cell: &QualifiedName,
         mor_name: &QualifiedName,
         arg_s: FiberTmS,
         arg_v: FiberTmV,
         arg_ty: FiberTyV,
     ) -> (FiberTmS, FiberTmV, FiberTyV) {
         let Some((path, mor_ty)) = self.resolve_codomain_mor(mor_name) else {
-            return self.fiber_syn_error(InvalidDblModel::FiberElement(cell.clone()));
+            return self.fiber_syn_error(FiberError::UnknownElement(mor_name.to_string()));
         };
         let FiberTyV_::Over(arg_obj) = &*arg_ty else {
-            return self.fiber_syn_error(InvalidDblModel::FiberType(cell.clone()));
+            return self.fiber_syn_error(FiberError::ArgNotElement(None));
         };
         let arg_obj = arg_obj.clone();
-        let BaseTyV_::Morphism(_, dom_obj, cod_obj) = &*mor_ty else {
-            return self.fiber_syn_error(InvalidDblModel::FiberType(cell.clone()));
-        };
-        if self.evaluator().equal_tm(&arg_obj, dom_obj).is_err() {
-            return self.fiber_syn_error(InvalidDblModel::FiberType(cell.clone()));
-        }
-        let cod_s = self.evaluator().quote_tm(cod_obj);
-        (
-            FiberTmS::over_app(path.clone(), cod_s, arg_s),
-            FiberTmV::over_app(path, cod_obj.clone(), arg_v),
-            FiberTyV::over(cod_obj.clone()),
-        )
+        self.fiber_mor_app(&path, &mor_ty, arg_s, arg_v, &arg_obj)
     }
 
     /// Synthesize a fiber term from a notebook instance term. Mirrors the
     /// text elaborator's `fiber_syn`, dispatching on [`nb::InstanceTm`]
-    /// instead of surface notation. `cell` names the enclosing equation cell
-    /// for error attribution.
-    fn fiber_syn_nb(
-        &mut self,
-        cell: &QualifiedName,
-        tm: &nb::InstanceTm,
-    ) -> (FiberTmS, FiberTmV, FiberTyV) {
+    /// instead of surface notation; errors are attributed to the cell in
+    /// [`Self::current_cell`].
+    fn fiber_syn_nb(&mut self, tm: &nb::InstanceTm) -> (FiberTmS, FiberTmV, FiberTyV) {
         match tm {
             nb::InstanceTm::Generator(name) => {
                 let Ok(qname) = QualifiedName::deserialize_str(name) else {
-                    return self.fiber_syn_error(InvalidDblModel::FiberElement(cell.clone()));
+                    return self.fiber_syn_error(FiberError::UnknownElement(name.clone()));
                 };
                 match self.resolve_fiber(qname.as_slice()) {
                     Some(r) => r,
-                    None => self.fiber_syn_error(InvalidDblModel::FiberElement(cell.clone())),
+                    None => self.fiber_syn_error(FiberError::UnknownElement(name.clone())),
                 }
             }
             nb::InstanceTm::App { mor, arg } => {
                 let nb::Mor::Basic(mor_name) = mor else {
-                    return self.fiber_syn_error(InvalidDblModel::UnsupportedFeature(
-                        Feature::CompositeApplication,
-                    ));
+                    self.errors
+                        .push(InvalidDblModel::UnsupportedFeature(Feature::CompositeApplication));
+                    return self.fiber_syn_hole();
                 };
                 let Ok(mor_qname) = QualifiedName::deserialize_str(mor_name) else {
-                    return self.fiber_syn_error(InvalidDblModel::FiberElement(cell.clone()));
+                    return self.fiber_syn_error(FiberError::UnknownElement(mor_name.clone()));
                 };
-                let (arg_s, arg_v, arg_ty) = self.fiber_syn_nb(cell, arg);
-                self.apply_codomain_morphism(cell, &mor_qname, arg_s, arg_v, arg_ty)
+                let (arg_s, arg_v, arg_ty) = self.fiber_syn_nb(arg);
+                self.apply_codomain_morphism(&mor_qname, arg_s, arg_v, arg_ty)
             }
             nb::InstanceTm::List { terms, .. } => {
                 let mut ss = Vec::with_capacity(terms.len());
@@ -663,11 +593,11 @@ impl<'a> Elaborator<'a> {
                 let mut objs = Vec::with_capacity(terms.len());
                 for term in terms {
                     let Some(term) = term else {
-                        return self.fiber_syn_error(InvalidDblModel::FiberElement(cell.clone()));
+                        return self.fiber_syn_error(FiberError::MissingTerm);
                     };
-                    let (s, v, ty) = self.fiber_syn_nb(cell, term);
+                    let (s, v, ty) = self.fiber_syn_nb(term);
                     let FiberTyV_::Over(o) = &*ty else {
-                        return self.fiber_syn_error(InvalidDblModel::FiberType(cell.clone()));
+                        return self.fiber_syn_error(FiberError::ListElementNotOver);
                     };
                     objs.push(o.clone());
                     ss.push(s);
@@ -678,19 +608,11 @@ impl<'a> Elaborator<'a> {
             nb::InstanceTm::ObApp { op, tm } => {
                 let nb::ObOp::Basic(op_name) = op;
                 let op_seg = name_seg(*op_name);
-                if self.theory().basic_ob_op([op_seg].into()).is_none() {
-                    return self.fiber_syn_error(InvalidDblModel::FiberType(cell.clone()));
+                if !self.check_ob_op(op_seg) {
+                    return self.fiber_syn_hole();
                 }
-                let (arg_s, arg_v, arg_ty) = self.fiber_syn_nb(cell, tm);
-                let FiberTyV_::Over(arg_obj) = &*arg_ty else {
-                    return self.fiber_syn_error(InvalidDblModel::FiberType(cell.clone()));
-                };
-                let obj = BaseTmV::app(op_seg, arg_obj.clone());
-                (
-                    FiberTmS::ob_app(op_seg, arg_s),
-                    FiberTmV::ob_app(op_seg, arg_v),
-                    FiberTyV::over(obj),
-                )
+                let (arg_s, arg_v, arg_ty) = self.fiber_syn_nb(tm);
+                self.fiber_ob_app(op_seg, arg_s, arg_v, &arg_ty)
             }
         }
     }
@@ -698,24 +620,16 @@ impl<'a> Elaborator<'a> {
     /// Check a notebook instance term against an expected fiber type. Fiber
     /// terms are all synthesizing, so this synthesizes and checks
     /// convertibility.
-    fn fiber_chk_nb(
-        &mut self,
-        cell: &QualifiedName,
-        expected: &FiberTyV,
-        tm: &nb::InstanceTm,
-    ) -> (FiberTmS, FiberTmV) {
-        let (s, v, ty) = self.fiber_syn_nb(cell, tm);
-        if self.evaluator().convertible_fiber_ty(&ty, expected).is_err() {
-            return self.fiber_chk_error(InvalidDblModel::FiberType(cell.clone()));
-        }
-        (s, v)
+    fn fiber_chk_nb(&mut self, expected: &FiberTyV, tm: &nb::InstanceTm) -> (FiberTmS, FiberTmV) {
+        let syn = self.fiber_syn_nb(tm);
+        self.check_fiber(syn, expected)
     }
 
     /// Elaborate the cells of an instance notebook against the codomain
     /// model, producing the instance as a fiber record — the notebook
     /// analogue of the text elaborator's `instance_body`.
     ///
-    /// The codomain is bound under `Self::CODOMAIN_BINDER` and each of its
+    /// The codomain is bound under `CODOMAIN_BINDER` and each of its
     /// fields is pushed into the base scope as a variable projecting out of
     /// that binding, so cell references to codomain objects and morphisms
     /// (UUID-qualified names) resolve through the ordinary
@@ -742,8 +656,8 @@ impl<'a> Elaborator<'a> {
         let c = self.checkpoint();
         let codomain_ty = BaseTyV::record(codomain.clone());
         let self_v = self.intro(
-            name_seg(Self::CODOMAIN_BINDER),
-            label_seg(Self::CODOMAIN_BINDER),
+            name_seg(CODOMAIN_BINDER),
+            label_seg(CODOMAIN_BINDER),
             Some(codomain_ty.clone()),
         );
         for (name, (label, _)) in codomain.fields.iter() {
@@ -762,6 +676,7 @@ impl<'a> Elaborator<'a> {
                 nb::InstanceJudgment::Generator(gen_decl) => {
                     let name = NameSegment::Uuid(gen_decl.id);
                     let label = LabelSegment::Text(ustr(&gen_decl.name));
+                    self.current_cell = Some(QualifiedName::single(name));
                     let over = gen_decl.over.as_ref().and_then(|ob| self.ob_syn(ob));
                     let (ty_s, ty_v) = match over {
                         Some((obj_s, obj_v, _)) => (FiberTyS::over(obj_s), FiberTyV::over(obj_v)),
@@ -780,6 +695,7 @@ impl<'a> Elaborator<'a> {
                     let name = NameSegment::Uuid(import.id);
                     let label = LabelSegment::Text(ustr(&import.name));
                     let qname = QualifiedName::single(name);
+                    self.current_cell = Some(qname.clone());
                     let resolved = import.instance.as_ref().and_then(|link| {
                         let nb::LinkType::Instantiation = link.r#type else {
                             return None;
@@ -809,23 +725,25 @@ impl<'a> Elaborator<'a> {
                 nb::InstanceJudgment::Equation(eqn_decl) => {
                     let name = NameSegment::Uuid(eqn_decl.id);
                     let label = LabelSegment::Text(ustr(&eqn_decl.name));
-                    let qname = QualifiedName::single(name);
+                    self.current_cell = Some(QualifiedName::single(name));
                     let (Some(lhs), Some(rhs)) = (&eqn_decl.lhs, &eqn_decl.rhs) else {
                         self.errors
                             .push(InvalidDblModel::UnsupportedFeature(Feature::PartialEquation));
                         continue;
                     };
-                    let (lhs_s, lhs_v, lhs_ty) = self.fiber_syn_nb(&qname, lhs);
+                    let (lhs_s, lhs_v, lhs_ty) = self.fiber_syn_nb(lhs);
                     let FiberTyV_::Over(obj) = &*lhs_ty else {
                         // Only fiber-element equations live in an instance;
                         // morphism equations constrain the model.
-                        self.errors.push(InvalidDblModel::FiberType(qname));
+                        self.report_fiber(FiberError::EquationNotOver);
                         continue;
                     };
-                    let over_s = FiberTyS::over(self.evaluator().quote_tm(obj));
-                    let (rhs_s, rhs_v) = self.fiber_chk_nb(&qname, &lhs_ty, rhs);
-                    fields_s.insert(name, label, FiberTyS::id(over_s, lhs_s, rhs_s));
-                    fields_v.insert(name, label, FiberTyV::id(lhs_ty.clone(), lhs_v, rhs_v));
+                    let obj = obj.clone();
+                    let (rhs_s, rhs_v) = self.fiber_chk_nb(&lhs_ty, rhs);
+                    let (id_s, id_v) =
+                        self.fiber_id_field(&lhs_ty, &obj, lhs_s, lhs_v, rhs_s, rhs_v);
+                    fields_s.insert(name, label, id_s);
+                    fields_v.insert(name, label, id_v);
                 }
             }
         }
@@ -869,6 +787,46 @@ impl<'a> Elaborator<'a> {
         let codomain_ty = type_def.val.clone();
         let (stx, val) = self.instance_notebook(&codomain, doc.notebook.formal_content());
         Some(Instance::new(self.theory.clone(), stx, val, codomain_ty))
+    }
+}
+
+impl<'a> FiberElab for Elaborator<'a> {
+    fn ctx(&self) -> &Context {
+        &self.ctx
+    }
+
+    fn ctx_mut(&mut self) -> &mut Context {
+        &mut self.ctx
+    }
+
+    fn elab_theory(&self) -> &Theory {
+        &self.theory
+    }
+
+    fn evaluator(&self) -> Evaluator<'_> {
+        Elaborator::evaluator(self)
+    }
+
+    fn fresh_meta(&mut self) -> MetaVar {
+        Elaborator::fresh_meta(self)
+    }
+
+    /// Attribute fiber errors to the cell currently being elaborated, as
+    /// typed [`InvalidDblModel`] values for the notebook interface.
+    fn report_fiber(&mut self, err: FiberError) {
+        let cell = self
+            .current_cell
+            .clone()
+            .unwrap_or_else(|| QualifiedName::single(name_seg("unknown cell")));
+        let error = match err {
+            FiberError::UnknownElement(_)
+            | FiberError::ProjNonRecord
+            | FiberError::UnknownProj(_)
+            | FiberError::MissingTerm => InvalidDblModel::FiberElement(cell),
+            FiberError::ImportCodomainMismatch(_) => InvalidDblModel::ImportCodomain(cell),
+            _ => InvalidDblModel::FiberType(cell),
+        };
+        self.errors.push(error);
     }
 }
 

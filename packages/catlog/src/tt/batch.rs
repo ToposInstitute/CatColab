@@ -301,7 +301,7 @@ fn snapshot_examples() {
 
 /// Render an instance term for snapshot output as `f(g(base))`, with
 /// `f` the outermost (last-applied) model morphism in the path.
-pub(crate) fn format_instance_term(tm: &DiscreteInstanceTerm, ns: &Namespace) -> String {
+pub(in crate::tt) fn format_instance_term(tm: &DiscreteInstanceTerm, ns: &Namespace) -> String {
     let mut s = ns.label_string(&tm.base);
     if let Path::Seq(edges) = &tm.path {
         for mor in edges.iter() {
@@ -313,7 +313,7 @@ pub(crate) fn format_instance_term(tm: &DiscreteInstanceTerm, ns: &Namespace) ->
 
 /// Writes the generators and equations of an instance, using the given
 /// per-doctrine formatters for fibers and equation terms.
-pub(crate) fn write_instance_summary<M: HasInstanceTerm>(
+pub(in crate::tt) fn write_instance_summary<M: HasInstanceTerm>(
     out: &mut String,
     instance: &DblModelInstance<M>,
     ns: &Namespace,
@@ -342,7 +342,7 @@ pub(crate) fn write_instance_summary<M: HasInstanceTerm>(
 
 /// Renders a modal object for snapshot output: generators by name, object
 /// operations as `op(inner)`, and lists as `[a, b, …]`.
-pub(crate) fn format_modal_ob(ob: &ModalOb, ns: &Namespace) -> String {
+pub(in crate::tt) fn format_modal_ob(ob: &ModalOb, ns: &Namespace) -> String {
     match ob {
         ModalOb::Generator(name) => ns.label_string(name),
         ModalOb::App(inner, op) => format!("{op}({})", format_modal_ob(inner, ns)),
@@ -379,7 +379,7 @@ impl Rendered {
 /// Renders a modal instance term as e.g. `op([x, unit([])])`, re-interleaving
 /// the morphism with its base (the inverse of the flattening done during
 /// extraction).
-pub(crate) fn format_modal_instance_term(tm: &ModalInstanceTerm, ns: &Namespace) -> String {
+pub(in crate::tt) fn format_modal_instance_term(tm: &ModalInstanceTerm, ns: &Namespace) -> String {
     apply_mor(&tm.mor, base_rendered(&tm.base, ns), ns).render()
 }
 
