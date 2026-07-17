@@ -18,7 +18,7 @@ You can find the auto-generated documentation for this Rust crate at [next.catco
     ```
 
     - Directly in the shell:
-  
+
     ```sh
     createdb -h localhost -p 5432 -U USER_NAME catcolab
     ```
@@ -126,5 +126,4 @@ To generate a timestamp for the migration filename, run:
 date -u +"%Y%m%d%H%M%S"
 ```
 
-Don't forget to run `cargo sqlx prepare` in `packages/backend` after making schema changes!
-
+Don't forget to run `cargo sqlx prepare -- --all-targets --features integration-tests,property-tests` in `packages/backend` after making schema changes!

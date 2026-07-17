@@ -18,6 +18,9 @@ pub mod document;
 /// RPC service for the backend.
 pub mod rpc;
 
+/// OpenRouter inference key management.
+pub mod inference;
+
 /// Storage backend for Automerge documents.
 pub mod storage;
 

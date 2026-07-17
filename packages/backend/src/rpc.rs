@@ -10,7 +10,7 @@ use super::app::{AppCtx, AppError, AppState, RefMsg};
 use super::auth::{NewPermissions, PermissionLevel, Permissions};
 use super::ref_actor::{ensure_ref_actor, send_to_actor};
 use super::user_state::get_or_create_user_state_doc;
-use super::{auth, document as doc, user};
+use super::{auth, document as doc, inference, user};
 
 /// Create router for RPC API.
 pub fn router() -> Router<AppState> {
@@ -29,6 +29,7 @@ pub fn router() -> Router<AppState> {
         .handler(get_active_user_profile)
         .handler(set_active_user_profile)
         .handler(get_user_state_doc_id)
+        .handler(get_inference_key)
 }
 
 #[handler(mutation)]
@@ -164,6 +165,11 @@ async fn get_active_user_profile(ctx: AppCtx) -> RpcResult<user::UserProfile> {
     user::get_active_user_profile(ctx).await.into()
 }
 
+#[handler(query)]
+async fn get_inference_key(ctx: AppCtx) -> RpcResult<String> {
+    inference::get_inference_key(&ctx).await.into()
+}
+
 #[handler(mutation)]
 async fn set_active_user_profile(ctx: AppCtx, user: user::UserProfile) -> RpcResult<()> {
     user::set_active_user_profile(ctx, user).await.into()
@@ -196,6 +202,8 @@ impl<T> From<AppError> for RpcResult<T> {
             AppError::Unauthorized => StatusCode::UNAUTHORIZED,
             AppError::Forbidden(_) => StatusCode::FORBIDDEN,
             AppError::NotFound(_) | AppError::Db(sqlx::Error::RowNotFound) => StatusCode::NOT_FOUND,
+            AppError::OpenRouter(_) => StatusCode::BAD_GATEWAY,
+            AppError::InferenceUnavailable => StatusCode::SERVICE_UNAVAILABLE,
             _ => StatusCode::INTERNAL_SERVER_ERROR,
         };
         let message = error.to_string();

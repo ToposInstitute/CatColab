@@ -49,6 +49,8 @@ pub async fn create_test_app_state(pool: PgPool) -> AppState {
         initialized_user_states: Arc::new(RwLock::new(HashMap::new())),
         http_client: reqwest::Client::new(),
         julia_url: None,
+        openrouter_provisioning_key: None,
+        openrouter_base_url: backend::inference::OPENROUTER_API_URL.to_string(),
     }
 }
 
@@ -69,6 +71,8 @@ pub fn create_test_firebase_user(user_id: &str) -> FirebaseUser {
     .expect("Failed to create test FirebaseUser")
 }
 
+// This function is not used in all consuming binaries of test_utils.
+#[allow(dead_code)]
 pub fn create_test_document_content(name: &str) -> serde_json::Value {
     json!({
         "version": "1",
