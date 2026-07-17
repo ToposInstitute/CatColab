@@ -1,0 +1,87 @@
+set_theory ThMulticategory
+
+#/ The signature of a fragment of the discrete exterior calculus (DEC), as a
+#/ multicategory presentation. Translated from Matt's notebook-elaborated
+#/ Klausmeier examples (examples/tt/notebook/klausmeier).
+model DEC := [
+  Form0 : Object,
+  Form1 : Object,
+  DualForm0 : Object,
+  lapl_d0 : Multihom[[DualForm0], DualForm0],
+  partial_0 : Multihom[[Form0], Form0],
+  partial_1 : Multihom[[Form1], Form1],
+  partial_d0 : Multihom[[DualForm0], DualForm0],
+  square_d0 : Multihom[[DualForm0], DualForm0],
+  add_d0d0 : Multihom[[DualForm0, DualForm0], DualForm0],
+  sub_d01 : Multihom[[DualForm0, Form0], DualForm0],
+  sub_d0d0 : Multihom[[DualForm0, DualForm0], DualForm0],
+  mult_00 : Multihom[[Form0, Form0], Form0],
+  mult_d0d0 : Multihom[[DualForm0, DualForm0], DualForm0],
+  mult_0d0 : Multihom[[Form0, DualForm0], DualForm0],
+  lie_1d0 : Multihom[[Form1, DualForm0], DualForm0],
+  wedge_00 : Multihom[[Form0, Form0], Form0],
+  wedge_10 : Multihom[[Form1, Form0], Form1]
+]
+
+#/ Faithful rendering: named intermediate generators (one per notebook cell),
+#/ each defined by a fiber equation, mirroring the diagram structure.
+
+#/ (n is a DualForm0 here -- Matt's draft mistakenly placed it in Form0, but
+#/ square_d0/mult_d0d0 demand a DualForm0, and the Klausmeier gluing below
+#/ equates it with Phytodynamics' DualForm0 n.)
+instance Hydrodynamics : DEC := [
+    Form0 := [a, k],
+    Form1 := [dX],
+    DualForm0 := [w, n, x0, x1, x2, x3, x4, x5],
+    x0 := sub_d01([w, a]),
+    x1 := square_d0([n]),
+    x2 := mult_d0d0([w, x1]),
+    x3 := sub_d0d0([x0, x2]),
+    x4 := lie_1d0([dX, w]),
+    x5 := mult_0d0([k, x4]),
+    partial_d0([w]) := add_d0d0([x3, x5])
+]
+
+instance Phytodynamics : DEC := [
+    Form0 := [m],
+    DualForm0 := [n, w, y0, y1, y2, y3, y4],
+    y0 := square_d0([n]),
+    y1 := mult_d0d0([w, y0]),
+    y2 := mult_0d0([m, n]),
+    y3 := sub_d0d0([y1, y2]),
+    y4 := lapl_d0([n]),
+    #/ NOTE: Matt's draft binds partial_d0([w]) here; for the plant-biomass
+    #/ equation this is likely partial_d0([n]) -- confirm against the notebook.
+    partial_d0([w]) := add_d0d0([y3, y4])
+]
+
+#/ The full Klausmeier model glues the two sub-instances along their shared
+#/ water (w) and plant-density (n) fields.
+instance Klausmeier : DEC := [
+    hydro : Hydrodynamics,
+    phyto : Phytodynamics,
+    hydro.n := phyto.n,
+    hydro.w := phyto.w
+]
+
+#/ Inlined rendering: the same equations with intermediates substituted,
+#/ exercising deeply-nested multihom applications.
+
+instance HydrodynamicsInline : DEC := [
+    Form0 := [a, k],
+    Form1 := [dX],
+    DualForm0 := [w, n],
+    partial_d0([w]) := add_d0d0([
+        sub_d0d0([sub_d01([w, a]), mult_d0d0([w, square_d0([n])])]),
+        mult_0d0([k, lie_1d0([dX, w])])
+    ])
+]
+
+instance PhytodynamicsInline : DEC := [
+    Form0 := [m],
+    DualForm0 := [n, w],
+    partial_d0([w]) := add_d0d0([
+        sub_d0d0([mult_d0d0([w, square_d0([n])]), mult_0d0([m, n])]),
+        lapl_d0([n])
+    ])
+]
