@@ -59,6 +59,8 @@ pub enum LinkType {
 
     #[serde(rename = "llmconversation-of")]
     ConversationOf,
+    #[serde(rename = "instance-of")]
+    InstanceOf,
 
     #[serde(rename = "instantiation")]
     Instantiation,
@@ -79,6 +81,7 @@ pub(crate) mod arbitrary {
                 LinkType::AnalysisOf,
                 LinkType::DiagramIn,
                 LinkType::ConversationOf,
+                LinkType::InstanceOf,
                 LinkType::Instantiation,
             ])
             .boxed()

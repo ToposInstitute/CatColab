@@ -3,6 +3,7 @@ pub mod api;
 pub mod cell;
 pub mod diagram_judgment;
 pub mod document;
+pub mod instance_judgment;
 pub mod model;
 pub mod model_judgment;
 pub mod notebook;
