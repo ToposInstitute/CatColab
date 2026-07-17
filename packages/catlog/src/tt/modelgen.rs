@@ -475,9 +475,14 @@ impl<'a> ModelGenerator<'a> {
                     if let NameSegment::Uuid(uuid) = name {
                         namespace.set_label(*uuid, *label);
                     }
+                    // Labels of the sub-instance's own generators live in an
+                    // inner namespace keyed by the import's name, mirroring
+                    // the structure of the flattened qualified names.
+                    let mut sub_ns = Namespace::new_for_uuid();
                     let mut sub_prefix = prefix.to_vec();
                     sub_prefix.push(*name);
-                    self.extract_modal_record(instance, namespace, &sub_prefix, sub_fields)?;
+                    self.extract_modal_record(instance, &mut sub_ns, &sub_prefix, sub_fields)?;
+                    namespace.add_inner(*name, sub_ns);
                 }
                 FiberTyV_::Id(_, _, _) => {}
             }
@@ -661,11 +666,13 @@ pub fn instance_from_def(
     inst: &Instance,
 ) -> Result<(ModelInstance, Namespace), String> {
     let mut generator = ModelGenerator::new(toplevel, th);
-    generator.generate(&inst.codomain);
+    // Seed the namespace with the codomain model's labels, so that names of
+    // codomain objects and morphisms appearing in fibers and terms resolve
+    // alongside the instance's own generators.
+    let mut namespace = generator.generate(&inst.codomain);
     let FiberTyV_::Record(fields) = &*inst.val else {
         return Err("expected an instance (a fiber record)".into());
     };
-    let mut namespace = Namespace::new_for_uuid();
     let instance = generator.instance(fields, &mut namespace)?;
     Ok((instance, namespace))
 }
@@ -846,9 +853,14 @@ fn extract_instance_record(
                 if let NameSegment::Uuid(uuid) = name {
                     namespace.set_label(*uuid, *label);
                 }
+                // Labels of the sub-instance's own generators live in an
+                // inner namespace keyed by the import's name, mirroring the
+                // structure of the flattened qualified names.
+                let mut sub_ns = Namespace::new_for_uuid();
                 let mut sub_prefix = prefix.to_vec();
                 sub_prefix.push(*name);
-                extract_instance_record(instance, namespace, &sub_prefix, sub_fields)?;
+                extract_instance_record(instance, &mut sub_ns, &sub_prefix, sub_fields)?;
+                namespace.add_inner(*name, sub_ns);
             }
             FiberTyV_::Id(_, _, _) => {}
         }

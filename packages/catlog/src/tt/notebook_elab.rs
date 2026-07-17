@@ -481,6 +481,397 @@ impl<'a> Elaborator<'a> {
     }
 }
 
+/// Instance-notebook elaboration: cells presenting an instance of a model,
+/// elaborated to a fiber record packaged as an [`Instance`] — the
+/// same target as the text elaborator's `instance NAME : X := [...]` path,
+/// whose `instance_body_inner` is the blueprint for everything here. The
+/// fiber helpers are deliberate near-duplicates of their text-side namesakes
+/// with typed errors; extracting a shared core is planned once the error
+/// channels unify.
+impl<'a> Elaborator<'a> {
+    /// Reserved name binding the codomain model in an instance notebook.
+    ///
+    /// Kept identical to the text elaborator's private `CODOMAIN_BINDER`:
+    /// both pipelines bind the codomain first in an empty context, so fiber
+    /// values from either root at the same de Bruijn level, and the shared
+    /// name keeps their display consistent. Cell names are UUIDs, so the
+    /// binder can never be shadowed.
+    const CODOMAIN_BINDER: &'static str = "instance self";
+
+    /// Introduce a fiber variable (a generator or import) into the fiber
+    /// scope, returning its neutral value.
+    fn intro_fiber(&mut self, name: VarName, label: LabelSegment, ty: FiberTyV) -> FiberTmV {
+        let v = FiberTmV::var(self.ctx.fiber_scope.len().into(), name, label);
+        self.ctx.fiber_env = self.ctx.fiber_env.snoc(v.clone());
+        self.ctx.push_fiber(name, label, ty);
+        v
+    }
+
+    /// Look up a fiber variable by name, returning its syntax, value, and
+    /// fiber type.
+    fn lookup_fiber_tm(&self, name: VarName) -> Option<(FiberTmS, FiberTmV, FiberTyV)> {
+        let (i, label, ty) = self.ctx.lookup_fiber(name)?;
+        Some((FiberTmS::var(i, name, label), self.ctx.fiber_env.get(*i).unwrap().clone(), ty))
+    }
+
+    fn fiber_syn_hole(&mut self) -> (FiberTmS, FiberTmV, FiberTyV) {
+        let tm_m = self.fresh_meta();
+        let obj_m = self.fresh_meta();
+        (FiberTmS::meta(tm_m), FiberTmV::meta(tm_m), FiberTyV::over(BaseTmV::meta(obj_m)))
+    }
+
+    fn fiber_syn_error(&mut self, error: InvalidDblModel) -> (FiberTmS, FiberTmV, FiberTyV) {
+        self.errors.push(error);
+        self.fiber_syn_hole()
+    }
+
+    fn fiber_chk_error(&mut self, error: InvalidDblModel) -> (FiberTmS, FiberTmV) {
+        self.errors.push(error);
+        let tm_m = self.fresh_meta();
+        (FiberTmS::meta(tm_m), FiberTmV::meta(tm_m))
+    }
+
+    /// Whether two codomain models agree closely enough to import an
+    /// instance of one into an instance of the other. Duplicates the text
+    /// elaborator's `codomains_match`; see there for why this is stricter
+    /// than record convertibility.
+    fn codomains_match(&self, a: &BaseTyV, b: &BaseTyV) -> bool {
+        if let (BaseTyV_::Record(r1), BaseTyV_::Record(r2)) = (&**a, &**b) {
+            let names_a: Vec<_> = r1.fields.iter().map(|(n, _)| n).collect();
+            let names_b: Vec<_> = r2.fields.iter().map(|(n, _)| n).collect();
+            if names_a != names_b {
+                return false;
+            }
+        }
+        self.evaluator().convertible_ty(a, b).is_ok()
+    }
+
+    /// Resolve a qualified name to a codomain morphism: the path (with
+    /// labels, for [`FiberTmS::over_app`]) and the morphism's type. The
+    /// codomain's fields are in the base scope (see
+    /// [`Self::instance_notebook`]), so the first segment is a context
+    /// variable and later segments project through records (a morphism of a
+    /// model instantiated into the codomain).
+    fn resolve_codomain_mor(
+        &self,
+        name: &QualifiedName,
+    ) -> Option<(Vec<(FieldName, LabelSegment)>, BaseTyV)> {
+        let (&first, rest) = name.as_slice().split_first()?;
+        let (i, label, ty) = self.ctx.lookup(first)?;
+        let mut tm_v = self.ctx.env.get(*i).unwrap().clone();
+        let mut ty_v = ty?;
+        let mut path = vec![(first, label)];
+        for &seg in rest {
+            let BaseTyV_::Record(r) = &*ty_v else {
+                return None;
+            };
+            let (seg_label, _) = r.fields.get_with_label(seg)?;
+            path.push((seg, *seg_label));
+            let next_ty = self.evaluator().field_ty(&ty_v, &tm_v, seg);
+            tm_v = self.evaluator().proj(&tm_v, seg, *seg_label);
+            ty_v = next_ty;
+        }
+        Some((path, ty_v))
+    }
+
+    /// Resolve a qualified fiber reference: a generator, or a projection
+    /// path through imports (`hydro.n`). The fiber-scope analogue of
+    /// [`Self::resolve_name`].
+    fn resolve_fiber(&self, segments: &[VarName]) -> Option<(FiberTmS, FiberTmV, FiberTyV)> {
+        let (&first, rest) = segments.split_first()?;
+        let (mut tm_s, mut tm_v, mut ty_v) = self.lookup_fiber_tm(first)?;
+        for &seg in rest {
+            let FiberTyV_::Record(r) = &*ty_v else {
+                return None;
+            };
+            let (label, field_ty) = r.get_with_label(seg)?;
+            tm_s = FiberTmS::proj(tm_s, seg, *label);
+            tm_v = FiberTmV::proj(tm_v, seg, *label);
+            ty_v = field_ty.clone();
+        }
+        Some((tm_s, tm_v, ty_v))
+    }
+
+    /// Apply a codomain morphism to an already-elaborated fiber argument.
+    /// Duplicates the text elaborator's `apply_codomain_morphism` with typed
+    /// errors: the argument's `Over` object must equal the morphism's domain
+    /// object (compared as base objects, so modal domains need no special
+    /// handling); the result lies over the morphism's codomain object.
+    fn apply_codomain_morphism(
+        &mut self,
+        cell: &QualifiedName,
+        mor_name: &QualifiedName,
+        arg_s: FiberTmS,
+        arg_v: FiberTmV,
+        arg_ty: FiberTyV,
+    ) -> (FiberTmS, FiberTmV, FiberTyV) {
+        let Some((path, mor_ty)) = self.resolve_codomain_mor(mor_name) else {
+            return self.fiber_syn_error(InvalidDblModel::FiberElement(cell.clone()));
+        };
+        let FiberTyV_::Over(arg_obj) = &*arg_ty else {
+            return self.fiber_syn_error(InvalidDblModel::FiberType(cell.clone()));
+        };
+        let arg_obj = arg_obj.clone();
+        let BaseTyV_::Morphism(_, dom_obj, cod_obj) = &*mor_ty else {
+            return self.fiber_syn_error(InvalidDblModel::FiberType(cell.clone()));
+        };
+        if self.evaluator().equal_tm(&arg_obj, dom_obj).is_err() {
+            return self.fiber_syn_error(InvalidDblModel::FiberType(cell.clone()));
+        }
+        let cod_s = self.evaluator().quote_tm(cod_obj);
+        (
+            FiberTmS::over_app(path.clone(), cod_s, arg_s),
+            FiberTmV::over_app(path, cod_obj.clone(), arg_v),
+            FiberTyV::over(cod_obj.clone()),
+        )
+    }
+
+    /// Synthesize a fiber term from a notebook instance term. Mirrors the
+    /// text elaborator's `fiber_syn`, dispatching on [`nb::InstanceTm`]
+    /// instead of surface notation. `cell` names the enclosing equation cell
+    /// for error attribution.
+    fn fiber_syn_nb(
+        &mut self,
+        cell: &QualifiedName,
+        tm: &nb::InstanceTm,
+    ) -> (FiberTmS, FiberTmV, FiberTyV) {
+        match tm {
+            nb::InstanceTm::Generator(name) => {
+                let Ok(qname) = QualifiedName::deserialize_str(name) else {
+                    return self.fiber_syn_error(InvalidDblModel::FiberElement(cell.clone()));
+                };
+                match self.resolve_fiber(qname.as_slice()) {
+                    Some(r) => r,
+                    None => self.fiber_syn_error(InvalidDblModel::FiberElement(cell.clone())),
+                }
+            }
+            nb::InstanceTm::App { mor, arg } => {
+                let nb::Mor::Basic(mor_name) = mor else {
+                    return self.fiber_syn_error(InvalidDblModel::UnsupportedFeature(
+                        Feature::CompositeApplication,
+                    ));
+                };
+                let Ok(mor_qname) = QualifiedName::deserialize_str(mor_name) else {
+                    return self.fiber_syn_error(InvalidDblModel::FiberElement(cell.clone()));
+                };
+                let (arg_s, arg_v, arg_ty) = self.fiber_syn_nb(cell, arg);
+                self.apply_codomain_morphism(cell, &mor_qname, arg_s, arg_v, arg_ty)
+            }
+            nb::InstanceTm::List { terms, .. } => {
+                let mut ss = Vec::with_capacity(terms.len());
+                let mut vs = Vec::with_capacity(terms.len());
+                let mut objs = Vec::with_capacity(terms.len());
+                for term in terms {
+                    let Some(term) = term else {
+                        return self.fiber_syn_error(InvalidDblModel::FiberElement(cell.clone()));
+                    };
+                    let (s, v, ty) = self.fiber_syn_nb(cell, term);
+                    let FiberTyV_::Over(o) = &*ty else {
+                        return self.fiber_syn_error(InvalidDblModel::FiberType(cell.clone()));
+                    };
+                    objs.push(o.clone());
+                    ss.push(s);
+                    vs.push(v);
+                }
+                (FiberTmS::list(ss), FiberTmV::list(vs), FiberTyV::over(BaseTmV::list(objs)))
+            }
+            nb::InstanceTm::ObApp { op, tm } => {
+                let nb::ObOp::Basic(op_name) = op;
+                let op_seg = name_seg(*op_name);
+                if self.theory().basic_ob_op([op_seg].into()).is_none() {
+                    return self.fiber_syn_error(InvalidDblModel::FiberType(cell.clone()));
+                }
+                let (arg_s, arg_v, arg_ty) = self.fiber_syn_nb(cell, tm);
+                let FiberTyV_::Over(arg_obj) = &*arg_ty else {
+                    return self.fiber_syn_error(InvalidDblModel::FiberType(cell.clone()));
+                };
+                let obj = BaseTmV::app(op_seg, arg_obj.clone());
+                (
+                    FiberTmS::ob_app(op_seg, arg_s),
+                    FiberTmV::ob_app(op_seg, arg_v),
+                    FiberTyV::over(obj),
+                )
+            }
+        }
+    }
+
+    /// Check a notebook instance term against an expected fiber type. Fiber
+    /// terms are all synthesizing, so this synthesizes and checks
+    /// convertibility.
+    fn fiber_chk_nb(
+        &mut self,
+        cell: &QualifiedName,
+        expected: &FiberTyV,
+        tm: &nb::InstanceTm,
+    ) -> (FiberTmS, FiberTmV) {
+        let (s, v, ty) = self.fiber_syn_nb(cell, tm);
+        if self.evaluator().convertible_fiber_ty(&ty, expected).is_err() {
+            return self.fiber_chk_error(InvalidDblModel::FiberType(cell.clone()));
+        }
+        (s, v)
+    }
+
+    /// Elaborate the cells of an instance notebook against the codomain
+    /// model, producing the instance as a fiber record — the notebook
+    /// analogue of the text elaborator's `instance_body`.
+    ///
+    /// The codomain is bound under `Self::CODOMAIN_BINDER` and each of its
+    /// fields is pushed into the base scope as a variable projecting out of
+    /// that binding, so cell references to codomain objects and morphisms
+    /// (UUID-qualified names) resolve through the ordinary
+    /// `Self::resolve_name` machinery — including modal objects in `over`
+    /// and paths through model instantiations. Generators and imports go to
+    /// the separate fiber scope, exactly as in the text pipeline. Unlike the
+    /// text pipeline, a bad cell does not abort the instance: the error is
+    /// recorded against the cell and elaboration continues.
+    pub fn instance_notebook<'b>(
+        &mut self,
+        codomain: &RecordV,
+        cells: impl Iterator<Item = &'b nb::InstanceJudgment>,
+    ) -> (FiberTyS, FiberTyV) {
+        let toplevel = self.toplevel;
+        // Like model notebooks, cells are elaborated in dependency order so
+        // that UI reordering cannot change the result.
+        let mut cells: Vec<_> = cells.collect();
+        cells.sort_by_key(|judgment| match judgment {
+            nb::InstanceJudgment::Generator(_) => 0,
+            nb::InstanceJudgment::Import(_) => 1,
+            nb::InstanceJudgment::Equation(_) => 2,
+        });
+
+        let c = self.checkpoint();
+        let codomain_ty = BaseTyV::record(codomain.clone());
+        let self_v = self.intro(
+            name_seg(Self::CODOMAIN_BINDER),
+            label_seg(Self::CODOMAIN_BINDER),
+            Some(codomain_ty.clone()),
+        );
+        for (name, (label, _)) in codomain.fields.iter() {
+            let field_ty = self.evaluator().field_ty(&codomain_ty, &self_v, *name);
+            let field_v = self.evaluator().proj(&self_v, *name, *label);
+            self.ctx.push_scope(*name, *label, Some(field_ty));
+            self.ctx.env = self.ctx.env.snoc(field_v);
+        }
+
+        let mut fields_s: Row<FiberTyS> = Row::empty();
+        let mut fields_v: Row<FiberTyV> = Row::empty();
+
+        for cell in cells {
+            match cell {
+                // A generator lying over a codomain object.
+                nb::InstanceJudgment::Generator(gen_decl) => {
+                    let name = NameSegment::Uuid(gen_decl.id);
+                    let label = LabelSegment::Text(ustr(&gen_decl.name));
+                    let over = gen_decl.over.as_ref().and_then(|ob| self.ob_syn(ob));
+                    let (ty_s, ty_v) = match over {
+                        Some((obj_s, obj_v, _)) => (FiberTyS::over(obj_s), FiberTyV::over(obj_v)),
+                        None => {
+                            self.errors.push(InvalidDblModel::ObType(QualifiedName::single(name)));
+                            let m = self.fresh_meta();
+                            (FiberTyS::over(BaseTmS::meta(m)), FiberTyV::over(BaseTmV::meta(m)))
+                        }
+                    };
+                    self.intro_fiber(name, label, ty_v.clone());
+                    fields_s.insert(name, label, ty_s);
+                    fields_v.insert(name, label, ty_v);
+                }
+                // An import of another instance of the same codomain.
+                nb::InstanceJudgment::Import(import) => {
+                    let name = NameSegment::Uuid(import.id);
+                    let label = LabelSegment::Text(ustr(&import.name));
+                    let qname = QualifiedName::single(name);
+                    let resolved = import.instance.as_ref().and_then(|link| {
+                        let nb::LinkType::Instantiation = link.r#type else {
+                            return None;
+                        };
+                        let topname = NameSegment::Text(ustr(&link.stable_ref.id));
+                        match toplevel.declarations.get(&topname) {
+                            Some(TopDecl::Instance(inst)) if inst.theory == self.theory => {
+                                Some((topname, inst))
+                            }
+                            _ => None,
+                        }
+                    });
+                    let Some((topname, inst)) = resolved else {
+                        self.errors.push(InvalidDblModel::InvalidLink(qname));
+                        continue;
+                    };
+                    if !self.codomains_match(&codomain_ty, &inst.codomain) {
+                        self.errors.push(InvalidDblModel::ImportCodomain(qname));
+                        continue;
+                    }
+                    let val = inst.val.clone();
+                    self.intro_fiber(name, label, val.clone());
+                    fields_s.insert(name, label, FiberTyS::topvar(topname));
+                    fields_v.insert(name, label, val);
+                }
+                // An equation between fiber elements.
+                nb::InstanceJudgment::Equation(eqn_decl) => {
+                    let name = NameSegment::Uuid(eqn_decl.id);
+                    let label = LabelSegment::Text(ustr(&eqn_decl.name));
+                    let qname = QualifiedName::single(name);
+                    let (Some(lhs), Some(rhs)) = (&eqn_decl.lhs, &eqn_decl.rhs) else {
+                        self.errors
+                            .push(InvalidDblModel::UnsupportedFeature(Feature::PartialEquation));
+                        continue;
+                    };
+                    let (lhs_s, lhs_v, lhs_ty) = self.fiber_syn_nb(&qname, lhs);
+                    let FiberTyV_::Over(obj) = &*lhs_ty else {
+                        // Only fiber-element equations live in an instance;
+                        // morphism equations constrain the model.
+                        self.errors.push(InvalidDblModel::FiberType(qname));
+                        continue;
+                    };
+                    let over_s = FiberTyS::over(self.evaluator().quote_tm(obj));
+                    let (rhs_s, rhs_v) = self.fiber_chk_nb(&qname, &lhs_ty, rhs);
+                    fields_s.insert(name, label, FiberTyS::id(over_s, lhs_s, rhs_s));
+                    fields_v.insert(name, label, FiberTyV::id(lhs_ty.clone(), lhs_v, rhs_v));
+                }
+            }
+        }
+        self.reset_to(c);
+        (FiberTyS::record(fields_s), FiberTyV::record(fields_v))
+    }
+
+    /// Elaborate an instance document into a top-level instance declaration.
+    ///
+    /// Resolves the document's `instanceOf` link to a model previously
+    /// declared in the toplevel (mirroring how instantiation cells resolve
+    /// their links), elaborates the cells against it, and packages the
+    /// result exactly as the text pipeline does — ready for
+    /// [`instance_from_def`](super::modelgen::instance_from_def).
+    ///
+    /// Returns `None` (with an error recorded) if the codomain link cannot
+    /// be resolved at all; cell-level problems are recorded per-cell in
+    /// [`Self::errors`] and still produce an instance.
+    pub fn instance_document(&mut self, doc: &nb::InstanceDocumentContent) -> Option<Instance> {
+        let toplevel = self.toplevel;
+        let link = &doc.instance_of;
+        let link_name = QualifiedName::single(NameSegment::Text(ustr(&link.stable_ref.id)));
+        let nb::LinkType::InstanceOf = link.r#type else {
+            self.errors.push(InvalidDblModel::InvalidLink(link_name));
+            return None;
+        };
+        let topname = NameSegment::Text(ustr(&link.stable_ref.id));
+        let Some(TopDecl::Type(type_def)) = toplevel.declarations.get(&topname) else {
+            self.errors.push(InvalidDblModel::InvalidLink(link_name));
+            return None;
+        };
+        if type_def.theory != self.theory {
+            self.errors.push(InvalidDblModel::InvalidLink(link_name));
+            return None;
+        }
+        let BaseTyV_::Record(codomain) = &*type_def.val else {
+            self.errors.push(InvalidDblModel::InvalidLink(link_name));
+            return None;
+        };
+        let codomain = codomain.clone();
+        let codomain_ty = type_def.val.clone();
+        let (stx, val) = self.instance_notebook(&codomain, doc.notebook.formal_content());
+        Some(Instance::new(self.theory.clone(), stx, val, codomain_ty))
+    }
+}
+
 /// Promotes a modality from notebook type to modality for modal theory.
 pub fn promote_modality(modality: nb::Modality) -> modal::Modality {
     match modality {
@@ -517,15 +908,17 @@ mod test {
     use ustr::ustr;
 
     use crate::dbl::model::DblModelPrinter;
-    use crate::stdlib::{th_schema, th_sym_monoidal_category};
+    use crate::stdlib::{th_schema, th_sym_monoidal_category, th_sym_multicategory};
     use crate::tt::{
-        modelgen::Model,
+        batch::{format_modal_instance_term, format_modal_ob, write_instance_summary},
+        modelgen::{Model, ModelInstance, instance_from_def},
         notebook_elab::Elaborator,
+        prelude::*,
         theory::{Theory, TheoryDef},
-        toplevel::Toplevel,
+        toplevel::{Instance, TopDecl, Toplevel, Type},
     };
     use crate::zero::name;
-    use catcolab_document_types::current::ModelDocumentContent;
+    use catcolab_document_types::current::{InstanceDocumentContent, ModelDocumentContent};
 
     fn elab_example(theory: &Theory, name: &str, expected: Expect) -> Model {
         let src = fs::read_to_string(format!("examples/tt/notebook/{name}.json")).unwrap();
@@ -592,20 +985,176 @@ mod test {
         );
     }
 
-    /// The Klausmeier instance-notebook fixtures deserialize against the
-    /// document schema. Elaboration of instance notebooks is not implemented
-    /// yet; this test pins schema/fixture agreement in the meantime.
-    #[test]
-    fn klausmeier_fixtures_deserialize() {
-        use catcolab_document_types::current::InstanceDocumentContent;
+    /// Elaborate a model document and install it in the toplevel under the
+    /// given ref id, so instance documents can link to it.
+    fn install_model(toplevel: &mut Toplevel, theory: &Theory, ref_id: &str, src: &str) {
+        let doc: ModelDocumentContent = serde_json::from_str(src).unwrap();
+        let (ty_s, ty_v) = {
+            let mut elab = Elaborator::new(theory.clone(), toplevel, ustr(ref_id));
+            let r = elab.notebook(doc.notebook.formal_content());
+            assert!(elab.errors().is_empty(), "{ref_id}: {:?}", elab.errors());
+            r
+        };
+        toplevel.declarations.insert(
+            NameSegment::Text(ustr(ref_id)),
+            TopDecl::Type(Type::new(theory.clone(), ty_s, ty_v)),
+        );
+    }
+
+    /// Elaborate an instance document, asserting no errors.
+    fn elab_instance(toplevel: &Toplevel, theory: &Theory, ref_id: &str, src: &str) -> Instance {
+        let doc: InstanceDocumentContent = serde_json::from_str(src).unwrap();
+        let mut elab = Elaborator::new(theory.clone(), toplevel, ustr(ref_id));
+        let inst = elab.instance_document(&doc).expect("codomain should resolve");
+        assert!(elab.errors().is_empty(), "{ref_id}: {:?}", elab.errors());
+        inst
+    }
+
+    /// The Klausmeier fixtures: DEC model + hydro/phyto instances installed
+    /// in a toplevel, ready for tests to elaborate against.
+    fn klausmeier_setup() -> (Theory, Toplevel) {
+        let th =
+            Theory::new(name("ThMulticategory"), TheoryDef::modal_unital(th_sym_multicategory()));
+        let mut toplevel = Toplevel::new(Default::default());
         let src = fs::read_to_string("examples/tt/notebook/klausmeier/dec_model.json").unwrap();
-        let _: ModelDocumentContent = serde_json::from_str(&src).unwrap();
-        for name in ["hydrodynamics", "phytodynamics", "klausmeier"] {
-            let src =
-                fs::read_to_string(format!("examples/tt/notebook/klausmeier/{name}.json")).unwrap();
-            let doc: InstanceDocumentContent = serde_json::from_str(&src).unwrap();
-            assert!(doc.notebook.formal_content().count() > 0);
+        install_model(&mut toplevel, &th, "dec_model", &src);
+        for ref_id in ["hydrodynamics", "phytodynamics"] {
+            let src = fs::read_to_string(format!("examples/tt/notebook/klausmeier/{ref_id}.json"))
+                .unwrap();
+            let inst = elab_instance(&toplevel, &th, ref_id, &src);
+            toplevel
+                .declarations
+                .insert(NameSegment::Text(ustr(ref_id)), TopDecl::Instance(inst));
         }
+        (th, toplevel)
+    }
+
+    /// Render an elaborated instance through `instance_from_def` in the
+    /// batch snapshot format.
+    fn instance_summary(toplevel: &Toplevel, theory: &Theory, inst: &Instance) -> String {
+        let (instance, ns) = instance_from_def(toplevel, &theory.definition, inst).unwrap();
+        let ModelInstance::ModalUnital(instance) = &instance else {
+            panic!("expected a modal instance");
+        };
+        let mut out = String::new();
+        write_instance_summary(
+            &mut out,
+            instance,
+            &ns,
+            |ob| format_modal_ob(ob, &ns),
+            |tm| format_modal_instance_term(tm, &ns),
+        );
+        out
+    }
+
+    /// End-to-end: the Klausmeier instance notebooks elaborate to
+    /// `DblModelInstance`s through the same pipeline as the text examples
+    /// (compare `examples/tt/text/test_klausmeier.dbltt.snapshot`).
+    #[test]
+    fn klausmeier_instance_notebooks() {
+        let (th, toplevel) = klausmeier_setup();
+
+        let Some(TopDecl::Instance(hydro)) =
+            toplevel.declarations.get(&NameSegment::Text(ustr("hydrodynamics")))
+        else {
+            unreachable!()
+        };
+        expect![[r#"
+            #/ instance generators:
+            #/   a : Form0
+            #/   k : Form0
+            #/   dX : Form1
+            #/   w : DualForm0
+            #/   n : DualForm0
+            #/   x0 : DualForm0
+            #/   x1 : DualForm0
+            #/   x2 : DualForm0
+            #/   x3 : DualForm0
+            #/   x4 : DualForm0
+            #/   x5 : DualForm0
+            #/ instance equations:
+            #/   x0 == sub_d01([w, a])
+            #/   x1 == square_d0([n])
+            #/   x2 == mult_d0d0([w, x1])
+            #/   x3 == sub_d0d0([x0, x2])
+            #/   x4 == lie_1d0([dX, w])
+            #/   x5 == mult_0d0([k, x4])
+            #/   partial_d0([w]) == add_d0d0([x3, x5])
+        "#]]
+        .assert_eq(&instance_summary(&toplevel, &th, hydro));
+
+        let src = fs::read_to_string("examples/tt/notebook/klausmeier/klausmeier.json").unwrap();
+        let klausmeier = elab_instance(&toplevel, &th, "klausmeier", &src);
+        expect![[r#"
+            #/ instance generators:
+            #/   hydro.a : Form0
+            #/   hydro.k : Form0
+            #/   hydro.dX : Form1
+            #/   hydro.w : DualForm0
+            #/   hydro.n : DualForm0
+            #/   hydro.x0 : DualForm0
+            #/   hydro.x1 : DualForm0
+            #/   hydro.x2 : DualForm0
+            #/   hydro.x3 : DualForm0
+            #/   hydro.x4 : DualForm0
+            #/   hydro.x5 : DualForm0
+            #/   phyto.m : Form0
+            #/   phyto.n : DualForm0
+            #/   phyto.w : DualForm0
+            #/   phyto.y0 : DualForm0
+            #/   phyto.y1 : DualForm0
+            #/   phyto.y2 : DualForm0
+            #/   phyto.y3 : DualForm0
+            #/   phyto.y4 : DualForm0
+            #/ instance equations:
+            #/   hydro.x0 == sub_d01([hydro.w, hydro.a])
+            #/   hydro.x1 == square_d0([hydro.n])
+            #/   hydro.x2 == mult_d0d0([hydro.w, hydro.x1])
+            #/   hydro.x3 == sub_d0d0([hydro.x0, hydro.x2])
+            #/   hydro.x4 == lie_1d0([hydro.dX, hydro.w])
+            #/   hydro.x5 == mult_0d0([hydro.k, hydro.x4])
+            #/   partial_d0([hydro.w]) == add_d0d0([hydro.x3, hydro.x5])
+            #/   phyto.y0 == square_d0([phyto.n])
+            #/   phyto.y1 == mult_d0d0([phyto.w, phyto.y0])
+            #/   phyto.y2 == mult_0d0([phyto.m, phyto.n])
+            #/   phyto.y3 == sub_d0d0([phyto.y1, phyto.y2])
+            #/   phyto.y4 == lapl_d0([phyto.n])
+            #/   partial_d0([phyto.w]) == add_d0d0([phyto.y3, phyto.y4])
+            #/   hydro.n == phyto.n
+            #/   hydro.w == phyto.w
+        "#]]
+        .assert_eq(&instance_summary(&toplevel, &th, &klausmeier));
+    }
+
+    /// Importing an instance of a different model into an instance notebook
+    /// is an error (notebook twin of the text suite's MismatchedImport).
+    #[test]
+    fn instance_import_codomain_mismatch() {
+        use crate::dbl::model::InvalidDblModel;
+        let (th, mut toplevel) = klausmeier_setup();
+        let other_model = r##"{"type":"model","name":"Other","theory":"multicategory","version":"2",
+            "notebook":{"cellContents":{"11111111-1111-1111-1111-111111111111":{
+                "tag":"formal","id":"11111111-1111-1111-1111-111111111111",
+                "content":{"tag":"object","name":"X","id":"22222222-2222-2222-2222-222222222222",
+                    "obType":{"tag":"Basic","content":"Object"}}}},
+                "cellOrder":["11111111-1111-1111-1111-111111111111"]}}"##;
+        install_model(&mut toplevel, &th, "other_model", other_model);
+        let bad_import = r##"{"type":"instance","name":"Bad","version":"2",
+            "instanceOf":{"_id":"other_model","_version":null,"_server":"catcolab.org","type":"instance-of"},
+            "notebook":{"cellContents":{"33333333-3333-3333-3333-333333333333":{
+                "tag":"formal","id":"33333333-3333-3333-3333-333333333333",
+                "content":{"tag":"import","name":"h","id":"44444444-4444-4444-4444-444444444444",
+                    "instance":{"_id":"hydrodynamics","_version":null,"_server":"catcolab.org","type":"instantiation"}}}},
+                "cellOrder":["33333333-3333-3333-3333-333333333333"]}}"##;
+        let doc: InstanceDocumentContent = serde_json::from_str(bad_import).unwrap();
+        let mut elab = Elaborator::new(th.clone(), &toplevel, ustr("bad_import"));
+        let inst = elab.instance_document(&doc);
+        assert!(inst.is_some());
+        assert!(
+            elab.errors().iter().any(|e| matches!(e, InvalidDblModel::ImportCodomain(_))),
+            "expected an ImportCodomain error, got {:?}",
+            elab.errors()
+        );
     }
 
     /// Test a notebook with an equation.
