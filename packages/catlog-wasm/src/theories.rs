@@ -4,7 +4,6 @@
 //! methods for theory-specific analyses.
 
 use catcolab_document_types::current::{DiagramDocumentContent, ModelDocumentContent};
-use catlog::tt::util::Target;
 use std::collections::HashMap;
 use std::rc::Rc;
 use tsify::serde_wasm_bindgen;

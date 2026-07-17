@@ -370,4 +370,6 @@ pub enum Feature {
     /// Application of a composite morphism in an instance term. Nested
     /// applications express the same thing.
     CompositeApplication,
+    /// Morphism-equation cell in a diagram notebook.
+    DiagramEquation,
 }

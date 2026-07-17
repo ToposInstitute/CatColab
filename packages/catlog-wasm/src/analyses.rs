@@ -148,7 +148,7 @@ pub(crate) fn mass_action_simulation(
     })
 }
 
-/// Constructor for the Decapodes analysis
+/// Constructor for the Decapodes analysis.
 #[derive(Serialize, Deserialize, Tsify)]
 #[tsify(into_wasm_abi, from_wasm_abi)]
 pub struct DecapodesTranspiler {}

@@ -4,8 +4,6 @@ use std::collections::HashMap;
 use std::rc::Rc;
 
 use all_the_same::all_the_same;
-use catlog::tt;
-use catlog::tt::toplevel::Toplevel;
 use derive_more::From;
 use serde::{Deserialize, Serialize};
 use tsify::Tsify;
@@ -288,8 +286,6 @@ pub struct ModelDiagramValidationResult(
 pub struct DblDiagramMap {
     #[wasm_bindgen(skip)]
     diagrams: HashMap<String, DblModelDiagram>,
-    #[wasm_bindgen(skip)]
-    toplevel: Toplevel,
 }
 
 impl Default for DblDiagramMap {
@@ -303,10 +299,7 @@ impl DblDiagramMap {
     /// Constructs an empty collection of models.
     #[wasm_bindgen(constructor)]
     pub fn new() -> Self {
-        DblDiagramMap {
-            diagrams: HashMap::new(),
-            toplevel: Toplevel::new(tt::theory::std_theories()),
-        }
+        DblDiagramMap { diagrams: HashMap::new() }
     }
 
     /// Returns whether the collection contains a model with the given name.
