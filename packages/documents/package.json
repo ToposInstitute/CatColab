@@ -12,6 +12,7 @@
         "format": "oxfmt .",
         "lint": "oxlint --fix && oxfmt .",
         "test": "vitest run",
+        "test:db-dump": "vitest --config vitest.db-dump.config.ts --run",
         "test:watch": "vitest",
         "check": "tsc -p tsconfig.test.json && pnpm run lint",
         "ci": "oxlint --deny-warnings && oxfmt --check ."
@@ -33,6 +34,7 @@
         "@types/uuid": "^10.0.0",
         "catcolab-documents": "workspace:*",
         "catcolab-logics": "workspace:*",
+        "fast-check": "^4.9.0",
         "happy-dom": "^20.0.0",
         "prosemirror-model": "^1.25.9",
         "prosemirror-state": "^1.4.4",
