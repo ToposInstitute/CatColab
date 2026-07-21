@@ -4,6 +4,7 @@ pub use crate::v1::DocumentType;
 
 use super::analysis::Analysis;
 use super::api::Link;
+use super::llm_conversation::LLMConversationDocumentContent;
 use super::notebook::Notebook;
 
 use serde::{Deserialize, Serialize};
@@ -58,6 +59,8 @@ pub enum Document {
     Diagram(DiagramDocumentContent),
     #[serde(rename = "analysis")]
     Analysis(AnalysisDocumentContent),
+    #[serde(rename = "llmconversation")]
+    LLMConversation(LLMConversationDocumentContent),
 }
 
 impl Document {

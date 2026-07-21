@@ -311,6 +311,9 @@ function elaborateAndValidateModel(
 
 /** Does the patch to the model document affect its formal content? */
 function isPatchToFormalContent(doc: Document, patch: Patch): boolean {
+    if (doc.type !== "model") {
+        return false;
+    }
     const path = patch.path;
     if (!(path[0] === "type" || path[0] === "theory" || path[0] === "notebook")) {
         // Ignore changes to top-level data like document name.

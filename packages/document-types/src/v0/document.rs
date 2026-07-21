@@ -64,6 +64,8 @@ pub enum DocumentType {
     Diagram,
     #[cfg_attr(feature = "backend", autosurgeon(rename = "analysis"))]
     Analysis,
+    #[cfg_attr(feature = "backend", autosurgeon(rename = "llmconversation"))]
+    LLMConversation,
 }
 
 impl FromStr for DocumentType {
@@ -74,6 +76,7 @@ impl FromStr for DocumentType {
             "model" => Ok(DocumentType::Model),
             "diagram" => Ok(DocumentType::Diagram),
             "analysis" => Ok(DocumentType::Analysis),
+            "llmconversation" => Ok(DocumentType::LLMConversation),
             other => Err(format!("unknown document type: {other}")),
         }
     }

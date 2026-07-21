@@ -60,7 +60,10 @@ export function DocumentMenu(props: {
     const onNewAnalysis = async () => {
         const docRefId = props.docRef.refId;
         const docType = props.liveDoc.doc.type;
-        invariant(docType !== "analysis", "Analysis cannot be created on other analysis");
+        invariant(
+            docType === "model" || docType === "diagram",
+            "Analysis can only be created on a model or diagram",
+        );
 
         const newRef = await createAnalysis(api, docType, api.makeUnversionedRef(docRefId));
         handleDocCreated("analysis", newRef);
