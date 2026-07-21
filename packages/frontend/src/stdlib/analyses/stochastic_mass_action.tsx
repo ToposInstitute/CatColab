@@ -178,14 +178,13 @@ export function StochasticMassActionConfigForm(props: {
                 }}
             />
             <InputField
+                type="number"
                 label="Random seed"
                 value={props.config.seed ?? ""}
                 onChange={(evt) => {
                     const value = Number(evt.currentTarget.value);
                     if (Number.isInteger(value) && value >= 0) {
                         props.changeConfig((content) => {
-                            // TODO: fix reactivity, so that this reruns the simulation on key-up
-                            //       (at the moment it requires hitting the enter key)
                             content.seed = value;
                         });
                     }
