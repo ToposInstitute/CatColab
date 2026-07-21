@@ -1,0 +1,157 @@
+set_theory ThMulticategory
+#/ result: set theory to ThMulticategory
+
+model SigMonoid := [
+  M : Object,
+  op : Multihom[[M, M], M],
+  unit : Multihom[[], M]
+]
+#/ declared: SigMonoid
+
+model SigRig := [
+  R : Object,
+  Add : SigMonoid & [ .M := R ],
+  Mul : SigMonoid & [ .M := R ]
+]
+#/ declared: SigRig
+
+instance Z2 : SigMonoid := [
+    M := [x],
+    op([x,x]) := unit([]),
+    op([x,unit([])]) := x,
+    op([unit([]),x]) := x
+]
+#/ declared: Z2
+#/ instance generators:
+#/   x : M
+#/ instance equations:
+#/   op([x, x]) == unit([])
+#/   op([x, unit([])]) == x
+#/   op([unit([]), x]) == x
+
+instance Z2freeZ2 : SigMonoid := [
+    a : Z2,
+    b : Z2
+]
+#/ declared: Z2freeZ2
+#/ instance generators:
+#/   a.x : M
+#/   b.x : M
+#/ instance equations:
+#/   op([a.x, a.x]) == unit([])
+#/   op([a.x, unit([])]) == a.x
+#/   op([unit([]), a.x]) == a.x
+#/   op([b.x, b.x]) == unit([])
+#/   op([b.x, unit([])]) == b.x
+#/   op([unit([]), b.x]) == b.x
+
+instance klein : SigMonoid := [
+    p : Z2freeZ2,
+    op([p.a.x,p.b.x]) := op([p.b.x,p.a.x]),
+    op([op([p.a.x,p.b.x]),op([p.a.x,p.b.x])]) := unit([])
+]
+#/ declared: klein
+#/ instance generators:
+#/   p.a.x : M
+#/   p.b.x : M
+#/ instance equations:
+#/   op([p.a.x, p.a.x]) == unit([])
+#/   op([p.a.x, unit([])]) == p.a.x
+#/   op([unit([]), p.a.x]) == p.a.x
+#/   op([p.b.x, p.b.x]) == unit([])
+#/   op([p.b.x, unit([])]) == p.b.x
+#/   op([unit([]), p.b.x]) == p.b.x
+#/   op([p.a.x, p.b.x]) == op([p.b.x, p.a.x])
+#/   op([op([p.a.x, p.b.x]), op([p.a.x, p.b.x])]) == unit([])
+
+instance Z2TheRig : SigRig := [
+    Add.op([Mul.unit([]),Mul.unit([])]) := Add.unit([]),
+    Add.op([Mul.unit([]),Add.unit([])]) := Mul.unit([]),
+    Add.op([Add.unit([]),Mul.unit([])]) := Mul.unit([]),
+    Mul.op([Add.unit([]),Add.unit([])]) := Add.unit([]),
+    Mul.op([Mul.unit([]), Add.unit([])]) := Add.unit([]),
+    Mul.op([Add.unit([]), Mul.unit([])]) := Add.unit([])
+]
+#/ declared: Z2TheRig
+#/ instance equations:
+#/   Add.op([Mul.unit([]), Mul.unit([])]) == Add.unit([])
+#/   Add.op([Mul.unit([]), Add.unit([])]) == Mul.unit([])
+#/   Add.op([Add.unit([]), Mul.unit([])]) == Mul.unit([])
+#/   Mul.op([Add.unit([]), Add.unit([])]) == Add.unit([])
+#/   Mul.op([Mul.unit([]), Add.unit([])]) == Add.unit([])
+#/   Mul.op([Add.unit([]), Mul.unit([])]) == Add.unit([])
+
+set_theory ThSymMonoidalCategory
+#/ result: set theory to ThSymMonoidalCategory
+
+model HMW := [
+  H : Object,
+  M : Object,
+  W : Object,
+  returns_w : (Hom Object)[H, W],
+  returns_d : (Hom Object)[H, @tensor []],
+  fight_h : (Hom Object) [@tensor [H,M], H],
+  fight_m : (Hom Object) [@tensor [H,M], M],
+  fight_mm : (Hom Object)[@tensor [H, M], @tensor [M, M]]
+]
+#/ declared: HMW
+
+instance hm : HMW := [
+    H := [hercules,odysseus,beowulf],
+    M := [hydra,polyphemus,grendel,dragon],
+    W := [megara, penelope],
+    fight_h(@tensor [odysseus,polyphemus]) := odysseus,
+    fight_h(@tensor [beowulf,grendel]) := beowulf,
+    fight_m(@tensor [beowulf,dragon]) := dragon,
+    fight_mm(@tensor [hercules,hydra]) := @tensor [hydra,hydra],
+    returns_w(hercules) := megara,
+    returns_w(odysseus) := penelope,
+    returns_d(beowulf) := @tensor []
+]
+#/ declared: hm
+#/ instance generators:
+#/   hercules : H
+#/   odysseus : H
+#/   beowulf : H
+#/   hydra : M
+#/   polyphemus : M
+#/   grendel : M
+#/   dragon : M
+#/   megara : W
+#/   penelope : W
+#/ instance equations:
+#/   fight_h(@tensor [odysseus, polyphemus]) == odysseus
+#/   fight_h(@tensor [beowulf, grendel]) == beowulf
+#/   fight_m(@tensor [beowulf, dragon]) == dragon
+#/   fight_mm(@tensor [hercules, hydra]) == @tensor [hydra, hydra]
+#/   returns_w(hercules) == megara
+#/   returns_w(odysseus) == penelope
+#/   returns_d(beowulf) == @tensor []
+
+model Chain := [
+  X : Object,
+  Y : Object,
+  s : (Hom Object)[X, Y],
+  t : (Hom Object)[@tensor [Y, Y], X]
+]
+#/ declared: Chain
+
+instance chain : Chain := [
+    X := [x0],
+    t(@tensor [s(x0), s(x0)]) := x0
+]
+#/ declared: chain
+#/ instance generators:
+#/   x0 : X
+#/ instance equations:
+#/   t(@tensor [s(x0), s(x0)]) == x0
+
+norm [chain] x0
+#/ result: x0
+
+norm [chain] s(x0)
+#/ result: s @ x0
+
+norm [chain] t(@tensor [s(x0), s(x0)])
+#/ result: (@tensor [s, s] ; t) @ @tensor [x0, x0]
+

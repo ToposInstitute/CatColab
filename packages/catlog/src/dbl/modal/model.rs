@@ -12,8 +12,8 @@ use ref_cast::RefCast;
 use super::theory::*;
 use crate::dbl::theory::DblTheoryKind;
 use crate::dbl::{graph::VDblGraph, model::*, theory::DblTheory};
-use crate::tt::util::pretty::*;
 use crate::validate::{self, Validate};
+use crate::zero::pretty::*;
 use crate::{one::computad::*, one::*, zero::*};
 
 /// Object in a model of a modal double theory.

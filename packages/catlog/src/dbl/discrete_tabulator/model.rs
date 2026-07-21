@@ -7,8 +7,8 @@ use derive_more::From;
 
 use super::theory::*;
 use crate::dbl::{category::*, model::*, theory::DblTheory};
-use crate::tt::util::pretty::*;
 use crate::validate::{self, Validate};
+use crate::zero::pretty::*;
 use crate::{one::*, zero::*};
 
 /// Object in a model of a discrete tabulator theory.

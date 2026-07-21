@@ -14,7 +14,7 @@ use serde::{self, Deserialize, Serialize};
 use tsify::Tsify;
 
 use super::column::{Column, IndexedHashColumn, Mapping, MutMapping};
-use crate::tt::util::pretty::*;
+use super::pretty::*;
 
 /// A segment in a [qualified name](QualifiedName).
 ///

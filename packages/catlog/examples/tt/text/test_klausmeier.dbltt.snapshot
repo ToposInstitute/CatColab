@@ -1,0 +1,167 @@
+set_theory ThMulticategory
+#/ result: set theory to ThMulticategory
+
+model DEC := [
+  Form0 : Object,
+  Form1 : Object,
+  DualForm0 : Object,
+  lapl_d0 : Multihom[[DualForm0], DualForm0],
+  partial_0 : Multihom[[Form0], Form0],
+  partial_1 : Multihom[[Form1], Form1],
+  partial_d0 : Multihom[[DualForm0], DualForm0],
+  square_d0 : Multihom[[DualForm0], DualForm0],
+  add_d0d0 : Multihom[[DualForm0, DualForm0], DualForm0],
+  sub_d01 : Multihom[[DualForm0, Form0], DualForm0],
+  sub_d0d0 : Multihom[[DualForm0, DualForm0], DualForm0],
+  mult_00 : Multihom[[Form0, Form0], Form0],
+  mult_d0d0 : Multihom[[DualForm0, DualForm0], DualForm0],
+  mult_0d0 : Multihom[[Form0, DualForm0], DualForm0],
+  lie_1d0 : Multihom[[Form1, DualForm0], DualForm0],
+  wedge_00 : Multihom[[Form0, Form0], Form0],
+  wedge_10 : Multihom[[Form1, Form0], Form1]
+]
+#/ declared: DEC
+
+instance Hydrodynamics : DEC := [
+    Form0 := [a, k],
+    Form1 := [dX],
+    DualForm0 := [w, n, x0, x1, x2, x3, x4, x5],
+    x0 := sub_d01([w, a]),
+    x1 := square_d0([n]),
+    x2 := mult_d0d0([w, x1]),
+    x3 := sub_d0d0([x0, x2]),
+    x4 := lie_1d0([dX, w]),
+    x5 := mult_0d0([k, x4]),
+    partial_d0([w]) := add_d0d0([x3, x5])
+]
+#/ declared: Hydrodynamics
+#/ instance generators:
+#/   a : Form0
+#/   k : Form0
+#/   dX : Form1
+#/   w : DualForm0
+#/   n : DualForm0
+#/   x0 : DualForm0
+#/   x1 : DualForm0
+#/   x2 : DualForm0
+#/   x3 : DualForm0
+#/   x4 : DualForm0
+#/   x5 : DualForm0
+#/ instance equations:
+#/   x0 == sub_d01([w, a])
+#/   x1 == square_d0([n])
+#/   x2 == mult_d0d0([w, x1])
+#/   x3 == sub_d0d0([x0, x2])
+#/   x4 == lie_1d0([dX, w])
+#/   x5 == mult_0d0([k, x4])
+#/   partial_d0([w]) == add_d0d0([x3, x5])
+
+instance Phytodynamics : DEC := [
+    Form0 := [m],
+    DualForm0 := [n, w, y0, y1, y2, y3, y4],
+    y0 := square_d0([n]),
+    y1 := mult_d0d0([w, y0]),
+    y2 := mult_0d0([m, n]),
+    y3 := sub_d0d0([y1, y2]),
+    y4 := lapl_d0([n]),
+    #/ NOTE: Matt's draft binds partial_d0([w]) here; for the plant-biomass
+    #/ equation this is likely partial_d0([n]) -- confirm against the notebook.
+    partial_d0([w]) := add_d0d0([y3, y4])
+]
+#/ declared: Phytodynamics
+#/ instance generators:
+#/   m : Form0
+#/   n : DualForm0
+#/   w : DualForm0
+#/   y0 : DualForm0
+#/   y1 : DualForm0
+#/   y2 : DualForm0
+#/   y3 : DualForm0
+#/   y4 : DualForm0
+#/ instance equations:
+#/   y0 == square_d0([n])
+#/   y1 == mult_d0d0([w, y0])
+#/   y2 == mult_0d0([m, n])
+#/   y3 == sub_d0d0([y1, y2])
+#/   y4 == lapl_d0([n])
+#/   partial_d0([w]) == add_d0d0([y3, y4])
+
+instance Klausmeier : DEC := [
+    hydro : Hydrodynamics,
+    phyto : Phytodynamics,
+    hydro.n := phyto.n,
+    hydro.w := phyto.w
+]
+#/ declared: Klausmeier
+#/ instance generators:
+#/   hydro.a : Form0
+#/   hydro.k : Form0
+#/   hydro.dX : Form1
+#/   hydro.w : DualForm0
+#/   hydro.n : DualForm0
+#/   hydro.x0 : DualForm0
+#/   hydro.x1 : DualForm0
+#/   hydro.x2 : DualForm0
+#/   hydro.x3 : DualForm0
+#/   hydro.x4 : DualForm0
+#/   hydro.x5 : DualForm0
+#/   phyto.m : Form0
+#/   phyto.n : DualForm0
+#/   phyto.w : DualForm0
+#/   phyto.y0 : DualForm0
+#/   phyto.y1 : DualForm0
+#/   phyto.y2 : DualForm0
+#/   phyto.y3 : DualForm0
+#/   phyto.y4 : DualForm0
+#/ instance equations:
+#/   hydro.x0 == sub_d01([hydro.w, hydro.a])
+#/   hydro.x1 == square_d0([hydro.n])
+#/   hydro.x2 == mult_d0d0([hydro.w, hydro.x1])
+#/   hydro.x3 == sub_d0d0([hydro.x0, hydro.x2])
+#/   hydro.x4 == lie_1d0([hydro.dX, hydro.w])
+#/   hydro.x5 == mult_0d0([hydro.k, hydro.x4])
+#/   partial_d0([hydro.w]) == add_d0d0([hydro.x3, hydro.x5])
+#/   phyto.y0 == square_d0([phyto.n])
+#/   phyto.y1 == mult_d0d0([phyto.w, phyto.y0])
+#/   phyto.y2 == mult_0d0([phyto.m, phyto.n])
+#/   phyto.y3 == sub_d0d0([phyto.y1, phyto.y2])
+#/   phyto.y4 == lapl_d0([phyto.n])
+#/   partial_d0([phyto.w]) == add_d0d0([phyto.y3, phyto.y4])
+#/   hydro.n == phyto.n
+#/   hydro.w == phyto.w
+
+instance HydrodynamicsInline : DEC := [
+    Form0 := [a, k],
+    Form1 := [dX],
+    DualForm0 := [w, n],
+    partial_d0([w]) := add_d0d0([
+        sub_d0d0([sub_d01([w, a]), mult_d0d0([w, square_d0([n])])]),
+        mult_0d0([k, lie_1d0([dX, w])])
+    ])
+]
+#/ declared: HydrodynamicsInline
+#/ instance generators:
+#/   a : Form0
+#/   k : Form0
+#/   dX : Form1
+#/   w : DualForm0
+#/   n : DualForm0
+#/ instance equations:
+#/   partial_d0([w]) == add_d0d0([sub_d0d0([sub_d01([w, a]), mult_d0d0([w, square_d0([n])])]), mult_0d0([k, lie_1d0([dX, w])])])
+
+instance PhytodynamicsInline : DEC := [
+    Form0 := [m],
+    DualForm0 := [n, w],
+    partial_d0([w]) := add_d0d0([
+        sub_d0d0([mult_d0d0([w, square_d0([n])]), mult_0d0([m, n])]),
+        lapl_d0([n])
+    ])
+]
+#/ declared: PhytodynamicsInline
+#/ instance generators:
+#/   m : Form0
+#/   n : DualForm0
+#/   w : DualForm0
+#/ instance equations:
+#/   partial_d0([w]) == add_d0d0([sub_d0d0([mult_d0d0([w, square_d0([n])]), mult_0d0([m, n])]), lapl_d0([n])])
+

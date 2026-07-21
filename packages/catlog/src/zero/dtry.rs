@@ -1,9 +1,9 @@
 //! Directories.
 
-use crate::{
-    tt::prelude::*,
-    zero::{LabelSegment, QualifiedLabel, QualifiedName},
-};
+use indexmap::IndexMap;
+
+use super::qualified::{LabelSegment, NameSegment, QualifiedLabel, QualifiedName};
+use super::row::Row;
 
 /// An entry in a [Dtry].
 ///
@@ -27,7 +27,7 @@ impl<T> DtryEntry<T> {
         }
     }
 
-    fn singleton(path: &[(FieldName, LabelSegment)], val: T) -> Self {
+    fn singleton(path: &[(NameSegment, LabelSegment)], val: T) -> Self {
         if path.is_empty() {
             DtryEntry::File(val)
         } else {
@@ -52,7 +52,7 @@ impl<T: Clone> DtryEntry<T> {
 
 /// A directory.
 ///
-/// A `Dtry<T>` consists of a mapping from `FieldName`s to directory
+/// A `Dtry<T>` consists of a mapping from `NameSegment`s to directory
 /// entries, where a directory entry is either a "File" ([DtryEntry::File]),
 /// that is an element of `T`, or a "subdirectory" ([DtryEntry::SubDir]),
 /// which is just another directory.
@@ -86,17 +86,17 @@ impl<T> Dtry<T> {
     }
 
     /// Iterate through the entries of the directory.
-    pub fn entries(&self) -> impl Iterator<Item = (&FieldName, &(LabelSegment, DtryEntry<T>))> {
+    pub fn entries(&self) -> impl Iterator<Item = (&NameSegment, &(LabelSegment, DtryEntry<T>))> {
         self.0.iter()
     }
 
     /// Get the entry for `field` if it exists.
-    pub fn entry(&self, field: &FieldName) -> Option<&DtryEntry<T>> {
+    pub fn entry(&self, field: &NameSegment) -> Option<&DtryEntry<T>> {
         self.0.get(*field)
     }
 
     /// Create a singleton directory with just one entry at the given path.
-    pub fn singleton(path: &[(FieldName, LabelSegment)], val: T) -> Self {
+    pub fn singleton(path: &[(NameSegment, LabelSegment)], val: T) -> Self {
         assert!(!path.is_empty());
         let ((field, label), path) = (path[0], &path[1..]);
         Dtry([(field, (label, DtryEntry::singleton(path, val)))].into_iter().collect())
@@ -124,8 +124,8 @@ impl<T: Clone> Dtry<T> {
     }
 }
 
-impl<T> From<IndexMap<FieldName, (LabelSegment, DtryEntry<T>)>> for Dtry<T> {
-    fn from(value: IndexMap<FieldName, (LabelSegment, DtryEntry<T>)>) -> Self {
+impl<T> From<IndexMap<NameSegment, (LabelSegment, DtryEntry<T>)>> for Dtry<T> {
+    fn from(value: IndexMap<NameSegment, (LabelSegment, DtryEntry<T>)>) -> Self {
         Self(value.into())
     }
 }

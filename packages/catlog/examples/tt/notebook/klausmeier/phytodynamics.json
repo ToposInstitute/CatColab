@@ -1,0 +1,372 @@
+{
+  "instanceOf": {
+    "_id": "dec_model",
+    "_server": "catcolab.org",
+    "_version": null,
+    "type": "instance-of"
+  },
+  "name": "Phytodynamics",
+  "notebook": {
+    "cellContents": {
+      "041949ed-aee8-57f4-ae2f-2a4051c4ec87": {
+        "content": {
+          "id": "4bf26d23-ad3c-5cec-9c9a-d49c35bd0f64",
+          "name": "w",
+          "over": {
+            "content": "5b62880f-6702-5485-9605-78a964901750",
+            "tag": "Basic"
+          },
+          "tag": "generator"
+        },
+        "id": "041949ed-aee8-57f4-ae2f-2a4051c4ec87",
+        "tag": "formal"
+      },
+      "53c2d96e-a94f-5f48-ae82-a1c47121b386": {
+        "content": {
+          "id": "41ef7859-fcee-55ac-ab8c-e2f4c4af0f2c",
+          "lhs": {
+            "content": "c1ef64cf-8968-5e41-8d64-40949d25daf2",
+            "tag": "Generator"
+          },
+          "name": "y2",
+          "rhs": {
+            "content": {
+              "arg": {
+                "content": {
+                  "modality": "SymmetricList",
+                  "terms": [
+                    {
+                      "content": "c46c610a-611e-5ebb-8276-304cd3ef5e99",
+                      "tag": "Generator"
+                    },
+                    {
+                      "content": "471460c5-a2ee-5e44-8c57-8034ad370593",
+                      "tag": "Generator"
+                    }
+                  ]
+                },
+                "tag": "List"
+              },
+              "mor": {
+                "content": "3a1b19df-9345-585a-b673-93383680e0ff",
+                "tag": "Basic"
+              }
+            },
+            "tag": "App"
+          },
+          "tag": "equation"
+        },
+        "id": "53c2d96e-a94f-5f48-ae82-a1c47121b386",
+        "tag": "formal"
+      },
+      "7707cc47-3162-5b28-aa52-ba7cfff37008": {
+        "content": {
+          "id": "b93fbd14-b77c-507f-bac1-1908fc1cd224",
+          "lhs": {
+            "content": "ad814f83-f647-5a9e-983a-f6942e4790f3",
+            "tag": "Generator"
+          },
+          "name": "y3",
+          "rhs": {
+            "content": {
+              "arg": {
+                "content": {
+                  "modality": "SymmetricList",
+                  "terms": [
+                    {
+                      "content": "5d85d291-b5f7-510f-967d-c259b7cdcb63",
+                      "tag": "Generator"
+                    },
+                    {
+                      "content": "c1ef64cf-8968-5e41-8d64-40949d25daf2",
+                      "tag": "Generator"
+                    }
+                  ]
+                },
+                "tag": "List"
+              },
+              "mor": {
+                "content": "55b1c6ab-28b3-5554-a387-237cea9a8db8",
+                "tag": "Basic"
+              }
+            },
+            "tag": "App"
+          },
+          "tag": "equation"
+        },
+        "id": "7707cc47-3162-5b28-aa52-ba7cfff37008",
+        "tag": "formal"
+      },
+      "8bec0a75-bca8-59a0-aa9c-122daddc5c94": {
+        "content": {
+          "id": "c1ef64cf-8968-5e41-8d64-40949d25daf2",
+          "name": "y2",
+          "over": {
+            "content": "5b62880f-6702-5485-9605-78a964901750",
+            "tag": "Basic"
+          },
+          "tag": "generator"
+        },
+        "id": "8bec0a75-bca8-59a0-aa9c-122daddc5c94",
+        "tag": "formal"
+      },
+      "a212d5e0-4c8e-5925-aa68-ed568075a1d9": {
+        "content": {
+          "id": "3c4fd918-4b55-5723-b3ee-81109a668daf",
+          "name": "y0",
+          "over": {
+            "content": "5b62880f-6702-5485-9605-78a964901750",
+            "tag": "Basic"
+          },
+          "tag": "generator"
+        },
+        "id": "a212d5e0-4c8e-5925-aa68-ed568075a1d9",
+        "tag": "formal"
+      },
+      "a5abff61-28bd-5239-a17d-038c85907d5a": {
+        "content": {
+          "id": "ad814f83-f647-5a9e-983a-f6942e4790f3",
+          "name": "y3",
+          "over": {
+            "content": "5b62880f-6702-5485-9605-78a964901750",
+            "tag": "Basic"
+          },
+          "tag": "generator"
+        },
+        "id": "a5abff61-28bd-5239-a17d-038c85907d5a",
+        "tag": "formal"
+      },
+      "b6faab41-0f79-514a-892d-2683651640c4": {
+        "content": {
+          "id": "db4d3b25-0fd0-5180-b315-31a4903712a0",
+          "lhs": {
+            "content": "5d85d291-b5f7-510f-967d-c259b7cdcb63",
+            "tag": "Generator"
+          },
+          "name": "y1",
+          "rhs": {
+            "content": {
+              "arg": {
+                "content": {
+                  "modality": "SymmetricList",
+                  "terms": [
+                    {
+                      "content": "4bf26d23-ad3c-5cec-9c9a-d49c35bd0f64",
+                      "tag": "Generator"
+                    },
+                    {
+                      "content": "3c4fd918-4b55-5723-b3ee-81109a668daf",
+                      "tag": "Generator"
+                    }
+                  ]
+                },
+                "tag": "List"
+              },
+              "mor": {
+                "content": "8347d8cf-c755-523a-b260-db827bc05af7",
+                "tag": "Basic"
+              }
+            },
+            "tag": "App"
+          },
+          "tag": "equation"
+        },
+        "id": "b6faab41-0f79-514a-892d-2683651640c4",
+        "tag": "formal"
+      },
+      "bf6410f3-4f35-5749-a47a-91a6d3926da4": {
+        "content": {
+          "id": "b694063c-4d37-5992-8ca7-8c1648d40b16",
+          "name": "y4",
+          "over": {
+            "content": "5b62880f-6702-5485-9605-78a964901750",
+            "tag": "Basic"
+          },
+          "tag": "generator"
+        },
+        "id": "bf6410f3-4f35-5749-a47a-91a6d3926da4",
+        "tag": "formal"
+      },
+      "c7f92d49-62bb-5bc8-b8ba-c97eae09ca39": {
+        "content": {
+          "id": "5d85d291-b5f7-510f-967d-c259b7cdcb63",
+          "name": "y1",
+          "over": {
+            "content": "5b62880f-6702-5485-9605-78a964901750",
+            "tag": "Basic"
+          },
+          "tag": "generator"
+        },
+        "id": "c7f92d49-62bb-5bc8-b8ba-c97eae09ca39",
+        "tag": "formal"
+      },
+      "d3a94d9f-5605-5f66-ba85-db20ae529407": {
+        "content": {
+          "id": "2f4eb787-2df9-5469-9518-52308b1d1370",
+          "lhs": {
+            "content": "3c4fd918-4b55-5723-b3ee-81109a668daf",
+            "tag": "Generator"
+          },
+          "name": "y0",
+          "rhs": {
+            "content": {
+              "arg": {
+                "content": {
+                  "modality": "SymmetricList",
+                  "terms": [
+                    {
+                      "content": "471460c5-a2ee-5e44-8c57-8034ad370593",
+                      "tag": "Generator"
+                    }
+                  ]
+                },
+                "tag": "List"
+              },
+              "mor": {
+                "content": "3bbb63e3-45cd-50a7-835e-200dbaf249d8",
+                "tag": "Basic"
+              }
+            },
+            "tag": "App"
+          },
+          "tag": "equation"
+        },
+        "id": "d3a94d9f-5605-5f66-ba85-db20ae529407",
+        "tag": "formal"
+      },
+      "e3d8d25e-650d-5a79-b732-0d7a017580d1": {
+        "content": {
+          "id": "c6606495-3b90-56a4-b871-8ed684b123df",
+          "lhs": {
+            "content": {
+              "arg": {
+                "content": {
+                  "modality": "SymmetricList",
+                  "terms": [
+                    {
+                      "content": "4bf26d23-ad3c-5cec-9c9a-d49c35bd0f64",
+                      "tag": "Generator"
+                    }
+                  ]
+                },
+                "tag": "List"
+              },
+              "mor": {
+                "content": "3a4f308f-ba91-55af-b87d-629f48b206ec",
+                "tag": "Basic"
+              }
+            },
+            "tag": "App"
+          },
+          "name": "dt_w",
+          "rhs": {
+            "content": {
+              "arg": {
+                "content": {
+                  "modality": "SymmetricList",
+                  "terms": [
+                    {
+                      "content": "ad814f83-f647-5a9e-983a-f6942e4790f3",
+                      "tag": "Generator"
+                    },
+                    {
+                      "content": "b694063c-4d37-5992-8ca7-8c1648d40b16",
+                      "tag": "Generator"
+                    }
+                  ]
+                },
+                "tag": "List"
+              },
+              "mor": {
+                "content": "e8308841-9bc2-5bd9-8558-1d3fbd9a1071",
+                "tag": "Basic"
+              }
+            },
+            "tag": "App"
+          },
+          "tag": "equation"
+        },
+        "id": "e3d8d25e-650d-5a79-b732-0d7a017580d1",
+        "tag": "formal"
+      },
+      "e63d3629-4296-5dfc-a9a0-9a8cd6ef4f17": {
+        "content": {
+          "id": "471460c5-a2ee-5e44-8c57-8034ad370593",
+          "name": "n",
+          "over": {
+            "content": "5b62880f-6702-5485-9605-78a964901750",
+            "tag": "Basic"
+          },
+          "tag": "generator"
+        },
+        "id": "e63d3629-4296-5dfc-a9a0-9a8cd6ef4f17",
+        "tag": "formal"
+      },
+      "e6882460-5932-5cbc-b34b-e6c82f5f4082": {
+        "content": {
+          "id": "b0a4c980-c481-5869-9dbd-1bf5d13a5bba",
+          "lhs": {
+            "content": "b694063c-4d37-5992-8ca7-8c1648d40b16",
+            "tag": "Generator"
+          },
+          "name": "y4",
+          "rhs": {
+            "content": {
+              "arg": {
+                "content": {
+                  "modality": "SymmetricList",
+                  "terms": [
+                    {
+                      "content": "471460c5-a2ee-5e44-8c57-8034ad370593",
+                      "tag": "Generator"
+                    }
+                  ]
+                },
+                "tag": "List"
+              },
+              "mor": {
+                "content": "442d7941-0b1a-52d2-83ea-7566b3302d18",
+                "tag": "Basic"
+              }
+            },
+            "tag": "App"
+          },
+          "tag": "equation"
+        },
+        "id": "e6882460-5932-5cbc-b34b-e6c82f5f4082",
+        "tag": "formal"
+      },
+      "fff789e3-eca2-5013-9fe2-dea4b38480c2": {
+        "content": {
+          "id": "c46c610a-611e-5ebb-8276-304cd3ef5e99",
+          "name": "m",
+          "over": {
+            "content": "0b11fe33-a54c-5ce3-90b4-c6fb951beb92",
+            "tag": "Basic"
+          },
+          "tag": "generator"
+        },
+        "id": "fff789e3-eca2-5013-9fe2-dea4b38480c2",
+        "tag": "formal"
+      }
+    },
+    "cellOrder": [
+      "fff789e3-eca2-5013-9fe2-dea4b38480c2",
+      "e63d3629-4296-5dfc-a9a0-9a8cd6ef4f17",
+      "041949ed-aee8-57f4-ae2f-2a4051c4ec87",
+      "a212d5e0-4c8e-5925-aa68-ed568075a1d9",
+      "c7f92d49-62bb-5bc8-b8ba-c97eae09ca39",
+      "8bec0a75-bca8-59a0-aa9c-122daddc5c94",
+      "a5abff61-28bd-5239-a17d-038c85907d5a",
+      "bf6410f3-4f35-5749-a47a-91a6d3926da4",
+      "d3a94d9f-5605-5f66-ba85-db20ae529407",
+      "b6faab41-0f79-514a-892d-2683651640c4",
+      "53c2d96e-a94f-5f48-ae82-a1c47121b386",
+      "7707cc47-3162-5b28-aa52-ba7cfff37008",
+      "e6882460-5932-5cbc-b34b-e6c82f5f4082",
+      "e3d8d25e-650d-5a79-b732-0d7a017580d1"
+    ]
+  },
+  "type": "instance",
+  "version": "2"
+}
