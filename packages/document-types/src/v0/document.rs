@@ -64,6 +64,12 @@ pub enum DocumentType {
     Diagram,
     #[cfg_attr(feature = "backend", autosurgeon(rename = "analysis"))]
     Analysis,
+    // TODO: Re-enable this only after the frontend supports Petri net documents
+    // throughout its document routing, menus ... other exhaustive checks over
+    // document types.
+
+    // #[cfg_attr(feature = "backend", autosurgeon(rename = "petrinet"))]
+    // PetriNet,
 }
 
 impl FromStr for DocumentType {
@@ -74,6 +80,8 @@ impl FromStr for DocumentType {
             "model" => Ok(DocumentType::Model),
             "diagram" => Ok(DocumentType::Diagram),
             "analysis" => Ok(DocumentType::Analysis),
+            // TODO: Re-enable with the PetriNet DocumentType variant above.
+            // "petrinet" => Ok(DocumentType::PetriNet),
             other => Err(format!("unknown document type: {other}")),
         }
     }

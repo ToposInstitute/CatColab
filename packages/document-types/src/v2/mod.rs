@@ -4,7 +4,9 @@ pub use v1::{analysis, api, diagram_judgment, model, model_judgment, path, theor
 
 pub mod cell;
 pub mod document;
+pub mod lens;
 pub mod notebook;
+pub mod petrinet;
 
 pub use analysis::*;
 pub use api::*;
@@ -14,6 +16,7 @@ pub use document::*;
 pub use model::*;
 pub use model_judgment::*;
 pub use notebook::*;
+pub use petrinet::*;
 pub use theory::*;
 
 #[cfg(test)]

@@ -7,7 +7,7 @@ use super::model::{Mor, Ob};
 use super::theory::{MorType, ObType};
 
 /// Declares an object in a model of a double theory.
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize, Tsify)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Tsify)]
 #[tsify(into_wasm_abi, from_wasm_abi, missing_as_null)]
 pub struct ObDecl {
     /// Human-readable label for object.
@@ -22,7 +22,7 @@ pub struct ObDecl {
 }
 
 /// Declares a morphism in a model of a double theory.
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize, Tsify)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Tsify)]
 #[tsify(into_wasm_abi, from_wasm_abi, missing_as_null)]
 pub struct MorDecl {
     /// Human-readable label for morphism.
@@ -43,7 +43,7 @@ pub struct MorDecl {
 }
 
 /// Instantiates an existing model into the current model.
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize, Tsify)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Tsify)]
 #[tsify(into_wasm_abi, from_wasm_abi, missing_as_null)]
 pub struct InstantiatedModel {
     /// Human-readable label for the instantiation.
@@ -60,7 +60,7 @@ pub struct InstantiatedModel {
 }
 
 /// A specialization of a generating object in an instantiated model.
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize, Tsify)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Tsify)]
 #[tsify(into_wasm_abi, from_wasm_abi, missing_as_null)]
 pub struct SpecializeModel {
     /// ID (qualified name) of generating object to specialize.
@@ -71,7 +71,7 @@ pub struct SpecializeModel {
 }
 
 /// Declares an equation in a model of a double theory.
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize, Tsify)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Tsify)]
 #[tsify(into_wasm_abi, from_wasm_abi, missing_as_null)]
 pub struct EqnDecl {
     /// Human-readable label for equation.
@@ -88,7 +88,7 @@ pub struct EqnDecl {
 }
 
 /// A judgment defining part of a model of a double theory.
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize, Tsify)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Tsify)]
 #[serde(tag = "tag")]
 #[tsify(into_wasm_abi, from_wasm_abi)]
 pub enum ModelJudgment {
@@ -107,6 +107,18 @@ pub enum ModelJudgment {
     /// Instantiates an existing model into this model.
     #[serde(rename = "instantiation")]
     Instantiation(InstantiatedModel),
+}
+
+impl ModelJudgment {
+    /// UUIDs are unique among all components, so we may extract them uniformly.
+    pub fn id(&self) -> Uuid {
+        match self {
+            ModelJudgment::Object(d) => d.id,
+            ModelJudgment::Morphism(d) => d.id,
+            ModelJudgment::Equation(d) => d.id,
+            ModelJudgment::Instantiation(d) => d.id,
+        }
+    }
 }
 
 /// Arbitrary instances for property-based testing.
