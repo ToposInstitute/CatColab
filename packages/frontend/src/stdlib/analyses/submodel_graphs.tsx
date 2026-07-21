@@ -11,10 +11,6 @@ import { modelToGraph } from "./model_graph";
 
 import "./submodel_graphs.css";
 
-function isNumber(num: number | null | undefined): num is number {
-    return (num as number) !== undefined;
-}
-
 /** Find submodels of a model and visualize them as graphs. */
 export default function SubmodelGraphs(
     props: {
@@ -27,7 +23,7 @@ export default function SubmodelGraphs(
         // If `enableMaxPathLength` has not been set, then set it to be true iff `maxPathLength`
         // already has a (numerical) value.
         if (props.content.enableMaxPathLength === undefined) {
-            if (isNumber(props.content.maxPathLength)) {
+            if (props.content.maxPathLength != null) {
                 props.content.enableMaxPathLength = true;
             } else {
                 props.content.enableMaxPathLength = false;
@@ -44,7 +40,7 @@ export default function SubmodelGraphs(
             }
             return props.findSubmodels(validated.model, {
                 maxPathLength:
-                    enableMaxPathLength() && isNumber(props.content.maxPathLength)
+                    enableMaxPathLength() && props.content.maxPathLength != null
                         ? props.content.maxPathLength
                         : null,
             });
