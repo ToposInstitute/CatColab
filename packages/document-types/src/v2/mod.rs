@@ -4,6 +4,7 @@ pub use v1::{analysis, api, diagram_judgment, model, model_judgment, path, theor
 
 pub mod cell;
 pub mod document;
+pub mod llm_conversation;
 pub mod notebook;
 
 pub use analysis::*;
@@ -11,6 +12,7 @@ pub use api::*;
 pub use cell::*;
 pub use diagram_judgment::*;
 pub use document::*;
+pub use llm_conversation::*;
 pub use model::*;
 pub use model_judgment::*;
 pub use notebook::*;

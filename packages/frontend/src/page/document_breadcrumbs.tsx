@@ -41,6 +41,8 @@ export function getParentRefId(document: Document): string | null {
             return document.diagramIn._id;
         case "analysis":
             return document.analysisOf._id;
+        case "llmconversation":
+            return document.conversationOf._id;
         default:
             assertExhaustive(document);
     }

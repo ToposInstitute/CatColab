@@ -571,6 +571,8 @@ async function getLiveDocument(
             const { liveAnalysis, docRef } = await getLiveAnalysis(refId, api, models);
             return { liveDoc: liveAnalysis, docRef };
         }
+        case "llmconversation":
+            throw new Error("LLM conversation pages are not implemented");
         default:
             assertExhaustive(documentType);
     }
