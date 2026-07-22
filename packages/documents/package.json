@@ -5,8 +5,7 @@
     "license": "MIT",
     "type": "module",
     "exports": {
-        ".": "./src/index.ts",
-        "./*": "./src/*"
+        ".": "./src/index.ts"
     },
     "scripts": {
         "format": "oxfmt .",
