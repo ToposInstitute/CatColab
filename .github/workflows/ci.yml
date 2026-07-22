@@ -112,6 +112,10 @@ jobs:
           pnpm --filter "./packages/*" run build:deps
           pnpm --filter "./packages/*" run ci
 
+      - name: Typescript documents package tests
+        run: |
+          pnpm --filter catcolab-documents exec vitest run test/creating-and-editing.test.ts test/definitions.test.ts
+
   build_nixos_system:
     name: build NixOS system
     runs-on: ubuntu-latest
