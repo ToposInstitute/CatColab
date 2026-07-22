@@ -19,7 +19,7 @@ describe("creating and editing notebooks", () => {
         expect(notebook.cells().length).toBe(0);
     });
 
-    test.skip("cells are added with a single `add` method", async () => {
+    test("cells are added with a single `add` method", async () => {
         const binder = createBinder();
         const notebook = await binder.createNotebook(SimpleOlog, { title: "An Olog" });
 
@@ -38,7 +38,7 @@ describe("creating and editing notebooks", () => {
         expect(notebook.cells().length).toBe(4);
     });
 
-    test.skip("the notebook and any cell can be updated", async () => {
+    test("the notebook and any cell can be updated", async () => {
         const binder = createBinder();
         const notebook = await binder.createNotebook(SimpleOlog, { title: "An Olog" });
 
@@ -71,7 +71,7 @@ describe("creating and editing notebooks", () => {
         expect(arrow.to?.id).toBe(target.id);
     });
 
-    test.skip("partial updates leave the other fields intact", async () => {
+    test("partial updates leave the other fields intact", async () => {
         const binder = createBinder();
         const notebook = await binder.createNotebook(SimpleOlog, { title: "An Olog" });
 
