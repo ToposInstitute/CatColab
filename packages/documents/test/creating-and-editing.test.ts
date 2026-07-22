@@ -9,7 +9,7 @@ import { describe, expect, test } from "vitest";
 // type from the logic for formal cells.
 import { createBinder, RichText } from "catcolab-documents";
 
-describe.skip("creating and editing notebooks", () => {
+describe("creating and editing notebooks", () => {
     test("createNotebook creates a titled notebook for a logic", async () => {
         const binder = createBinder();
         const notebook = await binder.createNotebook(SimpleOlog, { title: "An Olog" });
@@ -19,7 +19,7 @@ describe.skip("creating and editing notebooks", () => {
         expect(notebook.cells().length).toBe(0);
     });
 
-    test("cells are added with a single `add` method", async () => {
+    test.skip("cells are added with a single `add` method", async () => {
         const binder = createBinder();
         const notebook = await binder.createNotebook(SimpleOlog, { title: "An Olog" });
 
@@ -38,7 +38,7 @@ describe.skip("creating and editing notebooks", () => {
         expect(notebook.cells().length).toBe(4);
     });
 
-    test("the notebook and any cell can be updated", async () => {
+    test.skip("the notebook and any cell can be updated", async () => {
         const binder = createBinder();
         const notebook = await binder.createNotebook(SimpleOlog, { title: "An Olog" });
 
@@ -71,7 +71,7 @@ describe.skip("creating and editing notebooks", () => {
         expect(arrow.to?.id).toBe(target.id);
     });
 
-    test("partial updates leave the other fields intact", async () => {
+    test.skip("partial updates leave the other fields intact", async () => {
         const binder = createBinder();
         const notebook = await binder.createNotebook(SimpleOlog, { title: "An Olog" });
 
