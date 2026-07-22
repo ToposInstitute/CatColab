@@ -11,6 +11,7 @@
         "vite.config.ts",
         "vitest.db-dump.config.ts",
         "test/creating-and-editing.test.ts",
-        "test/creating-and-editing.test-d.ts"
+        "test/creating-and-editing.test-d.ts",
+        "test/definitions.test.ts"
     ]
 }
