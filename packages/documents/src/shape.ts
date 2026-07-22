@@ -1,23 +1,56 @@
 import { deepEqual } from "fast-equals";
 
-import type { MorType, ObType } from "catcolab-document-types";
+import type { Modality, MorType, ObOp, ObType } from "catcolab-document-types";
 
-export interface ObjectType {
+export interface ObjectType<T extends ObType = ObType> {
     readonly kind: "object";
-    readonly obType: ObType;
+    readonly obType: T;
 }
 
-export interface MorphismType {
+export interface MorphismType<T extends MorType = MorType> {
     readonly kind: "morphism";
-    readonly morType: MorType;
+    readonly morType: T;
 }
 
 export const RichText = { kind: "rich-text" } as const;
 
 export interface Shape {
-    readonly theory: string;
+    readonly theory?: string;
     readonly objects?: readonly ObjectType[];
     readonly morphisms?: readonly MorphismType[];
+    readonly informal?: readonly RichTextType[];
+}
+
+export type MorphismEndpoint =
+    | ObType
+    | {
+          readonly apply: ObOp;
+          readonly modality: Modality;
+      };
+
+export interface MorphismEndpoints {
+    readonly domain: MorphismEndpoint;
+    readonly codomain: MorphismEndpoint;
+}
+
+export function defineObject<const T>(obType: T & ObType): ObjectType<T & ObType> {
+    return { kind: "object", obType };
+}
+
+export function defineMorphism<const T>(morType: T & MorType): MorphismType<T & MorType>;
+export function defineMorphism<const T, const E extends MorphismEndpoints>(
+    morType: T & MorType,
+    endpoints: E,
+): MorphismType<T & MorType> & { readonly endpoints: E };
+export function defineMorphism<const T, const E extends MorphismEndpoints>(
+    morType: T & MorType,
+    endpoints?: E,
+): MorphismType<T & MorType> | (MorphismType<T & MorType> & { readonly endpoints: E }) {
+    return endpoints ? { kind: "morphism", morType, endpoints } : { kind: "morphism", morType };
+}
+
+export function defineShape<const S extends Shape>(shape: S): S {
+    return shape;
 }
 
 export type RichTextType = typeof RichText;
