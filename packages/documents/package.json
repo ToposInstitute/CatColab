@@ -20,6 +20,7 @@
     "dependencies": {
         "catcolab-document-types": "link:../document-types/pkg",
         "catlog-wasm": "link:../catlog-wasm/dist/pkg-browser",
+        "fast-equals": "^5.4.1",
         "uuid": "^13.0.0"
     },
     "devDependencies": {
