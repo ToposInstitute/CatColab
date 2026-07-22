@@ -126,6 +126,10 @@ jobs:
         run: |
           pnpm --filter catcolab-documents exec vitest run test/creating-and-editing.test.ts test/definitions.test.ts
 
+      - name: Typescript logic package tests
+        run: |
+          pnpm --filter catcolab-logics exec vitest run test/simple-olog.test.ts
+
   build_nixos_system:
     name: build NixOS system
     runs-on: ubuntu-latest
