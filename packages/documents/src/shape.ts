@@ -57,9 +57,9 @@ export type ObjectTypes<S extends Shape> = NonNullable<S["objects"]>[number];
 export type MorphismTypes<S extends Shape> = NonNullable<S["morphisms"]>[number];
 export type CellType<S extends Shape> = RichTextType | ObjectTypes<S> | MorphismTypes<S>;
 
-type MatchingObjectType<O, Required> = O extends ObjectType
-    ? O["obType"] extends Required
-        ? Required extends O["obType"]
+type ObjectTypesOver<O, EndpointObType> = O extends ObjectType
+    ? O["obType"] extends EndpointObType
+        ? EndpointObType extends O["obType"]
             ? O
             : never
         : never
@@ -67,9 +67,9 @@ type MatchingObjectType<O, Required> = O extends ObjectType
 
 export type EndpointObjectTypes<S extends Shape, M extends MorphismType> = M["morType"] extends {
     tag: "Hom";
-    content: infer Required;
+    content: infer EndpointObType;
 }
-    ? MatchingObjectType<ObjectTypes<S>, Required>
+    ? ObjectTypesOver<ObjectTypes<S>, EndpointObType>
     : ObjectTypes<S>;
 
 export function findObjectType<S extends Shape>(
