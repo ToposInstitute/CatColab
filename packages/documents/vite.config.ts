@@ -7,6 +7,9 @@ export default defineConfig({
     plugins: [monorepoDedupe(), wasm(), solid()],
     test: {
         environment: "happy-dom",
+        include: [
+            "test/{cell-operations,cells,creating-and-editing,definitions,document-store,instantiation,serialization,validation}.test.ts",
+        ],
         typecheck: {
             enabled: true,
             tsconfig: "./tsconfig.test.json",

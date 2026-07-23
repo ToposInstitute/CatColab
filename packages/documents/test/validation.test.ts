@@ -17,7 +17,7 @@ async function wellFormedOlog() {
     return notebook;
 }
 
-describe.skip("validate", () => {
+describe("validate", () => {
     test("a well-formed notebook validates to an Ok carrying the model", async () => {
         const notebook = await wellFormedOlog();
 
@@ -38,7 +38,7 @@ describe.skip("validate", () => {
     });
 });
 
-describe.skip("onValidate", () => {
+describe("onValidate", () => {
     test("always calls the callback at least once with the current validation", async () => {
         const notebook = await wellFormedOlog();
 
@@ -82,7 +82,7 @@ describe.skip("onValidate", () => {
     });
 });
 
-describe.skip("validation result", () => {
+describe("validation result", () => {
     test("an ill-formed notebook results in an Err carrying issues", async () => {
         const binder = createBinder();
 

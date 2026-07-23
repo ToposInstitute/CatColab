@@ -23,7 +23,7 @@ async function threeObjectNotebook() {
     return { notebook, a, b, c, names };
 }
 
-describe.skip("duplicating cells", () => {
+describe("duplicating cells", () => {
     test("copies keep the shape, get fresh identities and update independently", async () => {
         const binder = createBinder();
         const notebook = await binder.createNotebook(SimpleOlog, { title: "An Olog" });
@@ -41,7 +41,7 @@ describe.skip("duplicating cells", () => {
     });
 });
 
-describe.skip("re-ordering cells", () => {
+describe("re-ordering cells", () => {
     test("moveUp and moveDown shift a cell one position; moveTo moves to an index", async () => {
         const { a, b, c, names } = await threeObjectNotebook();
 
@@ -67,7 +67,7 @@ describe.skip("re-ordering cells", () => {
     });
 });
 
-describe.skip("deleting cells", () => {
+describe("deleting cells", () => {
     test("deleting a cell removes it from the notebook's order and contents", async () => {
         const { b, names } = await threeObjectNotebook();
 
@@ -101,7 +101,7 @@ describe.skip("deleting cells", () => {
     });
 });
 
-describe.skip("getting a cell by id", () => {
+describe("getting a cell by id", () => {
     test("get retrieves a cell by id, filtered by the type of cell", async () => {
         const { notebook, a } = await threeObjectNotebook();
 
@@ -114,7 +114,7 @@ describe.skip("getting a cell by id", () => {
     });
 });
 
-describe.skip("subscribing to changes", () => {
+describe("subscribing to changes", () => {
     test("onChange triggers on any change to the notebook, with no arguments", async () => {
         const { notebook, a } = await threeObjectNotebook();
 

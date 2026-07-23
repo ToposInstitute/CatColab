@@ -19,6 +19,18 @@ describe("creating and editing notebooks", () => {
         expect(notebook.cells().length).toBe(0);
     });
 
+    test("the default binder exposes a stable, plain document view", async () => {
+        const binder = createBinder();
+        const notebook = await binder.createNotebook(SimpleOlog, { title: "An Olog" });
+        const documentView = notebook.document;
+
+        notebook.update({ title: "A renamed Olog" });
+
+        expect(notebook.document).toBe(documentView);
+        expect(documentView.name).toBe("A renamed Olog");
+        expect(structuredClone(documentView)).toEqual(documentView);
+    });
+
     test("cells are added with a single `add` method", async () => {
         const binder = createBinder();
         const notebook = await binder.createNotebook(SimpleOlog, { title: "An Olog" });

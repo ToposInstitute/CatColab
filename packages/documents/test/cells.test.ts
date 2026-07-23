@@ -1,5 +1,4 @@
 import { Aspect, SimpleOlog, Type } from "catcolab-logics/simple-olog";
-import { Entity, Mapping, SimpleSchema } from "catcolab-logics/simple-schema";
 import { describe, expect, test } from "vitest";
 
 // RFC-0006 "Iterating through cells".
@@ -9,7 +8,7 @@ import { describe, expect, test } from "vitest";
 // recurses into instantiations.
 import { CellKind, createBinder, Instantiation, RichText } from "catcolab-documents";
 
-describe.skip("iterating through cells", () => {
+describe("iterating through cells", () => {
     test("cells() iterates all cells with kind discriminants", async () => {
         const binder = createBinder();
         const notebook = await binder.createNotebook(SimpleOlog, { title: "An Olog" });
@@ -51,15 +50,15 @@ describe.skip("iterating through cells", () => {
 
     test("cellsOf() filters cells by cell type", async () => {
         const binder = createBinder();
-        const notebook = await binder.createNotebook(SimpleSchema, { title: "Example schema" });
+        const notebook = await binder.createNotebook(SimpleOlog, { title: "An Olog" });
 
-        const person = notebook.add(Entity, { label: "Person" });
-        const company = notebook.add(Entity, { label: "Company" });
+        const person = notebook.add(Type, { label: "Person" });
+        const company = notebook.add(Type, { label: "Company" });
 
-        notebook.add(Mapping, { label: "employer", from: person, to: company });
+        notebook.add(Aspect, { label: "employer", from: person, to: company });
 
-        const entities = notebook.cellsOf(Entity);
-        const mappings = notebook.cellsOf(Mapping);
+        const entities = notebook.cellsOf(Type);
+        const mappings = notebook.cellsOf(Aspect);
 
         expect(entities.map((cell) => cell.label).join(", ")).toBe("Person, Company");
         expect(mappings.map((cell) => cell.label).join(", ")).toBe("employer");
@@ -67,30 +66,30 @@ describe.skip("iterating through cells", () => {
 
     test("cells and cellsOf do not recurse into instantiations", async () => {
         const binder = createBinder();
-        const notebook = await binder.createNotebook(SimpleSchema, { title: "Example schema" });
+        const notebook = await binder.createNotebook(SimpleOlog, { title: "An Olog" });
 
-        const person = notebook.add(Entity, { label: "Person" });
-        const company = notebook.add(Entity, { label: "Company" });
-        notebook.add(Mapping, { label: "employer", from: person, to: company });
+        const person = notebook.add(Type, { label: "Person" });
+        const company = notebook.add(Type, { label: "Company" });
+        notebook.add(Aspect, { label: "employer", from: person, to: company });
 
-        const anotherSchema = await binder.createNotebook(SimpleSchema, {
-            title: "Another schema",
+        const anotherOlog = await binder.createNotebook(SimpleOlog, {
+            title: "Another olog",
         });
-        const enterprise = anotherSchema.add(Entity, { label: "Enterprise" });
-        const building = anotherSchema.add(Entity, { label: "Building" });
-        anotherSchema.add(Mapping, { label: "owner", from: enterprise, to: building });
+        const enterprise = anotherOlog.add(Type, { label: "Enterprise" });
+        const building = anotherOlog.add(Type, { label: "Building" });
+        anotherOlog.add(Aspect, { label: "owner", from: enterprise, to: building });
 
         notebook.add(Instantiation, {
-            label: "ImportedSchema",
-            model: anotherSchema,
+            label: "ImportedOlog",
+            model: anotherOlog,
             specializations: [{ object: enterprise, as: company }],
         });
 
         const instantiations = notebook.cellsOf(Instantiation);
-        const entities = notebook.cellsOf(Entity);
-        const mappings = notebook.cellsOf(Mapping);
+        const entities = notebook.cellsOf(Type);
+        const mappings = notebook.cellsOf(Aspect);
 
-        expect(instantiations.map((cell) => cell.label).join(", ")).toBe("ImportedSchema");
+        expect(instantiations.map((cell) => cell.label).join(", ")).toBe("ImportedOlog");
         expect(entities.map((cell) => cell.label).join(", ")).toBe("Person, Company");
         expect(mappings.map((cell) => cell.label).join(", ")).toBe("employer");
     });

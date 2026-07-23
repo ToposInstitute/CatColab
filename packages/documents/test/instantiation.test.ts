@@ -8,7 +8,7 @@ import { describe, expect, test } from "vitest";
 // defined in the local binder.
 import { createBinder, Instantiation } from "catcolab-documents";
 
-describe.skip("instantiation", () => {
+describe("instantiation", () => {
     test("a notebook from the same binder can be instantiated with specializations", async () => {
         const binder = createBinder();
         const notebook = await binder.createNotebook(SimpleOlog, { title: "An Olog" });
@@ -31,5 +31,26 @@ describe.skip("instantiation", () => {
         // Instantiating a valid notebook keeps this notebook valid.
         const result = await notebook.validate();
         expect(result.tag).toBe("Ok");
+    });
+
+    test("references are resolved only within the binder that created them", async () => {
+        const firstBinder = createBinder();
+        const secondBinder = createBinder();
+
+        const notebook = await firstBinder.createNotebook(SimpleOlog, { title: "An Olog" });
+        notebook.add(Type, { label: "A" });
+
+        const foreignOlog = await secondBinder.createNotebook(SimpleOlog, {
+            title: "Foreign Olog",
+        });
+        foreignOlog.add(Type, { label: "Foreign thing" });
+
+        notebook.add(Instantiation, {
+            label: "ImportedForeignOlog",
+            model: foreignOlog,
+        });
+
+        const result = await notebook.validate();
+        expect(result.tag).toBe("Err");
     });
 });

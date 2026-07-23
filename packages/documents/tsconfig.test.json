@@ -10,8 +10,17 @@
     "include": [
         "vite.config.ts",
         "vitest.db-dump.config.ts",
+        "test/cell-operations.test.ts",
+        "test/cells.test.ts",
         "test/creating-and-editing.test.ts",
         "test/creating-and-editing.test-d.ts",
-        "test/definitions.test.ts"
+        "test/definitions.test.ts",
+        "test/document-store.test.ts",
+        "test/instantiation.test.ts",
+        "test/serialization.test.ts",
+        "test/stores/automerge-store.test.ts",
+        "test/stores/backend-store.test.ts",
+        "test/stores/solid-store.test.ts",
+        "test/validation.test.ts"
     ]
 }

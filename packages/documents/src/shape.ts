@@ -12,6 +12,14 @@ export interface MorphismType<T extends MorType = MorType> {
 }
 
 export const RichText = { kind: "rich-text" } as const;
+export const Instantiation = { kind: "instantiation" } as const;
+
+export const CellKind = {
+    RichText: "rich-text",
+    Object: "object",
+    Morphism: "morphism",
+    Instantiation: "instantiation",
+} as const;
 
 export interface Shape {
     readonly theory?: string;
@@ -53,9 +61,14 @@ export function defineShape<const S extends Shape>(shape: S): S {
 }
 
 export type RichTextType = typeof RichText;
+export type InstantiationType = typeof Instantiation;
 export type ObjectTypes<S extends Shape> = NonNullable<S["objects"]>[number];
 export type MorphismTypes<S extends Shape> = NonNullable<S["morphisms"]>[number];
-export type CellType<S extends Shape> = RichTextType | ObjectTypes<S> | MorphismTypes<S>;
+export type CellType<S extends Shape> =
+    | RichTextType
+    | InstantiationType
+    | ObjectTypes<S>
+    | MorphismTypes<S>;
 
 type MatchingObjectType<O, Required> = O extends ObjectType
     ? O["obType"] extends Required
