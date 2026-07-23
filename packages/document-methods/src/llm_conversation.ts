@@ -80,6 +80,18 @@ export function appendLLMInteraction(
     conversation.interactions.push(interaction);
 }
 
+/** Reject every pending feedback request superseded by a new user message. */
+export function rejectPendingFeedbackRequests(conversation: LLMConversationDocument): void {
+    for (const interaction of conversation.interactions) {
+        if (
+            interaction.tag === "user-feedback-request" &&
+            interaction.resolution === "unresolved"
+        ) {
+            interaction.resolution = "rejected";
+        }
+    }
+}
+
 /** Resolve a pending feedback request by its stable interaction ID. */
 export function resolveUserFeedbackRequest(
     conversation: LLMConversationDocument,
