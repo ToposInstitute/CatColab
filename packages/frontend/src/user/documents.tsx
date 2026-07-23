@@ -7,6 +7,7 @@ import { createMemo, createSignal, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
 import { IconButton } from "catcolab-ui-components";
+import { documentTypeLabel } from "../api";
 import { BrandedToolbar, PageActionsContext } from "../page";
 import { DocumentList, filterDocuments } from "./document_list";
 import { LoginGate } from "./login";
@@ -98,7 +99,7 @@ function DeleteButton(props: { doc: DocInfo & { refId: string } }) {
         await actions.showDeleteDialog({
             refId: props.doc.refId,
             name: props.doc.name,
-            typeName: props.doc.typeName,
+            typeName: documentTypeLabel(props.doc.typeName),
         });
     };
 

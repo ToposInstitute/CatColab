@@ -12,6 +12,7 @@ import invariant from "tiny-invariant";
 
 import type { Permissions } from "catcolab-api";
 import { type Document, migrateDocument } from "catlog-wasm";
+import { assertExhaustive } from "../util/assert_exhaustive";
 
 /** Live document, typically retrieved from the backend.
 
@@ -49,6 +50,24 @@ export type LiveDocWithRef<Doc extends Document = Document> = {
 
 /** The type discriminator for documents */
 export type DocumentType = Document["type"];
+
+/** Human-readable name for a document type. */
+export function documentTypeLabel(documentType: DocumentType): string {
+    switch (documentType) {
+        case "model":
+            return "model";
+        case "diagram":
+            return "diagram";
+        case "analysis":
+            return "analysis";
+        case "instance":
+            return "instance";
+        case "llmconversation":
+            return "LLM conversation";
+        default:
+            return assertExhaustive(documentType);
+    }
+}
 
 /** Info about a document ref in the CatColab backend. */
 export type DocRef = {

@@ -27,7 +27,7 @@ mod integration_tests {
                 "_server": "test",
                 "type": "llmconversation-of"
             },
-            "llmModel": "openai/gpt-oss-20b:free",
+            "llmModel": "test-model",
             "interactions": []
         })
     }

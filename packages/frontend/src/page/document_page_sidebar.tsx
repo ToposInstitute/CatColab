@@ -6,6 +6,7 @@ import { DocumentTypeIcon, type FocusHandle } from "catcolab-ui-components";
 import type { Document, Link } from "catlog-wasm";
 import { type Api, type LiveDocWithRef, useApi } from "../api";
 import { TheoryLibraryContext } from "../theory";
+import { isDocumentVisible, useUserSettings } from "../user/user_settings";
 import { useUserState } from "../user/user_state_context";
 import { DocumentMenu } from "./document_menu";
 
@@ -49,6 +50,9 @@ async function getDocParent(doc: Document, api: Api): Promise<LiveDocWithRef | u
             break;
         case "analysis":
             parentLink = doc.analysisOf;
+            break;
+        case "llmconversation":
+            parentLink = doc.llmConversationOf;
             break;
         default:
             break;
@@ -107,21 +111,24 @@ function DocumentsTreeNode(props: {
 }) {
     const api = useApi();
     const userState = useUserState();
+    const { settings } = useUserSettings();
 
     const childRefIds = createMemo(() => {
         const docRefId = props.doc.docRef.refId;
         if (!docRefId) {
             return [];
         }
-        const docInfo = userState.documents[docRefId];
-        if (!docInfo) {
-            return [];
-        }
-        return docInfo.usedBy
-            .filter(
-                (rel) => rel.relationType === "diagram-in" || rel.relationType === "analysis-of",
-            )
-            .map((rel) => uuidStringify(rel.refId));
+
+        return (
+            userState.documents[docRefId]?.usedBy
+                .filter(
+                    (relation) =>
+                        relation.relationType === "diagram-in" ||
+                        relation.relationType === "analysis-of" ||
+                        relation.relationType === "llmconversation-of",
+                )
+                .map((relation) => uuidStringify(relation.refId)) ?? []
+        );
     });
 
     const childDocSource = createMemo(() => {
@@ -169,6 +176,12 @@ function DocumentsTreeNode(props: {
         return filtered;
     });
 
+    const visibleChildDocs = createMemo(() =>
+        (childDocs() ?? []).filter((child) =>
+            isDocumentVisible({ typeName: child.liveDoc.doc.type }, settings()),
+        ),
+    );
+
     return (
         <>
             <DocumentsTreeLeaf
@@ -181,7 +194,7 @@ function DocumentsTreeNode(props: {
                 refetchPrimaryDoc={props.refetchPrimaryDoc}
                 refetchSecondaryDoc={props.refetchSecondaryDoc}
             />
-            <For each={childDocs()}>
+            <For each={visibleChildDocs()}>
                 {(child) => (
                     <DocumentsTreeNode
                         doc={child}

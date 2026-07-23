@@ -32,7 +32,7 @@ import {
 import { getLiveAnalysis, type LiveAnalysisDoc } from "../analysis";
 import { AnalysisNotebookEditor } from "../analysis/analysis_editor";
 import { AnalysisInfo } from "../analysis/analysis_info";
-import { type Api, type DocRef, type DocumentType, useApi } from "../api";
+import { type Api, type DocRef, type DocumentType, documentTypeLabel, useApi } from "../api";
 import { getLiveDiagram, type LiveDiagramDoc } from "../diagram";
 import { DiagramNotebookEditor } from "../diagram/diagram_editor";
 import { DiagramInfo } from "../diagram/diagram_info";
@@ -489,8 +489,8 @@ export function DocumentPane(props: {
                                 </Show>
                             }
                         >
-                            This {props.doc.type} has been deleted and will not be listed in your
-                            documents.
+                            This {documentTypeLabel(props.doc.type)} has been deleted and will not
+                            be listed in your documents.
                         </WarningBanner>
                     </Show>
                     <div class="notebook-container">
