@@ -1,5 +1,6 @@
+import { Nb } from "catcolab-document-methods";
 import type { Ob } from "catcolab-document-types";
-import { formalJudgment, persistedCell, type ModelDocument } from "./model-document";
+import { formalJudgment, type ModelDocument } from "./model-document";
 import { findMorphismType, findObjectType } from "./shape";
 import type {
     EndpointObjectTypes,
@@ -54,7 +55,7 @@ export function richTextHandle(document: ModelDocument, cellId: string): RichTex
         kind: "rich-text",
         id: cellId,
         get content() {
-            const cell = persistedCell(document, cellId);
+            const cell = Nb.getCellById(document.notebook, cellId);
             if (cell.tag !== "rich-text") {
                 throw new Error(`Cell ${cellId} is not rich text.`);
             }
@@ -64,7 +65,7 @@ export function richTextHandle(document: ModelDocument, cellId: string): RichTex
             if (patch.content === undefined) {
                 return;
             }
-            const cell = persistedCell(document, cellId);
+            const cell = Nb.getCellById(document.notebook, cellId);
             if (cell.tag !== "rich-text") {
                 throw new Error(`Cell ${cellId} is not rich text.`);
             }
@@ -112,7 +113,7 @@ function endpointHandle<S extends Shape>(
     }
 
     for (const cellId of document.notebook.cellOrder) {
-        const cell = persistedCell(document, cellId);
+        const cell = Nb.getCellById(document.notebook, cellId);
         if (cell.tag !== "formal" || cell.content.tag !== "object") {
             continue;
         }
@@ -204,7 +205,7 @@ export function cellHandle<S extends Shape>(
     document: ModelDocument,
     cellId: string,
 ): Cell<S> {
-    const cell = persistedCell(document, cellId);
+    const cell = Nb.getCellById(document.notebook, cellId);
     if (cell.tag === "rich-text") {
         return richTextHandle(document, cellId);
     }
