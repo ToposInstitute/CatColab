@@ -1,6 +1,5 @@
-import { deepEqual } from "fast-equals";
-
 import type { Modality, MorType, ObOp, ObType } from "catcolab-document-types";
+import { morphismTypesEqual, objectTypesEqual } from "./equality";
 
 export interface ObjectType<T extends ObType = ObType> {
     readonly kind: "object";
@@ -77,7 +76,7 @@ export function findObjectType<S extends Shape>(
     shape: S,
     obType: ObType,
 ): ObjectTypes<S> | undefined {
-    return shape.objects?.find((type) => deepEqual(type.obType, obType)) as
+    return shape.objects?.find((type) => objectTypesEqual(type.obType, obType)) as
         | ObjectTypes<S>
         | undefined;
 }
@@ -86,7 +85,7 @@ export function findMorphismType<S extends Shape>(
     shape: S,
     morType: MorType,
 ): MorphismTypes<S> | undefined {
-    return shape.morphisms?.find((type) => deepEqual(type.morType, morType)) as
+    return shape.morphisms?.find((type) => morphismTypesEqual(type.morType, morType)) as
         | MorphismTypes<S>
         | undefined;
 }
