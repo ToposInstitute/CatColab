@@ -1,13 +1,11 @@
-import { SimpleOlog } from "catcolab-logics/simple-olog";
-import { SimpleSchema } from "catcolab-logics/simple-schema";
-
 import type { Instance, InstanceDocument } from "catcolab-documents";
 import type { Api, ApiBinder, ApiDocumentHandle, DocRef, LiveDoc } from "../api";
 import type { LiveModelDoc, ModelLibrary } from "../model";
+import { instanceShapes, shapeForTheory as shapeForTheoryIn } from "../model/shapes";
 
-/** Shapes whose models can have data instances. */
-const instanceShapes = [SimpleOlog, SimpleSchema] as const;
 type SupportedInstanceShape = (typeof instanceShapes)[number];
+
+/** An instance loaded through a frontend document binder. */
 export type ApiInstance = Instance<ApiDocumentHandle, SupportedInstanceShape>;
 
 /** An instance document "live" for compatibility with existing container components.
@@ -33,7 +31,7 @@ export type LiveInstanceDoc = {
 
 /** Look up the shape for a theory that supports data instances, if any. */
 export function shapeForTheory(theory?: string) {
-    return instanceShapes.find((shape) => shape.theory === theory);
+    return shapeForTheoryIn(instanceShapes, theory);
 }
 
 function enlivenInstance(
