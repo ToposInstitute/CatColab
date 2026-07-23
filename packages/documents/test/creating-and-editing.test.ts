@@ -38,6 +38,22 @@ describe("creating and editing notebooks", () => {
         expect(notebook.cells().length).toBe(4);
     });
 
+    test("cells can be added with null", async () => {
+        const binder = createBinder();
+        const notebook = await binder.createNotebook(SimpleOlog, { title: "An Olog" });
+
+        const source = notebook.add(Type, { label: null });
+        const target = notebook.add(Type, { label: null });
+        const arrow = notebook.add(Aspect, { label: null, from: null, to: null });
+
+        expect(source.label).toBe("");
+        expect(target.label).toBe("");
+        expect(arrow.label).toBe("");
+        expect(arrow.from).toBe(null);
+        expect(arrow.to).toBe(null);
+        expect(notebook.cells().length).toBe(3);
+    });
+
     test("the notebook and any cell can be updated", async () => {
         const binder = createBinder();
         const notebook = await binder.createNotebook(SimpleOlog, { title: "An Olog" });
