@@ -1,5 +1,4 @@
-import { currentVersion } from "catcolab-document-types";
-import type { ModelDocument } from "./model-document";
+import { Model } from "catcolab-document-methods";
 import { notebookFromDocument, type Notebook } from "./notebook";
 import type { Shape } from "./shape";
 
@@ -16,16 +15,8 @@ export function createBinder(): Binder {
             shape: S,
             options: { title: string },
         ) {
-            const document: ModelDocument = {
-                type: "model",
-                name: options.title,
-                theory: shape.theory,
-                notebook: {
-                    cellOrder: [],
-                    cellContents: {},
-                },
-                version: currentVersion(),
-            };
+            const document = Model.newModelDocument({ theory: shape.theory });
+            document.name = options.title;
 
             return notebookFromDocument(shape, document);
         },
