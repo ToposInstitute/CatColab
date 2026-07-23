@@ -47,6 +47,11 @@ import { DiagramInfo } from "../diagram/diagram_info";
 import { InstanceEditor } from "../instance/instance_editor";
 import { InstanceInfo } from "../instance/instance_info";
 import { getLiveInstance, type LiveInstanceDoc } from "../instance/live_doc_compatibility";
+import {
+    getLiveLLMConversation,
+    LLMConversationEditorStub,
+    type LiveLLMConversationDoc,
+} from "../llm_conversation";
 import { type LiveModelDoc, type ModelLibrary, ModelLibraryContext } from "../model";
 import { ModelNotebookEditor } from "../model/model_editor";
 import { ModelDocumentHead } from "../model/model_info";
@@ -54,7 +59,9 @@ import { DocumentBreadcrumbs, DocumentLoadingScreen } from "../page";
 import { DocumentHead } from "../page/document_head";
 import { SidebarLayout } from "../page/sidebar_layout";
 import { PermissionsButton } from "../user";
+import { isDocumentVisible, useUserSettings } from "../user/user_settings";
 import { assertExhaustive } from "../util/assert_exhaustive";
+import NotFoundPage from "./404_page";
 import { DocRefIdContext } from "./context";
 import { DocumentSidebar } from "./document_page_sidebar";
 import { HistorySidebar } from "./history_sidebar";
@@ -62,7 +69,12 @@ import { useSnapshotHistory } from "./use_snapshot_history";
 
 import "./document_page.css";
 
-type AnyLiveDoc = LiveModelDoc | LiveDiagramDoc | LiveAnalysisDoc | LiveInstanceDoc;
+type AnyLiveDoc =
+    | LiveModelDoc
+    | LiveDiagramDoc
+    | LiveAnalysisDoc
+    | LiveInstanceDoc
+    | LiveLLMConversationDoc;
 
 /** A Live*Document bundled with its backend DocRef.
  *
@@ -85,7 +97,11 @@ export default function DocumentPage() {
 
     const params = useParams();
     const navigate = useNavigate();
-    const isSidePanelOpen = () => !!params.subkind && !!params.subref;
+    const { settings } = useUserSettings();
+    const documentIsVisible = (kind: string | undefined) =>
+        kind === undefined || isDocumentVisible({ typeName: kind as DocumentType }, settings());
+    const isSidePanelOpen = () =>
+        !!params.subkind && !!params.subref && documentIsVisible(params.subkind);
     const paneFocus = useChildFocus<"primary" | "secondary">(rootFocus, { default: "primary" });
 
     // Redirect if primary and secondary refs match
@@ -96,7 +112,7 @@ export default function DocumentPage() {
     });
 
     const [primaryLiveDoc, { refetch: refetchPrimaryDoc }] = createResource(
-        () => params.ref,
+        () => (documentIsVisible(params.kind) ? params.ref : undefined),
         (refId) => getLiveDocument(refId, api, models, binder, params.kind as DocumentType),
     );
 
@@ -107,11 +123,12 @@ export default function DocumentPage() {
                 kind: params.subkind || null,
                 ref: params.subref || null,
                 primaryRef: params.ref,
+                visible: documentIsVisible(params.subkind),
             };
         },
         async (source) => {
             // Return undefined to clear resource when there's no secondary in URL
-            if (!source.kind || !source.ref) {
+            if (!source.kind || !source.ref || !source.visible) {
                 return undefined;
             }
 
@@ -171,7 +188,7 @@ export default function DocumentPage() {
     });
 
     return (
-        <>
+        <Show when={documentIsVisible(params.kind)} fallback={<NotFoundPage />}>
             <Title>{documentTitle()}</Title>
             <Show when={primaryLiveDoc()} fallback={<DocumentLoadingScreen />}>
                 {(docWithRef) => (
@@ -230,7 +247,7 @@ export default function DocumentPage() {
                     </SidebarLayout>
                 )}
             </Show>
-        </>
+        </Show>
     );
 }
 
@@ -531,6 +548,11 @@ export function DocumentPane(props: {
                                     </DocumentHead>
                                 )}
                             </Match>
+                            <Match keyed when={props.doc.type === "llmconversation" && props.doc}>
+                                {(liveConversation) => (
+                                    <DocumentHead liveDoc={liveConversation.liveDoc} />
+                                )}
+                            </Match>
                         </Switch>
                         <Switch>
                             <Match keyed when={props.doc.type === "model" && props.doc}>
@@ -561,6 +583,9 @@ export function DocumentPane(props: {
                                 {(liveInstance) => (
                                     <InstanceEditor instance={liveInstance.instance} />
                                 )}
+                            </Match>
+                            <Match when={props.doc.type === "llmconversation"}>
+                                <LLMConversationEditorStub />
                             </Match>
                         </Switch>
                     </div>
@@ -600,8 +625,15 @@ async function getLiveDocument(
             const { liveInstance, docRef } = await getLiveInstance(refId, api, models, binder);
             return { liveDoc: liveInstance, docRef };
         }
-        case "llmconversation":
-            throw new Error("LLM conversation pages are not implemented");
+        case "llmconversation": {
+            const { liveConversation, docRef } = await getLiveLLMConversation(
+                refId,
+                api,
+                models,
+                binder,
+            );
+            return { liveDoc: liveConversation, docRef };
+        }
         default:
             assertExhaustive(documentType);
     }
