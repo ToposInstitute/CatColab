@@ -1,12 +1,14 @@
 import { Nb } from "catcolab-document-methods";
 import { v7 } from "uuid";
 
-import type { Link, Ob, SpecializeModel } from "catcolab-document-types";
-import {
-    changeModelDocument,
-    modelDocumentView,
-    optionalPersistedCell,
-} from "./model-document";
+import type {
+    Link,
+    ModelJudgment,
+    NotebookCell,
+    Ob,
+    SpecializeModel,
+} from "catcolab-document-types";
+import { changeModelDocument, getModelDocumentView } from "./model-document";
 import { findMorphismType, findObjectType } from "./shape";
 import type {
     EndpointObjectTypes,
@@ -73,6 +75,10 @@ export type Cell<S extends Shape> =
     | MorphismCell<S, MorphismTypes<S>>
     | InstantiationCell;
 
+function cellView<Handle>(store: DocumentStore<Handle>, handle: Handle, cellId: string) {
+    return getModelDocumentView(store, handle).notebook.cellContents[cellId];
+}
+
 function operations<Handle, C>(
     store: DocumentStore<Handle>,
     handle: Handle,
@@ -94,11 +100,11 @@ function operations<Handle, C>(
 
     return {
         duplicate(): C {
-            const original = optionalPersistedCell(modelDocumentView(store, handle), cellId);
+            const original = cellView(store, handle, cellId);
             if (!original) {
                 throw new Error(`Cell ${cellId} does not exist.`);
             }
-            const duplicate = store.copyValue(handle, original);
+            const duplicate = store.copyValue(handle, original) as NotebookCell<ModelJudgment>;
             const duplicateId = v7();
             duplicate.id = duplicateId;
             if (duplicate.tag === "formal") {
@@ -111,13 +117,13 @@ function operations<Handle, C>(
             return make(duplicateId);
         },
         moveUp() {
-            const index = modelDocumentView(store, handle).notebook.cellOrder.indexOf(cellId);
+            const index = getModelDocumentView(store, handle).notebook.cellOrder.indexOf(cellId);
             if (index > 0) {
                 moveTo(index - 1);
             }
         },
         moveDown() {
-            const document = modelDocumentView(store, handle);
+            const document = getModelDocumentView(store, handle);
             const index = document.notebook.cellOrder.indexOf(cellId);
             if (index >= 0 && index < document.notebook.cellOrder.length - 1) {
                 moveTo(index + 1);
@@ -146,7 +152,7 @@ export function richTextHandle<Handle>(
         kind: "rich-text",
         id: cellId,
         get content() {
-            const cell = optionalPersistedCell(modelDocumentView(store, handle), cellId);
+            const cell = cellView(store, handle, cellId);
             return cell?.tag === "rich-text" ? cell.content : undefined;
         },
         update(patch) {
@@ -154,7 +160,7 @@ export function richTextHandle<Handle>(
                 return;
             }
             changeModelDocument(store, handle, (document) => {
-                const cell = optionalPersistedCell(document, cellId);
+                const cell = document.notebook.cellContents[cellId];
                 if (cell?.tag === "rich-text") {
                     cell.content = patch.content as string;
                 }
@@ -176,7 +182,7 @@ export function objectHandle<Handle, T extends ObjectType>(
         id: cellId,
         type,
         get label() {
-            const cell = optionalPersistedCell(modelDocumentView(store, handle), cellId);
+            const cell = cellView(store, handle, cellId);
             return cell?.tag === "formal" && cell.content.tag === "object"
                 ? cell.content.name
                 : undefined;
@@ -186,7 +192,7 @@ export function objectHandle<Handle, T extends ObjectType>(
                 return;
             }
             changeModelDocument(store, handle, (document) => {
-                const cell = optionalPersistedCell(document, cellId);
+                const cell = document.notebook.cellContents[cellId];
                 if (cell?.tag === "formal" && cell.content.tag === "object") {
                     cell.content.name = patch.label ?? "";
                 }
@@ -205,7 +211,7 @@ function endpointHandle<Handle, S extends Shape>(
     if (endpoint?.tag !== "Basic") {
         return null;
     }
-    const document = modelDocumentView(store, handle);
+    const document = getModelDocumentView(store, handle);
     for (const cellId of document.notebook.cellOrder) {
         const cell = Nb.getCellById(document.notebook, cellId);
         if (
@@ -228,7 +234,7 @@ export function endpointValue<Handle>(
     if (!endpoint) {
         return null;
     }
-    const cell = optionalPersistedCell(modelDocumentView(store, handle), endpoint.id);
+    const cell = cellView(store, handle, endpoint.id);
     if (cell?.tag !== "formal" || cell.content.tag !== "object") {
         throw new Error(`Cell ${endpoint.id} is not an object.`);
     }
@@ -240,7 +246,7 @@ export function objectGeneratorId<Handle>(
     handle: Handle,
     endpoint: ObjectCell<ObjectType>,
 ): string {
-    const cell = optionalPersistedCell(modelDocumentView(store, handle), endpoint.id);
+    const cell = cellView(store, handle, endpoint.id);
     if (cell?.tag !== "formal" || cell.content.tag !== "object") {
         throw new Error(`Cell ${endpoint.id} is not an object.`);
     }
@@ -260,13 +266,13 @@ export function morphismHandle<Handle, S extends Shape, T extends MorphismTypes<
         id: cellId,
         type,
         get label() {
-            const cell = optionalPersistedCell(modelDocumentView(store, handle), cellId);
+            const cell = cellView(store, handle, cellId);
             return cell?.tag === "formal" && cell.content.tag === "morphism"
                 ? cell.content.name
                 : undefined;
         },
         get from() {
-            const cell = optionalPersistedCell(modelDocumentView(store, handle), cellId);
+            const cell = cellView(store, handle, cellId);
             const endpoint =
                 cell?.tag === "formal" && cell.content.tag === "morphism" ? cell.content.dom : null;
             return endpointHandle(shape, store, handle, endpoint) as ObjectCell<
@@ -274,7 +280,7 @@ export function morphismHandle<Handle, S extends Shape, T extends MorphismTypes<
             > | null;
         },
         get to() {
-            const cell = optionalPersistedCell(modelDocumentView(store, handle), cellId);
+            const cell = cellView(store, handle, cellId);
             const endpoint =
                 cell?.tag === "formal" && cell.content.tag === "morphism" ? cell.content.cod : null;
             return endpointHandle(shape, store, handle, endpoint) as ObjectCell<
@@ -289,7 +295,7 @@ export function morphismHandle<Handle, S extends Shape, T extends MorphismTypes<
                 ? endpointValue(store, handle, patch.to ?? null)
                 : undefined;
             changeModelDocument(store, handle, (document) => {
-                const cell = optionalPersistedCell(document, cellId);
+                const cell = document.notebook.cellContents[cellId];
                 if (cell?.tag !== "formal" || cell.content.tag !== "morphism") {
                     return;
                 }
@@ -318,19 +324,19 @@ export function instantiationHandle<Handle>(
         kind: "instantiation",
         id: cellId,
         get label() {
-            const cell = optionalPersistedCell(modelDocumentView(store, handle), cellId);
+            const cell = cellView(store, handle, cellId);
             return cell?.tag === "formal" && cell.content.tag === "instantiation"
                 ? cell.content.name
                 : undefined;
         },
         get model() {
-            const cell = optionalPersistedCell(modelDocumentView(store, handle), cellId);
+            const cell = cellView(store, handle, cellId);
             return cell?.tag === "formal" && cell.content.tag === "instantiation"
                 ? cell.content.model
                 : null;
         },
         get specializations() {
-            const cell = optionalPersistedCell(modelDocumentView(store, handle), cellId);
+            const cell = cellView(store, handle, cellId);
             return cell?.tag === "formal" && cell.content.tag === "instantiation"
                 ? cell.content.specializations
                 : [];
@@ -345,7 +351,7 @@ export function cellHandle<Handle, S extends Shape>(
     handle: Handle,
     cellId: string,
 ): Cell<S> {
-    const cell = Nb.getCellById(modelDocumentView(store, handle).notebook, cellId);
+    const cell = Nb.getCellById(getModelDocumentView(store, handle).notebook, cellId);
     if (cell.tag === "rich-text") {
         return richTextHandle(store, handle, cellId);
     }

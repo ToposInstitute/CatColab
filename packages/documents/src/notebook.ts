@@ -18,8 +18,7 @@ import {
 import { morphismTypesEqual, objectTypesEqual } from "./equality";
 import {
     changeModelDocument,
-    modelDocumentView,
-    optionalPersistedCell,
+    getModelDocumentView,
     type ModelDocument,
     type ModelDocumentView,
 } from "./model-document";
@@ -93,9 +92,7 @@ const notebookRefs = new WeakMap<object, () => DocumentRef>();
 
 function refForNotebook(notebook: Notebook<Shape, unknown>): DocumentRef {
     const getRef = notebookRefs.get(notebook);
-    if (!getRef) {
-        throw new Error("Notebook is not attached to a document reference.");
-    }
+    if (!getRef) throw new Error("Notebook is not attached to a document reference.");
     return getRef();
 }
 
@@ -121,10 +118,10 @@ export function notebookFromDocument<Handle, S extends Shape>(
         shape,
         handle,
         get document() {
-            return modelDocumentView(store, handle);
+            return getModelDocumentView(store, handle);
         },
         get title() {
-            return modelDocumentView(store, handle).name;
+            return getModelDocumentView(store, handle).name;
         },
         add<T extends CellType<S>>(type: T, value: AddValue<S, Handle, T>) {
             if (type.kind === "rich-text") {
@@ -141,12 +138,12 @@ export function notebookFromDocument<Handle, S extends Shape>(
             }
             if (type.kind === "instantiation") {
                 const args = value as InstantiationArgs<Handle>;
-                const modelRef = refForNotebook(args.model);
+                const ref = refForNotebook(args.model);
                 const judgment = Model.newInstantiatedModel({
                     type: "instantiation",
-                    _id: modelRef.id,
-                    _version: modelRef.version,
-                    _server: modelRef.server ?? "",
+                    _id: ref.id,
+                    _version: ref.version,
+                    _server: ref.server ?? "",
                 });
                 judgment.name = args.label;
                 judgment.specializations = (args.specializations ?? []).map((specialization) => ({
@@ -167,7 +164,7 @@ export function notebookFromDocument<Handle, S extends Shape>(
             return morphismHandle(shape, store, handle, cell.id, type as MorphismTypes<S>) as AddedCell<S, T>;
         },
         cells() {
-            return Nb.getCells(modelDocumentView(store, handle).notebook).map((cell) =>
+            return Nb.getCells(getModelDocumentView(store, handle).notebook).map((cell) =>
                 cellHandle(shape, store, handle, cell.id),
             );
         },
@@ -175,7 +172,7 @@ export function notebookFromDocument<Handle, S extends Shape>(
             return notebook.cells().filter((cell) => typeMatches(type, cell)) as AddedCell<S, T>[];
         },
         get<T extends CellType<S>>(type: T, id: string): Result<AddedCell<S, T>> {
-            if (!optionalPersistedCell(modelDocumentView(store, handle), id)) {
+            if (!getModelDocumentView(store, handle).notebook.cellContents[id]) {
                 return { tag: "Err", content: [{ message: `No cell with id "${id}".`, path: ["id"] }] };
             }
             const cell = cellHandle(shape, store, handle, id);
@@ -194,8 +191,7 @@ export function notebookFromDocument<Handle, S extends Shape>(
             }
         },
         dump() {
-            const document = modelDocumentView(store, handle);
-            return store.copyValue(handle, document);
+            return store.copyValue(handle, getModelDocumentView(store, handle)) as ModelDocument;
         },
         onChange(callback) {
             return store.subscribe(handle, callback);
