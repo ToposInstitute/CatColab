@@ -8,6 +8,8 @@ import { DocumentTypeIcon, IconButton } from "catcolab-ui-components";
 import { createAnalysis } from "../analysis";
 import { type DocRef, type DocumentType, type LiveDoc, useApi } from "../api";
 import { createDiagram } from "../diagram";
+import { DEFAULT_LLM_MODEL } from "../inference/chat";
+import { createLLMConversation } from "../llm_conversation";
 import {
     CopyJSONMenuItem,
     DeleteMenuItem,
@@ -19,6 +21,7 @@ import {
     RestoreMenuItem,
 } from "../page";
 import { TheoryLibraryContext } from "../theory";
+import { isDocumentVisible, useUserSettings } from "../user/user_settings_context";
 
 export function DocumentMenu(props: {
     liveDoc: LiveDoc;
@@ -27,6 +30,7 @@ export function DocumentMenu(props: {
     onDocDeleted?: () => void;
 }) {
     const api = useApi();
+    const { settings } = useUserSettings();
 
     const navigate = useNavigate();
     const docType = () => props.liveDoc.doc.type;
@@ -69,6 +73,20 @@ export function DocumentMenu(props: {
         handleDocCreated("analysis", newRef);
     };
 
+    const canCreateLLMConversation = () =>
+        props.liveDoc.doc.type === "model" &&
+        isDocumentVisible({ typeName: "llmconversation" }, settings());
+
+    const onNewLLMConversation = async () => {
+        invariant(canCreateLLMConversation(), "LLM Conversation creation should be enabled");
+        const newRef = await createLLMConversation(
+            api,
+            api.makeUnversionedRef(props.docRef.refId),
+            DEFAULT_LLM_MODEL,
+        );
+        handleDocCreated("llmconversation", newRef);
+    };
+
     const theories = useContext(TheoryLibraryContext);
     invariant(theories, "Library of theories should be provided as context");
 
@@ -79,13 +97,9 @@ export function DocumentMenu(props: {
         },
     );
 
-    const showSeparator = createMemo(() => {
-        return (
-            theory()?.supportsInstances ||
-            docType() === "diagram" ||
-            props.liveDoc.doc.type !== "analysis"
-        );
-    });
+    const showSeparator = createMemo(
+        () => theory()?.supportsInstances || docType() === "model" || docType() === "diagram",
+    );
     const canDelete = () => props.docRef.permissions.user === "Own" && !props.docRef.isDeleted;
 
     const canRestore = () => props.docRef.permissions.user === "Own" && props.docRef.isDeleted;
@@ -117,10 +131,16 @@ export function DocumentMenu(props: {
                             </MenuItem>
                         </Match>
                     </Switch>
-                    <Show when={props.liveDoc.doc.type !== "analysis"}>
+                    <Show when={docType() === "model" || docType() === "diagram"}>
                         <MenuItem onSelect={() => onNewAnalysis()}>
                             <DocumentTypeIcon documentType="analysis" />
                             <MenuItemLabel>{`New analysis of this ${docType()}`}</MenuItemLabel>
+                        </MenuItem>
+                    </Show>
+                    <Show when={canCreateLLMConversation()}>
+                        <MenuItem onSelect={() => onNewLLMConversation()}>
+                            <DocumentTypeIcon documentType="llmconversation" />
+                            <MenuItemLabel>New LLM Conversation</MenuItemLabel>
                         </MenuItem>
                     </Show>
                     <Show when={showSeparator()}>

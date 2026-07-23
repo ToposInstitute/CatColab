@@ -19,6 +19,9 @@ export default defineConfig({
         }),
         solid(),
     ],
+    optimizeDeps: {
+        include: ["debug", "extend"],
+    },
     build: {
         chunkSizeWarningLimit: 2000,
         sourcemap: true,

@@ -7,6 +7,7 @@ import { stringify as uuidStringify } from "uuid";
 
 import { RelativeTime, createVirtualList, DocumentTypeIcon } from "catcolab-ui-components";
 import { TheoryLibraryContext } from "../theory";
+import { assertExhaustive } from "../util/assert_exhaustive";
 import { isDocumentVisible, type UserSettings } from "./user_settings_context";
 import { currentUserPermission, formatOwners, useUserState } from "./user_state_context";
 
@@ -41,6 +42,39 @@ export function filterDocuments(
 
 /** Fixed row height in pixels — must match --doc-row-height in CSS. */
 const ROW_HEIGHT = 45;
+
+type ParentDocumentDetails = {
+    relationType: "diagram-in" | "analysis-of" | "llmconversation-of";
+    prefix: string;
+    orphanedPrefix: string;
+};
+
+function parentDocumentDetails(typeName: DocInfo["typeName"]): ParentDocumentDetails | undefined {
+    switch (typeName) {
+        case "model":
+            return undefined;
+        case "diagram":
+            return {
+                relationType: "diagram-in",
+                prefix: "Diagram in ",
+                orphanedPrefix: "Orphaned diagram",
+            };
+        case "analysis":
+            return {
+                relationType: "analysis-of",
+                prefix: "Analysis of ",
+                orphanedPrefix: "Orphaned analysis",
+            };
+        case "llmconversation":
+            return {
+                relationType: "llmconversation-of",
+                prefix: "LLM Conversation about ",
+                orphanedPrefix: "Orphaned LLM conversation",
+            };
+        default:
+            return assertExhaustive(typeName);
+    }
+}
 
 interface DocumentListProps {
     documents: () => (DocInfo & { refId: string })[];
@@ -141,46 +175,32 @@ function DocumentRow(props: DocumentRowProps) {
     });
 
     const parentInfo = createMemo(() => {
-        // Derive the parent ref ID from dependsOn relations.
-        const parentRelType =
-            props.doc.typeName === "diagram"
-                ? "diagram-in"
-                : props.doc.typeName === "analysis"
-                  ? "analysis-of"
-                  : undefined;
-        if (!parentRelType) {
+        const details = parentDocumentDetails(props.doc.typeName);
+        if (!details) {
             return undefined;
         }
-        const rel = props.doc.dependsOn.find((r) => r.relationType === parentRelType);
-        if (!rel) {
+        const relation = props.doc.dependsOn.find(
+            (relation) => relation.relationType === details.relationType,
+        );
+        if (!relation) {
             return undefined;
         }
-        const parentId = uuidStringify(rel.refId);
+        const parentId = uuidStringify(relation.refId);
         const parentDoc = userState.documents[parentId];
-
-        // If parent document doesn't exist, show as orphaned
         if (!parentDoc) {
-            let prefix = "";
-            if (props.doc.typeName === "diagram") {
-                prefix = "Orphaned diagram";
-            } else if (props.doc.typeName === "analysis") {
-                prefix = "Orphaned analysis";
-            } else {
-                return undefined;
-            }
-            return { prefix, parentId: undefined, parentName: undefined, parentType: undefined };
+            return {
+                prefix: details.orphanedPrefix,
+                parentId: undefined,
+                parentName: undefined,
+                parentType: undefined,
+            };
         }
-
-        const parentName = parentDoc.name || "Untitled";
-        let prefix = "";
-        if (props.doc.typeName === "diagram") {
-            prefix = "Diagram in ";
-        } else if (props.doc.typeName === "analysis") {
-            prefix = "Analysis of ";
-        } else {
-            return undefined;
-        }
-        return { prefix, parentId, parentName, parentType: parentDoc.typeName };
+        return {
+            prefix: details.prefix,
+            parentId,
+            parentName: parentDoc.name || "Untitled",
+            parentType: parentDoc.typeName,
+        };
     });
 
     return (

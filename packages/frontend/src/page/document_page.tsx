@@ -1,7 +1,7 @@
 import Resizable, { type ContextValue } from "@corvu/resizable";
 import { makeEventListener } from "@solid-primitives/event-listener";
 import { Title } from "@solidjs/meta";
-import { useNavigate, useParams } from "@solidjs/router";
+import { A, useNavigate, useParams } from "@solidjs/router";
 import ChevronsRight from "lucide-solid/icons/chevrons-right";
 import History from "lucide-solid/icons/history";
 import Maximize2 from "lucide-solid/icons/maximize-2";
@@ -32,10 +32,15 @@ import {
 import { getLiveAnalysis, type LiveAnalysisDoc } from "../analysis";
 import { AnalysisNotebookEditor } from "../analysis/analysis_editor";
 import { AnalysisInfo } from "../analysis/analysis_info";
-import { type Api, type DocRef, type DocumentType, useApi } from "../api";
+import { type Api, type DocRef, type DocumentType, documentTypeLabel, useApi } from "../api";
 import { getLiveDiagram, type LiveDiagramDoc } from "../diagram";
 import { DiagramNotebookEditor } from "../diagram/diagram_editor";
 import { DiagramInfo } from "../diagram/diagram_info";
+import {
+    getLiveLLMConversation,
+    LLMConversationEditor,
+    type LiveLLMConversationDoc,
+} from "../llm_conversation";
 import { type LiveModelDoc, type ModelLibrary, ModelLibraryContext } from "../model";
 import { ModelNotebookEditor } from "../model/model_editor";
 import { ModelDocumentHead } from "../model/model_info";
@@ -43,7 +48,9 @@ import { DocumentBreadcrumbs, DocumentLoadingScreen } from "../page";
 import { DocumentHead } from "../page/document_head";
 import { SidebarLayout } from "../page/sidebar_layout";
 import { PermissionsButton } from "../user";
+import { isDocumentVisible, useUserSettings } from "../user/user_settings_context";
 import { assertExhaustive } from "../util/assert_exhaustive";
+import NotFoundPage from "./404_page";
 import { DocRefIdContext } from "./context";
 import { DocumentSidebar } from "./document_page_sidebar";
 import { HistorySidebar } from "./history_sidebar";
@@ -51,7 +58,7 @@ import { useSnapshotHistory } from "./use_snapshot_history";
 
 import "./document_page.css";
 
-type AnyLiveDoc = LiveModelDoc | LiveDiagramDoc | LiveAnalysisDoc;
+type AnyLiveDoc = LiveModelDoc | LiveDiagramDoc | LiveAnalysisDoc | LiveLLMConversationDoc;
 
 /** A Live*Document bundled with its backend DocRef.
  *
@@ -73,7 +80,11 @@ export default function DocumentPage() {
 
     const params = useParams();
     const navigate = useNavigate();
-    const isSidePanelOpen = () => !!params.subkind && !!params.subref;
+    const { settings } = useUserSettings();
+    const documentIsVisible = (kind: string | undefined) =>
+        kind === undefined || isDocumentVisible({ typeName: kind as DocumentType }, settings());
+    const isSidePanelOpen = () =>
+        !!params.subkind && !!params.subref && documentIsVisible(params.subkind);
     const paneFocus = useChildFocus<"primary" | "secondary">(rootFocus, { default: "primary" });
 
     // Redirect if primary and secondary refs match
@@ -84,7 +95,7 @@ export default function DocumentPage() {
     });
 
     const [primaryLiveDoc, { refetch: refetchPrimaryDoc }] = createResource(
-        () => params.ref,
+        () => (documentIsVisible(params.kind) ? params.ref : undefined),
         (refId) => getLiveDocument(refId, api, models, params.kind as DocumentType),
     );
 
@@ -95,11 +106,12 @@ export default function DocumentPage() {
                 kind: params.subkind || null,
                 ref: params.subref || null,
                 primaryRef: params.ref,
+                visible: documentIsVisible(params.subkind),
             };
         },
         async (source) => {
             // Return undefined to clear resource when there's no secondary in URL
-            if (!source.kind || !source.ref) {
+            if (!source.kind || !source.ref || !source.visible) {
                 return undefined;
             }
 
@@ -159,7 +171,7 @@ export default function DocumentPage() {
     });
 
     return (
-        <>
+        <Show when={documentIsVisible(params.kind)} fallback={<NotFoundPage />}>
             <Title>{documentTitle()}</Title>
             <Show when={primaryLiveDoc()} fallback={<DocumentLoadingScreen />}>
                 {(docWithRef) => (
@@ -218,7 +230,7 @@ export default function DocumentPage() {
                     </SidebarLayout>
                 )}
             </Show>
-        </>
+        </Show>
     );
 }
 
@@ -471,7 +483,11 @@ export function DocumentPane(props: {
     // oxlint-disable solid/reactivity -- Context.Provider value getter is reactive
     return (
         <DocRefIdContext.Provider value={() => props.docRef.refId}>
-            <div class="document-pane-layout" onMouseDown={() => props.focus.setFocused(true)}>
+            <div
+                class="document-pane-layout"
+                classList={{ "llm-conversation-pane": props.doc.type === "llmconversation" }}
+                onMouseDown={() => props.focus.setFocused(true)}
+            >
                 <div class="document-pane-content">
                     <Show when={isDeleted()}>
                         <WarningBanner
@@ -489,8 +505,8 @@ export function DocumentPane(props: {
                                 </Show>
                             }
                         >
-                            This {props.doc.type} has been deleted and will not be listed in your
-                            documents.
+                            This {documentTypeLabel(props.doc.type)} has been deleted and will not
+                            be listed in your documents.
                         </WarningBanner>
                     </Show>
                     <div class="notebook-container">
@@ -509,6 +525,21 @@ export function DocumentPane(props: {
                                 {(liveAnalysis) => (
                                     <DocumentHead liveDoc={liveAnalysis.liveDoc}>
                                         <AnalysisInfo liveAnalysis={liveAnalysis} />
+                                    </DocumentHead>
+                                )}
+                            </Match>
+                            <Match keyed when={props.doc.type === "llmconversation" && props.doc}>
+                                {(conversation) => (
+                                    <DocumentHead liveDoc={conversation.liveDoc}>
+                                        <div class="name">LLM Conversation</div>
+                                        <div class="model">
+                                            <A
+                                                href={`/model/${conversation.liveDoc.doc.llmConversationOf._id}`}
+                                            >
+                                                {conversation.liveModel.liveDoc.doc.name ||
+                                                    "Untitled"}
+                                            </A>
+                                        </div>
                                     </DocumentHead>
                                 )}
                             </Match>
@@ -536,6 +567,11 @@ export function DocumentPane(props: {
                                         liveAnalysis={liveAnalysis}
                                         focus={props.focus}
                                     />
+                                )}
+                            </Match>
+                            <Match keyed when={props.doc.type === "llmconversation" && props.doc}>
+                                {(conversation) => (
+                                    <LLMConversationEditor conversation={conversation} />
                                 )}
                             </Match>
                         </Switch>
@@ -571,8 +607,10 @@ async function getLiveDocument(
             const { liveAnalysis, docRef } = await getLiveAnalysis(refId, api, models);
             return { liveDoc: liveAnalysis, docRef };
         }
-        case "llmconversation":
-            throw new Error("LLM conversation pages are not implemented");
+        case "llmconversation": {
+            const liveDoc = await getLiveLLMConversation(refId, api, models);
+            return { liveDoc, docRef: liveDoc.docRef };
+        }
         default:
             assertExhaustive(documentType);
     }

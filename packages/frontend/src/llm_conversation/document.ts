@@ -19,6 +19,11 @@ import type { ContextExecScope } from "../inference/context_exec.ts";
 import * as LLMConversationAdapter from "../inference/llm_conversation_adapter.ts";
 import type { LiveModelDoc, ModelLibrary } from "../model";
 import type { InferenceKeyResult } from "../user/inference_key_context.tsx";
+import { errorMessage } from "../util/error.ts";
+import {
+    type ConversationAttachmentMetadata,
+    validateConversationAttachments,
+} from "./conversation_attachment_policy.ts";
 
 /** A live LLM conversation and the model it is attached to. */
 export type LiveLLMConversationDoc = {
@@ -34,12 +39,32 @@ export type LLMConversationUserInput = {
     files: InlineFile[];
 };
 
+/** Project a persisted inline file into attachment policy metadata. */
+export function inlineFileMetadata(file: InlineFile): ConversationAttachmentMetadata {
+    return {
+        filename: file.filename,
+        mediaType: file.mediaType,
+        byteLength: file.content.length,
+    };
+}
+
+/** Project all persisted conversation attachments into attachment policy metadata. */
+export function conversationAttachmentMetadata(
+    interactions: readonly LLMInteraction[],
+): ConversationAttachmentMetadata[] {
+    const result: ConversationAttachmentMetadata[] = [];
+    for (const interaction of interactions) {
+        if (interaction.tag === "user-message") {
+            result.push(...interaction.files.map(inlineFileMetadata));
+        }
+    }
+    return result;
+}
+
 /** Outcome of attempting one LLM conversation turn. */
 export type LLMConversationTurnResult =
     | { tag: "Completed"; content: string }
-    | { tag: "Unavailable" }
-    | { tag: "Deleted" }
-    | { tag: "Failed"; message: string };
+    | { tag: "Failed"; message: string; details?: string; retryable: boolean };
 
 /** Create a new LLM conversation attached to a model. */
 export function createLLMConversation(
@@ -91,30 +116,75 @@ export async function runLLMConversationTurn(args: {
 }): Promise<LLMConversationTurnResult> {
     const { conversation, inferenceKey, userInput, contextExecScope, onContent } = args;
     if (conversation.docRef.isDeleted) {
-        return { tag: "Deleted" };
+        return failedTurn("This LLM Conversation has been deleted.");
     }
     if (inferenceKey.tag !== "Ready") {
-        return { tag: "Unavailable" };
+        return failedTurn("Inference is unavailable.");
+    }
+
+    const inputValidation = validateUserInput(conversation.liveDoc.doc.interactions, userInput);
+    if (inputValidation.tag === "Err") {
+        return failedTurn(inputValidation.content);
     }
 
     try {
         const userInteraction = LLMConversation.newUserMessage(userInput.content, userInput.files);
         conversation.liveDoc.changeDoc((doc) => {
-            for (const interaction of doc.interactions) {
-                if (
-                    interaction.tag === "user-feedback-request" &&
-                    interaction.resolution === "unresolved"
-                ) {
-                    interaction.resolution = "rejected";
-                }
-            }
+            LLMConversation.rejectUnresolvedUserFeedbackRequests(doc);
             LLMConversation.appendLLMInteraction(doc, userInteraction);
         });
 
+        return await generateLLMConversationResponse({
+            conversation,
+            inferenceKey,
+            contextExecScope,
+            onContent,
+        });
+    } catch (error) {
+        return failedTurn(`The response failed: ${errorMessage(error)}`, formatDetails(error));
+    }
+}
+
+/** Retry the latest persisted user message without adding it to the conversation again. */
+export async function retryLastLLMConversationResponse(args: {
+    conversation: LiveLLMConversationDoc;
+    userMessageId: Uuid;
+    inferenceKey: InferenceKeyResult;
+    contextExecScope: ContextExecScope;
+    onContent?: (delta: string, snapshot: string) => void;
+}): Promise<LLMConversationTurnResult> {
+    const { conversation, userMessageId, inferenceKey, contextExecScope, onContent } = args;
+    if (conversation.docRef.isDeleted) {
+        return failedTurn("This LLM Conversation has been deleted.");
+    }
+    if (inferenceKey.tag !== "Ready") {
+        return failedTurn("Inference is unavailable.");
+    }
+    const latestInteraction = conversation.liveDoc.doc.interactions.at(-1);
+    if (latestInteraction?.tag !== "user-message" || latestInteraction.id !== userMessageId) {
+        return failedTurn("The conversation changed before the response could be retried.");
+    }
+
+    return await generateLLMConversationResponse({
+        conversation,
+        inferenceKey,
+        contextExecScope,
+        onContent,
+    });
+}
+
+/** Generate and persist a response to the current persisted conversation. */
+async function generateLLMConversationResponse(args: {
+    conversation: LiveLLMConversationDoc;
+    inferenceKey: Extract<InferenceKeyResult, { tag: "Ready" }>;
+    contextExecScope: ContextExecScope;
+    onContent?: (delta: string, snapshot: string) => void;
+}): Promise<LLMConversationTurnResult> {
+    const { conversation, inferenceKey, contextExecScope, onContent } = args;
+    try {
         const persistedConversation = conversation.liveDoc.docHandle.doc();
         const context =
             LLMConversationAdapter.prepareLLMConversationInference(persistedConversation);
-
         const result = await runOpenAIChatTurn(
             createInferenceClient(inferenceKey.key),
             context.transcript,
@@ -126,17 +196,41 @@ export async function runLLMConversationTurn(args: {
             result.generatedMessageDelta,
         );
         if (generated.tag === "Err") {
-            return { tag: "Failed", message: generated.content };
+            return failedTurn(
+                `The response failed: ${generated.content}`,
+                formatDetails(result.generatedMessageDelta),
+                true,
+            );
+        }
+        if (generated.content.length === 0 && result.content.trim().length === 0) {
+            return failedTurn(
+                "The model produced no usable output. Your message was saved. Would you like to retry?",
+                formatDetails(result.generatedMessageDelta),
+                true,
+            );
         }
 
         conversation.liveDoc.changeDoc((doc) => {
             for (const interaction of generated.content) {
                 LLMConversation.appendLLMInteraction(doc, interaction);
             }
+            if (
+                !generated.content.some((interaction) => interaction.tag === "llm-message") &&
+                result.content.trim().length > 0
+            ) {
+                LLMConversation.appendLLMInteraction(
+                    doc,
+                    LLMConversation.newLLMMessage(result.content),
+                );
+            }
         });
         return { tag: "Completed", content: result.content };
     } catch (error) {
-        return { tag: "Failed", message: errorMessage(error) };
+        return failedTurn(
+            `The response failed: ${errorMessage(error)}`,
+            formatDetails(error),
+            true,
+        );
     }
 }
 
@@ -154,10 +248,17 @@ function generatedOpenAIMessageDeltaToLLMInteractions(
 
         const toolCalls = message.tool_calls ?? [];
         if (toolCalls.length === 0) {
+            // Some providers emit an empty assistant message between tool-use
+            // continuations. It has no user-visible content to persist.
+            if (message.content === null || message.content === undefined) {
+                continue;
+            }
             if (typeof message.content !== "string") {
                 return { tag: "Err", content: "Expected assistant content to be a string" };
             }
-            interactions.push(LLMConversation.newLLMMessage(message.content));
+            if (message.content.trim().length > 0) {
+                interactions.push(LLMConversation.newLLMMessage(message.content));
+            }
             continue;
         }
 
@@ -198,6 +299,39 @@ function generatedOpenAIMessageDeltaToLLMInteractions(
     return { tag: "Ok", content: interactions };
 }
 
-function errorMessage(error: unknown): string {
-    return error instanceof Error ? error.message : String(error);
+function validateUserInput(
+    interactions: readonly LLMInteraction[],
+    input: LLMConversationUserInput,
+): JsResult<void, string> {
+    if (!input.content.trim() && input.files.length === 0) {
+        return { tag: "Err", content: "A message or attachment is required." };
+    }
+    return validateConversationAttachments([
+        ...conversationAttachmentMetadata(interactions),
+        ...input.files.map(inlineFileMetadata),
+    ]);
+}
+
+function failedTurn(
+    message: string,
+    details?: string,
+    retryable = false,
+): LLMConversationTurnResult {
+    return {
+        tag: "Failed",
+        message,
+        ...(details === undefined ? {} : { details }),
+        retryable,
+    };
+}
+
+function formatDetails(value: unknown): string {
+    if (value instanceof Error) {
+        return value.stack ?? value.message;
+    }
+    try {
+        return JSON.stringify(value, null, 2);
+    } catch {
+        return String(value);
+    }
 }

@@ -127,9 +127,14 @@ const routes: RouteDefinition[] = [
     {
         path: "/:kind/:ref/:subkind?/:subref?",
         matchFilters: {
-            kind: ["model", "diagram", "analysis"],
+            kind: ["model", "diagram", "analysis", "llmconversation"],
             ref: refIsUUIDFilter.ref,
-            subkind: (v?: string) => !v || v === "analysis" || v === "diagram" || v === "model",
+            subkind: (v?: string) =>
+                !v ||
+                v === "analysis" ||
+                v === "diagram" ||
+                v === "model" ||
+                v === "llmconversation",
             subref: (v?: string) => !v || refIsUUIDFilter.ref(v),
         },
         component: lazy(() => import("./page/document_page")),

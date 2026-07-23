@@ -10,7 +10,11 @@ import type {
     OpenAITranscript,
 } from "../inference/chat.ts";
 import type { ContextExecScope } from "../inference/context_exec.ts";
-import { type LiveLLMConversationDoc, runLLMConversationTurn } from "./document.ts";
+import {
+    type LiveLLMConversationDoc,
+    retryLastLLMConversationResponse,
+    runLLMConversationTurn,
+} from "./document.ts";
 
 const inference = vi.hoisted(() => ({
     createInferenceClient: vi.fn<(apiKey: string) => unknown>(),
@@ -60,12 +64,6 @@ const inputFile: InlineFile = {
     content: Array.from(new TextEncoder().encode("left,right\n0,1\n")),
 };
 
-const binaryInputFile: InlineFile = {
-    filename: "data.bin",
-    mediaType: "application/octet-stream",
-    content: [0, 255],
-};
-
 const generatedMessageDelta: GeneratedOpenAIMessage[] = [
     {
         role: "assistant",
@@ -104,7 +102,7 @@ describe("LLM conversation turns", () => {
                 inferenceKey: { tag: "Ready", key: "inference-key" },
                 userInput: {
                     content: "Inspect the attached file.",
-                    files: [inputFile, binaryInputFile],
+                    files: [inputFile],
                 },
                 contextExecScope: {},
             }),
@@ -114,7 +112,6 @@ describe("LLM conversation turns", () => {
         const scope = inference.runOpenAIChatTurn.mock.calls[0]?.[2] as ContextExecScope;
         assert.deepStrictEqual(scope.files, {
             "values.csv": "left,right\n0,1\n",
-            "data.bin": [0, 255],
         });
         assert.strictEqual(inference.runOpenAIChatTurn.mock.calls[0]?.[4], "test-model");
 
@@ -132,25 +129,83 @@ describe("LLM conversation turns", () => {
         assert.strictEqual(response.content, "The values are 0 and 1.");
     });
 
-    test("retains the user message when inference fails", async () => {
+    test("persists tool output when the model produces no final text", async () => {
         const conversation = makeLiveConversation();
         inference.createInferenceClient.mockReturnValue({});
-        inference.runOpenAIChatTurn.mockRejectedValue(new Error("network failed"));
+        inference.runOpenAIChatTurn.mockResolvedValue({
+            content: "",
+            generatedMessageDelta: generatedMessageDelta.slice(0, 2),
+        });
 
         assert.deepStrictEqual(
             await runLLMConversationTurn({
                 conversation,
                 inferenceKey: { tag: "Ready", key: "inference-key" },
-                userInput: { content: "What is the meaning of life?", files: [] },
+                userInput: { content: "Inspect the attached file.", files: [inputFile] },
                 contextExecScope: {},
             }),
-            { tag: "Failed", message: "network failed" }, // we may never know
+            { tag: "Completed", content: "" },
         );
+
+        const interactions = conversation.liveDoc.docHandle.doc().interactions;
+        assert.deepStrictEqual(
+            interactions.map((interaction) => interaction.tag),
+            ["user-message", "llm-code-execution"],
+        );
+    });
+
+    test("retains the user message when inference fails", async () => {
+        const conversation = makeLiveConversation();
+        inference.createInferenceClient.mockReturnValue({});
+        inference.runOpenAIChatTurn.mockRejectedValue(new Error("network failed"));
+
+        const result = await runLLMConversationTurn({
+            conversation,
+            inferenceKey: { tag: "Ready", key: "inference-key" },
+            userInput: { content: "What is the meaning of life?", files: [] },
+            contextExecScope: {},
+        });
+        if (result.tag !== "Failed") {
+            assert.fail(`Expected Failed result, got ${result.tag}`);
+        }
+        assert.strictEqual(result.retryable, true);
 
         const interactions = conversation.liveDoc.docHandle.doc().interactions;
         assert.strictEqual(interactions.length, 1);
         const user = interactions[0];
         assert(user?.tag === "user-message");
         assert.strictEqual(user.content, "What is the meaning of life?");
+    });
+
+    test("retries without duplicating the persisted user message", async () => {
+        const conversation = makeLiveConversation();
+        const savedUserMessage = LLMConversation.newUserMessage("Please answer this.", []);
+        conversation.liveDoc.changeDoc((doc) => {
+            LLMConversation.appendLLMInteraction(doc, savedUserMessage);
+        });
+        inference.createInferenceClient.mockReturnValue({});
+        inference.runOpenAIChatTurn.mockReset();
+        inference.runOpenAIChatTurn.mockResolvedValue({
+            content: "A usable response.",
+            generatedMessageDelta: [{ role: "assistant", content: "A usable response." }],
+        });
+
+        assert.deepStrictEqual(
+            await retryLastLLMConversationResponse({
+                conversation,
+                userMessageId: savedUserMessage.id,
+                inferenceKey: { tag: "Ready", key: "inference-key" },
+                contextExecScope: {},
+            }),
+            { tag: "Completed", content: "A usable response." },
+        );
+        const interactions = conversation.liveDoc.docHandle.doc().interactions;
+        assert.deepStrictEqual(
+            interactions.map((interaction) => interaction.tag),
+            ["user-message", "llm-message"],
+        );
+        assert.strictEqual(inference.runOpenAIChatTurn.mock.calls.length, 1);
+        const retryTranscript = inference.runOpenAIChatTurn.mock.calls[0]?.[1];
+        assert.deepStrictEqual(retryTranscript, [{ role: "user", content: "Please answer this." }]);
     });
 });
