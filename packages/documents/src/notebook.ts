@@ -23,6 +23,9 @@ import type {
     Shape,
 } from "./shape";
 
+/**
+ * The value given to [`Notebook.add`].
+ */
 type AddValue<S extends Shape, T extends CellType<S>> = T extends RichTextType
     ? { content: string }
     : T extends ObjectType
@@ -34,7 +37,10 @@ type AddValue<S extends Shape, T extends CellType<S>> = T extends RichTextType
               to: ObjectCell<EndpointObjectTypes<S, T>> | null;
           }
         : never;
-
+/**
+ * The type of a cell after being added to a notebook. This resolves to a
+ * [`Cell`] switched by the [`T`] [`CellType`] passed to it.
+ */
 type AddedCell<S extends Shape, T extends CellType<S>> = T extends RichTextType
     ? RichTextCell
     : T extends ObjectType
