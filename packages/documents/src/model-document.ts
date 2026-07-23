@@ -1,38 +1,88 @@
-import type { ModelDocument } from "catcolab-document-methods";
-import type { DocumentStore } from "./store";
+import { Model } from "catcolab-document-methods";
+import type {
+    Link,
+    ModelJudgment,
+    MorType,
+    Ob,
+    ObType,
+    SpecializeModel,
+} from "catcolab-document-types";
+import type { DocumentOfType, DocumentView } from "./document";
+import type { DocumentAdapter } from "./document-adapter";
+import type { NotebookFormat } from "./notebook-core";
 
-export type { ModelDocument } from "catcolab-document-methods";
+export type ModelDocument = DocumentOfType<"model">;
+export type ModelDocumentView = DocumentView<ModelDocument>;
 
-export type DeepReadonly<T> = T extends (...args: never[]) => unknown
-    ? T
-    : T extends readonly (infer Item)[]
-      ? readonly DeepReadonly<Item>[]
-      : T extends object
-        ? { readonly [Key in keyof T]: DeepReadonly<T[Key]> }
-        : T;
-
-export type ModelDocumentView = DeepReadonly<ModelDocument>;
-
-export function getModelDocumentView<Handle>(
-    store: DocumentStore<Handle>,
-    handle: Handle,
-): Readonly<ModelDocument> {
-    const document = store.getDocumentView(handle);
-    if (document.type !== "model") {
-        throw new Error(`Expected a model document, received "${document.type}".`);
-    }
-    return document as Readonly<ModelDocument>;
+export interface ModelDefinition {
+    readonly theory: string;
 }
 
-export function changeModelDocument<Handle>(
-    store: DocumentStore<Handle>,
-    handle: Handle,
-    change: (document: ModelDocument) => void,
-): void {
-    store.changeDocument(handle, (document) => {
-        if (document.type !== "model") {
-            throw new Error(`Expected a model document, received "${document.type}".`);
-        }
-        change(document);
-    });
+export const modelDocumentAdapter: DocumentAdapter<
+    "model",
+    ModelDefinition,
+    { readonly title: string }
+> = {
+    documentType: "model",
+    create: (definition, options) => newModelDocument(definition.theory, options.title),
+    check: (definition, document) =>
+        document.theory === definition.theory
+            ? { tag: "Ok", content: undefined }
+            : {
+                  tag: "Err",
+                  content: [
+                      {
+                          message:
+                              `Cannot load document with theory "${document.theory}" ` +
+                              `using a shape with theory "${definition.theory}".`,
+                          path: ["theory"],
+                      },
+                  ],
+              },
+};
+
+export const modelNotebookFormat: NotebookFormat<"model", ModelJudgment> = {
+    documentType: "model",
+    getNotebook: (document) => document.notebook,
+    changeNotebook: (document, change) => change(document.notebook),
+};
+
+export function newModelDocument(theory: string, title: string): ModelDocument {
+    const document = Model.newModelDocument({ theory });
+    document.name = title;
+    return document;
+}
+
+export function newObjectJudgment(obType: ObType, label: string | null): ModelJudgment {
+    const judgment = Model.newObjectDecl(obType);
+    judgment.name = label ?? "";
+    return judgment;
+}
+
+export function newMorphismJudgment(options: {
+    readonly morType: MorType;
+    readonly label: string | null;
+    readonly dom: Ob | null;
+    readonly cod: Ob | null;
+}): ModelJudgment {
+    const judgment = Model.newMorphismDecl(options.morType);
+    judgment.name = options.label ?? "";
+    judgment.dom = options.dom;
+    judgment.cod = options.cod;
+    return judgment;
+}
+
+export function newInstantiationJudgment(options: {
+    readonly label: string;
+    readonly model: Link;
+    readonly specializations: SpecializeModel[];
+}): ModelJudgment {
+    const judgment = Model.newInstantiatedModel(options.model);
+    judgment.name = options.label;
+    judgment.specializations = options.specializations;
+    return judgment;
+}
+
+export function duplicateModelJudgment(content: ModelJudgment): ModelJudgment {
+    return Model.duplicateModelJudgment(content);
 }

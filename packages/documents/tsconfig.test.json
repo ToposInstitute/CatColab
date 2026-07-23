@@ -17,6 +17,7 @@
         "test/definitions.test.ts",
         "test/document-store.test.ts",
         "test/instantiation.test.ts",
+        "test/notebook-editor.test.ts",
         "test/serialization.test.ts",
         "test/stores/automerge-store.test.ts",
         "test/stores/backend-store.test.ts",

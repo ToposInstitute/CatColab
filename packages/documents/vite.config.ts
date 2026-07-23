@@ -8,7 +8,7 @@ export default defineConfig({
     test: {
         environment: "happy-dom",
         include: [
-            "test/{cell-operations,cells,creating-and-editing,definitions,document-store,instantiation,serialization,validation}.test.ts",
+            "test/{cell-operations,cells,creating-and-editing,definitions,document-store,instantiation,notebook-editor,serialization,validation}.test.ts",
         ],
         typecheck: {
             enabled: true,

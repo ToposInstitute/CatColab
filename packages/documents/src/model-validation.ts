@@ -7,7 +7,7 @@ import {
     type DblTheory,
     type ModelNotebook,
 } from "catlog-wasm";
-import { getModelDocumentView } from "./model-document";
+import { getDocumentViewOfType } from "./document";
 import type { Result } from "./result";
 import type { DocumentRef, DocumentStore } from "./store";
 
@@ -25,12 +25,12 @@ function theoryFor(theory: string): DblTheory {
     return simpleOlogTheory;
 }
 
-export async function validateDocument<Handle>(
+export async function validateModel<Handle>(
     store: DocumentStore<Handle>,
     handle: Handle,
 ): Promise<Result<DblModel>> {
     try {
-        const document = getModelDocumentView(store, handle);
+        const document = getDocumentViewOfType(store, handle, "model");
         const ref = store.getDocumentRef(handle);
         const model = await elaborate(store, ref, theoryFor(document.theory), []);
         const result = model.validate();
@@ -83,7 +83,7 @@ async function elaborate<Handle>(
         throw new Error(resolved.content.map((issue) => issue.message).join("; "));
     }
     const handle = resolved.content;
-    const document = store.copyValue(handle, getModelDocumentView(store, handle));
+    const document = store.copyValue(handle, getDocumentViewOfType(store, handle, "model"));
     const nextStack = [...stack, { key, name: document.name }];
     const instantiated = new DblModelMap();
     const instantiatedRefs = new Set<string>();

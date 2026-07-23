@@ -64,11 +64,8 @@ export type RichTextType = typeof RichText;
 export type InstantiationType = typeof Instantiation;
 export type ObjectTypes<S extends Shape> = NonNullable<S["objects"]>[number];
 export type MorphismTypes<S extends Shape> = NonNullable<S["morphisms"]>[number];
-export type CellType<S extends Shape> =
-    | RichTextType
-    | InstantiationType
-    | ObjectTypes<S>
-    | MorphismTypes<S>;
+export type InformalTypes<S extends Shape> = NonNullable<S["informal"]>[number];
+export type CellType<S extends Shape> = ObjectTypes<S> | MorphismTypes<S> | InformalTypes<S>;
 
 type MatchingObjectType<O, Required> = O extends ObjectType
     ? O["obType"] extends Required

@@ -1,14 +1,10 @@
-import { Model, Nb } from "catcolab-document-methods";
 import type { ModelJudgment } from "catcolab-document-types";
 import type { DblModel } from "catlog-wasm";
+import { attachDocument, getAttachedDocumentRef, type AttachedDocument } from "./attached-document";
 import {
     cellHandle,
     endpointValue,
-    instantiationHandle,
-    morphismHandle,
     objectGeneratorId,
-    objectHandle,
-    richTextHandle,
     type Cell,
     type InstantiationCell,
     type MorphismCell,
@@ -17,11 +13,17 @@ import {
 } from "./cell";
 import { morphismTypesEqual, objectTypesEqual } from "./equality";
 import {
-    changeModelDocument,
-    getModelDocumentView,
+    duplicateModelJudgment,
+    modelNotebookFormat,
+    newInstantiationJudgment,
+    newMorphismJudgment,
+    newObjectJudgment,
     type ModelDocument,
-    type ModelDocumentView,
 } from "./model-document";
+import { validateModel } from "./model-validation";
+import { createNotebookCore, getNotebookCore, registerNotebookCore } from "./notebook-core";
+import { createNotebookEditor, type FormalCellFamily } from "./notebook-editor";
+import { observeValidation } from "./observe-validation";
 import type { Result } from "./result";
 import {
     type CellType,
@@ -30,12 +32,10 @@ import {
     type MorphismType,
     type MorphismTypes,
     type ObjectType,
-    type ObjectTypes,
     type RichTextType,
     type Shape,
 } from "./shape";
-import type { DocumentRef, DocumentStore } from "./store";
-import { validateDocument } from "./validation";
+import type { DocumentStore } from "./store";
 
 export interface InstantiationSpecialization {
     readonly object: ObjectCell<ObjectType>;
@@ -48,7 +48,9 @@ export interface InstantiationArgs<Handle> {
     readonly specializations?: readonly InstantiationSpecialization[];
 }
 
-type AddValue<S extends Shape, Handle, T extends CellType<S>> = T extends RichTextType
+type ModelCellType<S extends Shape> = RichTextType | InstantiationType | CellType<S>;
+
+type AddValue<S extends Shape, Handle, T extends ModelCellType<S>> = T extends RichTextType
     ? { content: string }
     : T extends InstantiationType
       ? InstantiationArgs<Handle>
@@ -62,7 +64,7 @@ type AddValue<S extends Shape, Handle, T extends CellType<S>> = T extends RichTe
             }
           : never;
 
-type AddedCell<S extends Shape, T extends CellType<S>> = T extends RichTextType
+type AddedCell<S extends Shape, T extends ModelCellType<S>> = T extends RichTextType
     ? RichTextCell
     : T extends InstantiationType
       ? InstantiationCell
@@ -72,149 +74,138 @@ type AddedCell<S extends Shape, T extends CellType<S>> = T extends RichTextType
           ? MorphismCell<S, T>
           : never;
 
-export interface Notebook<S extends Shape, Handle = unknown> {
+interface ModelNotebookMethods<S extends Shape, Handle> {
     readonly shape: S;
-    readonly handle: Handle;
-    readonly document: ModelDocumentView;
-    readonly title: string;
-    add<T extends CellType<S>>(type: T, value: AddValue<S, Handle, T>): AddedCell<S, T>;
+    add<T extends ModelCellType<S>>(type: T, value: AddValue<S, Handle, T>): AddedCell<S, T>;
     cells(): readonly Cell<S>[];
-    cellsOf<T extends CellType<S>>(type: T): readonly AddedCell<S, T>[];
-    get<T extends CellType<S>>(type: T, id: string): Result<AddedCell<S, T>>;
-    update(patch: Partial<{ title: string }>): void;
-    dump(): ModelDocument;
-    onChange(callback: () => void): () => void;
+    cellsOf<T extends ModelCellType<S>>(type: T): readonly AddedCell<S, T>[];
+    get<T extends ModelCellType<S>>(type: T, id: string): Result<AddedCell<S, T>>;
     validate(): Promise<Result<DblModel>>;
     onValidate(callback: (result: Result<DblModel>) => void): () => void;
 }
 
-const notebookRefs = new WeakMap<object, () => DocumentRef>();
+export type Notebook<S extends Shape, Handle = unknown> = AttachedDocument<ModelDocument, Handle> &
+    ModelNotebookMethods<S, Handle>;
 
-function refForNotebook(notebook: Notebook<Shape, unknown>): DocumentRef {
-    const getRef = notebookRefs.get(notebook);
-    if (!getRef) throw new Error("Notebook is not attached to a document reference.");
-    return getRef();
-}
-
-function typeMatches<S extends Shape>(type: CellType<S>, cell: Cell<S>): boolean {
-    if (type.kind === "rich-text") return cell.kind === "rich-text";
-    if (type.kind === "instantiation") return cell.kind === "instantiation";
-    if (type.kind === "object") {
-        return cell.kind === "object" && objectTypesEqual(type.obType, cell.type.obType);
+function modelJudgmentTag(content: unknown): ModelJudgment["tag"] | undefined {
+    if (typeof content !== "object" || content === null || !("tag" in content)) {
+        return undefined;
     }
-    return cell.kind === "morphism" && morphismTypesEqual(type.morType, cell.type.morType);
+    return (content as { tag?: ModelJudgment["tag"] }).tag;
 }
 
-export function notebookFromDocument<Handle, S extends Shape>(
+export function attachModelNotebook<Handle, S extends Shape>(
     store: DocumentStore<Handle>,
     handle: Handle,
     shape: S,
 ): Notebook<S, Handle> {
-    const append = (cell: ReturnType<typeof Nb.newRichTextCell> | Nb.FormalCell<ModelJudgment>) => {
-        changeModelDocument(store, handle, (document) => Nb.appendCell(document.notebook, cell));
-    };
-
-    const notebook: Notebook<S, Handle> = {
-        shape,
-        handle,
-        get document() {
-            return getModelDocumentView(store, handle);
+    const core = createNotebookCore(store, handle, modelNotebookFormat);
+    const attached = attachDocument(store, handle, "model");
+    const modelCells: FormalCellFamily<ModelJudgment> = {
+        supportsType(type) {
+            const kind = (type as { kind?: unknown } | null)?.kind;
+            return kind === "object" || kind === "morphism" || kind === "instantiation";
         },
-        get title() {
-            return getModelDocumentView(store, handle).name;
+        supportsContent(content): content is ModelJudgment {
+            const tag = modelJudgmentTag(content);
+            return tag === "object" || tag === "morphism" || tag === "instantiation";
         },
-        add<T extends CellType<S>>(type: T, value: AddValue<S, Handle, T>) {
-            if (type.kind === "rich-text") {
-                const cell = Nb.newRichTextCell((value as { content: string }).content);
-                append(cell);
-                return richTextHandle(store, handle, cell.id) as AddedCell<S, T>;
+        create(type, value) {
+            const cellType = type as ModelCellType<S>;
+            if (cellType.kind === "object") {
+                return newObjectJudgment(
+                    cellType.obType,
+                    (value as { label: string | null }).label,
+                );
             }
-            if (type.kind === "object") {
-                const judgment = Model.newObjectDecl(type.obType);
-                judgment.name = (value as { label: string | null }).label ?? "";
-                const cell = Nb.newFormalCell<ModelJudgment>(judgment);
-                append(cell);
-                return objectHandle(store, handle, cell.id, type as ObjectTypes<S>) as AddedCell<S, T>;
-            }
-            if (type.kind === "instantiation") {
+            if (cellType.kind === "instantiation") {
                 const args = value as InstantiationArgs<Handle>;
-                const ref = refForNotebook(args.model);
-                const judgment = Model.newInstantiatedModel({
-                    type: "instantiation",
-                    _id: ref.id,
-                    _version: ref.version,
-                    _server: ref.server ?? "",
+                const modelRef = getAttachedDocumentRef(args.model);
+                const modelCore = getNotebookCore<ModelJudgment>(args.model);
+                return newInstantiationJudgment({
+                    label: args.label,
+                    model: {
+                        type: "instantiation",
+                        _id: modelRef.id,
+                        _version: modelRef.version,
+                        _server: modelRef.server ?? "",
+                    },
+                    specializations: (args.specializations ?? []).map((specialization) => ({
+                        id: objectGeneratorId(modelCore, specialization.object),
+                        ob: endpointValue(core, specialization.as),
+                    })),
                 });
-                judgment.name = args.label;
-                judgment.specializations = (args.specializations ?? []).map((specialization) => ({
-                    id: objectGeneratorId(store, args.model.handle, specialization.object),
-                    ob: endpointValue(store, handle, specialization.as),
-                }));
-                const cell = Nb.newFormalCell<ModelJudgment>(judgment);
-                append(cell);
-                return instantiationHandle(store, handle, cell.id) as AddedCell<S, T>;
             }
-            const morphism = value as AddValue<S, Handle, MorphismTypes<S>>;
-            const judgment = Model.newMorphismDecl(type.morType);
-            judgment.name = morphism.label ?? "";
-            judgment.dom = endpointValue(store, handle, morphism.from);
-            judgment.cod = endpointValue(store, handle, morphism.to);
-            const cell = Nb.newFormalCell<ModelJudgment>(judgment);
-            append(cell);
-            return morphismHandle(shape, store, handle, cell.id, type as MorphismTypes<S>) as AddedCell<S, T>;
+            if (cellType.kind === "morphism") {
+                const morphism = value as AddValue<S, Handle, MorphismTypes<S>>;
+                return newMorphismJudgment({
+                    morType: cellType.morType,
+                    label: morphism.label,
+                    dom: endpointValue(core, morphism.from),
+                    cod: endpointValue(core, morphism.to),
+                });
+            }
+            throw new Error("Cell type is not supported by model formal content.");
         },
-        cells() {
-            return Nb.getCells(getModelDocumentView(store, handle).notebook).map((cell) =>
-                cellHandle(shape, store, handle, cell.id),
+        attach(cellId) {
+            return cellHandle(shape, core, cellId);
+        },
+        matches(type, content) {
+            const cellType = type as ModelCellType<S>;
+            const tag = modelJudgmentTag(content);
+            if (cellType.kind === "instantiation") {
+                return tag === "instantiation";
+            }
+            if (cellType.kind === "object") {
+                return (
+                    tag === "object" &&
+                    objectTypesEqual(
+                        cellType.obType,
+                        (content as Extract<ModelJudgment, { tag: "object" }>).obType,
+                    )
+                );
+            }
+            return (
+                cellType.kind === "morphism" &&
+                tag === "morphism" &&
+                morphismTypesEqual(
+                    cellType.morType,
+                    (content as Extract<ModelJudgment, { tag: "morphism" }>).morType,
+                )
             );
         },
-        cellsOf<T extends CellType<S>>(type: T) {
-            return notebook.cells().filter((cell) => typeMatches(type, cell)) as AddedCell<S, T>[];
-        },
-        get<T extends CellType<S>>(type: T, id: string): Result<AddedCell<S, T>> {
-            if (!getModelDocumentView(store, handle).notebook.cellContents[id]) {
-                return { tag: "Err", content: [{ message: `No cell with id "${id}".`, path: ["id"] }] };
-            }
-            const cell = cellHandle(shape, store, handle, id);
-            return typeMatches(type, cell)
-                ? { tag: "Ok", content: cell as AddedCell<S, T> }
-                : {
-                      tag: "Err",
-                      content: [{ message: `Cell "${id}" is not of the expected type.`, path: ["id"] }],
-                  };
-        },
-        update(patch) {
-            if (patch.title !== undefined) {
-                changeModelDocument(store, handle, (document) => {
-                    document.name = patch.title as string;
-                });
-            }
-        },
-        dump() {
-            return store.copyValue(handle, getModelDocumentView(store, handle)) as ModelDocument;
-        },
-        onChange(callback) {
-            return store.subscribe(handle, callback);
-        },
-        validate() {
-            return validateDocument(store, handle);
-        },
-        onValidate(callback) {
-            let active = true;
-            let generation = 0;
-            const run = async () => {
-                const current = ++generation;
-                const result = await validateDocument(store, handle);
-                if (active && current === generation) callback(result);
-            };
-            queueMicrotask(() => void run());
-            const unsubscribe = store.subscribe(handle, () => void run());
-            return () => {
-                active = false;
-                unsubscribe();
-            };
+        duplicate(content) {
+            return duplicateModelJudgment(content);
         },
     };
-    notebookRefs.set(notebook, () => store.getDocumentRef(handle));
+    const editor = createNotebookEditor(core, [modelCells]);
+    const methods: ModelNotebookMethods<S, Handle> = {
+        shape,
+        add<T extends ModelCellType<S>>(type: T, value: AddValue<S, Handle, T>) {
+            return editor.add(type, value) as AddedCell<S, T>;
+        },
+        cells() {
+            return editor.cells() as Cell<S>[];
+        },
+        cellsOf<T extends ModelCellType<S>>(type: T) {
+            return editor.cellsOf(type) as AddedCell<S, T>[];
+        },
+        get<T extends ModelCellType<S>>(type: T, id: string): Result<AddedCell<S, T>> {
+            return editor.get(type, id) as Result<AddedCell<S, T>>;
+        },
+        validate() {
+            return validateModel(store, handle);
+        },
+        onValidate(callback) {
+            return observeValidation({
+                subscribe: attached.onChange,
+                validate: () => validateModel(store, handle),
+                dispose: (model) => model.free(),
+                callback,
+            });
+        },
+    };
+    const notebook = Object.assign(attached, methods);
+    registerNotebookCore(notebook, core);
     return notebook;
 }
