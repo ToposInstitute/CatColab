@@ -269,6 +269,36 @@ impl ThNullableSignedCategory {
     pub fn theory(&self) -> DblTheory {
         DblTheory(self.0.clone().into())
     }
+
+    #[wasm_bindgen(js_name = "positiveLoops")]
+    pub fn positive_loops(
+        &self,
+        model: &DblModel,
+        options: MotifsOptions,
+    ) -> Result<Vec<MotifOccurrence>, String> {
+        let positive_loop = models::positive_loop(self.0.clone());
+        motifs(&positive_loop, model, options)
+    }
+
+    #[wasm_bindgen(js_name = "negativeLoops")]
+    pub fn negative_loops(
+        &self,
+        model: &DblModel,
+        options: MotifsOptions,
+    ) -> Result<Vec<MotifOccurrence>, String> {
+        let negative_loop = models::negative_loop(self.0.clone());
+        motifs(&negative_loop, model, options)
+    }
+
+    #[wasm_bindgen(js_name = "indeterminateLoops")]
+    pub fn indeterminate_loops(
+        &self,
+        model: &DblModel,
+        options: MotifsOptions,
+    ) -> Result<Vec<MotifOccurrence>, String> {
+        let indeterminate_loop = models::indeterminate_loop(self.0.clone());
+        motifs(&indeterminate_loop, model, options)
+    }
 }
 
 /// The theory of categories with scalars.
