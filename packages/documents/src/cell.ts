@@ -1,6 +1,6 @@
 import { Nb } from "catcolab-document-methods";
 import type { Ob } from "catcolab-document-types";
-import { formalJudgment, type ModelDocument } from "./model-document";
+import { modelJudgment, type ModelDocument } from "./model-document";
 import { findMorphismType, findObjectType } from "./shape";
 import type {
     EndpointObjectTypes,
@@ -84,7 +84,7 @@ export function objectHandle<O extends ObjectType>(
         id: cellId,
         type,
         get label() {
-            const judgment = formalJudgment(document, cellId);
+            const judgment = modelJudgment(document, cellId);
             if (judgment.tag !== "object") {
                 throw new Error(`Cell ${cellId} is not an object.`);
             }
@@ -94,7 +94,7 @@ export function objectHandle<O extends ObjectType>(
             if (patch.label === undefined) {
                 return;
             }
-            const judgment = formalJudgment(document, cellId);
+            const judgment = modelJudgment(document, cellId);
             if (judgment.tag !== "object") {
                 throw new Error(`Cell ${cellId} is not an object.`);
             }
@@ -133,7 +133,7 @@ export function endpointValue(
     if (!endpoint) {
         return null;
     }
-    const judgment = formalJudgment(document, endpoint.id);
+    const judgment = modelJudgment(document, endpoint.id);
     if (judgment.tag !== "object") {
         throw new Error(`Cell ${endpoint.id} is not an object.`);
     }
@@ -151,14 +151,14 @@ export function morphismHandle<S extends Shape, M extends MorphismTypes<S>>(
         id: cellId,
         type,
         get label() {
-            const judgment = formalJudgment(document, cellId);
+            const judgment = modelJudgment(document, cellId);
             if (judgment.tag !== "morphism") {
                 throw new Error(`Cell ${cellId} is not a morphism.`);
             }
             return judgment.name;
         },
         get from() {
-            const judgment = formalJudgment(document, cellId);
+            const judgment = modelJudgment(document, cellId);
             if (judgment.tag !== "morphism") {
                 throw new Error(`Cell ${cellId} is not a morphism.`);
             }
@@ -167,7 +167,7 @@ export function morphismHandle<S extends Shape, M extends MorphismTypes<S>>(
             > | null;
         },
         get to() {
-            const judgment = formalJudgment(document, cellId);
+            const judgment = modelJudgment(document, cellId);
             if (judgment.tag !== "morphism") {
                 throw new Error(`Cell ${cellId} is not a morphism.`);
             }
@@ -176,7 +176,7 @@ export function morphismHandle<S extends Shape, M extends MorphismTypes<S>>(
             > | null;
         },
         update(patch) {
-            const judgment = formalJudgment(document, cellId);
+            const judgment = modelJudgment(document, cellId);
             if (judgment.tag !== "morphism") {
                 throw new Error(`Cell ${cellId} is not a morphism.`);
             }

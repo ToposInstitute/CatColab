@@ -12,6 +12,7 @@ import {
     type RichTextCell,
 } from "./cell";
 import type { ModelDocument } from "./model-document";
+import type { NotebookDocument } from "./notebook-document";
 import type {
     CellType,
     EndpointObjectTypes,
@@ -49,9 +50,9 @@ type AddedCell<S extends Shape, T extends CellType<S>> = T extends RichTextType
         ? MorphismCell<S, T>
         : never;
 
-export interface Notebook<S extends Shape> {
+export interface Notebook<S extends Shape, D extends NotebookDocument = NotebookDocument> {
     readonly shape: S;
-    readonly document: ModelDocument;
+    readonly document: D;
     readonly title: string;
 
     add<T extends CellType<S>>(type: T, value: AddValue<S, T>): AddedCell<S, T>;
@@ -59,10 +60,10 @@ export interface Notebook<S extends Shape> {
     update(patch: Partial<{ title: string }>): void;
 }
 
-export function notebookFromDocument<S extends Shape>(
+export function notebookFromModel<S extends Shape, D extends ModelDocument>(
     shape: S,
-    document: ModelDocument,
-): Notebook<S> {
+    document: D,
+): Notebook<S, D> {
     return {
         shape,
         document,
