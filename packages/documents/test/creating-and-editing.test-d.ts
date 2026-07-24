@@ -1,9 +1,18 @@
 import { Aspect, SimpleOlog, Type } from "catcolab-logics/simple-olog";
 import { describe, test } from "vitest";
 
-import { createBinder } from "catcolab-documents";
+import type { Document } from "catcolab-document-types";
+import { createBinder, type Notebook } from "catcolab-documents";
+
+type InstanceDocument = Extract<Document, { type: "instance" }>;
 
 describe("creating and editing notebooks (type level)", () => {
+    test("instance documents cannot back notebooks", () => {
+        // @ts-expect-error Instance documents contain tables rather than notebooks.
+        const notebook = null as unknown as Notebook<typeof SimpleOlog, InstanceDocument>;
+        void notebook;
+    });
+
     test("invalid shapes are type errors in a simple olog", async () => {
         const binder = createBinder();
         const notebook = await binder.createNotebook(SimpleOlog, { title: "An Olog" });
