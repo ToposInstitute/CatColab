@@ -56,8 +56,14 @@ function makeLiveConversation(): LiveLLMConversationDoc {
 
 const inputFile: InlineFile = {
     filename: "values.csv",
-    fileType: "CSV",
+    mediaType: "text/csv",
     content: Array.from(new TextEncoder().encode("left,right\n0,1\n")),
+};
+
+const binaryInputFile: InlineFile = {
+    filename: "data.bin",
+    mediaType: "application/octet-stream",
+    content: [0, 255],
 };
 
 const generatedMessageDelta: GeneratedOpenAIMessage[] = [
@@ -96,14 +102,20 @@ describe("LLM conversation turns", () => {
             await runLLMConversationTurn({
                 conversation,
                 inferenceKey: { tag: "Ready", key: "inference-key" },
-                userInput: { content: "Inspect the attached file.", files: [inputFile] },
+                userInput: {
+                    content: "Inspect the attached file.",
+                    files: [inputFile, binaryInputFile],
+                },
                 contextExecScope: {},
             }),
             { tag: "Completed", content: "The values are 0 and 1." },
         );
 
         const scope = inference.runOpenAIChatTurn.mock.calls[0]?.[2] as ContextExecScope;
-        assert.deepStrictEqual(scope.files, { "values.csv": "left,right\n0,1\n" });
+        assert.deepStrictEqual(scope.files, {
+            "values.csv": "left,right\n0,1\n",
+            "data.bin": [0, 255],
+        });
         assert.strictEqual(inference.runOpenAIChatTurn.mock.calls[0]?.[4], "test-model");
 
         const interactions = conversation.liveDoc.docHandle.doc().interactions;

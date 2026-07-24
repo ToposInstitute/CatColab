@@ -1,10 +1,10 @@
 import type { LLMConversationDocument } from "catcolab-document-methods";
-import type { FileType, UserMessage } from "catcolab-document-types";
+import type { UserMessage } from "catcolab-document-types";
 import { assertExhaustive } from "../util/assert_exhaustive.ts";
 import type { OpenAITranscript } from "./chat.ts";
 
 /** Files available to `contextExec`, indexed by their filenames. */
-export type ConversationFiles = Readonly<Record<string, string>>;
+export type ConversationFiles = Readonly<Record<string, string | number[]>>;
 
 /** The OpenAI request data derived from a persisted LLM conversation. */
 export type LLMConversationInferenceContext = {
@@ -17,14 +17,17 @@ export function prepareLLMConversationInference(
     conversation: LLMConversationDocument,
 ): LLMConversationInferenceContext {
     const transcript: OpenAITranscript = [];
-    const files: Record<string, string> = Object.create(null) as Record<string, string>;
+    const files: Record<string, string | number[]> = Object.create(null) as Record<
+        string,
+        string | number[]
+    >;
 
     for (const interaction of conversation.interactions) {
         switch (interaction.tag) {
             case "user-message":
                 transcript.push({ role: "user", content: userMessageToOpenAIContent(interaction) });
                 for (const file of interaction.files) {
-                    files[file.filename] = decodeFile(file.fileType, file.content);
+                    files[file.filename] = decodeFile(file.mediaType, file.content);
                 }
                 break;
             case "llm-message":
@@ -58,7 +61,8 @@ export function prepareLLMConversationInference(
                     case "unresolved":
                         transcript.push({
                             role: "system",
-                            content: "The user rejected your proposed changes.",
+                            content:
+                                "The user has a follow up message and so your proposed changes were not applied.",
                         });
                         break;
                     case "approved":
@@ -98,11 +102,14 @@ function userMessageToOpenAIContent(message: UserMessage): string {
     return message.content.length > 0 ? `${message.content}\n\n${availability}` : availability;
 }
 
-function decodeFile(fileType: FileType, content: number[]): string {
-    switch (fileType) {
-        case "CSV":
-            return new TextDecoder("utf-8").decode(Uint8Array.from(content));
-        default:
-            return assertExhaustive(fileType);
+/** Special logic for doing "reasonable" decoding to files to insert into the
+    execution environment. */
+function decodeFile(_mediaType: string, content: number[]): string | number[] {
+    // For now this is essentially a placeholder until we decide what we want to
+    // do to different media types.
+    try {
+        return new TextDecoder("utf-8", { fatal: true }).decode(Uint8Array.from(content));
+    } catch {
+        return content;
     }
 }

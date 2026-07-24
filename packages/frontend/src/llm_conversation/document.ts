@@ -16,7 +16,7 @@ import {
     type GeneratedOpenAIMessage,
 } from "../inference/chat.ts";
 import type { ContextExecScope } from "../inference/context_exec.ts";
-import * as LLMConversationInference from "../inference/llm_conversation.ts";
+import * as LLMConversationAdapter from "../inference/llm_conversation_adapter.ts";
 import type { LiveModelDoc, ModelLibrary } from "../model";
 import type { InferenceKeyResult } from "../user/inference_key_context.tsx";
 
@@ -113,7 +113,7 @@ export async function runLLMConversationTurn(args: {
 
         const persistedConversation = conversation.liveDoc.docHandle.doc();
         const context =
-            LLMConversationInference.prepareLLMConversationInference(persistedConversation);
+            LLMConversationAdapter.prepareLLMConversationInference(persistedConversation);
 
         const result = await runOpenAIChatTurn(
             createInferenceClient(inferenceKey.key),
