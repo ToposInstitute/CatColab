@@ -27,7 +27,7 @@ pub fn negative_loop(th: Rc<DiscreteDblTheory>) -> DiscreteDblModel {
 /// A signed graph or free [nullable signed category](super::theories::th_nullable_signed_category),
 /// possibly with delays.
 pub fn indeterminate_loop(th: Rc<DiscreteDblTheory>) -> DiscreteDblModel {
-    loop_of_type(th, name("Zero"), name("Zero").into())
+    loop_of_type(th, name("Object"), name("Zero").into())
 }
 
 /// The delayed positive self-loop.
