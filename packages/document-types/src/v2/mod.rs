@@ -5,6 +5,7 @@ pub use v1::{analysis, api, diagram_judgment, model, model_judgment, path, theor
 pub mod cell;
 pub mod document;
 pub mod notebook;
+pub mod rich_text;
 
 pub use analysis::*;
 pub use api::*;
@@ -14,16 +15,31 @@ pub use document::*;
 pub use model::*;
 pub use model_judgment::*;
 pub use notebook::*;
+pub use rich_text::*;
 pub use theory::*;
 
 #[cfg(test)]
 mod test {
     use super::document::Document;
     use crate::test_utils::test_example_documents;
+    use serde_json::json;
 
     #[test]
     fn test_v2_examples() {
         test_example_documents::<Document, _>("examples/v2", |_, _| {});
+    }
+
+    #[test]
+    fn rich_text_accepts_live_strings_and_serialized_spans() {
+        let string: super::RichTextContent = serde_json::from_value(json!("hello")).unwrap();
+        assert_eq!(string, super::RichTextContent::String("hello".to_owned()));
+
+        let spans: super::RichTextContent = serde_json::from_value(json!([
+            { "type": "text", "value": "hello", "marks": { "strong": true } },
+            { "type": "block", "block": { "type": "math_inline", "tex": "x^2" } }
+        ]))
+        .unwrap();
+        assert!(matches!(spans, super::RichTextContent::Spans(_)));
     }
 }
 

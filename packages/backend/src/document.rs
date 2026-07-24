@@ -3,7 +3,9 @@
 use crate::app::{AppCtx, AppError, AppState};
 use crate::ref_actor::ensure_ref_actor;
 use crate::user_state_updates::{update_ref_for_users, update_user_state};
-use catcolab_document_types::automerge_json::{hydrate_to_json, populate_automerge_from_json};
+use catcolab_document_types::automerge_json::{
+    hydrate_to_json_with_rich_text, populate_automerge_from_json,
+};
 use catcolab_document_types::automerge_util::copy_doc_at_heads;
 use chrono::{DateTime, Utc};
 use samod::DocumentId;
@@ -144,10 +146,10 @@ pub async fn create_snapshot(state: AppState, ref_id: Uuid) -> Result<(), AppErr
 
     let (heads, doc_content) = doc_handle.with_document(|doc| {
         let heads: Vec<Vec<u8>> = doc.get_heads().iter().map(|h| h.0.to_vec()).collect();
-        let hydrated = doc.hydrate(None);
-        let doc_content = hydrate_to_json(&hydrated);
-        (heads, doc_content)
-    });
+        let doc_content = hydrate_to_json_with_rich_text(doc)
+            .map_err(|e| AppError::Invalid(format!("Failed to serialize document: {:?}", e)))?;
+        Ok::<_, AppError>((heads, doc_content))
+    })?;
 
     sqlx::query(
         "

@@ -3,7 +3,7 @@
 use automerge::Automerge;
 use serde_json::Value;
 
-use crate::automerge_json::{hydrate_to_json, populate_automerge_from_json};
+use crate::automerge_json::{hydrate_to_json_with_rich_text, populate_automerge_from_json};
 
 /// Create an Automerge doc populated from a JSON object.
 pub fn doc_from_json(value: &Value) -> Automerge {
@@ -18,8 +18,7 @@ pub fn doc_from_json(value: &Value) -> Automerge {
 
 /// Read the current doc state back as JSON.
 pub fn doc_to_json(doc: &Automerge) -> Value {
-    let value = doc.hydrate(None);
-    hydrate_to_json(&value)
+    hydrate_to_json_with_rich_text(doc).unwrap()
 }
 
 /// Roundtrip a JSON object through Automerge and back.

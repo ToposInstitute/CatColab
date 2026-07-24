@@ -1,3 +1,4 @@
+import { next as Automerge } from "@automerge/automerge";
 import { useNavigate } from "@solidjs/router";
 import { getAuth, signOut } from "firebase/auth";
 import Copy from "lucide-solid/icons/copy";
@@ -22,6 +23,7 @@ import { createStore, produce } from "solid-js/store";
 import invariant from "tiny-invariant";
 
 import type { NewPermissions, PermissionLevel, Permissions, UserSummary } from "catcolab-api";
+import { serializeAutomergeDocument } from "catcolab-document-types";
 import {
     Button,
     Dialog,
@@ -242,7 +244,7 @@ export const PermissionsButton = (props: { liveDoc: LiveDoc; docRef: DocRef }) =
                 <OwnerPermissionsButton refId={props.docRef.refId} docName={docName()} />
             </Match>
             <Match when={[anyone(), user()].every((level) => level === null || level === "Read")}>
-                <ReadonlyPermissionsButton doc={props.liveDoc.doc} docName={docName()} />
+                <ReadonlyPermissionsButton liveDoc={props.liveDoc} docName={docName()} />
             </Match>
         </Switch>
     );
@@ -301,14 +303,17 @@ const AnonPermissionsTrigger = (props: ComponentProps<"button">) => {
     );
 };
 
-const ReadonlyPermissionsButton = (props: { doc: Document; docName: string }) => {
+const ReadonlyPermissionsButton = (props: { liveDoc: LiveDoc; docName: string }) => {
     const [open, setOpen] = createSignal(false);
     const api = useApi();
     const navigate = useNavigate();
 
     const onDuplicateDocument = async () => {
-        const newRef = await api.duplicateDoc(props.doc);
-        navigate(`/${props.doc.type}/${newRef}`);
+        const doc = serializeAutomergeDocument(
+            Automerge.save(props.liveDoc.docHandle.doc()),
+        ) as Document;
+        const newRef = await api.duplicateDoc(doc);
+        navigate(`/${doc.type}/${newRef}`);
     };
 
     return (
@@ -328,7 +333,7 @@ const ReadonlyPermissionsButton = (props: { doc: Document; docName: string }) =>
                     <span>
                         <Button type="button" variant="utility" onClick={onDuplicateDocument}>
                             <Copy />
-                            Duplicate {props.doc.type}
+                            Duplicate {props.liveDoc.doc.type}
                         </Button>
                     </span>
                     <span class="duplicate-button-height-text"> to make permanent changes.</span>

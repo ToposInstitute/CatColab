@@ -7,7 +7,6 @@ mod v0;
 pub mod v1;
 pub mod v2;
 
-#[cfg(feature = "backend")]
 pub mod automerge_json;
 
 #[cfg(feature = "backend")]
@@ -118,6 +117,19 @@ pub fn migrate_document(input: JsValue) -> Result<JsValue, JsValue> {
         .map_err(|e| JsValue::from_str(&format!("serialize error: {e}")))?;
 
     Ok(output)
+}
+
+/// Serialize an Automerge document to JSON, encoding rich-text spans.
+#[wasm_bindgen(js_name = "serializeAutomergeDocument")]
+pub fn serialize_automerge_document(input: &[u8]) -> Result<JsValue, JsValue> {
+    let doc = automerge::Automerge::load(input)
+        .map_err(|e| JsValue::from_str(&format!("Automerge load error: {e}")))?;
+    let value = automerge_json::hydrate_to_json_with_rich_text(&doc)
+        .map_err(|e| JsValue::from_str(&format!("Automerge serialization error: {e}")))?;
+
+    value
+        .serialize(&Serializer::json_compatible())
+        .map_err(|e| JsValue::from_str(&format!("serialize error: {e}")))
 }
 
 #[cfg(test)]

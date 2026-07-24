@@ -123,9 +123,9 @@ export function DocumentMenu(props: {
                     <Show when={showSeparator()}>
                         <MenuSeparator />
                     </Show>
-                    <DuplicateMenuItem doc={props.liveDoc.doc} />
-                    <ExportJSONMenuItem doc={props.liveDoc.doc} />
-                    <CopyJSONMenuItem doc={props.liveDoc.doc} />
+                    <DuplicateMenuItem liveDoc={props.liveDoc} />
+                    <ExportJSONMenuItem liveDoc={props.liveDoc} />
+                    <CopyJSONMenuItem liveDoc={props.liveDoc} />
                     <MenuSeparator />
                     <Switch>
                         <Match when={canRestore()}>
