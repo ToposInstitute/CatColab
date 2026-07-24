@@ -14,15 +14,15 @@ import { currentVersion } from "catcolab-document-types";
 /** A document containing an LLM conversation attached to a model. */
 export type LLMConversationDocument = Document & { type: "llmconversation" };
 
-/** Create an empty LLM conversation for a model. */
+/** Create an empty LLM conversation for a document. */
 export const newLLMConversationDocument = (
-    modelRef: StableRef,
+    documentRef: StableRef,
     llmModel: string,
 ): LLMConversationDocument => ({
     name: "",
     type: "llmconversation",
     llmConversationOf: {
-        ...modelRef,
+        ...documentRef,
         type: "llmconversation-of",
     },
     llmModel,

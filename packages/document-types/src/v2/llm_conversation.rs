@@ -5,20 +5,13 @@ use serde_json::Value;
 use tsify::Tsify;
 use uuid::Uuid;
 
-/// A supported inline file type.
-#[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Tsify)]
-#[tsify(into_wasm_abi, from_wasm_abi)]
-pub enum FileType {
-    CSV,
-}
-
 /// A file stored inline with a user message.
 #[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Tsify)]
 #[tsify(into_wasm_abi, from_wasm_abi)]
 pub struct InlineFile {
     pub filename: String,
-    #[serde(rename = "fileType")]
-    pub file_type: FileType,
+    #[serde(rename = "mediaType")]
+    pub media_type: String,
     pub content: Vec<u8>,
 }
 
@@ -101,7 +94,7 @@ pub enum LLMInteraction {
     UserFeedbackRequest(UserFeedbackRequest),
 }
 
-/// A sequential conversation attached to a CatColab model.
+/// A sequential conversation attached to a CatColab document.
 #[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Tsify)]
 #[tsify(into_wasm_abi, from_wasm_abi)]
 pub struct LLMConversationDocumentContent {
