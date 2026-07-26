@@ -1,5 +1,5 @@
 import RotateCcw from "lucide-solid/icons/rotate-ccw";
-import { createMemo, createSignal } from "solid-js";
+import { createMemo, createSignal, Show } from "solid-js";
 
 import {
     BlockTitle,
@@ -115,12 +115,14 @@ export default function StochasticMassAction(
     );
 
     const RerunButton = () => (
-        <IconButton
-            onClick={() => setRerunCount((count) => count + 1)}
-            tooltip="Re-run the stochastic simulation"
-        >
-            <RotateCcw size={16} />
-        </IconButton>
+        <Show when={props.content.seed == null}>
+            <IconButton
+                onClick={() => setRerunCount((count) => count + 1)}
+                tooltip="Re-run the stochastic simulation"
+            >
+                <RotateCcw size={16} />
+            </IconButton>
+        </Show>
     );
 
     return (
