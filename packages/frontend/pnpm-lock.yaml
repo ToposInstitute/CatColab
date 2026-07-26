@@ -122,6 +122,9 @@ importers:
       lucide-solid:
         specifier: ^0.471.0
         version: 0.471.0(solid-js@1.9.10)
+      modern-gif:
+        specifier: ^2.1.0
+        version: 2.1.0
       prosemirror-commands:
         specifier: ^1.7.1
         version: 1.7.1
@@ -2334,6 +2337,12 @@ packages:
     resolution: {integrity: sha512-+NsyUUAZDmo6YVHzL/stxSu3t9YS1iljliy3BSDrXJ/dkn1KYdmtZODGGjLcc9XLgVVpH4KshHB8XmZgMhaBXg==}
     engines: {node: '>=10'}
     hasBin: true
+
+  modern-gif@2.1.0:
+    resolution: {integrity: sha512-9ZGD5b4jNUge0fvFP1bd9Hsqz5CSZI1al3EhCJ+WFkZgmn5NO1yvVwXJA/LTqro85l2Gt0+S0dDFgVYhYtLLWg==}
+
+  modern-palette@2.0.0:
+    resolution: {integrity: sha512-wKZcom2QzK6sS6h5RLYHEkd3V3maQLzgkI+ekDCimlk7dfXa63aekZcy+7KS+8JEqIDeY/yV1CAvA7l+7u6QHA==}
 
   mri@1.2.0:
     resolution: {integrity: sha512-tzzskb3bG8LvYGFF/mDTpq3jpI6Q9wc3LEmBaghu+DdCssd1FakN7Bc0hVNmEyGq1bq3RgfkCb3cmQLpNPOroA==}
@@ -5934,6 +5943,12 @@ snapshots:
       minipass: 7.1.2
 
   mkdirp@3.0.1: {}
+
+  modern-gif@2.1.0:
+    dependencies:
+      modern-palette: 2.0.0
+
+  modern-palette@2.0.0: {}
 
   mri@1.2.0: {}
 

@@ -1,0 +1,105 @@
+abstract type AbstractMeshSpec end
+
+dimension(::Type{M}) where {M<:AbstractMeshSpec} = dimension(mesh_instance(M))
+export dimension
+
+# A concrete instance from the mesh's own defaults, used only to read `dimension`
+mesh_instance(::Type{M}) where {M<:AbstractMeshSpec} = M(values(default_values(M))...)
+
+name(::AbstractMeshSpec) = "No name provided"
+
+struct Geometry{D<:AbstractMeshSpec}
+    domain::D
+    mesh::HasDeltaSet
+    dualmesh::HasDeltaSet
+end
+
+meshtype(::Geometry{D}) where D = D
+dimension(g::Geometry) = dimension(g.domain)
+
+Geometry(domain, args...) = Geometry{typeof(domain)}(domain, args...)
+
+"""    
+"""
+struct Circle <: AbstractMeshSpec
+    n::Int
+    c::Float64
+end
+
+default_values(::Type{Circle}) = (n=9, c=500,)
+dimension(::Circle) = 1
+
+function Geometry(c::Circle; division::SimplexCenter=Circumcenter())
+    mesh = EmbeddedDeltaSet1D{Bool, Point2D}()
+    map(range(0, 2pi - (pi/(2^(c.n-1))); step=pi/(2^(c.n-1)))) do t
+        add_vertex!(mesh, point=Point2D(cos(t),sin(t))*(c.c/2pi))
+    end
+    add_edges!(mesh, 1:(nv(mesh)-1), 2:nv(mesh))
+    add_edge!(mesh, nv(mesh), 1)
+    dualmesh = EmbeddedDeltaDualComplex1D{Bool, Float64, Point2D}(mesh)
+    subdivide_duals!(dualmesh, division)
+    Geometry(c, mesh, dualmesh)
+end
+
+struct Icosphere <: AbstractMeshSpec
+    order::Int
+    radius::Float64
+end
+
+default_values(::Type{Icosphere}) = (order=6, radius=1.0,)
+dimension(::Icosphere) = 2
+
+function Geometry(m::Icosphere; division::SimplexCenter=Circumcenter())
+    s = loadmesh(CombinatorialSpaces.Icosphere(m.order, m.radius))
+    sd = EmbeddedDeltaDualComplex2D{Bool, Float64, Point3{Float64}}(s)
+    subdivide_duals!(sd, division)
+    Geometry(m, s, sd)
+end
+
+# function Geometry(m::UV; division::SimplexCenter=Circumcenter())
+#     s, _, _ = makeSphere(m)
+#     sd = EmbeddedDeltaDualComplex2D{Bool, Float64, Point3{Float64}}(s)
+#     subdivide_duals!(sd, division)
+#     Geometry(m, s, sd)
+# end
+
+struct Rectangle <: AbstractMeshSpec
+    max_x::Int
+    max_y::Int
+    dx::Float64
+    dy::Float64
+end
+
+default_values(::Type{Rectangle}) = (max_x=100, max_y=100, dx=0.1, dy=0.1,)
+
+dimension(::Rectangle) = 2
+
+function Geometry(r::Rectangle; division::SimplexCenter=Circumcenter())
+    s = triangulated_grid(r.max_x, r.max_y, r.dx, r.dy, Point2{Float64})
+    sd = EmbeddedDeltaDualComplex2D{Bool, Float64, Point2{Float64}}(s)
+    subdivide_duals!(sd, division)
+    Geometry(r, s, sd)
+end
+
+# TODO it is semantically better to case to Point2?
+middle(r::Rectangle) = [r.max_x/2, r.max_y/2]
+
+function indexing_bounds(r::Rectangle)
+    (x=floor(Int, r.max_x/r.dx), y=floor(Int, r.max_y/r.dy))
+end
+
+# TODO XXX hardcoded alert!
+indexing_bounds(m::Icosphere) = (x=100, y=100)
+
+# """ helper function for UV """
+# makeSphere(m::UV) = makeSphere(m.minlat, m.maxlat, m.dlat, m.minlong, m.maxlong, m.dlong, m.radius)
+
+function embedding_dimension end
+export embedding_dimension
+
+embedding_dimension(::Type{M}) where {M<:AbstractMeshSpec} = embedding_dimension(mesh_instance(M))
+embedding_dimension(g::Geometry) = embedding_dimension(g.domain)
+
+embedding_dimension(::Circle) = 2
+embedding_dimension(::Rectangle) = 2
+embedding_dimension(::Icosphere) = 3

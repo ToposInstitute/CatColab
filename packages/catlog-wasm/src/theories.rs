@@ -3,7 +3,11 @@
 //! Each struct in this module provides a [`DblTheory`], possibly with additional
 //! methods for theory-specific analyses.
 
+use catcolab_document_types::current::{DiagramDocumentContent, ModelDocumentContent};
+use catlog::tt::util::Target;
+use std::collections::HashMap;
 use std::rc::Rc;
+use tsify::serde_wasm_bindgen;
 use wasm_bindgen::prelude::*;
 
 use catlog::dbl::theory::{self as theory, NonUnital, Unital};
@@ -531,6 +535,35 @@ impl ThPowerSystem {
                 .map_err(|err| format!("{err:?}"))
                 .into(),
         ))
+    }
+}
+
+/// A theory of the DEC
+#[wasm_bindgen]
+pub struct ThDEC(Rc<theory::ModalDblTheory<Unital>>);
+
+#[wasm_bindgen]
+impl ThDEC {
+    #[wasm_bindgen(constructor)]
+    pub fn new() -> Self {
+        Self(Rc::new(theories::th_multicategory())) // TODO symmetric?
+    }
+
+    #[wasm_bindgen]
+    pub fn theory(&self) -> DblTheory {
+        DblTheory(self.0.clone().into())
+    }
+
+    #[wasm_bindgen(js_name = "simulatePode")]
+    pub fn simulate_pode(
+        model: ModelDocumentContent,
+        diagram: DiagramDocumentContent,
+        diagram_map: JsValue,
+    ) -> Result<JsValue, String> {
+        let diagram_map: HashMap<String, DiagramDocumentContent> =
+            serde_wasm_bindgen::from_value(diagram_map).map_err(|e| e.to_string())?;
+        let target = simulate_pode(model, diagram, diagram_map)?;
+        serde_wasm_bindgen::to_value(&target).map_err(|e| e.to_string())
     }
 }
 

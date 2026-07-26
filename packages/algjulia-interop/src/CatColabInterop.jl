@@ -10,8 +10,10 @@ function endpoint end
 include("Types.jl")
 @reexport using .Types
 
-include("CatlabInterop.jl")
+# include("CatlabInterop.jl")
+include("DecapodesInterop/DecapodesInterop.jl")
 # Add more interops here...
 
+using Oxygen, HTTP
 
 end # module

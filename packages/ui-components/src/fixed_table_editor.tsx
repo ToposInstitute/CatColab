@@ -88,7 +88,7 @@ export const createNumericalColumn = <Row,>(args: {
     name?: string;
     header?: boolean;
     data: (row: Row) => number | undefined;
-    default?: number;
+    default?: number | ((row: Row) => number);
     validate?: (row: Row, data: number) => boolean;
     setData?: (row: Row, data: number) => void;
 }): TextColumnSchema<Row> => ({
@@ -98,9 +98,12 @@ export const createNumericalColumn = <Row,>(args: {
     content(row) {
         let value = args.data(row);
         if (value === undefined) {
-            value = args.default ?? 0;
-            args.setData?.(row, value);
-        }
+        const def = typeof args.default === "function"
+            ? args.default(row)
+            : (args.default ?? 0);
+        args.setData?.(row, def);
+        return def.toString();
+    }
         return value.toString();
     },
     validate(row, text) {
@@ -118,6 +121,42 @@ export const createNumericalColumn = <Row,>(args: {
             return isValid;
         }),
 });
+
+/** Create schema for a column with a vector of numerical (floating point) data. */
+export const createVectorColumn = <Row,>(args: {
+    name?: string;
+    header?: boolean;
+    data: (row: Row) => number[] | undefined;
+    length?: (row: Row) => number;          // expected arity, if known
+    default?: (row: Row) => number[];
+    setData?: (row: Row, data: number[]) => void;
+}): TextColumnSchema<Row> => ({
+    contentType: "string",
+    name: args.name,
+    header: args.header,
+    content(row) {
+        const v = args.data(row) ?? args.default?.(row);
+        if (v === undefined) return "";
+        return v.join(", ");
+    },
+    validate(row, text) {
+        const parts = text.split(",").map((s) => Number(s.trim()));
+        if (parts.some(Number.isNaN)) return false;
+        const n = args.length?.(row);
+        return n === undefined || parts.length === n;
+    },
+    setContent:
+        args.setData &&
+        ((row, text) => {
+            const parts = text.split(",").map((s) => Number(s.trim()));
+            if (parts.some(Number.isNaN)) return false;
+            const n = args.length?.(row);
+            if (n !== undefined && parts.length !== n) return false;
+            args.setData?.(row, parts);
+            return true;
+        }),
+});
+
 
 /** Edit tabular data given by a fixed list of rows.
 
@@ -243,6 +282,7 @@ function EnumCellEditor<Row>(props: { row: Row; schema: EnumColumnSchema<Row> })
                 schema().setContent?.(row(), value);
             }}
         >
+            <option value="">(none)</option>
             <For each={schema().variants(row())}>
                 {(variant) => <option value={variant}>{variant}</option>}
             </For>

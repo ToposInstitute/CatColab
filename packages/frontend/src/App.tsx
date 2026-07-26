@@ -11,6 +11,7 @@ import * as uuid from "uuid";
 
 import { Button } from "catcolab-ui-components";
 import { Api, ApiContext, useApi } from "./api";
+import { createDiagramLibraryWithApi, DiagramLibraryContext } from "./diagram";
 import { helpRoutes } from "./help/routes";
 import { createModelLibraryWithApi, ModelLibraryContext } from "./model";
 import { createModel } from "./model/document";
@@ -44,6 +45,7 @@ const Root = (props: RouteSectionProps) => {
 
     const theories = stdTheories;
     const models = createModelLibraryWithApi(api, theories);
+    const diagrams = createDiagramLibraryWithApi(api, theories);
 
     return (
         <FirebaseProvider app={firebaseApp}>
@@ -52,6 +54,7 @@ const Root = (props: RouteSectionProps) => {
                     [ApiContext, api],
                     [TheoryLibraryContext, theories],
                     [ModelLibraryContext, models],
+                    [DiagramLibraryContext, diagrams],
                     UserStateProvider,
                     InferenceKeyProvider,
                 ]}

@@ -1,5 +1,9 @@
 //! Auxiliary structs and glue code for data passed to/from analyses.
 
+use std::collections::HashMap;
+
+use catcolab_document_types::v2::{DiagramDocumentContent, ModelDocumentContent};
+use catlog::tt::util::{Decapodes, Target};
 use serde::{Deserialize, Serialize};
 use tsify::Tsify;
 
@@ -142,4 +146,18 @@ pub(crate) fn mass_action_simulation(
         solution: ODEResult(solution.into()),
         latex_equations: LatexEquations(latex_equations),
     })
+}
+
+/// Constructor for the Decapodes analysis
+#[derive(Serialize, Deserialize, Tsify)]
+#[tsify(into_wasm_abi, from_wasm_abi)]
+pub struct DecapodesTranspiler {}
+
+/// Simulates Decapodes.
+pub(crate) fn simulate_pode(
+    model: ModelDocumentContent,
+    diagram: DiagramDocumentContent,
+    diagram_map: HashMap<String, DiagramDocumentContent>,
+) -> Result<Target, String> {
+    Ok(Decapodes::elab_and_transpile(model, diagram, diagram_map))
 }
