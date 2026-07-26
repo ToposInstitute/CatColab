@@ -18,16 +18,13 @@ export default function SubmodelGraphs(
         title?: string;
     } & ModelAnalysisProps<MotifFindingAnalysisContent>,
 ) {
-    // For compatibility with notebooks created before the `enableMaxPathLength` field was introduced.
-    const enableMaxPathLength = () => {
-        // If `enableMaxPathLength` has not been set, then set it to be true iff `maxPathLength`
-        // already has a (numerical) value.
-        if (props.content.enableMaxPathLength === undefined) {
-            if (props.content.maxPathLength != null) {
-                props.content.enableMaxPathLength = true;
-            } else {
-                props.content.enableMaxPathLength = false;
-            }
+    // For compatibility with notebooks created before the `enableMaxPathLength`
+    // field was introduced.
+    const enableMaxPathLength = (): boolean => {
+        // If `enableMaxPathLength` has not been set, then take it to be true
+        // iff `maxPathLength` already has a (numerical) value.
+        if (props.content.enableMaxPathLength == null) {
+            return props.content.maxPathLength != null;
         }
         return props.content.enableMaxPathLength;
     };
