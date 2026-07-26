@@ -774,7 +774,7 @@ mod unit_tests {
         });
 
         let mut relations = extract_relations_from_json(&content);
-        relations.sort_by(|a, b| a.ref_id.cmp(&b.ref_id));
+        relations.sort_by_key(|a| a.ref_id);
 
         assert_eq!(relations.len(), 2);
         assert_eq!(
