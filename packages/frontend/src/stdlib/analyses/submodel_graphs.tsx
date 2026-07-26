@@ -18,6 +18,17 @@ export default function SubmodelGraphs(
         title?: string;
     } & ModelAnalysisProps<MotifFindingAnalysisContent>,
 ) {
+    // For compatibility with notebooks created before the `enableMaxPathLength`
+    // field was introduced.
+    const enableMaxPathLength = (): boolean => {
+        // If `enableMaxPathLength` has not been set, then take it to be true
+        // iff `maxPathLength` already has a (numerical) value.
+        if (props.content.enableMaxPathLength == null) {
+            return props.content.maxPathLength != null;
+        }
+        return props.content.enableMaxPathLength;
+    };
+
     const submodels = createMemo<MotifOccurrence[]>(
         () => {
             const validated = props.liveModel.validatedModel();
@@ -25,7 +36,10 @@ export default function SubmodelGraphs(
                 return [];
             }
             return props.findSubmodels(validated.model, {
-                maxPathLength: props.content.maxPathLength ?? null,
+                maxPathLength:
+                    enableMaxPathLength() && props.content.maxPathLength != null
+                        ? props.content.maxPathLength
+                        : null,
             });
         },
         [],
@@ -77,24 +91,27 @@ export default function SubmodelGraphs(
                         <InputField
                             type="checkbox"
                             label="Limit length of paths"
-                            checked={props.content.maxPathLength != null}
+                            checked={enableMaxPathLength()}
                             onChange={(evt) =>
                                 props.changeContent((content) => {
-                                    content.maxPathLength = evt.currentTarget.checked ? 1 : null;
+                                    content.enableMaxPathLength = evt.currentTarget.checked;
                                 })
                             }
                         />
-                        <Show when={props.content.maxPathLength != null}>
+                        <Show when={enableMaxPathLength()}>
                             <InputField
                                 type="number"
                                 min="0"
                                 label="Maximum length of path"
                                 value={props.content.maxPathLength ?? ""}
-                                onChange={(evt) =>
-                                    props.changeContent((content) => {
-                                        content.maxPathLength = evt.currentTarget.valueAsNumber;
-                                    })
-                                }
+                                onChange={(evt) => {
+                                    const value = evt.currentTarget.valueAsNumber;
+                                    if (value > 0 && Number.isInteger(value)) {
+                                        props.changeContent((content) => {
+                                            content.maxPathLength = value;
+                                        });
+                                    }
+                                }}
                             />
                         </Show>
                     </FormGroup>
