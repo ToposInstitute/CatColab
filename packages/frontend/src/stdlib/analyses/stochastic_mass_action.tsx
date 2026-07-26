@@ -38,14 +38,6 @@ export default function StochasticMassAction(
 ) {
     const elaboratedModel = () => props.liveModel.elaboratedModel();
 
-    // For backwards compatibility with notebooks created before the `seed` field was introduced.
-    const seed = () => {
-        if (props.content.seed === undefined) {
-            props.content.seed = null;
-        }
-        return props.content.seed;
-    };
-
     const obGenerators = createMemo<QualifiedName[]>(() => {
         const model = elaboratedModel();
         if (!model) {
@@ -139,7 +131,6 @@ export default function StochasticMassAction(
                     <StochasticMassActionConfigForm
                         config={props.content}
                         changeConfig={props.changeContent}
-                        useSetSeed={seed() === null}
                     />
                 }
                 actions={RerunButton()}
@@ -160,13 +151,12 @@ export default function StochasticMassAction(
 export function StochasticMassActionConfigForm(props: {
     config: StochasticMassActionProblemData;
     changeConfig: (f: (config: StochasticMassActionProblemData) => void) => void;
-    useSetSeed: boolean;
 }) {
     return (
-        <FormGroup compact style={{ "min-width": "286px" }}>
+        <FormGroup compact>
             <CheckboxField
                 label="Fixed random seed"
-                checked={props.config.seed !== null}
+                checked={props.config.seed != null}
                 onChange={(evt) => {
                     props.changeConfig((content) => {
                         if (evt.currentTarget.checked) {
