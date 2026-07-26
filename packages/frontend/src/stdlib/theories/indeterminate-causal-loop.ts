@@ -64,6 +64,33 @@ export default function createIndeterminateCausalLoopTheory(theoryMeta: TheoryMe
                 description: "Visualize the causal loop diagram",
                 help: "visualization",
             }),
+            analyses.motifFinding({
+                id: "negative-loops",
+                name: "Balancing loops",
+                description: "Analyze the diagram for balancing loops",
+                help: "loops",
+                findMotifs(model, options) {
+                    return thNullableSignedCategory.negativeLoops(model, options);
+                },
+            }),
+            analyses.motifFinding({
+                id: "positive-loops",
+                name: "Reinforcing loops",
+                description: "Analyze the diagram for reinforcing loops",
+                help: "loops",
+                findMotifs(model, options) {
+                    return thNullableSignedCategory.positiveLoops(model, options);
+                },
+            }),
+            analyses.motifFinding({
+                id: "indeterminateLoops",
+                name: "Indeterminate loops",
+                description: "Analyze the diagram for indeterminate loops",
+                help: "loops",
+                findMotifs(model, options) {
+                    return thNullableSignedCategory.indeterminateLoops(model, options);
+                },
+            }),
         ],
     });
 }
