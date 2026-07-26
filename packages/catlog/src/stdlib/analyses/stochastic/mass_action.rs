@@ -22,7 +22,7 @@ use tsify::Tsify;
 #[cfg_attr(feature = "serde-wasm", derive(Tsify))]
 #[cfg_attr(
     feature = "serde-wasm",
-    tsify(into_wasm_abi, from_wasm_abi, hashmap_as_object)
+    tsify(into_wasm_abi, from_wasm_abi, hashmap_as_object, missing_as_null)
 )]
 pub struct StochasticMassActionProblemData {
     /// Map from morphism IDs to rate coefficients (nonnegative reals).
@@ -31,6 +31,9 @@ pub struct StochasticMassActionProblemData {
     /// Map from object IDs to initial values (nonnegative integers).
     #[cfg_attr(feature = "serde", serde(rename = "initialValues"))]
     pub initial_values: HashMap<QualifiedName, u32>,
+
+    /// Optional fixed seed, for reproducibility.
+    pub seed: Option<u64>,
 
     /// Duration of simulation.
     pub duration: f32,
@@ -105,7 +108,10 @@ impl PetriNetStochasticMassActionAnalysis {
             .iter()
             .map(|id| data.initial_values.get(id).copied().unwrap_or_default() as isize)
             .collect();
-        let mut problem = gillespie::Gillespie::new(initial, false);
+        let mut problem = match data.seed {
+            Some(seed) => gillespie::Gillespie::new_with_seed(initial, false, seed),
+            None => gillespie::Gillespie::new(initial, false),
+        };
 
         for mor in model.mor_generators_with_type(&self.transition_mor_type) {
             let (inputs, outputs) = transition_interface(model, &mor);
@@ -167,6 +173,7 @@ mod tests {
                 (name("I"), 1),
                 (name("R"), 0),
             ]),
+            seed: None,
             duration: 10f32,
         };
         let sys =

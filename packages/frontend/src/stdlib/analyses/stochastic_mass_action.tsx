@@ -1,5 +1,5 @@
 import RotateCcw from "lucide-solid/icons/rotate-ccw";
-import { createMemo, createSignal } from "solid-js";
+import { createMemo, createSignal, Show } from "solid-js";
 
 import {
     BlockTitle,
@@ -8,6 +8,9 @@ import {
     FixedTableEditor,
     Foldable,
     IconButton,
+    CheckboxField,
+    FormGroup,
+    InputField,
 } from "catcolab-ui-components";
 import type {
     DblModel,
@@ -112,17 +115,28 @@ export default function StochasticMassAction(
     );
 
     const RerunButton = () => (
-        <IconButton
-            onClick={() => setRerunCount((count) => count + 1)}
-            tooltip="Re-run the stochastic simulation"
-        >
-            <RotateCcw size={16} />
-        </IconButton>
+        <Show when={props.content.seed == null}>
+            <IconButton
+                onClick={() => setRerunCount((count) => count + 1)}
+                tooltip="Re-run the stochastic simulation"
+            >
+                <RotateCcw size={16} />
+            </IconButton>
+        </Show>
     );
 
     return (
         <div class="simulation">
-            <BlockTitle title={props.title} actions={RerunButton()} />
+            <BlockTitle
+                title={props.title}
+                settingsPane={
+                    <StochasticMassActionConfigForm
+                        config={props.content}
+                        changeConfig={props.changeContent}
+                    />
+                }
+                actions={RerunButton()}
+            />
             <Foldable title="Parameters" defaultExpanded>
                 <div class="parameters">
                     <FixedTableEditor rows={obGenerators()} schema={obSchema} />
@@ -132,5 +146,42 @@ export default function StochasticMassAction(
             </Foldable>
             <ODEResultPlot result={plotResult()} />
         </div>
+    );
+}
+
+/** Form to configure a mass-action analysis. */
+export function StochasticMassActionConfigForm(props: {
+    config: StochasticMassActionProblemData;
+    changeConfig: (f: (config: StochasticMassActionProblemData) => void) => void;
+}) {
+    return (
+        <FormGroup compact>
+            <CheckboxField
+                label="Fixed random seed"
+                checked={props.config.seed != null}
+                onChange={(evt) => {
+                    props.changeConfig((content) => {
+                        if (evt.currentTarget.checked) {
+                            content.seed = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
+                        } else {
+                            content.seed = null;
+                        }
+                    });
+                }}
+            />
+            <InputField
+                type="number"
+                label="Random seed"
+                value={props.config.seed ?? ""}
+                onChange={(evt) => {
+                    const value = Number(evt.currentTarget.value);
+                    if (Number.isInteger(value) && value >= 0) {
+                        props.changeConfig((content) => {
+                            content.seed = value;
+                        });
+                    }
+                }}
+            />
+        </FormGroup>
     );
 }
