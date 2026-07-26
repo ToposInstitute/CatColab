@@ -11,6 +11,12 @@ include notable new features.
 
 ## [Unreleased]
 
+### Added
+
+- Finding motifs---positive, negative, and indeterminate loops---in causal loop
+  diagrams with indeterminates
+  ([#1354](https://github.com/ToposInstitute/CatColab/pull/1354))
+
 ### Fixed
 
 - Exporting, importing, and duplicating notebooks now preserves rich text;
