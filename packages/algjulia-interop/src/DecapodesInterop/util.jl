@@ -1,20 +1,11 @@
 using InteractiveUtils: subtypes
 import SymbolicUtils
 
-
 const IC_REGISTRY = Dict{Type{<:AbstractMeshSpec}, Vector{Type{<:AbstractInitialConditionSpec}}}(
-    Circle    => [ConstantIC, GaussianIC],
+    Circle => [ConstantIC, GaussianIC],
     Rectangle => [ConstantIC, GaussianIC],
     Icosphere => [ConstantIC, TaylorVortexIC],
 )
-
-function __validate_ic_registry()
-    for (M, ics) in IC_REGISTRY, T in ics
-        hasmethod(default_values, Tuple{Type{T}, Type{M}}) ||
-            error("IC_REGISTRY declares $(nameof(T)) on $(nameof(M)) with no default_values")
-    end
-end
-
 
 spec(::Type{T}) where T = Dict(string.(fieldnames(T)) .=> string.(nameof.(fieldtypes(T))))
 
@@ -24,15 +15,15 @@ spec(::Type{T}) where T = Dict(string.(fieldnames(T)) .=> string.(nameof.(fieldt
     defaults::Dict
 end
 
-as_vector(v::AbstractVector)       = collect(float.(v))
-as_vector(v::Diagonal)             = collect(float.(diag(v)))
-as_vector(v::Number)               = Float64[v]
+as_vector(v::AbstractVector) = collect(float.(v))
+as_vector(v::Diagonal) = collect(float.(diag(v)))
+as_vector(v::Number) = Float64[v]
 as_vector(p::AbstractVortexParams) = Float64[getfield(p, f) for f in fieldnames(typeof(p))]
 
 from_vector(::AbstractVector, xs) = collect(Float64, xs)
-from_vector(::Diagonal, xs)       = Diagonal(collect(Float64, xs))
-from_vector(::Float64, xs)        = Float64(only(xs))
-from_vector(::Int, xs)            = Int(only(xs))
+from_vector(::Diagonal, xs) = Diagonal(collect(Float64, xs))
+from_vector(::Float64, xs) = Float64(only(xs))
+from_vector(::Int, xs) = Int(only(xs))
 from_vector(p::AbstractVortexParams, xs) = typeof(p)(xs...)
 
 function ic_type(name::AbstractString, ::Type{M}) where {M<:AbstractMeshSpec}
@@ -72,7 +63,7 @@ end
 
 function supported_options()
     mesh_types = subtypes(AbstractMeshSpec)
-    mesh_info  = Dict(string(nameof(m)) => MeshInfo(m) for m in mesh_types)
+    mesh_info = Dict(string(nameof(m)) => MeshInfo(m) for m in mesh_types)
     Dict(:mesh_info => mesh_info)
 end
 

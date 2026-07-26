@@ -8,6 +8,24 @@ D = CatColabInterop.DecapodesInterop
 using ComponentArrays
 using HTTP, Test, Oxygen, JSON3
 
+
+
+# Meshes
+dvs = D.default_values(D.Circle)
+@test dvs.n == 9
+@test dvs.c == 500
+circle = D.Circle(dvs...)
+geometry = D.Geometry(circle)
+
+dvs = D.default_values(D.Icosphere)
+@test dvs.order == 6
+@test dvs.radius == 1.0
+ico = D.Icosphere(dvs...)
+geometry = D.Geometry(ico)
+
+# Initial Conditions
+
+
 # include("plotting.jl")
 
 # body = read((@__DIR__)*"/data/diagrams/heat-eq.json", String)

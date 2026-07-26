@@ -1,7 +1,4 @@
-using .Defaults: @default, default_values
-
 abstract type AbstractMeshSpec end
-
 
 dimension(::Type{M}) where {M<:AbstractMeshSpec} = dimension(mesh_instance(M))
 export dimension
@@ -22,20 +19,14 @@ dimension(g::Geometry) = dimension(g.domain)
 
 Geometry(domain, args...) = Geometry{typeof(domain)}(domain, args...)
 
-function Geometry(dict::AbstractDict)
-    mesh = Symbol(dict["mesh"])
-    # TODO replace with Default
-    domain = PREDEFINED_MESHES[mesh]
-    Geometry(domain)
-end
-
 """    
 """
-@default struct Circle <: AbstractMeshSpec
-    n::Int = 9
-    c::Float64 = 500
+struct Circle <: AbstractMeshSpec
+    n::Int
+    c::Float64
 end
 
+default_values(::Type{Circle}) = (n=9, c=500,)
 dimension(::Circle) = 1
 
 function Geometry(c::Circle; division::SimplexCenter=Circumcenter())
@@ -50,15 +41,16 @@ function Geometry(c::Circle; division::SimplexCenter=Circumcenter())
     Geometry(c, mesh, dualmesh)
 end
 
-@default struct Icosphere <: AbstractMeshSpec
-    order::Int = 6
-    radius::Float64 = 1.0
+struct Icosphere <: AbstractMeshSpec
+    order::Int
+    radius::Float64
 end
 
+default_values(::Type{Icosphere}) = (order=6, radius=1.0,)
 dimension(::Icosphere) = 2
 
 function Geometry(m::Icosphere; division::SimplexCenter=Circumcenter())
-    s = loadmesh(Icosphere(m.order, m.radius))
+    s = loadmesh(CombinatorialSpaces.Icosphere(m.order, m.radius))
     sd = EmbeddedDeltaDualComplex2D{Bool, Float64, Point3{Float64}}(s)
     subdivide_duals!(sd, division)
     Geometry(m, s, sd)
@@ -71,12 +63,14 @@ end
 #     Geometry(m, s, sd)
 # end
 
-@default struct Rectangle <: AbstractMeshSpec
-    max_x::Int = 100
-    max_y::Int = 100
-    dx::Float64 = 0.1
-    dy::Float64 = 0.1
+struct Rectangle <: AbstractMeshSpec
+    max_x::Int
+    max_y::Int
+    dx::Float64
+    dy::Float64
 end
+
+default_values(::Type{Rectangle}) = (max_x=100, max_y=100, dx=0.1, dy=0.1,)
 
 dimension(::Rectangle) = 2
 
@@ -100,8 +94,6 @@ indexing_bounds(m::Icosphere) = (x=100, y=100)
 # """ helper function for UV """
 # makeSphere(m::UV) = makeSphere(m.minlat, m.maxlat, m.dlat, m.minlong, m.maxlong, m.dlong, m.radius)
 
-
-
 function embedding_dimension end
 export embedding_dimension
 
@@ -111,10 +103,3 @@ embedding_dimension(g::Geometry) = embedding_dimension(g.domain)
 embedding_dimension(::Circle) = 2
 embedding_dimension(::Rectangle) = 2
 embedding_dimension(::Icosphere) = 3
-
-const PREDEFINED_MESHES = Dict(
-    :Rectangle => Rectangle(100, 100, 2, 2),
-    :Icosphere6 => Icosphere(6, 1.0),
-    :Icosphere7 => Icosphere(7, 1.0),
-    :Icosphere8 => Icosphere(8, 1.0))
-    # :UV => UV(0, 180, 2.5, 0, 360, 2.5, 1.0))

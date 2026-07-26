@@ -51,7 +51,6 @@ const DEFAULT_DURATION = 10
 const DEFAULT_CONSTANTS = ComponentArray()
 const DEFAULT_ICS = Dict()
 
-
 function symvar(pode::SummationDecapode, geometry::Geometry, var::Int)
     M = meshtype(geometry)
     t = SymbolicUtils.symtype(DECQuantity, pode[var, :type], M, dimension(M))

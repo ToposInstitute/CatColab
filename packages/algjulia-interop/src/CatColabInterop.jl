@@ -4,8 +4,6 @@ export endpoint
 
 using Reexport
 
-include("util.jl")
-
 """ Extend this method with endpoint(::Val{my_analysis_name}). """
 function endpoint end 
 

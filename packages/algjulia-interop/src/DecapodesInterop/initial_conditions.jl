@@ -26,7 +26,6 @@ using DiagrammaticEquations: ThDEC as DEC
 
 import ..DecapodesInterop: AbstractMeshSpec, Geometry, Circle, Rectangle, Icosphere
 import ..DecapodesInterop: AbstractVortexParams, TaylorVortexParams, dimension, embedding_dimension
-import ..Defaults: @default, default_values
 
 const GAUSS_NORM = sqrt(2*pi)
 
@@ -77,6 +76,9 @@ function default_values(::Type{GaussianIC}, ::Type{M}) where {M<:AbstractMeshSpe
     (mean=zeros(d), var=Diagonal(ones(d)))
 end
 
+"""
+    Gaussian initial conditions for a dual form over a circle
+"""
 function initial_condition(var::BasicSymbolic{DEC.DualForm{idx, Circle, spacedim}}, g::GaussianIC, geometry::Geometry; f::Function=identity) where {idx, spacedim}
     # dist = Normal(pi)
     dist = Normal(only(g.mean), sqrt(only(g.var.diag)))
@@ -85,6 +87,9 @@ function initial_condition(var::BasicSymbolic{DEC.DualForm{idx, Circle, spacedim
     [m(t) for t in range(0, 2*pi; length=ne(geometry.dualmesh))]
 end
 
+"""
+    Gaussian initial conditions for a dual 0-form over a rectangle
+"""
 function initial_condition(::BasicSymbolic{DEC.DualForm{0, Rectangle, dim}}, g::GaussianIC, geometry::Geometry; f::Function=identity) where dim
     pts = dual0_points(geometry.dualmesh)
     dist = MvNormal(g.mean, g.var)
@@ -92,8 +97,10 @@ function initial_condition(::BasicSymbolic{DEC.DualForm{0, Rectangle, dim}}, g::
     [m(p) for p in pts]
 end
 
-function initial_condition(::BasicSymbolic{DEC.PrimalForm{1, Circle, n}},
-                           ::GaussianIC, geometry::Geometry; f::Function=identity) where {n}
+"""
+    Gaussian initial conditions for a 1-form over a circle
+"""
+function initial_condition(::BasicSymbolic{DEC.PrimalForm{1, Circle, dim}}, ::GaussianIC, geometry::Geometry; f::Function=identity) where dim
     dist = Normal(pi)
     m(t) = Distributions.pdf(dist, t) * 7.2 * GAUSS_NORM |> f
     [m(t) for t in range(0, 2pi; length=ne(geometry.dualmesh))]
@@ -107,10 +114,16 @@ function constant_primal_1form(sd, v::AbstractVector)
     end
 end
 
+"""
+    Constant initial conditions for a 1-form over a rectangle
+"""
 function initial_condition(::BasicSymbolic{DEC.PrimalForm{1, Rectangle, dim}}, ic::ConstantIC, geometry::Geometry) where dim
     constant_primal_1form(geometry.dualmesh, [1.0, 0.0])
 end
 
+"""
+    Constant initial conditions for a dual 0-form over a rectangle
+"""
 function initial_condition(::BasicSymbolic{DEC.DualForm{0, Rectangle, dim}}, c::ConstantIC, geometry::Geometry) where dim
     fill(c.value, ndual0(geometry.dualmesh))
 end
@@ -139,10 +152,8 @@ end
 
 """    Associates the values in a dictionary to their initial condition flags, and passes the output to initial_conditions
 """
-function initial_conditions(ics::AbstractDict{<:BasicSymbolic, <:AbstractInitialConditionSpec},
-                            geometry::Geometry)
-    ComponentArray(; (nameof(var) => initial_condition(var, spec, geometry)
-                      for (var, spec) in ics)...)
+function initial_conditions(ics::AbstractDict{<:BasicSymbolic, <:AbstractInitialConditionSpec}, geometry::Geometry)
+    ComponentArray(; (nameof(var) => initial_condition(var, spec, geometry) for (var, spec) in ics)...)
 end
 export initial_conditions
 

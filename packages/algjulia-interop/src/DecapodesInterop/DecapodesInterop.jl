@@ -25,7 +25,6 @@ import DiagrammaticEquations: SummationDecapode
 using Decapodes
 
 # CatColabInterop
-using ..Defaults
 using CatColabInterop
 import CatColabInterop: endpoint
 
@@ -45,6 +44,7 @@ include("ns_helper.jl")
 # Specifying the initial conditions
 include("initial_conditions.jl")
 using .InitialConditions
+export default_values
 
 # Interpret the ModelDiagram struct into a Decapode
 include("model_diagram.jl")
@@ -97,7 +97,6 @@ end
 function endpoint(::Val{:DecapodesString})
     @post "/decapodes-string" function(stream::HTTP.Stream)
         payload = HTTP.payload(stream.message)
-        @info String(copy(payload))
         analysis = JSON3.read(payload, Analysis)
         system = DecapodesSystem(analysis)
 
