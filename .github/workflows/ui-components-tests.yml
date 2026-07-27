@@ -27,13 +27,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Install Nix
         uses: cachix/install-nix-action@v25
 
       - name: Configure Cachix
-        uses: cachix/cachix-action@v14
+        uses: cachix/cachix-action@v17
         with:
           name: catcolab-jmoggr
           authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'

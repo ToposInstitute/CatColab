@@ -26,7 +26,7 @@ jobs:
       issues: write
     steps:
       - name: Sync to Notion
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         env:
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
           NOTION_DATABASE_ID: ${{ secrets.NOTION_DATABASE_ID }}

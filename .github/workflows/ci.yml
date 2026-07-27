@@ -20,7 +20,7 @@ jobs:
           - beta
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Tests
         run: |
@@ -35,7 +35,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Install Rust toolchain from file
         uses: actions-rust-lang/setup-rust-toolchain@v1
@@ -52,7 +52,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Install Rust toolchain from file
         uses: actions-rust-lang/setup-rust-toolchain@v1
@@ -72,13 +72,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Install Nix
         uses: cachix/install-nix-action@v25
 
       - name: Configure Cachix
-        uses: cachix/cachix-action@v14
+        uses: cachix/cachix-action@v17
         with:
           name: catcolab-jmoggr
           authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
@@ -92,13 +92,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
 
       - name: Setup NodeJS
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: "pnpm"
@@ -124,13 +124,13 @@ jobs:
 
     steps:
     - name: Checkout
-      uses: actions/checkout@v4
+      uses: actions/checkout@v7
     
     - name: Install Nix
       uses: cachix/install-nix-action@v25
 
     - name: Configure Cachix
-      uses: cachix/cachix-action@v14
+      uses: cachix/cachix-action@v17
       with:
         name: catcolab-jmoggr
         authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
@@ -143,7 +143,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Install Rust toolchain from file
         uses: actions-rust-lang/setup-rust-toolchain@v1
@@ -152,7 +152,7 @@ jobs:
           rustflags: ""
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
 
       - name: Run dev setup
         run: |
@@ -175,7 +175,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Install Rust toolchain from file
         uses: actions-rust-lang/setup-rust-toolchain@v1
@@ -211,7 +211,7 @@ jobs:
 
     steps:
     - name: Checkout
-      uses: actions/checkout@v4
+      uses: actions/checkout@v7
 
     - name: Install Nix
       uses: cachix/install-nix-action@v25
@@ -219,7 +219,7 @@ jobs:
         install_url: https://releases.nixos.org/nix/nix-2.29.2/install
 
     - name: Configure Cachix
-      uses: cachix/cachix-action@v14
+      uses: cachix/cachix-action@v17
       with:
         name: catcolab-jmoggr
         authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
