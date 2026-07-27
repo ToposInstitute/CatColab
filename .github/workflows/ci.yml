@@ -22,11 +22,15 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v7
 
+      - name: Install Rust toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: ${{ matrix.toolchain }}
+          # Don't override flags in cargo config files.
+          rustflags: ""
+
       - name: Tests
         run: |
-          rustup toolchain install ${{ matrix.toolchain }}
-          rustup default ${{ matrix.toolchain }}
-
           cargo check -p catlog -p catlog-wasm -p catcolab-document-types --all-features --verbose
           cargo test -p catlog -p catlog-wasm -p catcolab-document-types --all-features --verbose
 
