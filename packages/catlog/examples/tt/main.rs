@@ -36,7 +36,7 @@ fn main() -> io::Result<()> {
         };
 
         if let Err(e) = watcher.watch(Path::new(&args.path), RecursiveMode::Recursive) {
-            eprintln!("could not watch {}: {}", &args.path, e)
+            eprintln!("could not watch {}: {}", args.path, e)
         }
 
         for res in rx {

@@ -49,15 +49,13 @@ mod integration_tests {
             .expect("Repo lookup failed")
             .expect("Document not found in repo");
 
-        doc_handle
-            .with_document(|doc| {
-                doc.transact(|tx| {
-                    tx.put(automerge::ROOT, "name", "Autosaved Name")?;
-                    Ok::<_, automerge::AutomergeError>(())
-                })
-                .map(|_| ())
+        doc_handle.with_document(|doc| {
+            doc.transact(|tx| {
+                tx.put(automerge::ROOT, "name", "Autosaved Name")?;
+                Ok::<_, automerge::AutomergeError>(())
             })
             .expect("Failed to mutate document");
+        });
 
         tokio::time::sleep(std::time::Duration::from_millis(800)).await;
 

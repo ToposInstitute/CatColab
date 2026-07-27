@@ -136,7 +136,7 @@ pub fn run(path: &str, output: &BatchOutput) -> io::Result<bool> {
     let src = match fs::read_to_string(path) {
         Ok(s) => s,
         Err(e) => {
-            eprintln!("Could not read {}: {}", &path, e);
+            eprintln!("Could not read {}: {}", path, e);
             return Ok(false);
         }
     };
