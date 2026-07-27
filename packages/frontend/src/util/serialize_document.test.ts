@@ -4,7 +4,7 @@ import { Repo } from "@automerge/automerge-repo";
 import { assert, describe, test } from "vitest";
 
 import { Model, type ModelDocument, Nb } from "catcolab-document-methods";
-import { serializeAutomergeDocument, type Document } from "catcolab-document-types";
+import { serializeAutomergeDocument } from "catcolab-document-types";
 
 // Dummy Automerge repo with no networking or storage.
 const repo = new Repo();
@@ -38,8 +38,8 @@ describe("serializeAutomergeDocument", () => {
         });
 
         const serialized = serializeAutomergeDocument(
-            Automerge.save((docHandle as DocHandle<Document>).doc()),
-        ) as Document;
+            Automerge.save(docHandle.doc()),
+        ) as ModelDocument;
 
         const cell = serialized.notebook.cellContents[cellId];
         assert(cell?.tag === "rich-text");
@@ -85,9 +85,7 @@ describe("serializeAutomergeDocument", () => {
             Automerge.splice(doc, contentPath, 1, 0, "hello world");
         });
 
-        const json = JSON.stringify(
-            serializeAutomergeDocument(Automerge.save((docHandle as DocHandle<Document>).doc())),
-        );
+        const json = JSON.stringify(serializeAutomergeDocument(Automerge.save(docHandle.doc())));
         assert(
             !json.includes("\ufffc"),
             "serialized JSON must not contain U+FFFC placeholders from a flattened Text object",
