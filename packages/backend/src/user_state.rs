@@ -505,6 +505,7 @@ pub mod arbitrary {
             DocumentType::Model,
             DocumentType::Diagram,
             DocumentType::Analysis,
+            DocumentType::LLMConversation,
         ])
         .boxed()
     }
