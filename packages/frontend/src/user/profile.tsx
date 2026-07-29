@@ -7,25 +7,60 @@ import { Button, FormGroup, TextInputField } from "catcolab-ui-components";
 import { useApi } from "../api";
 import { BrandedToolbar } from "../page";
 import { LoginGate } from "./login";
+import { useUserSettings } from "./user_settings_context";
 import { useUserState } from "./user_state_context";
 
-/** Page to configure user profile. */
+/** Page to configure user settings. */
 export default function UserProfilePage() {
     const appTitle = import.meta.env.VITE_APP_TITLE;
 
     return (
         <>
-            <Title>Profile - {appTitle}</Title>
+            <Title>User Settings - {appTitle}</Title>
             <div class="growable-container">
                 <BrandedToolbar />
                 <div class="page-container">
                     <LoginGate>
+                        <h1>User settings</h1>
+                        <hr />
                         <h2>Public profile</h2>
                         <UserProfileForm />
+                        <hr />
+                        <h2>Functionality</h2>
+                        <LLMCapabilitiesSetting />
                     </LoginGate>
                 </div>
             </div>
         </>
+    );
+}
+
+/** Toggle the user's access to LLM-powered features. */
+function LLMCapabilitiesSetting() {
+    const { settings, isReady, updateSettings } = useUserSettings();
+
+    return (
+        <p>
+            <label>
+                <input
+                    type="checkbox"
+                    checked={settings().llmCapabilitiesEnabled}
+                    disabled={!isReady()}
+                    onChange={(evt) =>
+                        updateSettings({
+                            llmCapabilitiesEnabled: evt.currentTarget.checked,
+                        })
+                    }
+                />{" "}
+                <span style={{ display: "inline-block", "vertical-align": "middle" }}>
+                    LLM capabilities
+                    <br />
+                    <small>
+                        Enable LLM-powered features, including LLM Conversation documents.
+                    </small>
+                </span>
+            </label>
+        </p>
     );
 }
 
@@ -96,7 +131,7 @@ export function UserProfileForm() {
                 </Field>
             </FormGroup>
             <Button type="submit" variant="positive">
-                Update profile
+                Update public profile
             </Button>
         </Form>
     );

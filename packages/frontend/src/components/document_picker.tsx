@@ -29,6 +29,7 @@ import {
 import type { Document, Uuid } from "catlog-wasm";
 import { useApi } from "../api";
 import { TheoryLibraryContext } from "../theory";
+import { isDocumentVisible, useUserSettings } from "../user/user_settings_context";
 import { useUserState } from "../user/user_state_context";
 
 import "./document_picker.css";
@@ -166,6 +167,7 @@ function DocSearchInput(
     ]);
 
     const userState = useUserState();
+    const { settings } = useUserSettings();
     const theories = useContext(TheoryLibraryContext);
 
     const [inputText, setInputText] = createSignal("");
@@ -191,6 +193,9 @@ function DocSearchInput(
         const entries = Object.entries(docs) as [string, DocInfo][];
         return entries
             .filter(([refId, doc]) => {
+                if (!isDocumentVisible(doc, settings())) {
+                    return false;
+                }
                 if (doc.deletedAt !== null) {
                     return false;
                 }

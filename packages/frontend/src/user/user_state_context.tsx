@@ -2,7 +2,13 @@ import type { PermissionInfo, UserInfo, UserState } from "catcolab-api/src/user_
 import { createContext, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
-export const INITIAL_USER_STATE: UserState = {
+import type { UserSettings } from "./user_settings_context";
+
+export type AppUserState = UserState & {
+    settings?: Partial<UserSettings>;
+};
+
+export const INITIAL_USER_STATE: AppUserState = {
     profile: { username: null, displayName: null },
     knownUsers: {},
     documents: {},
