@@ -3,29 +3,63 @@ import { Title } from "@solidjs/meta";
 import { createEffect } from "solid-js";
 
 import type { UserProfile } from "catcolab-api";
-import { Button, FormGroup, TextInputField } from "catcolab-ui-components";
+import { Button, CheckboxField, FormGroup, TextInputField } from "catcolab-ui-components";
 import { useApi } from "../api";
 import { BrandedToolbar } from "../page";
 import { LoginGate } from "./login";
+import { useUserSettings } from "./user_settings";
 import { useUserState } from "./user_state_context";
 
-/** Page to configure user profile. */
+/** Page to configure user settings. */
 export default function UserProfilePage() {
     const appTitle = import.meta.env.VITE_APP_TITLE;
 
     return (
         <>
-            <Title>Profile - {appTitle}</Title>
+            <Title>User Settings - {appTitle}</Title>
             <div class="growable-container">
                 <BrandedToolbar />
                 <div class="page-container">
                     <LoginGate>
+                        <h1>User settings</h1>
+                        <hr />
                         <h2>Public profile</h2>
                         <UserProfileForm />
+                        <hr />
+                        <h2>Functionality</h2>
+                        <LLMCapabilitiesSetting />
                     </LoginGate>
                 </div>
             </div>
         </>
+    );
+}
+
+/** Toggle the user's access to LLM-powered features. */
+function LLMCapabilitiesSetting() {
+    const { settings, updateSettings } = useUserSettings();
+
+    const updateLlmEnabled = async (enabled: boolean) => {
+        await updateSettings({ llmEnabled: enabled });
+    };
+
+    return (
+        <FormGroup compact>
+            <CheckboxField
+                label={
+                    <>
+                        <strong>LLM capabilities</strong>
+                        <br />
+                        <small>
+                            Enable LLM-powered features, including LLM Conversation documents.
+                        </small>
+                    </>
+                }
+                checked={settings()?.llmEnabled === true}
+                disabled={settings.loading || settings() === undefined}
+                onChange={(evt) => updateLlmEnabled(evt.currentTarget.checked)}
+            />
+        </FormGroup>
     );
 }
 
@@ -96,7 +130,7 @@ export function UserProfileForm() {
                 </Field>
             </FormGroup>
             <Button type="submit" variant="positive">
-                Update profile
+                Update public profile
             </Button>
         </Form>
     );
