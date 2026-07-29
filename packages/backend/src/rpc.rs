@@ -10,7 +10,7 @@ use super::app::{AppCtx, AppError, AppState, RefMsg};
 use super::auth::{NewPermissions, PermissionLevel, Permissions};
 use super::ref_actor::{ensure_ref_actor, send_to_actor};
 use super::user_state::get_or_create_user_state_doc;
-use super::{auth, document as doc, inference, user};
+use super::{auth, document as doc, inference, user, user_settings};
 
 /// Create router for RPC API.
 pub fn router() -> Router<AppState> {
@@ -28,6 +28,8 @@ pub fn router() -> Router<AppState> {
         .handler(username_status)
         .handler(get_active_user_profile)
         .handler(set_active_user_profile)
+        .handler(get_active_user_settings)
+        .handler(set_active_user_settings)
         .handler(get_user_state_doc_id)
         .handler(get_inference_key)
 }
@@ -173,6 +175,19 @@ async fn get_inference_key(ctx: AppCtx) -> RpcResult<String> {
 #[handler(mutation)]
 async fn set_active_user_profile(ctx: AppCtx, user: user::UserProfile) -> RpcResult<()> {
     user::set_active_user_profile(ctx, user).await.into()
+}
+
+#[handler(query)]
+async fn get_active_user_settings(ctx: AppCtx) -> RpcResult<user_settings::UserSettings> {
+    user_settings::get_active_user_settings(ctx).await.into()
+}
+
+#[handler(mutation)]
+async fn set_active_user_settings(
+    ctx: AppCtx,
+    settings: user_settings::UserSettings,
+) -> RpcResult<()> {
+    user_settings::set_active_user_settings(ctx, settings).await.into()
 }
 
 #[handler(query)]
