@@ -27,6 +27,9 @@ pub mod storage;
 /// User accounts and profiles.
 pub mod user;
 
+/// User settings.
+pub mod user_settings;
+
 /// User state synchronized via Automerge.
 pub mod user_state;
 

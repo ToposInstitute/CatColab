@@ -4,15 +4,28 @@ import { type JSX, createEffect, createResource } from "solid-js";
 
 import { useApi } from "../api";
 import { type InferenceKeyResult, InferenceKeyContext } from "./inference_key_context";
+import { useUserSettings } from "./user_settings";
 
 /** Provides the authenticated user's inference key. */
 export function InferenceKeyProvider(props: { children: JSX.Element }) {
     const api = useApi();
     const firebaseApp = useFirebaseApp();
     const auth = useAuth(getAuth(firebaseApp));
+    const { settings } = useUserSettings();
+
+    const enabledUserId = () => {
+        const userId = auth.data?.uid;
+        if (userId === undefined) {
+            return null;
+        }
+        if (settings()?.llmEnabled !== true) {
+            return null;
+        }
+        return userId;
+    };
 
     const [inferenceKey, { mutate }] = createResource(
-        () => auth.data?.uid ?? null,
+        enabledUserId,
         async (): Promise<InferenceKeyResult> => {
             const result = await api.rpc.get_inference_key.query();
             if (result.tag === "Ok") {
@@ -25,9 +38,9 @@ export function InferenceKeyProvider(props: { children: JSX.Element }) {
         },
     );
 
-    // clear the resource explicitly on sign-out
+    // Clear the resource explicitly on sign-out or when LLM access is disabled.
     createEffect(() => {
-        if (auth.data == null) {
+        if (enabledUserId() === null) {
             mutate(undefined);
         }
     });
