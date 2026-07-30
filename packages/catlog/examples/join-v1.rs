@@ -745,7 +745,7 @@ impl Instance {
 // ---------- Loading SNAP graph datasets ----------
 // Set EDGES environment variable to override; EDGES=all for no limit.
 const DEFAULT_MAX_EDGES: usize = 1_000;
-const DEFAULT_FILE: &str = "data/ca-GrQc.txt";
+const DEFAULT_FILE: &str = "examples/data/ca-GrQc.txt";
 
 macro_rules! print_flush {
     ($($e:tt)*) => { { print!($($e)*); std::io::stdout().flush().unwrap() } }
@@ -908,8 +908,6 @@ fn example_accounting_employees() {
 
 fn example_snap() {
     let total = Instant::now();
-    let cwd = std::env::current_dir();
-    println!("current working directory: {cwd:?}");
 
     let schema = graph_schema();
 
