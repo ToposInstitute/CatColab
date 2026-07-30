@@ -1,4 +1,4 @@
-#![allow(missing_docs,unused)]
+#![allow(missing_docs)]
 
 // use catlog::zero::column::{Column, Mapping};
 use std::io::prelude::*;
@@ -9,7 +9,6 @@ use std::fmt::Display;
 use std::rc::Rc;
 use std::hash::Hash;
 use std::cmp::Ordering;
-use std::path::Path;
 
 const DEBUG: bool = true;
 // Debug-print vectors of length <= PRINTMAX.
@@ -17,6 +16,13 @@ const PRINTMAX: usize = 40;
 
 macro_rules! print_flush {
     ($($e:tt)*) => { { print!($($e)*); std::io::stdout().flush().unwrap() } }
+}
+
+fn clone_with_capacity<A: Clone>(n: usize, src: &Vec<A>) -> Vec<A> {
+    debug_assert!(n >= src.len());
+    let mut r = Vec::with_capacity(n);
+    r.extend_from_slice(src);
+    return r;
 }
 
 
@@ -380,7 +386,7 @@ impl<'a,'b> QueryContext<'a,'b> {
         // 4a    For each binding of values to prior and new vars,
         // 4b    If the binding is not in the atom, discard the binding.
         //
-        let mut bindings: Vec<Binding> = vec![Vec::new()];
+        let mut bindings: Vec<Binding> = vec![Vec::with_capacity(self.plan.len())];
         for (var, wcops) in &self.plan { // 1 For each var in some order
             let n_wcops = wcops.len();
             if n_wcops == 0 {
@@ -391,7 +397,8 @@ impl<'a,'b> QueryContext<'a,'b> {
                 // TODO LATER: could easily pre-allocate the number of vectors we need here.
                 for binding in std::mem::take(&mut bindings) {
                     for &x in entities.keys() {
-                        let mut b = binding.clone(); // DANGER! ALLOCATION IN INNER LOOP!
+                        // DANGER! ALLOCATION IN INNER LOOP!
+                        let mut b = clone_with_capacity(self.plan.len(), &binding);
                         b.push(x);
                         bindings.push(b);
                     }
@@ -420,14 +427,10 @@ impl<'a,'b> QueryContext<'a,'b> {
             if DEBUG {
                 print_flush!("  {var:?}\tpropose {wcops:?}");
             }
-
-            let n_bindings_before = bindings.len();
-            let mut n_bindings: usize = 0;
             for (i, binding) in std::mem::take(&mut bindings).into_iter().enumerate() {
                 let wcop = &wcops[proposers[i]];
                 self.wco_propose(wcop, binding, &mut bindings);
             }
-
             if DEBUG {
                 let n = bindings.len();
                 println!(": {n}");
@@ -437,8 +440,8 @@ impl<'a,'b> QueryContext<'a,'b> {
             }
 
             // 4   For each atom that mentions the var,
-            // (we exclude the one that enumerate it in this case because it's easy)
-            if DEBUG && n_wcops > 1 {
+            if n_wcops <= 1 { continue } // only one wcop, no need to filter.
+            if DEBUG {
                 print_flush!("  {var:?}\tfilter {:?}", &wcops);
             }
             for wcop in wcops {
@@ -446,8 +449,7 @@ impl<'a,'b> QueryContext<'a,'b> {
                 // 4b    If the binding is not in the atom, discard the binding.
                 self.wco_filter(wcop, &mut bindings);
             }
-
-            if DEBUG && n_wcops > 1 {
+            if DEBUG {
                 let n = bindings.len();
                 println!(": {n}");
                 if n <= PRINTMAX {
@@ -504,7 +506,6 @@ impl<'a,'b> QueryContext<'a,'b> {
 
         let &(morphism, ref strategy) = wcop;
         match strategy {
-            // BRANCH NOT YET TESTED
             Strategy::Image => { // use reverse index
                 // f(V) = X: X is an entity, so f is entity->entity (IdId reverse
                 // index), and its keys are exactly the image of f.
@@ -513,7 +514,7 @@ impl<'a,'b> QueryContext<'a,'b> {
                 };
                 for &x in index.keys() {
                     // DANGER! ALLOCATION IN INNER LOOP!
-                    extend_and_push(binding.clone(), x, bindings)
+                    extend_and_push(clone_with_capacity(self.plan.len(), &binding), x, bindings)
                 }
             }
 
@@ -522,7 +523,7 @@ impl<'a,'b> QueryContext<'a,'b> {
                 let index = &self.index_diagonal[morphism];
                 for &x in index {
                     // DANGER! ALLOCATION IN INNER LOOP!
-                    extend_and_push(binding.clone(), x, bindings);
+                    extend_and_push(clone_with_capacity(self.plan.len(), &binding), x, bindings);
                 }
             }
 
@@ -551,7 +552,7 @@ impl<'a,'b> QueryContext<'a,'b> {
                         let entities: &HashSet<EntityId> = &index[k];
                         for &entity in entities {
                             // DANGER! ALLOCATION IN INNER LOOP!
-                            extend_and_push(binding.clone(), entity, bindings);
+                            extend_and_push(clone_with_capacity(self.plan.len(), &binding), entity, bindings);
                         }
                     }
                     Known::Usize(_k) => todo!("preimage usize"),
@@ -563,7 +564,7 @@ impl<'a,'b> QueryContext<'a,'b> {
                         let entities: &HashSet<EntityId> = &index[k];
                         for &entity in entities {
                             // DANGER! ALLOCATION IN INNER LOOP!
-                            extend_and_push(binding.clone(), entity, bindings);
+                            extend_and_push(clone_with_capacity(self.plan.len(), &binding), entity, bindings);
                         }
                     }
                 }
@@ -575,7 +576,7 @@ impl<'a,'b> QueryContext<'a,'b> {
         let &(morphism, ref strategy) = wcop;
         let table = &self.database.mappings[morphism];
         match strategy {
-            Strategy::Image => { // NOT YET TESTED
+            Strategy::Image => {
                 // f(V) = X: keep bindings whose X is in the image of f.
                 // X is an entity, so f is entity->entity (IdId reverse index).
                 let TaggedReverseIndex::IdId(index) = &self.index_reverse[morphism] else {
@@ -583,7 +584,7 @@ impl<'a,'b> QueryContext<'a,'b> {
                 };
                 bindings.retain(|binding| index.contains_key(binding.last().unwrap()));
             }
-            Strategy::Diagonal => { // NOT YET TESTED
+            Strategy::Diagonal => {
                 // f(X) = X: keep bindings whose X is on the diagonal of f.
                 let index = &self.index_diagonal[morphism];
                 bindings.retain(|binding| index.contains(binding.last().unwrap()));
@@ -825,10 +826,6 @@ fn load_edges() -> Vec<(usize, usize)> {
 
 fn graph_from_edges(schema: Rc<Schema>, edges: Vec<(usize, usize)>) -> Instance {
     assert!(schema == graph_schema());
-    let max_node: usize = edges.iter()
-        .flat_map(|&(src,dst)| [src,dst])
-        .max()
-        .unwrap();
     let mappings = map! {
         "Node".to_string() => TaggedMap::Id(edges.iter().flat_map(|e| [(e.0, ()), (e.1, ())]).collect()),
         "Edge".to_string() => TaggedMap::Id((0..edges.len()).map(|i| (i, ())).collect()),
@@ -984,7 +981,7 @@ fn example_snap() {
     let bindings = triangle.execute(&graph, plan);
     let compute_ns = compute.elapsed().as_nanos();
     println!("Done! Found {} triangles.", bindings.len());
-    if (DEBUG && bindings.len() < PRINTMAX) {
+    if DEBUG && bindings.len() < PRINTMAX {
         println!("bindings for var order: {var_order:?}");
         for b in &bindings { println!("  {b:?}"); }
     }
