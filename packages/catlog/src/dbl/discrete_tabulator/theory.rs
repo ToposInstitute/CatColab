@@ -8,7 +8,7 @@ use ref_cast::RefCast;
 
 use crate::dbl::{category::*, graph::ProedgeGraph, tree::DblTree};
 use crate::one::{Graph, Path};
-use crate::tt::util::pretty::*;
+use crate::zero::pretty::*;
 use crate::zero::*;
 
 /// Object type in a discrete tabulator theory.

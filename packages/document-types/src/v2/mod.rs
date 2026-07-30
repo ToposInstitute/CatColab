@@ -1,6 +1,8 @@
 use crate::v1;
 
-pub use v1::{analysis, api, diagram_judgment, model, model_judgment, path, theory};
+pub use v1::{
+    analysis, api, diagram_judgment, instance_judgment, model, model_judgment, path, theory,
+};
 
 pub mod cell;
 pub mod document;
@@ -13,6 +15,7 @@ pub use api::*;
 pub use cell::*;
 pub use diagram_judgment::*;
 pub use document::*;
+pub use instance_judgment::*;
 pub use llm_conversation::*;
 pub use model::*;
 pub use model_judgment::*;

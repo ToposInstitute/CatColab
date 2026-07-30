@@ -37,6 +37,21 @@ pub struct DiagramDocumentContent {
     pub version: String,
 }
 
+/// This is the content of an instance document, presenting an instance of the
+/// model that the document's `instanceOf` link points to.
+///
+/// Not yet a variant of [`Document`]: wiring into the document enum (and the
+/// frontend) is deferred until instance notebooks elaborate.
+#[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Tsify)]
+#[tsify(into_wasm_abi, from_wasm_abi)]
+pub struct InstanceDocumentContent {
+    pub name: String,
+    #[serde(rename = "instanceOf")]
+    pub instance_of: Link,
+    pub notebook: Notebook<super::instance_judgment::InstanceJudgment>,
+    pub version: String,
+}
+
 #[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Tsify)]
 #[tsify(into_wasm_abi, from_wasm_abi)]
 pub struct AnalysisDocumentContent {

@@ -7,3 +7,7 @@ _svgs
 
 /.quarto/
 **/*.quarto_ipynb
+
+# Local preview tooling + artifacts
+preview.sh
+*.preview.html
