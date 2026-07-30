@@ -41,3 +41,6 @@
 <!-- Type theory -->
 \newcommand{\context}{\mathsf{cx}}
 \newcommand{\type}{\mathsf{ty}}
+\newcommand{\Sing}{\cat{Sing}}
+\newcommand{\Id}{\cat{Id}}
+\newcommand{\Over}{\cat{Over}}

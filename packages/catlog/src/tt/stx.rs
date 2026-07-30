@@ -330,8 +330,7 @@ pub enum FiberTyS_ {
     /// [...]`, projection out of a sub-instance import, fiber list/object
     /// -operation literals, and codomain-morphism application.
     Over(BaseTmS),
-    /// An instance of a model — an object of the fiber over the codomain
-    /// model — presented as a record of fiber types. A generator is an
+    /// An instance of a model presented as a record of fiber types. A generator is an
     /// [`Over`](Self::Over) field, a sub-instance import is a nested
     /// [`Record`](Self::Record) field, and an equation is an
     /// [`Id`](Self::Id) field. This is what `instance I : X := [...]`
