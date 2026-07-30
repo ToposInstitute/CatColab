@@ -112,3 +112,5 @@ CHANGELOG.html
 
 # VSCode
 .vscode/*
+
+/.luarc.json
