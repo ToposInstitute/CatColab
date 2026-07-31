@@ -40,7 +40,7 @@ pub struct DiagramDocumentContent {
 }
 
 #[derive(PartialEq, Debug, Serialize, Deserialize, Tsify)]
-#[tsify(into_wasm_abi, from_wasm_abi)]
+#[tsify(into_wasm_abi, from_wasm_abi, hashmap_as_object)]
 pub struct InstanceDocumentContent {
     pub name: String,
     #[serde(rename = "instanceOf")]

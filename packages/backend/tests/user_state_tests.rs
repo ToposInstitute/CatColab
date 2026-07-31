@@ -83,7 +83,7 @@ mod integration_tests {
                 "_server": "test",
                 "type": "instance-of"
             },
-            "tables": []
+            "tables": {}
         })
     }
 

@@ -12,6 +12,6 @@ export const newInstanceDocument = (modelRef: StableRef): InstanceDocument => ({
         ...modelRef,
         type: "instance-of",
     },
-    tables: [],
+    tables: {},
     version: currentVersion(),
 });

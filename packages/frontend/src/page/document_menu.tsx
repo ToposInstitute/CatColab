@@ -62,6 +62,10 @@ export function DocumentMenu(props: {
         const docType = props.liveDoc.doc.type;
         invariant(docType !== "analysis", "Analysis cannot be created on other analysis");
         invariant(docType !== "instance", "Analysis cannot yet be created on an instance");
+        invariant(
+            docType !== "llmconversation",
+            "Analysis cannot be created on an LLM conversation",
+        );
 
         const newRef = await createAnalysis(api, docType, api.makeUnversionedRef(docRefId));
         handleDocCreated("analysis", newRef);
