@@ -1,6 +1,8 @@
 import { lazy } from "solid-js";
 
 import type {
+    LinearODEEquationsData,
+    LotkaVolterraEquationsData,
     MassActionEquationsData,
     MorType,
     ObType,

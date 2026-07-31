@@ -96,7 +96,12 @@ export function Completions(props: {
                         role="option"
                         classList={{ active: i() === presumptive() }}
                         onMouseOver={() => setPresumptive(i())}
-                        onMouseDown={() => select(c)}
+                        onMouseDown={(evt) => {
+                            // Prevent the input from blurring so focus stays in
+                            // the editor when a completion is clicked.
+                            evt.preventDefault();
+                            select(c);
+                        }}
                     >
                         <div class="completion-head">
                             <Show when={c.icon}>

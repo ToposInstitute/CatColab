@@ -19,12 +19,3 @@
 .defaultDelimiter {
     transform: scale(1, 1.5);
 }
-
-.emptyListInput {
-    background: transparent;
-    border: none;
-    outline: none;
-    width: 0.5ex;
-    margin: 0;
-    padding: 0;
-}
