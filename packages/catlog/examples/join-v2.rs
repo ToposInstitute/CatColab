@@ -219,7 +219,7 @@ enum Trie {
 //
 // A trie index for an atom R(xs...) will have N levels, where N is the # of distinct
 // variables in xs. An index can be specified by indicating what to do for each column of
-// the relation:
+// the relation.
 
 type IndexShape = Vec<IndexColumnShape>; // length = arity of relation
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
@@ -228,6 +228,9 @@ enum IndexColumnShape {   // what to do with column i.
     EqConst(Value),   // EqConst(v)   => filter: equal to v, otherwise discard.
     EqColumn(usize),  // EqColumn(j)  => filter: equal to column j, otherwise discard.
 }
+
+// INVARIANT: If shape[i] = EqColumn(j), we should have j < i and shape[j] = TrieLevel(_).
+// This ensures that shapes which denote equivalent indexes are equal on the nose.
 
 impl Trie {
     // Trie::build() returns None if the trie is empty. This is necessary to distinguish
@@ -255,7 +258,12 @@ impl Trie {
                     assert!(level_to_col[*k].is_none(), "TrieLevel({k}) assigned twice");
                     level_to_col[*k] = Some(col);
                 }
-                IndexColumnShape::EqConst(_) | IndexColumnShape::EqColumn(_) => {
+                IndexColumnShape::EqConst(_) => filters.push((col, colshape)),
+                IndexColumnShape::EqColumn(j) => {
+                    // Enforce the invariant on Shape.
+                    assert!(*j < col, "EqColumn({j}) at column {col} is not a backreference");
+                    assert!(matches!(shape[*j], IndexColumnShape::TrieLevel(_)),
+                            "EqColumn({j}) at column {col} must point to a TrieLevel");
                     filters.push((col, colshape));
                 }
             }
