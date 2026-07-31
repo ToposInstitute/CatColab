@@ -239,10 +239,72 @@ enum IndexColumnShape {   // what to do with column i.
 // pretty straightforward to do this way. The trie shaping is a little less obvious.
 
 impl Trie {
-    fn build<Db: Database>(db: Db, rel: Db::RelId, shape: &IndexShape) -> Option<Trie> {
+    fn build<Db: Database>(db: &Db, rel: Db::RelId, shape: &IndexShape) -> Option<Trie> {
         // Option<Trie> because it the result may be empty. E.g. if the atom is R(2), then
         // the result will be Some(Leaf) if R(2) holds and None otherwise.
-        todo!("build a trie from db.rows(rel) using `shape`");
+
+        // Preprocess `shape` once, outside the row loop:
+        //  - `level_to_col[k]` is the column that becomes trie level k.
+        //  - `filters` are the columns carrying EqConst/EqColumn checks.
+        let n_levels = shape.iter().filter(|c| matches!(c, IndexColumnShape::TrieLevel(_))).count();
+        let mut level_to_col: Vec<Option<usize>> = vec![None; n_levels];
+        let mut filters: Vec<(usize, &IndexColumnShape)> = Vec::new();
+        for (col, colshape) in shape.iter().enumerate() {
+            match colshape {
+                IndexColumnShape::TrieLevel(k) => {
+                    // The TrieLevels must form a permutation of 0..n_levels: each level in
+                    // range and assigned exactly once.
+                    assert!(*k < n_levels, "TrieLevel({k}) out of range for {n_levels} levels");
+                    assert!(level_to_col[*k].is_none(), "TrieLevel({k}) assigned twice");
+                    level_to_col[*k] = Some(col);
+                }
+                IndexColumnShape::EqConst(_) | IndexColumnShape::EqColumn(_) => {
+                    filters.push((col, colshape));
+                }
+            }
+        }
+        // Every level got a column (follows from the count + range + no-dup asserts, but
+        // make it explicit): unwrap the Options into a plain Vec<usize>.
+        let level_to_col: Vec<usize> =
+            level_to_col.into_iter().map(|c| c.expect("every trie level must have a column")).collect();
+
+        let arity = shape.len();
+        let mut root = Trie::Node(HashMap::new());
+        // For the N == 0 case (a fully-constant atom like R(2)) there is no root Node; we
+        // only need to know whether any row survived the filters.
+        let mut any_row = false;
+
+        for row in db.rows(rel) {
+            debug_assert!(row.len() == arity, "row arity {} != shape arity {arity}", row.len());
+
+            // Apply filters; discard the row on any failure.
+            let keep = filters.iter().all(|(col, colshape)| match colshape {
+                IndexColumnShape::EqConst(v) => row[*col] == *v,
+                IndexColumnShape::EqColumn(j) => row[*col] == row[*j],
+                IndexColumnShape::TrieLevel(_) => unreachable!("filters holds no TrieLevels"),
+            });
+            if !keep { continue }
+            any_row = true;
+
+            // Walk the surviving row's path into the trie, materializing intermediate
+            // Nodes on the way down and a Leaf at the bottom.
+            let mut node = &mut root;
+            for (level, &col) in level_to_col.iter().enumerate() {
+                let deepest = level == n_levels - 1;
+                match node {
+                    Trie::Node(map) => {
+                        node = map.entry(row[col]).or_insert_with(|| {
+                            if deepest { Trie::Leaf } else { Trie::Node(HashMap::new()) }
+                        });
+                    }
+                    Trie::Leaf => unreachable!("only the deepest level holds Leaves"),
+                }
+            }
+        }
+
+        if !any_row { None }
+        else if n_levels == 0 { Some(Trie::Leaf) }
+        else { Some(root) }
     }
 }
 
