@@ -19,6 +19,9 @@
         "build:deps": "pnpm --filter ./packages/frontend run build:deps",
         "dev": "pnpm --filter ./packages/frontend run dev"
     },
+    "engines": {
+        "node": "^24.4.0"
+    },
     "devDependencies": {
         "depcheck": "^1.4.7",
         "oxfmt": "^0.37.0",
