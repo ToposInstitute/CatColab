@@ -229,20 +229,17 @@ enum IndexColumnShape {   // what to do with column i.
     EqColumn(usize),  // EqColumn(j)  => filter: equal to column j, otherwise discard.
 }
 
-// The filters must be checked for each row before modifying the trie.
-//
-// Interpreting these IndexShapes to build trie indexes is likely to be somewhat
-// inefficient due to having interpretative overhead in the inner loop. TODO: Measure this
-// and redesign if too slow. My instincts: instead of one loop over every row that
-// examines the IndexShape each time, turn IndexShape into a pipeline of ops, each one of
-// which turns into one loop over the rows. The filters (EqConst, EqColumn) should be
-// pretty straightforward to do this way. The trie shaping is a little less obvious.
-
 impl Trie {
+    // Trie::build() returns None if the trie is empty. This is necessary to distinguish
+    // between Some(Trie::Leaf()), a trie containing an single empty tuple, and None, an
+    // empty trie.
+    //
+    // TODO: Trie::build() may be slow due to the interpretative overhead of examining
+    // filters and level_to_col in the inner loop. Measure this and redesign if too slow.
+    // Instead of one loop interpreting these for each row each filter could become its
+    // own loop, and level_to_col a final loop (or maybe there's some way to pipeline even
+    // further?).
     fn build<Db: Database>(db: &Db, rel: Db::RelId, shape: &IndexShape) -> Option<Trie> {
-        // Option<Trie> because it the result may be empty. E.g. if the atom is R(2), then
-        // the result will be Some(Leaf) if R(2) holds and None otherwise.
-
         // Preprocess `shape` once, outside the row loop:
         //  - `level_to_col[k]` is the column that becomes trie level k.
         //  - `filters` are the columns carrying EqConst/EqColumn checks.
@@ -270,8 +267,8 @@ impl Trie {
 
         let arity = shape.len();
         let mut root = Trie::Node(HashMap::new());
-        // For the N == 0 case (a fully-constant atom like R(2)) there is no root Node; we
-        // only need to know whether any row survived the filters.
+        // For the N == 0 case (an atom with no variables, like R(2)) there is no root
+        // Node; we only need to know whether any row survived the filters.
         let mut any_row = false;
 
         for row in db.rows(rel) {
