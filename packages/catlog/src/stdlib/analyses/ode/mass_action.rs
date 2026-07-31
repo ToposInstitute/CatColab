@@ -13,6 +13,7 @@ use serde::{Deserialize, Serialize};
 use tsify::Tsify;
 
 use super::Parameter;
+use crate::latex::{Latex, ToLatexWithMap};
 use crate::simulate::ode::PolynomialSystem;
 use crate::stdlib::analyses::ode::ode_semantics::*;
 use crate::stdlib::analyses::petri::transition_interface;
@@ -35,6 +36,7 @@ impl ODESemantics for PetriNetMassActionSemantics {
     type ModelType = ModalDblModel<Unital>;
     type ParameterType = MassActionParameter;
     type AnalysisType = PetriNetMassActionAnalysis;
+    type EquationsDataType = MassActionEquationsData;
     type ProblemDataType = MassActionProblemData;
 }
 
@@ -42,6 +44,7 @@ impl ODESemantics for StockFlowMassActionSemantics {
     type ModelType = DiscreteTabModel;
     type ParameterType = MassActionParameter;
     type AnalysisType = StockFlowMassActionAnalysis;
+    type EquationsDataType = MassActionEquationsData;
     type ProblemDataType = MassActionProblemData;
 }
 
@@ -68,11 +71,11 @@ pub enum MassConservationType {
 #[cfg_attr(feature = "serde-wasm", derive(Tsify))]
 #[cfg_attr(feature = "serde-wasm", tsify(into_wasm_abi, from_wasm_abi))]
 pub enum RateGranularity {
-    /// Each flow gets assigned a single consumption and single production rate.
+    /// Each flow (transition) gets assigned a single consumption and single production rate.
     PerTransition,
 
-    /// Each flow gets assigned a consumption rate for each input stock and
-    /// a production rate for each output stock.
+    /// Each flow (transition) gets assigned a consumption rate for each input stock (place) and
+    /// a production rate for each output stock (place).
     PerPlace,
 }
 
@@ -160,6 +163,30 @@ impl fmt::Display for MassActionParameter {
     }
 }
 
+impl ToLatexWithMap for MassActionParameter {
+    fn to_latex_with_map<T: Fn(&QualifiedName) -> String>(&self, f: T) -> Latex {
+        match self {
+            MassActionParameter::Balanced { flow } => Latex(format!("r_{{{}}}", f(flow))),
+            MassActionParameter::Unbalanced { direction, parameter } => {
+                match (direction, parameter) {
+                    (Direction::IncomingFlow, RateParameter::PerTransition { flow }) => {
+                        Latex(format!("\\rho_{{{}}}", f(flow)))
+                    }
+                    (Direction::OutgoingFlow, RateParameter::PerTransition { flow }) => {
+                        Latex(format!("\\kappa_{{{}}}", f(flow)))
+                    }
+                    (Direction::IncomingFlow, RateParameter::PerPlace { flow, stock }) => {
+                        Latex(format!("\\rho_{{{}}}^{{{}}}", f(flow), f(stock)))
+                    }
+                    (Direction::OutgoingFlow, RateParameter::PerPlace { flow, stock }) => {
+                        Latex(format!("\\kappa_{{{}}}^{{{}}}", f(flow), f(stock)))
+                    }
+                }
+            }
+        }
+    }
+}
+
 impl ODEParameterType for MassActionParameter {}
 
 /// Mass-action ODE analysis for Petri nets.
@@ -194,9 +221,8 @@ impl
 {
     fn build_system_builder(
         &self,
-        model: &<PetriNetMassActionSemantics as ODESemantics>::ModelType,
-    ) -> PolynomialODESystemBuilder<<PetriNetMassActionSemantics as ODESemantics>::ParameterType>
-    {
+        model: &ModalDblModel<Unital>,
+    ) -> PolynomialODESystemBuilder<MassActionParameter> {
         let mut builder = PolynomialODESystemBuilder::new();
 
         for place in model.ob_generators_with_type(&self.place_ob_type) {
@@ -331,9 +357,8 @@ impl
 {
     fn build_system_builder(
         &self,
-        model: &<StockFlowMassActionSemantics as ODESemantics>::ModelType,
-    ) -> PolynomialODESystemBuilder<<StockFlowMassActionSemantics as ODESemantics>::ParameterType>
-    {
+        model: &DiscreteTabModel,
+    ) -> PolynomialODESystemBuilder<MassActionParameter> {
         let mut builder = PolynomialODESystemBuilder::new();
 
         for stock in model.ob_generators_with_type(&self.stock_ob_type) {
@@ -404,7 +429,28 @@ impl
     }
 }
 
-/// Data defining an unbalanced mass-action ODE problem for a model.
+/// Data defining mass-action ODE equations for a model.
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde-wasm", derive(Tsify))]
+#[cfg_attr(feature = "serde-wasm", tsify(into_wasm_abi, from_wasm_abi))]
+#[derive(Clone)]
+pub struct MassActionEquationsData {
+    /// Whether or not mass is conserved.
+    #[cfg_attr(feature = "serde", serde(rename = "massConservationType"))]
+    pub mass_conservation_type: MassConservationType,
+}
+
+impl Default for MassActionEquationsData {
+    fn default() -> Self {
+        Self {
+            mass_conservation_type: MassConservationType::Balanced,
+        }
+    }
+}
+
+impl ODESemanticsEquationsData for MassActionEquationsData {}
+
+/// Data defining a mass-action ODE problem for a model.
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde-wasm", derive(Tsify))]
 #[cfg_attr(
@@ -412,9 +458,9 @@ impl
     tsify(into_wasm_abi, from_wasm_abi, hashmap_as_object)
 )]
 pub struct MassActionProblemData {
-    /// Whether or not mass is conserved.
-    #[cfg_attr(feature = "serde", serde(rename = "massConservationType"))]
-    pub mass_conservation_type: MassConservationType,
+    /// Data used for generating the equations (namely, whether or not mass is conserved).
+    #[cfg_attr(feature = "serde", serde(rename = "equationsData"))]
+    pub equations_data: MassActionEquationsData,
 
     /// Map from morphism IDs to consumption rate coefficients (nonnegative reals),
     /// for the balanced per transition case.
@@ -451,6 +497,10 @@ pub struct MassActionProblemData {
 }
 
 impl ODESemanticsProblemData<MassActionParameter> for MassActionProblemData {
+    fn equations_data(&self) -> impl ODESemanticsEquationsData {
+        self.equations_data.clone()
+    }
+
     fn initial_values(&self) -> HashMap<QualifiedName, f32> {
         self.initial_values.clone()
     }
@@ -519,8 +569,10 @@ mod tests {
     use std::rc::Rc;
 
     use super::*;
-    use crate::simulate::ode::LatexEquation;
-    use crate::stdlib::{analyses, models::*, theories::*};
+    use crate::{
+        latex::{LatexEquation, LatexEquations},
+        stdlib::{analyses, models::*, theories::*},
+    };
 
     // Tests for stock-flow diagrams. These all use the backward_link() model,
     // which has a single flow x==f==>y and a single link y->f.
@@ -622,16 +674,16 @@ mod tests {
             ..StockFlowMassActionAnalysis::default()
         }
         .build_system(&model);
-        let expected = vec![
+        let expected = LatexEquations(vec![
             LatexEquation {
-                lhs: "\\frac{\\mathrm{d}}{\\mathrm{d}t} x".to_string(),
-                rhs: "-Outgoing(f) \\cdot x \\cdot y".to_string(),
+                lhs: Latex("\\frac{\\mathrm{d}}{\\mathrm{d}t} x".to_string()),
+                rhs: Latex("-\\kappa_{f} \\cdot x \\cdot y".to_string()),
             },
             LatexEquation {
-                lhs: "\\frac{\\mathrm{d}}{\\mathrm{d}t} y".to_string(),
-                rhs: "Incoming(f) \\cdot x \\cdot y".to_string(),
+                lhs: Latex("\\frac{\\mathrm{d}}{\\mathrm{d}t} y".to_string()),
+                rhs: Latex("\\rho_{f} \\cdot x \\cdot y".to_string()),
             },
-        ];
+        ]);
         assert_eq!(expected, sys.to_latex_equations());
     }
 }

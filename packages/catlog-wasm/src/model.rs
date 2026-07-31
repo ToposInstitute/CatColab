@@ -427,46 +427,42 @@ impl DblModel {
         Ok(())
     }
 
-    /// Gets label strings for the domain and codomain of a morphism generator.
+    /// Gets the domain and codomain of a morphism generator.
     ///
-    /// Returns `Some((dom_label, cod_label))` when the morphism has a domain
-    /// and codomain whose labels can be resolved from the namespace.
-    pub fn mor_generator_dom_cod_label_strings(
-        &self,
-        id: &QualifiedName,
-    ) -> Option<(String, String)> {
+    /// Returns `Some((dom, cod))`.
+    pub fn mor_generator_dom_cod(&self, id: &QualifiedName) -> Option<(Ob, Ob)> {
         let (dom, cod) = all_the_same!(match &self.model {
             DblModelBox::[Discrete, DiscreteTab, ModalUnital, ModalNonUnital](model) => {
                 (Quoter.quote(model.get_dom(id)?),
                  Quoter.quote(model.get_cod(id)?))
             }
         });
-        Some((self.ob_label_string(&dom)?, self.ob_label_string(&cod)?))
+        Some((dom, cod))
     }
 
-    /// Gets a label string for an object.
+    /// Gets the list of labels for an object.
     ///
-    /// For a single object returns its label (e.g. `"S"`). For a list of
-    /// objects returns bracketed labels (e.g. `"[S, I]"`).
-    fn ob_label_string(&self, ob: &Ob) -> Option<String> {
+    /// This works for both basic objects and list objects (e.g. `[x,y]` in a Petri net).
+    pub fn get_ob_label(&self, ob: &Ob) -> Option<Vec<QualifiedLabel>> {
         match ob {
             Ob::Basic(s) => {
                 let name = QualifiedName::deserialize_str(s).ok()?;
-                Some(self.ob_namespace.label_string(&name))
+                self.ob_namespace.label(&name).map(|var| vec![var])
             }
             Ob::App { ob, .. } => {
                 // FIXME: This is incorrect in general. The design issue is that
                 // this pretty printer claims to handles all models, but is
                 // customized to Petri nets as free SMCs where we prefer to omit
                 // the tensor application.
-                self.ob_label_string(ob)
+                self.get_ob_label(ob)
             }
             Ob::List { objects, .. } => {
-                let labels: Option<Vec<String>> = objects
+                let labels: Vec<_> = objects
                     .iter()
-                    .map(|ob| ob.as_ref().and_then(|ob| self.ob_label_string(ob)))
+                    .filter_map(|ob| ob.as_ref().and_then(|ob| self.get_ob_label(ob)))
+                    .flatten()
                     .collect();
-                Some(format!("[{}]", labels?.join(", ")))
+                Some(labels)
             }
             _ => None,
         }
@@ -864,10 +860,12 @@ pub(crate) mod tests {
         assert_eq!(Result::from(model.validate().0).map_err(|errs| errs.len()), Err(2));
     }
 
+    /// Construct a stock-flow diagram with a backwards link.
     pub(crate) fn backward_link(src_name: &str, tgt_name: &str, flow_name: &str) -> DblModel {
         let th = ThCategoryLinks::new().theory();
         let mut model = DblModel::new(&th);
         let [f, x, y, link] = [Uuid::now_v7(), Uuid::now_v7(), Uuid::now_v7(), Uuid::now_v7()];
+
         assert!(
             model
                 .add_ob(&ObDecl {

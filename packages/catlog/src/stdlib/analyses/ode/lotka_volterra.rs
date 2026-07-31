@@ -15,6 +15,7 @@ use tsify::Tsify;
 
 use super::Parameter;
 use crate::dbl::model::{FpDblModel, MutDblModel};
+use crate::latex::{Latex, ToLatexWithMap};
 use crate::one::Path;
 use crate::simulate::ode::PolynomialSystem;
 use crate::stdlib::analyses::ode::ode_semantics::{
@@ -31,6 +32,7 @@ impl ODESemantics for LotkaVolterraSemantics {
     type ModelType = DiscreteDblModel;
     type ParameterType = LotkaVolterraParameter;
     type AnalysisType = LotkaVolterraAnalysis;
+    type EquationsDataType = ();
     type ProblemDataType = LotkaVolterraProblemData;
 }
 
@@ -59,6 +61,15 @@ impl fmt::Display for LotkaVolterraParameter {
             Self::Interaction { link } => {
                 write!(f, "Interaction({})", link)
             }
+        }
+    }
+}
+
+impl ToLatexWithMap for LotkaVolterraParameter {
+    fn to_latex_with_map<T: Fn(&QualifiedName) -> String>(&self, f: T) -> Latex {
+        match self {
+            Self::Growth { variable } => Latex(format!("g_{{{}}}", f(variable))),
+            Self::Interaction { link } => Latex(format!("k_{{{}}}", f(link))),
         }
     }
 }
@@ -100,8 +111,8 @@ impl
     /// and [our paper on regulatory networks](crate::refs::RegNets).
     fn build_system_builder(
         &self,
-        model: &<LotkaVolterraSemantics as ODESemantics>::ModelType,
-    ) -> PolynomialODESystemBuilder<<LotkaVolterraSemantics as ODESemantics>::ParameterType> {
+        model: &DiscreteDblModel,
+    ) -> PolynomialODESystemBuilder<LotkaVolterraParameter> {
         let mut builder = PolynomialODESystemBuilder::new();
 
         for var in model.ob_generators_with_type(&self.var_ob_type) {
@@ -198,16 +209,11 @@ impl ODESemanticsProblemData<<LotkaVolterraSemantics as ODESemantics>::Parameter
 
     fn extend_scalars(
         &self,
-        sys: PolynomialSystem<
-            QualifiedName,
-            Parameter<<LotkaVolterraSemantics as ODESemantics>::ParameterType>,
-            i8,
-        >,
+        sys: PolynomialSystem<QualifiedName, Parameter<LotkaVolterraParameter>, i8>,
     ) -> PolynomialSystem<QualifiedName, f32, i8> {
         let sys = sys.extend_scalars(|poly| {
             poly.eval(|param| match param {
                 LotkaVolterraParameter::Growth { variable } => {
-                    // FIXME: this won't work, because `variable` will now be `Growth.variable`
                     self.growth_rates.get(variable).cloned().unwrap_or_default()
                 }
                 LotkaVolterraParameter::Interaction { link } => {
@@ -228,7 +234,7 @@ mod test {
     use super::*;
     use crate::{
         dbl::model::MutDblModel,
-        simulate::ode::LatexEquation,
+        latex::{LatexEquation, LatexEquations, wrap_with_backslash_text},
         stdlib::{models::*, theories::*},
     };
 
@@ -245,6 +251,54 @@ mod test {
         "#]);
         expected.assert_eq(&sys.to_string());
     }
+
+    #[test]
+    fn complicated_symbolic() {
+        let th = Rc::new(th_signed_category());
+        let mut model = DiscreteDblModel::new(th);
+        model.add_ob(name("a"), name("Object"));
+        model.add_ob(name("b"), name("Object"));
+        model.add_ob(name("c"), name("Object"));
+        model.add_ob(name("d"), name("Object"));
+        model.add_mor(name("f"), name("a"), name("b"), Path::Id(name("Object")));
+        model.add_mor(name("g"), name("b"), name("a"), Path::Id(name("Object")));
+        model.add_mor(name("h"), name("b"), name("a"), name("Negative").into());
+        model.add_mor(name("i"), name("a"), name("c"), name("Negative").into());
+        model.add_mor(name("j"), name("c"), name("d"), Path::Id(name("Object")));
+        model.add_mor(name("k"), name("d"), name("b"), name("Negative").into());
+        let sys = LotkaVolterraAnalysis::default().build_system(&model);
+        let expected = expect!([r#"
+            da = Growth(a) a + (Interaction(g) - Interaction(h)) a b
+            db = Interaction(f) a b + Growth(b) b - Interaction(k) b d
+            dc = -Interaction(i) a c + Growth(c) c
+            dd = Interaction(j) c d + Growth(d) d
+        "#]);
+        expected.assert_eq(&sys.to_string());
+    }
+
+    // Test for LaTeX.
+
+    #[test]
+    fn to_latex() {
+        let th = Rc::new(th_signed_category());
+        let model = negative_feedback(th);
+        let system = LotkaVolterraAnalysis::default().build_system(&model);
+        let equations =
+            system.to_latex_equations_with_map(|name| wrap_with_backslash_text(name.to_string()));
+        let expected = LatexEquations(vec![
+            LatexEquation {
+                lhs: Latex("\\frac{\\mathrm{d}}{\\mathrm{d}t} x".to_string()),
+                rhs: Latex("g_{x} \\cdot x - k_{\\text{negative}} \\cdot x \\cdot y".to_string()),
+            },
+            LatexEquation {
+                lhs: Latex("\\frac{\\mathrm{d}}{\\mathrm{d}t} y".to_string()),
+                rhs: Latex("k_{\\text{positive}} \\cdot x \\cdot y + g_{y} \\cdot y".to_string()),
+            },
+        ]);
+        assert_eq!(expected, equations);
+    }
+
+    // Numerical test.
 
     #[test]
     fn complicated_symbolic() {

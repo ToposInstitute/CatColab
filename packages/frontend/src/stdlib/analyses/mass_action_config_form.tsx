@@ -4,7 +4,11 @@ import { CheckboxField, FormGroup, SelectField } from "catcolab-ui-components";
 import type { MassActionEquationsData, MassActionProblemData, RateGranularity } from "catlog-wasm";
 
 /** Configuration of a mass-action analysis. */
-export type Config = MassActionProblemData | MassActionEquationsData;
+export type Config = MassActionEquationsData | MassActionProblemData;
+
+function isMassActionProblemData(config: Config): config is MassActionProblemData {
+    return (config as MassActionProblemData).equationsData !== undefined;
+}
 
 /** Form to configure a mass-action analysis. */
 export function MassActionConfigForm(props: {
@@ -12,11 +16,21 @@ export function MassActionConfigForm(props: {
     changeConfig: (f: (config: Config) => void) => void;
     enableGranularity: boolean;
 }) {
-    const massConservation = () => props.config.massConservationType;
-    const massConservationGranularity = () =>
-        props.config.massConservationType.type === "Unbalanced"
-            ? props.config.massConservationType.granularity
+    function massActionEquationsData(): MassActionEquationsData {
+        if (isMassActionProblemData(props.config)) {
+            return props.config.equationsData;
+        } else {
+            return props.config;
+        }
+    }
+
+    const massConservation = () => massActionEquationsData().massConservationType;
+    const massConservationGranularity = () => {
+        const massConversarvation = massActionEquationsData().massConservationType;
+        return massConversarvation.type === "Unbalanced"
+            ? massConversarvation.granularity
             : undefined;
+    };
 
     return (
         <FormGroup compact style={{ "min-width": "286px" }}>
@@ -25,14 +39,20 @@ export function MassActionConfigForm(props: {
                 checked={massConservation().type === "Balanced"}
                 onChange={(evt) => {
                     props.changeConfig((content) => {
+                        let massActionEquationsData: MassActionEquationsData;
+                        if (isMassActionProblemData(content)) {
+                            massActionEquationsData = content.equationsData;
+                        } else {
+                            massActionEquationsData = content;
+                        }
                         if (evt.currentTarget.checked) {
-                            content.massConservationType = {
+                            massActionEquationsData.massConservationType = {
                                 type: "Balanced",
                             };
                         } else {
-                            content.massConservationType = {
+                            massActionEquationsData.massConservationType = {
                                 type: "Unbalanced",
-                                granularity: "PerTransition",
+                                granularity: "PerPlace",
                             };
                         }
                     });
@@ -41,12 +61,20 @@ export function MassActionConfigForm(props: {
             <Show when={massConservation().type === "Unbalanced" && props.enableGranularity}>
                 <SelectField
                     label="Rate granularity"
-                    value={massConservationGranularity() ?? "PerTransition"}
+                    value={massConservationGranularity() ?? "PerPlace"}
                     onChange={(evt) => {
                         props.changeConfig((content) => {
-                            if (content.massConservationType.type === "Unbalanced") {
-                                content.massConservationType.granularity = evt.currentTarget
-                                    .value as RateGranularity;
+                            let massActionEquationsData: MassActionEquationsData;
+                            if (isMassActionProblemData(content)) {
+                                massActionEquationsData = content.equationsData;
+                            } else {
+                                massActionEquationsData = content;
+                            }
+                            if (
+                                massActionEquationsData.massConservationType.type === "Unbalanced"
+                            ) {
+                                massActionEquationsData.massConservationType.granularity = evt
+                                    .currentTarget.value as RateGranularity;
                             }
                         });
                     }}
