@@ -616,29 +616,26 @@ mod tests {
             (0, 2), (2, 1), (1, 0),   // and its reverse
             (1, 3), (3, 1),           // extra edges, not in any triangle here
         ];
-        let n = check_triangle_query(&edges);
-        assert!(n > 0, "test data should contain triangles");
-    }
-
-    // Run the triangle query E(x,y) E(y,z) E(z,x) (order x,y,z) over `edges` via the WCOJ
-    // plan, returning the triangles in sorted order.
-    //
-    // fwd = E indexed (source, dest); bwd = E indexed (dest, source). Rewritten atoms:
-    // fwd(x,y) fwd(y,z) bwd(x,z).
-    fn wcoj_triangle_query(edges: &[(Value, Value)]) -> Vec<Vec<Value>> {
-        let db = edge_db(edges);
+        let db = edge_db(&edges);
+        // fwd = E indexed (source, dest); bwd = E indexed (dest, source). Rewritten
+        // atoms: fwd(x,y) fwd(y,z) bwd(x,z).
         let fwd = Trie::build(&db, "E", &vec![TrieLevel(0), TrieLevel(1)]).unwrap();
         let bwd = Trie::build(&db, "E", &vec![TrieLevel(1), TrieLevel(0)]).unwrap();
         let plan = QueryPlan {
             indexes: vec![&fwd, &fwd, &bwd],
             levels: vec![vec![0, 2], vec![0, 1], vec![1, 2]],
         };
-        run_plan(&plan)
+        let got = run_plan(&plan);
+        let want = bruteforce_triangle_query(&edges);
+
+        assert!(!want.is_empty(), "test data should contain triangles");
+        assert_eq!(got, want, "triangle join mismatch");
     }
 
-    // The same triangle query by brute force: all (x,y,z) with x->y, y->z, z->x, in sorted
-    // order. Iterate out-neighbours of y (rather than all edges) so this stays near-linear
-    // in the number of 2-paths.
+    // The triangle query E(x,y) E(y,z) E(z,x) by brute force: all (x,y,z) with x->y, y->z,
+    // z->x, in sorted order. Iterate out-neighbours of y (rather than all edges) so this
+    // stays near-linear in the number of 2-paths. Used to cross-check the WCOJ plan, both in
+    // the unit test above and in the SNAP benchmark below.
     fn bruteforce_triangle_query(edges: &[(Value, Value)]) -> Vec<Vec<Value>> {
         let edge_set: HashSet<(Value, Value)> = edges.iter().copied().collect();
         let mut out: HashMap<Value, Vec<Value>> = HashMap::new();
@@ -652,15 +649,6 @@ mod tests {
             }
         }
         normalize(want)
-    }
-
-    // Run both the WCOJ and brute-force triangle queries, assert they agree, and return the
-    // triangle count.
-    fn check_triangle_query(edges: &[(Value, Value)]) -> usize {
-        let got = wcoj_triangle_query(edges);
-        let want = bruteforce_triangle_query(edges);
-        assert_eq!(got, want, "triangle join mismatch");
-        got.len()
     }
 
     // ---- Test 3: two-atom path query E(x,y) E(y,z), order x,y,z. ----
@@ -732,10 +720,24 @@ mod tests {
         };
         // load_edges_from already sorts.
         let edges = load_edges_from(file, max_edges);
+        let db = edge_db(&edges);
 
+        // WCOJ phase 1: build the trie indexes.
+        let wcoj_start = Instant::now();
+        let fwd = Trie::build(&db, "E", &vec![TrieLevel(0), TrieLevel(1)]).unwrap();
+        let bwd = Trie::build(&db, "E", &vec![TrieLevel(1), TrieLevel(0)]).unwrap();
+        let build_time = wcoj_start.elapsed();
+
+        // WCOJ phase 2: execute the join, materializing + sorting the results just like the
+        // brute force does, so the two are compared on equal terms.
+        let plan = QueryPlan {
+            indexes: vec![&fwd, &fwd, &bwd],
+            levels: vec![vec![0, 2], vec![0, 1], vec![1, 2]],
+        };
         let t = Instant::now();
-        let got = wcoj_triangle_query(&edges);
-        let wcoj_time = t.elapsed();
+        let got = run_plan(&plan);
+        let exec_time = t.elapsed();
+        let total_time = wcoj_start.elapsed();
 
         let t = Instant::now();
         let want = bruteforce_triangle_query(&edges);
@@ -744,9 +746,11 @@ mod tests {
         assert_eq!(got, want, "triangle join mismatch");
         println!(
             "    {dataset}: {} edges -> {} directed triangles
-wcoj          {:?}
+wcoj build    {:?}
+wcoj execute  {:?}
+wcoj total    {:?}
 2-edge-filter {:?}",
-            edges.len(), got.len(), wcoj_time, brute_time,
+            edges.len(), got.len(), build_time, exec_time, total_time, brute_time,
         );
     }
 
