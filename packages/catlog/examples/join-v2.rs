@@ -477,4 +477,224 @@ impl Trie {
 
 
 // ---------- MAIN ----------
-fn main() { todo!("main"); }
+fn main() { tests::run_all(); }
+
+
+// ============================================================================
+// ===================== TESTS (mostly claude-generated)  =====================
+// ============================================================================
+//
+// Everything below is test-only code. Run with:
+//
+//     cargo run --example join-v2
+//
+// Since query planning / variable-order selection don't exist yet, each test
+// hand-builds the trie indexes and the `QueryPlan` (indexes + levels) that a
+// planner would eventually produce, then checks `Trie::build` and
+// `QueryPlan::execute_dfs` against a brute-force computation over small data.
+mod tests {
+    use super::*;
+    use super::IndexColumnShape::{TrieLevel, EqColumn, EqConst};
+    use std::collections::{HashMap, HashSet};
+
+    // ---- A trivial in-memory Database backed by Vecs. ----
+    struct VecDb {
+        // name -> (arity, rows)
+        rels: HashMap<&'static str, (usize, Vec<Vec<Value>>)>,
+    }
+
+    impl VecDb {
+        fn new() -> Self { VecDb { rels: HashMap::new() } }
+
+        // Builder-style: add a relation. Panics if a row's width != arity.
+        fn rel(mut self, name: &'static str, arity: usize, rows: Vec<Vec<Value>>) -> Self {
+            for row in &rows { assert_eq!(row.len(), arity, "bad row width in {name}"); }
+            self.rels.insert(name, (arity, rows));
+            self
+        }
+    }
+
+    impl Database for VecDb {
+        type RelId = &'static str;
+        fn arity(&self, r: &'static str) -> usize { self.rels[r].0 }
+        fn count(&self, r: &'static str) -> usize { self.rels[r].1.len() }
+        fn rows(&self, r: &'static str) -> impl Iterator<Item = &[Value]> {
+            self.rels[r].1.iter().map(|row| row.as_slice())
+        }
+    }
+
+    // ---- Small helpers. ----
+
+    // Sorted keys of a trie node's map.
+    fn keys(node: &Trie) -> Vec<Value> {
+        match node {
+            Trie::Node(map) => { let mut k: Vec<Value> = map.keys().copied().collect(); k.sort(); k }
+            Trie::Leaf => panic!("expected a Trie::Node, got a Leaf"),
+        }
+    }
+
+    // Child of a node under `key` (panics if absent or if node is a Leaf).
+    fn child<'a>(node: &'a Trie, key: Value) -> &'a Trie {
+        match node {
+            Trie::Node(map) => map.get(&key).expect("missing key"),
+            Trie::Leaf => panic!("expected a Trie::Node, got a Leaf"),
+        }
+    }
+
+    fn is_leaf(node: &Trie) -> bool { matches!(node, Trie::Leaf) }
+
+    // Run a plan and return its output rows, sorted & de-duplicated.
+    fn run_plan(plan: &QueryPlan) -> Vec<Vec<Value>> {
+        let mut out: Vec<Vec<Value>> = Vec::new();
+        plan.execute_dfs(|row| out.push(row.to_vec()));
+        out.sort();
+        out.dedup();
+        out
+    }
+
+    fn normalize(mut v: Vec<Vec<Value>>) -> Vec<Vec<Value>> {
+        v.sort();
+        v.dedup();
+        v
+    }
+
+    // ---- Test 1: Trie::build across all IndexColumnShape kinds. ----
+    //
+    // Exercises: multi-level tries, a non-identity permutation shape, the
+    // EqColumn filter (R(x,x)), empty results (-> None), and the zero-level
+    // EqConst path (-> Some(Leaf) / None).
+    fn test_trie_build() {
+        let db = VecDb::new()
+            .rel("E", 2, vec![vec![0, 1], vec![0, 2], vec![1, 2]])
+            .rel("R", 2, vec![vec![0, 0], vec![1, 2], vec![3, 3], vec![2, 2]])
+            .rel("S", 2, vec![vec![0, 1], vec![1, 0]])
+            .rel("T", 1, vec![vec![5], vec![6]]);
+
+        // Forward index E(x,y): level 0 = col 0, level 1 = col 1.
+        let fwd = Trie::build(&db, "E", &vec![TrieLevel(0), TrieLevel(1)]).unwrap();
+        assert_eq!(keys(&fwd), vec![0, 1]);
+        assert_eq!(keys(child(&fwd, 0)), vec![1, 2]);
+        assert_eq!(keys(child(&fwd, 1)), vec![2]);
+        assert!(is_leaf(child(child(&fwd, 0), 1)));
+
+        // Backward index E(x,y) with a *swapped* shape: level 0 = col 1 (the
+        // destination), level 1 = col 0 (the source). So top-level keys are the
+        // set of destinations.
+        let bwd = Trie::build(&db, "E", &vec![TrieLevel(1), TrieLevel(0)]).unwrap();
+        assert_eq!(keys(&bwd), vec![1, 2]);       // destinations
+        assert_eq!(keys(child(&bwd, 2)), vec![0, 1]); // sources of edges into 2
+
+        // R(x,x): EqColumn(0) keeps only rows where col1 == col0; depth-1 trie.
+        let diag = Trie::build(&db, "R", &vec![TrieLevel(0), EqColumn(0)]).unwrap();
+        assert_eq!(keys(&diag), vec![0, 2, 3]);
+        assert!(is_leaf(child(&diag, 0)));
+
+        // S has no diagonal rows, so R(x,x)-style build over S is empty -> None.
+        assert!(Trie::build(&db, "S", &vec![TrieLevel(0), EqColumn(0)]).is_none());
+
+        // Zero-level (fully constant) atom via EqConst: Some(Leaf) iff a match exists.
+        match Trie::build(&db, "T", &vec![EqConst(5)]) {
+            Some(Trie::Leaf) => {}
+            other => panic!("T(5) should build Some(Leaf), got {:?}", other.is_some()),
+        }
+        assert!(Trie::build(&db, "T", &vec![EqConst(9)]).is_none());
+    }
+
+    // ---- Test 2: triangle query E(x,y) E(y,z) E(z,x), order x,y,z. ----
+    //
+    // This is the worked example in the QueryPlan doc comment: the canonical
+    // worst-case-optimal-join workload. Checked against a brute-force scan.
+    fn test_triangle_query() {
+        let edges: Vec<(Value, Value)> = vec![
+            (0, 1), (1, 2), (2, 0),   // a directed 3-cycle
+            (0, 2), (2, 1), (1, 0),   // and its reverse
+            (1, 3), (3, 1),           // extra edges, not in any triangle here
+        ];
+        let db = edge_db(&edges);
+
+        // fwd = E indexed (source, dest); bwd = E indexed (dest, source).
+        let fwd = Trie::build(&db, "E", &vec![TrieLevel(0), TrieLevel(1)]).unwrap();
+        let bwd = Trie::build(&db, "E", &vec![TrieLevel(1), TrieLevel(0)]).unwrap();
+
+        // Rewritten atoms: fwd(x,y) fwd(y,z) bwd(x,z).
+        let plan = QueryPlan {
+            indexes: vec![&fwd, &fwd, &bwd],
+            levels: vec![vec![0, 2], vec![0, 1], vec![1, 2]],
+        };
+        let got = run_plan(&plan);
+
+        // Brute force: all (x,y,z) with x->y, y->z, z->x.
+        let edge_set: HashSet<(Value, Value)> = edges.iter().copied().collect();
+        let mut want: Vec<Vec<Value>> = Vec::new();
+        for &(x, y) in &edges {
+            for &(y2, z) in &edges {
+                if y2 == y && edge_set.contains(&(z, x)) {
+                    want.push(vec![x, y, z]);
+                }
+            }
+        }
+        let want = normalize(want);
+
+        assert!(!want.is_empty(), "test data should contain triangles");
+        assert_eq!(got, want, "triangle join mismatch");
+    }
+
+    // ---- Test 3: two-atom path query E(x,y) E(y,z), order x,y,z. ----
+    //
+    // A trie shared by two atom-entries (both use `fwd`), so it exercises the
+    // save/restore of a trie that participates in multiple levels.
+    fn test_path_query() {
+        let edges: Vec<(Value, Value)> = vec![
+            (0, 1), (1, 2), (1, 3), (2, 3), (3, 0),
+        ];
+        let db = edge_db(&edges);
+        let fwd = Trie::build(&db, "E", &vec![TrieLevel(0), TrieLevel(1)]).unwrap();
+
+        // levels: x <- entry0; y <- entry0 ∩ entry1; z <- entry1.
+        let plan = QueryPlan {
+            indexes: vec![&fwd, &fwd],
+            levels: vec![vec![0], vec![0, 1], vec![1]],
+        };
+        let got = run_plan(&plan);
+
+        let mut want: Vec<Vec<Value>> = Vec::new();
+        for &(x, y) in &edges {
+            for &(y2, z) in &edges {
+                if y2 == y { want.push(vec![x, y, z]); }
+            }
+        }
+        let want = normalize(want);
+
+        assert!(!want.is_empty(), "test data should contain 2-paths");
+        assert_eq!(got, want, "path join mismatch");
+    }
+
+    // ---- Test 4: single self-join atom R(x,x), order x. ----
+    //
+    // Exercises the EqColumn trie inside execute_dfs (a depth-1 join whose only
+    // trie came from a variable-reuse shape).
+    fn test_self_loop_query() {
+        let db = VecDb::new().rel(
+            "R", 2,
+            vec![vec![0, 0], vec![1, 1], vec![2, 3], vec![4, 4], vec![5, 6]],
+        );
+        let diag = Trie::build(&db, "R", &vec![TrieLevel(0), EqColumn(0)]).unwrap();
+        let plan = QueryPlan { indexes: vec![&diag], levels: vec![vec![0]] };
+        let got = run_plan(&plan);
+        assert_eq!(got, vec![vec![0], vec![1], vec![4]], "self-loop mismatch");
+    }
+
+    // Build a Database with a single binary relation "E" from an edge list.
+    fn edge_db(edges: &[(Value, Value)]) -> VecDb {
+        let rows: Vec<Vec<Value>> = edges.iter().map(|&(a, b)| vec![a, b]).collect();
+        VecDb::new().rel("E", 2, rows)
+    }
+
+    pub fn run_all() {
+        test_trie_build();       println!("ok  test_trie_build");
+        test_triangle_query();   println!("ok  test_triangle_query");
+        test_path_query();       println!("ok  test_path_query");
+        test_self_loop_query();  println!("ok  test_self_loop_query");
+        println!("all tests passed");
+    }
+}
