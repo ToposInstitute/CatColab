@@ -620,12 +620,12 @@ mod tests {
         assert!(n > 0, "test data should contain triangles");
     }
 
-    // Run the triangle query E(x,y) E(y,z) E(z,x) (order x,y,z) over `edges` via the
-    // WCOJ plan, cross-check it against a brute-force scan, and return the triangle count.
+    // Run the triangle query E(x,y) E(y,z) E(z,x) (order x,y,z) over `edges` via the WCOJ
+    // plan, returning the triangles in sorted order.
     //
     // fwd = E indexed (source, dest); bwd = E indexed (dest, source). Rewritten atoms:
     // fwd(x,y) fwd(y,z) bwd(x,z).
-    fn check_triangle_query(edges: &[(Value, Value)]) -> usize {
+    fn wcoj_triangle_query(edges: &[(Value, Value)]) -> Vec<Vec<Value>> {
         let db = edge_db(edges);
         let fwd = Trie::build(&db, "E", &vec![TrieLevel(0), TrieLevel(1)]).unwrap();
         let bwd = Trie::build(&db, "E", &vec![TrieLevel(1), TrieLevel(0)]).unwrap();
@@ -633,10 +633,13 @@ mod tests {
             indexes: vec![&fwd, &fwd, &bwd],
             levels: vec![vec![0, 2], vec![0, 1], vec![1, 2]],
         };
-        let got = run_plan(&plan);
+        run_plan(&plan)
+    }
 
-        // Brute force: all (x,y,z) with x->y, y->z, z->x. Iterate out-neighbours of y
-        // (rather than all edges) so this stays near-linear in the number of 2-paths.
+    // The same triangle query by brute force: all (x,y,z) with x->y, y->z, z->x, in sorted
+    // order. Iterate out-neighbours of y (rather than all edges) so this stays near-linear
+    // in the number of 2-paths.
+    fn bruteforce_triangle_query(edges: &[(Value, Value)]) -> Vec<Vec<Value>> {
         let edge_set: HashSet<(Value, Value)> = edges.iter().copied().collect();
         let mut out: HashMap<Value, Vec<Value>> = HashMap::new();
         for &(a, b) in edges { out.entry(a).or_default().push(b); }
@@ -648,8 +651,14 @@ mod tests {
                 }
             }
         }
-        let want = normalize(want);
+        normalize(want)
+    }
 
+    // Run both the WCOJ and brute-force triangle queries, assert they agree, and return the
+    // triangle count.
+    fn check_triangle_query(edges: &[(Value, Value)]) -> usize {
+        let got = wcoj_triangle_query(edges);
+        let want = bruteforce_triangle_query(edges);
         assert_eq!(got, want, "triangle join mismatch");
         got.len()
     }
@@ -722,13 +731,22 @@ mod tests {
             Err(e) => { println!("    (skipped: cannot open {path}: {e})"); return; }
         };
         // load_edges_from already sorts.
-        let mut edges = load_edges_from(file, max_edges);
+        let edges = load_edges_from(file, max_edges);
 
-        let started = Instant::now();
-        let n = check_triangle_query(&edges);
+        let t = Instant::now();
+        let got = wcoj_triangle_query(&edges);
+        let wcoj_time = t.elapsed();
+
+        let t = Instant::now();
+        let want = bruteforce_triangle_query(&edges);
+        let brute_time = t.elapsed();
+
+        assert_eq!(got, want, "triangle join mismatch");
         println!(
-            "    {dataset}: {} edges -> {} directed triangles in {:?}",
-            edges.len(), n, started.elapsed(),
+            "    {dataset}: {} edges -> {} directed triangles
+wcoj          {:?}
+2-edge-filter {:?}",
+            edges.len(), got.len(), wcoj_time, brute_time,
         );
     }
 
