@@ -4,10 +4,7 @@ use std::io::prelude::*;
 use std::time::Instant;
 use std::collections::HashMap;
 use std::collections::HashSet;
-use std::fmt::Display;
-use std::rc::Rc;
 use std::hash::Hash;
-use std::cmp::Ordering;
 
 const DEBUG: bool = true;
 // Debug-print vectors of length <= PRINTMAX.
