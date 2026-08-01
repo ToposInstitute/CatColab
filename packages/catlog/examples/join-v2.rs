@@ -166,16 +166,6 @@ struct QueryPlan<'a> {
     levels: Vec<Vec<usize>>,
 }
 
-impl QueryPlan<'_> {
-    fn from_var_order<'a, Db: Database, Var: Eq + Hash + Copy>(
-        db: &'a Db,
-        query: Query<Db, Var>,
-        var_order: Vec<usize>,
-    ) -> QueryPlan<'a> {
-        todo!()
-    }
-}
-
 // ==== ON IMPLEMENTING COMPUTATIONAL ATOMS ====
 //
 // Frank McSherry's DataToad project takes a "breadth-first" approach to solving WCOJs,
