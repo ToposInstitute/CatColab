@@ -180,9 +180,16 @@ impl<'a> QueryPlan<'a> {
 
 struct QueryDfsState<'a, F> {
     callback: F,
-    tries: Vec<&'a Trie>,
+    tries: Vec<&'a Trie>,       // the current node in each trie that we're investigating.
     levels_reverse: Vec<Vec<usize>>,
-    prefix: Vec<Value>,
+    prefix: Vec<Value>,      // partial solution: prefix[i] = value of ith variable.
+    // scratch: Vec<&'a Trie>,  // a scratch vector of tries used when trying to find a match
+    // stack: Vec<&'a Trie>,  // a stack of trie nodes, used to save & restore tries
+    // // Every time we enter a level, we push the trie nodes for that level on the stack.
+    // //
+    // // Eg. if we enter a level [0,2] and our stack is [s...]
+    // // we push plan.tries[0] and plan.tries[2] on the stack
+    // // so now our stack is [s..., plan.tries[0], plan.tries[2]].
 }
 
 impl<'a, F: FnMut(&[Value])> QueryDfsState<'a, F> {
@@ -196,6 +203,7 @@ impl<'a, F: FnMut(&[Value])> QueryDfsState<'a, F> {
         // QueryDfsState for saving this information (one big Vec) and push/pop it.
         let level_tries: Vec<&Trie> = level.iter().map(|&trie_idx| self.tries[trie_idx]).collect();
         // Get the trie maps for each trie we're using in this level.
+        // TODO: either avoid this allocation or put it into a mutable vec on QueryDfsState.
         let level_maps: Vec<&HashMap<Value, Trie>> = level_tries.iter().copied()
             .map(|trie| match trie {
                 Trie::Node(map) => map,
@@ -209,18 +217,20 @@ impl<'a, F: FnMut(&[Value])> QueryDfsState<'a, F> {
             .0;
 
         'keys: for (key, child) in level_maps[proposer_map_idx] {
-            // Descend the proposer into this child.
-            self.tries[level[proposer_map_idx]] = child;
-            // For every *other* trie in this level, look up this key. Skip the key if any
-            // lack it: the intersection is empty there, so it can't extend the prefix.
+            let mut children = Vec::new();
+            // Look up this key in each trie at this level. If any trie lacks this key,
+            // skip to the next key.
             for (pos, &trie_idx) in level.iter().enumerate() {
-                if pos == proposer_map_idx { continue }
+                if pos == proposer_map_idx { children.push(child); continue; }
                 match level_maps[pos].get(key) {
-                    Some(child) => self.tries[trie_idx] = child,
+                    Some(child) => children.push(child),
                     None => continue 'keys,
                 }
             }
-            // The key is present in every trie of this level: bind it and recurse.
+            // Write the children into `self.tries` and recurse.
+            for (pos, &trie_idx) in level.iter().enumerate() {
+                self.tries[trie_idx] = children[pos];
+            }
             self.recur(*key)
         }
 
