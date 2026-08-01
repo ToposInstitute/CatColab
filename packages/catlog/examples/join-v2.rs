@@ -188,14 +188,16 @@ struct QueryDfsState<'a, F> {
 impl<'a, F: FnMut(&[Value])> QueryDfsState<'a, F> {
     fn execute(&mut self) {
         assert!(!self.levels_reverse.is_empty());
-        // if self.levels_reverse.is_empty() {
-        //     f(self.prefix);
-        //     return
-        // }
         let level: Vec<usize> = self.levels_reverse.pop().unwrap();
+        // For each trie in this level, snapshot its current node so we can restore it
+        // when we're done.
+        //
+        // TODO: instead of allocating many small vectors here, add a stack Vec to
+        // QueryDfsState for saving this information (one big Vec) and push/pop it.
+        let level_tries: Vec<&Trie> = level.iter().map(|&trie_idx| self.tries[trie_idx]).collect();
         // Get the trie maps for each trie we're using in this level.
-        let level_maps: Vec<&HashMap<Value, Trie>> = level.iter().copied()
-            .map(|trie_idx| match self.tries[trie_idx] {
+        let level_maps: Vec<&HashMap<Value, Trie>> = level_tries.iter().copied()
+            .map(|trie| match trie {
                 Trie::Node(map) => map,
                 Trie::Leaf => panic!("trie ran out of levels too soon"),
             }).collect();
@@ -205,19 +207,29 @@ impl<'a, F: FnMut(&[Value])> QueryDfsState<'a, F> {
             .min_by_key(|(map_idx, map)| map.len())
             .unwrap()
             .0;
-        for (key, child) in level_maps[proposer_map_idx] {
-            // Descend into this child.
-            self.tries[proposer_map_idx] = child;
-            // For every *other* trie in this level, look up this key. Continue if any
-            // lack it.
-            todo!("descend the other tries");
-            // Now, execute recursively.
+
+        'keys: for (key, child) in level_maps[proposer_map_idx] {
+            // Descend the proposer into this child.
+            self.tries[level[proposer_map_idx]] = child;
+            // For every *other* trie in this level, look up this key. Skip the key if any
+            // lack it: the intersection is empty there, so it can't extend the prefix.
+            for (pos, &trie_idx) in level.iter().enumerate() {
+                if pos == proposer_map_idx { continue }
+                match level_maps[pos].get(key) {
+                    Some(child) => self.tries[trie_idx] = child,
+                    None => continue 'keys,
+                }
+            }
+            // The key is present in every trie of this level: bind it and recurse.
             self.recur(*key)
         }
-        todo!("Restore the trie maps for every map we used in this level.");
+
+        // Restore every trie in this level to the parent node the caller left it at.
+        for (pos, &trie_idx) in level.iter().enumerate() {
+            self.tries[trie_idx] = level_tries[pos];
+        }
         self.levels_reverse.push(level);
     }
-
 
     fn recur(&mut self, next: Value) {
         self.prefix.push(next);
