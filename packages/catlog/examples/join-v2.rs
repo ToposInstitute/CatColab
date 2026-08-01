@@ -133,6 +133,49 @@ struct QueryContext<Db: Database, Var: Eq + Hash + Copy> {
     query: Query<Db, Var>,
 }
 
+// A plan has one `indexes` entry for each atom in the query and one level for each
+// variable. The index entries may happen to be duplicates of the same index; that's
+// deliberate: when we execute the plan, we're going to maintain some distinct mutable
+// state corresponding to each entry.
+//
+// levels[i]: bounds for variable i.
+// levels[i][j]: the trie which we should use to bound this variable.
+// Let t = indexes[k] be a trie and d be its depth. Then `k` should occur exactly `d`
+// times in `levels`, each occurrence corresponding to one level of `t`.
+//
+// Example: Consider the query
+//
+//     E(x,y) E(y,z) E(z,x) with variable order x,y,z
+//
+// We'll need two indexes, fwd(x,y) = E(x,y) and bwd(y,x) = E(x,y). You can think of this
+// as rewriting the query so that every atom has the same variable order:
+//
+//     fwd(x,y) fwd(y,z) bwd(x,z)
+//
+// Then this becomes:
+//
+//     QueryPlan {
+//         indexes: [&fwd, &fwd, &bwd],
+//         levels: [[0,2],      // x ← fwd    ∩ bwd    = {x : ∃y,z. E(x,y) ∧ E(z,x)}
+//                  [0,1],      // y ← fwd[x] ∩ fwd    = {y : E(x,y) ∧ ∃z. E(y,z)}
+//                  [1,2]],     // z ← fwd[y] ∩ bwd[x] = {z : E(y,z) ∧ E(z,x) }
+//     }
+struct QueryPlan<'a> {
+    // May contain duplicates. This is deliberate. TODO EXPLAIN
+    indexes: Vec<&'a Trie>,
+    levels: Vec<Vec<usize>>,
+}
+
+impl QueryPlan<'_> {
+    fn from_var_order<'a, Db: Database, Var: Eq + Hash + Copy>(
+        db: &'a Db,
+        query: Query<Db, Var>,
+        var_order: Vec<usize>,
+    ) -> QueryPlan<'a> {
+        todo!()
+    }
+}
+
 // ==== ON IMPLEMENTING COMPUTATIONAL ATOMS ====
 //
 // Frank McSherry's DataToad project takes a "breadth-first" approach to solving WCOJs,
