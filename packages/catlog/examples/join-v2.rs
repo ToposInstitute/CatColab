@@ -543,18 +543,15 @@ mod tests {
 
     fn is_leaf(node: &Trie) -> bool { matches!(node, Trie::Leaf) }
 
-    // Run a plan and return its output rows, sorted & de-duplicated.
+    // Run a plan and return its output rows in sorted order.
     fn run_plan(plan: &QueryPlan) -> Vec<Vec<Value>> {
         let mut out: Vec<Vec<Value>> = Vec::new();
         plan.execute_dfs(|row| out.push(row.to_vec()));
-        out.sort();
-        out.dedup();
-        out
+        normalize(out)
     }
 
     fn normalize(mut v: Vec<Vec<Value>>) -> Vec<Vec<Value>> {
         v.sort();
-        v.dedup();
         v
     }
 
@@ -610,33 +607,42 @@ mod tests {
             (0, 2), (2, 1), (1, 0),   // and its reverse
             (1, 3), (3, 1),           // extra edges, not in any triangle here
         ];
-        let db = edge_db(&edges);
+        let n = check_triangle_query(&edges);
+        assert!(n > 0, "test data should contain triangles");
+    }
 
-        // fwd = E indexed (source, dest); bwd = E indexed (dest, source).
+    // Run the triangle query E(x,y) E(y,z) E(z,x) (order x,y,z) over `edges` via the
+    // WCOJ plan, cross-check it against a brute-force scan, and return the triangle count.
+    //
+    // fwd = E indexed (source, dest); bwd = E indexed (dest, source). Rewritten atoms:
+    // fwd(x,y) fwd(y,z) bwd(x,z).
+    fn check_triangle_query(edges: &[(Value, Value)]) -> usize {
+        let db = edge_db(edges);
         let fwd = Trie::build(&db, "E", &vec![TrieLevel(0), TrieLevel(1)]).unwrap();
         let bwd = Trie::build(&db, "E", &vec![TrieLevel(1), TrieLevel(0)]).unwrap();
-
-        // Rewritten atoms: fwd(x,y) fwd(y,z) bwd(x,z).
         let plan = QueryPlan {
             indexes: vec![&fwd, &fwd, &bwd],
             levels: vec![vec![0, 2], vec![0, 1], vec![1, 2]],
         };
         let got = run_plan(&plan);
 
-        // Brute force: all (x,y,z) with x->y, y->z, z->x.
+        // Brute force: all (x,y,z) with x->y, y->z, z->x. Iterate out-neighbours of y
+        // (rather than all edges) so this stays near-linear in the number of 2-paths.
         let edge_set: HashSet<(Value, Value)> = edges.iter().copied().collect();
+        let mut out: HashMap<Value, Vec<Value>> = HashMap::new();
+        for &(a, b) in edges { out.entry(a).or_default().push(b); }
         let mut want: Vec<Vec<Value>> = Vec::new();
-        for &(x, y) in &edges {
-            for &(y2, z) in &edges {
-                if y2 == y && edge_set.contains(&(z, x)) {
-                    want.push(vec![x, y, z]);
+        for &(x, y) in edges {
+            if let Some(zs) = out.get(&y) {
+                for &z in zs {
+                    if edge_set.contains(&(z, x)) { want.push(vec![x, y, z]); }
                 }
             }
         }
         let want = normalize(want);
 
-        assert!(!want.is_empty(), "test data should contain triangles");
         assert_eq!(got, want, "triangle join mismatch");
+        got.len()
     }
 
     // ---- Test 3: two-atom path query E(x,y) E(y,z), order x,y,z. ----
@@ -690,11 +696,41 @@ mod tests {
         VecDb::new().rel("E", 2, rows)
     }
 
+    // ---- Test 5: triangle query on a real SNAP dataset. ----
+    //
+    // Loads (a prefix of) the named dataset from examples/data/ and runs the same triangle
+    // query as test 2, cross-checked against brute force. `max_edges` caps how much of
+    // the file we read so we can start small and scale up; None means "the whole file".
+    // The crate directory is resolved at compile time, so it works regardless of the
+    // working directory; if the file is missing the test is skipped, not failed.
+    fn run_triangle_snap(dataset: &str, max_edges: Option<usize>) {
+        use std::fs::File;
+        let path = format!("{}/examples/data/{dataset}", env!("CARGO_MANIFEST_DIR"));
+        let file = match File::open(&path) {
+            Ok(f) => f,
+            Err(e) => { println!("    (skipped: cannot open {path}: {e})"); return; }
+        };
+        // load_edges_from already sorts.
+        let mut edges = load_edges_from(file, max_edges);
+
+        let started = Instant::now();
+        let n = check_triangle_query(&edges);
+        println!(
+            "    {dataset}: {} edges -> {} directed triangles in {:?}",
+            edges.len(), n, started.elapsed(),
+        );
+    }
+
+    fn test_triangle_snap() { run_triangle_snap("ca-GrQc.txt", Some(3_000)); }
+    fn test_triangle_snap_large() { run_triangle_snap("wiki-Vote.txt", None); }
+
     pub fn run_all() {
         test_trie_build();       println!("ok  test_trie_build");
         test_triangle_query();   println!("ok  test_triangle_query");
         test_path_query();       println!("ok  test_path_query");
         test_self_loop_query();  println!("ok  test_self_loop_query");
+        test_triangle_snap();    println!("ok  test_triangle_snap");
+        test_triangle_snap_large();    println!("ok  test_triangle_snap_large");
         println!("all tests passed");
     }
 }
