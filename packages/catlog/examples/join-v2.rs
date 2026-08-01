@@ -54,9 +54,9 @@ fn load_edges_from<R: std::io::Read>(source: R, max_edges: Option<usize>) -> Vec
     if edges.is_sorted() {
         println!(", already sorted");
     } else {
-        println!(", sorting...");
+        print_flush!(", sorting...");
         edges.sort_unstable();
-        println!("sorted!");
+        println!(" done!");
     }
     return edges;
 }
@@ -477,7 +477,13 @@ impl Trie {
 
 
 // ---------- BENCHMARKS ----------
-fn main() { tests::run_triangle_snap("wiki-Vote.txt", None); }
+fn main() {
+    tests::run_triangle_snap("ca-GrQc.txt", None);
+    tests::run_triangle_snap("wiki-Vote.txt", None);
+    tests::run_triangle_snap("cit-HepTh.txt", None);
+    tests::run_triangle_snap("email-Enron.txt", None);
+    tests::run_triangle_snap("soc-Epinions1.txt", None);
+}
 
 
 // ============================================================================
