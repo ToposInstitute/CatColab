@@ -166,6 +166,71 @@ struct QueryPlan<'a> {
     levels: Vec<Vec<usize>>,
 }
 
+impl<'a> QueryPlan<'a> {
+    fn execute_dfs<F>(&self, mut f: F) where F: FnMut(&[Value]) {
+        // Execute via depth-first backtracking.
+        QueryDfsState {
+            tries: self.indexes.clone(),
+            levels_reverse: self.levels.iter().rev().cloned().collect(),
+            prefix: Vec::with_capacity(self.levels.len()),
+            callback: f,
+        }.execute()
+    }
+}
+
+struct QueryDfsState<'a, F> {
+    callback: F,
+    tries: Vec<&'a Trie>,
+    levels_reverse: Vec<Vec<usize>>,
+    prefix: Vec<Value>,
+}
+
+impl<'a, F: FnMut(&[Value])> QueryDfsState<'a, F> {
+    fn execute(&mut self) {
+        assert!(!self.levels_reverse.is_empty());
+        // if self.levels_reverse.is_empty() {
+        //     f(self.prefix);
+        //     return
+        // }
+        let level: Vec<usize> = self.levels_reverse.pop().unwrap();
+        // Get the trie maps for each trie we're using in this level.
+        let level_maps: Vec<&HashMap<Value, Trie>> = level.iter().copied()
+            .map(|trie_idx| match self.tries[trie_idx] {
+                Trie::Node(map) => map,
+                Trie::Leaf => panic!("trie ran out of levels too soon"),
+            }).collect();
+        // Which map has the smallest count?
+        let proposer_map_idx: usize = level_maps.iter()
+            .enumerate()
+            .min_by_key(|(map_idx, map)| map.len())
+            .unwrap()
+            .0;
+        for (key, child) in level_maps[proposer_map_idx] {
+            // Descend into this child.
+            self.tries[proposer_map_idx] = child;
+            // For every *other* trie in this level, look up this key. Continue if any
+            // lack it.
+            todo!("descend the other tries");
+            // Now, execute recursively.
+            self.recur(*key)
+        }
+        todo!("Restore the trie maps for every map we used in this level.");
+        self.levels_reverse.push(level);
+    }
+
+
+    fn recur(&mut self, next: Value) {
+        self.prefix.push(next);
+        if self.levels_reverse.is_empty() {
+            (self.callback)(self.prefix.as_slice());
+        } else {
+            self.execute();
+        }
+        let popped = self.prefix.pop();
+        debug_assert!(popped == Some(next));
+    }
+}
+
 // ==== ON IMPLEMENTING COMPUTATIONAL ATOMS ====
 //
 // Frank McSherry's DataToad project takes a "breadth-first" approach to solving WCOJs,
