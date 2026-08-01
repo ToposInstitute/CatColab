@@ -714,10 +714,7 @@ mod tests {
     pub fn run_triangle_snap(dataset: &str, max_edges: Option<usize>) {
         use std::fs::File;
         let path = format!("{}/examples/data/{dataset}", env!("CARGO_MANIFEST_DIR"));
-        let file = match File::open(&path) {
-            Ok(f) => f,
-            Err(e) => { println!("    (skipped: cannot open {path}: {e})"); return; }
-        };
+        let file = File::open(&path).expect("could not open data file");
         // load_edges_from already sorts.
         let edges = load_edges_from(file, max_edges);
         let db = edge_db(&edges);
@@ -745,11 +742,12 @@ mod tests {
 
         assert_eq!(got, want, "triangle join mismatch");
         println!(
-            "    {dataset}: {} edges -> {} directed triangles
-wcoj build    {:?}
-wcoj execute  {:?}
-wcoj total    {:?}
-2-edge-filter {:?}",
+            "{dataset}: {} edges -> {} directed triangles
+  wcoj build    {:?}
+  wcoj execute  {:?}
+  wcoj total    {:?}
+  2-edge-filter {:?}
+",
             edges.len(), got.len(), build_time, exec_time, total_time, brute_time,
         );
     }
