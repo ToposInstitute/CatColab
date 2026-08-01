@@ -476,17 +476,18 @@ impl Trie {
 // 6. Execute query using the indexes.
 
 
-// ---------- MAIN ----------
-fn main() { tests::run_all(); }
+// ---------- BENCHMARKS ----------
+fn main() { tests::run_triangle_snap("wiki-Vote.txt", None); }
 
 
 // ============================================================================
-// ===================== TESTS (mostly claude-generated)  =====================
+// ========= TESTS, BENCHMARKS, & HELPERS (mostly claude-generated)  ==========
 // ============================================================================
 //
-// Everything below is test-only code. Run with:
+// Run the tests with:
 //
-//     cargo run --example join-v2
+//     cargo test --example join-v2
+//     cargo test --example join-v2 -- --nocapture   # to see the SNAP timing output
 //
 // Since query planning / variable-order selection don't exist yet, each test
 // hand-builds the trie indexes and the `QueryPlan` (indexes + levels) that a
@@ -560,6 +561,7 @@ mod tests {
     // Exercises: multi-level tries, a non-identity permutation shape, the
     // EqColumn filter (R(x,x)), empty results (-> None), and the zero-level
     // EqConst path (-> Some(Leaf) / None).
+    #[test]
     fn test_trie_build() {
         let db = VecDb::new()
             .rel("E", 2, vec![vec![0, 1], vec![0, 2], vec![1, 2]])
@@ -601,6 +603,7 @@ mod tests {
     //
     // This is the worked example in the QueryPlan doc comment: the canonical
     // worst-case-optimal-join workload. Checked against a brute-force scan.
+    #[test]
     fn test_triangle_query() {
         let edges: Vec<(Value, Value)> = vec![
             (0, 1), (1, 2), (2, 0),   // a directed 3-cycle
@@ -649,6 +652,7 @@ mod tests {
     //
     // A trie shared by two atom-entries (both use `fwd`), so it exercises the
     // save/restore of a trie that participates in multiple levels.
+    #[test]
     fn test_path_query() {
         let edges: Vec<(Value, Value)> = vec![
             (0, 1), (1, 2), (1, 3), (2, 3), (3, 0),
@@ -679,6 +683,7 @@ mod tests {
     //
     // Exercises the EqColumn trie inside execute_dfs (a depth-1 join whose only
     // trie came from a variable-reuse shape).
+    #[test]
     fn test_self_loop_query() {
         let db = VecDb::new().rel(
             "R", 2,
@@ -703,7 +708,7 @@ mod tests {
     // the file we read so we can start small and scale up; None means "the whole file".
     // The crate directory is resolved at compile time, so it works regardless of the
     // working directory; if the file is missing the test is skipped, not failed.
-    fn run_triangle_snap(dataset: &str, max_edges: Option<usize>) {
+    pub fn run_triangle_snap(dataset: &str, max_edges: Option<usize>) {
         use std::fs::File;
         let path = format!("{}/examples/data/{dataset}", env!("CARGO_MANIFEST_DIR"));
         let file = match File::open(&path) {
@@ -721,16 +726,6 @@ mod tests {
         );
     }
 
+    #[test]
     fn test_triangle_snap() { run_triangle_snap("ca-GrQc.txt", Some(3_000)); }
-    fn test_triangle_snap_large() { run_triangle_snap("wiki-Vote.txt", None); }
-
-    pub fn run_all() {
-        test_trie_build();       println!("ok  test_trie_build");
-        test_triangle_query();   println!("ok  test_triangle_query");
-        test_path_query();       println!("ok  test_path_query");
-        test_self_loop_query();  println!("ok  test_self_loop_query");
-        test_triangle_snap();    println!("ok  test_triangle_snap");
-        test_triangle_snap_large();    println!("ok  test_triangle_snap_large");
-        println!("all tests passed");
-    }
 }
