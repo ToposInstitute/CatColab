@@ -26,7 +26,7 @@ import type { ModelDocument } from "./document";
 /**
  * The value given to [`Notebook.add`].
  */
-type AddValue<S extends Shape, T extends CellType<S>> = T extends RichTextType
+type CellValuesOf<S extends Shape, T extends CellType<S>> = T extends RichTextType
     ? { content: string }
     : T extends ObjectType
       ? { label: string | null }
@@ -41,7 +41,7 @@ type AddValue<S extends Shape, T extends CellType<S>> = T extends RichTextType
  * The type of a cell after being added to a notebook. This resolves to a
  * [`Cell`] switched by the [`T`] [`CellType`] passed to it.
  */
-type AddedCell<S extends Shape, T extends CellType<S>> = T extends RichTextType
+type AddedCellOf<S extends Shape, T extends CellType<S>> = T extends RichTextType
     ? RichTextCell
     : T extends ObjectType
       ? ObjectCell<T>
@@ -54,7 +54,7 @@ export interface Notebook<S extends Shape, D extends NotebookDocument = Notebook
     readonly document: D;
     readonly title: string;
 
-    add<T extends CellType<S>>(type: T, value: AddValue<S, T>): AddedCell<S, T>;
+    add<T extends CellType<S>>(type: T, values: CellValuesOf<S, T>): AddedCellOf<S, T>;
     cells(): readonly Cell<S>[];
     update(patch: Partial<{ title: string }>): void;
 }
@@ -69,34 +69,39 @@ export function notebookFromModel<S extends Shape, D extends ModelDocument>(
         get title() {
             return document.name;
         },
-        add<T extends CellType<S>>(type: T, value: AddValue<S, T>) {
+        add<T extends CellType<S>>(type: T, values: CellValuesOf<S, T>) {
             if (type.kind === "rich-text") {
-                const richText = value as { content: string };
+                const richText = values as { content: string };
                 const cell = Nb.newRichTextCell(richText.content);
                 Nb.appendCell(document.notebook, cell);
-                return getRichTextCell(document, cell.id) as AddedCell<S, T>;
+                return getRichTextCell(document, cell.id) as AddedCellOf<S, T>;
             }
 
             if (type.kind === "object") {
-                const object = value as { label: string | null };
+                const object = values as { label: string | null };
                 const judgment = Model.newObjectDecl(type.obType);
                 judgment.name = object.label ?? "";
                 const cell = Nb.newFormalCell<ModelJudgment>(judgment);
                 Nb.appendCell(document.notebook, cell);
-                return getObjectCell(document, cell.id, type as ObjectTypes<S>) as AddedCell<S, T>;
+                return getObjectCell(document, cell.id, type as ObjectTypes<S>) as AddedCellOf<
+                    S,
+                    T
+                >;
             }
 
-            const morphism = value as AddValue<S, MorphismTypes<S>>;
+            const morphism = values as CellValuesOf<S, MorphismTypes<S>>;
             const judgment = Model.newMorphismDecl(type.morType);
             judgment.name = morphism.label ?? "";
             judgment.dom = obFromObjectCell(document, morphism.from);
             judgment.cod = obFromObjectCell(document, morphism.to);
             const cell = Nb.newFormalCell<ModelJudgment>(judgment);
             Nb.appendCell(document.notebook, cell);
-            return getMorphismCell(shape, document, cell.id, type as MorphismTypes<S>) as AddedCell<
-                S,
-                T
-            >;
+            return getMorphismCell(
+                shape,
+                document,
+                cell.id,
+                type as MorphismTypes<S>,
+            ) as AddedCellOf<S, T>;
         },
         cells() {
             return document.notebook.cellOrder.map((cellId) =>
