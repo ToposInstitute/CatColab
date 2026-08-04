@@ -53,11 +53,11 @@ export function defineShape<const S extends Shape>(shape: S): S {
 }
 
 export type RichTextType = typeof RichText;
-export type ObjectTypes<S extends Shape> = NonNullable<S["objects"]>[number];
-export type MorphismTypes<S extends Shape> = NonNullable<S["morphisms"]>[number];
-export type CellType<S extends Shape> = RichTextType | ObjectTypes<S> | MorphismTypes<S>;
+export type ObjectTypesOf<S extends Shape> = NonNullable<S["objects"]>[number];
+export type MorphismTypesOf<S extends Shape> = NonNullable<S["morphisms"]>[number];
+export type CellTypeOf<S extends Shape> = RichTextType | ObjectTypesOf<S> | MorphismTypesOf<S>;
 
-type MatchingObjectTypeOf<O, EndpointObType> = O extends ObjectType
+type MatchingObjectTypesOf<O, EndpointObType> = O extends ObjectType
     ? O["obType"] extends EndpointObType
         ? EndpointObType extends O["obType"]
             ? O
@@ -65,43 +65,43 @@ type MatchingObjectTypeOf<O, EndpointObType> = O extends ObjectType
         : never
     : never;
 
-type HomObjectTypeOf<S extends Shape, M extends MorphismType> = M["morType"] extends {
+type HomObjectTypesOf<S extends Shape, M extends MorphismType> = M["morType"] extends {
     tag: "Hom";
     content: infer EndpointObType;
 }
-    ? MatchingObjectTypeOf<ObjectTypes<S>, EndpointObType>
-    : ObjectTypes<S>;
+    ? MatchingObjectTypesOf<ObjectTypesOf<S>, EndpointObType>
+    : ObjectTypesOf<S>;
 
-type EndpointObjectTypeOf<S extends Shape, M extends MorphismType, E> = E extends ObType
-    ? MatchingObjectTypeOf<ObjectTypes<S>, E>
-    : HomObjectTypeOf<S, M>;
+type EndpointObjectTypesOf<S extends Shape, M extends MorphismType, E> = E extends ObType
+    ? MatchingObjectTypesOf<ObjectTypesOf<S>, E>
+    : HomObjectTypesOf<S, M>;
 
-export type DomainObjectTypeOf<S extends Shape, M extends MorphismType> = M extends {
+export type DomainObjectTypesOf<S extends Shape, M extends MorphismType> = M extends {
     readonly endpoints: { readonly domain: infer E };
 }
-    ? EndpointObjectTypeOf<S, M, E>
-    : HomObjectTypeOf<S, M>;
+    ? EndpointObjectTypesOf<S, M, E>
+    : HomObjectTypesOf<S, M>;
 
-export type CodomainObjectTypeOf<S extends Shape, M extends MorphismType> = M extends {
+export type CodomainObjectTypesOf<S extends Shape, M extends MorphismType> = M extends {
     readonly endpoints: { readonly codomain: infer E };
 }
-    ? EndpointObjectTypeOf<S, M, E>
-    : HomObjectTypeOf<S, M>;
+    ? EndpointObjectTypesOf<S, M, E>
+    : HomObjectTypesOf<S, M>;
 
 export function findObjectType<S extends Shape>(
     shape: S,
     obType: ObType,
-): ObjectTypes<S> | undefined {
+): ObjectTypesOf<S> | undefined {
     return shape.objects?.find((type) => objectTypesEqual(type.obType, obType)) as
-        | ObjectTypes<S>
+        | ObjectTypesOf<S>
         | undefined;
 }
 
 export function findMorphismType<S extends Shape>(
     shape: S,
     morType: MorType,
-): MorphismTypes<S> | undefined {
+): MorphismTypesOf<S> | undefined {
     return shape.morphisms?.find((type) => morphismTypesEqual(type.morType, morType)) as
-        | MorphismTypes<S>
+        | MorphismTypesOf<S>
         | undefined;
 }
