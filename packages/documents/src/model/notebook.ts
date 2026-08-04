@@ -60,7 +60,7 @@ export interface Notebook<S extends Shape, D extends NotebookDocument = Notebook
     update(patch: Partial<{ title: string }>): void;
 }
 
-export function notebookFromModel<S extends Shape, D extends ModelDocument>(
+export function modelNotebookFromDoc<S extends Shape, D extends ModelDocument>(
     shape: S,
     document: D,
 ): Notebook<S, D> {
