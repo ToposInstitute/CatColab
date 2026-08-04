@@ -13,12 +13,19 @@ use crate::v1;
 #[serde(tag = "tag")]
 #[tsify(into_wasm_abi, from_wasm_abi)]
 pub enum NotebookCell<T> {
+    /// A rich-text cell.
     #[serde(rename = "rich-text")]
     RichText { id: Uuid, content: RichTextContent },
     #[serde(rename = "formal")]
-    Formal { id: Uuid, content: T },
+    Formal {
+        /// The ID of the cell.
+        id: Uuid,
+        /// The formal content of the cell.
+        content: T,
+    },
 }
 
+/// Short-hand declaration for readability.
 #[declare]
 pub type Cell<T> = NotebookCell<T>;
 

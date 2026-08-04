@@ -62,7 +62,7 @@ export function DocumentMenu(props: {
         const docType = props.liveDoc.doc.type;
         invariant(
             docType === "model" || docType === "diagram",
-            "Analysis can only be created on a model or diagram",
+            () => `Cannot create analysis of ${docType} document`,
         );
 
         const newRef = await createAnalysis(api, docType, api.makeUnversionedRef(docRefId));
@@ -117,7 +117,7 @@ export function DocumentMenu(props: {
                             </MenuItem>
                         </Match>
                     </Switch>
-                    <Show when={props.liveDoc.doc.type !== "analysis"}>
+                    <Show when={docType() === "model" || docType() === "diagram"}>
                         <MenuItem onSelect={() => onNewAnalysis()}>
                             <DocumentTypeIcon documentType="analysis" />
                             <MenuItemLabel>{`New analysis of this ${docType()}`}</MenuItemLabel>
