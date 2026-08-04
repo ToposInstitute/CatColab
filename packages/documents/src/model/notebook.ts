@@ -1,7 +1,7 @@
 import { Model, Nb } from "catcolab-document-methods";
 import type { ModelJudgment } from "catcolab-document-types";
 import type { NotebookDocument } from "../notebook-document";
-import { richTextHandle, type RichTextCell } from "../rich-text";
+import { getRichTextCell, type RichTextCell } from "../rich-text";
 import type {
     CellType,
     EndpointObjectTypes,
@@ -13,10 +13,10 @@ import type {
     Shape,
 } from "../shape";
 import {
-    cellHandle,
-    endpointValue,
-    morphismHandle,
-    objectHandle,
+    getModelCell,
+    getMorphismCell,
+    getObjectCell,
+    obFromObjectCell,
     type Cell,
     type MorphismCell,
     type ObjectCell,
@@ -74,7 +74,7 @@ export function notebookFromModel<S extends Shape, D extends ModelDocument>(
                 const richText = value as { content: string };
                 const cell = Nb.newRichTextCell(richText.content);
                 Nb.appendCell(document.notebook, cell);
-                return richTextHandle(document, cell.id) as AddedCell<S, T>;
+                return getRichTextCell(document, cell.id) as AddedCell<S, T>;
             }
 
             if (type.kind === "object") {
@@ -83,23 +83,25 @@ export function notebookFromModel<S extends Shape, D extends ModelDocument>(
                 judgment.name = object.label ?? "";
                 const cell = Nb.newFormalCell<ModelJudgment>(judgment);
                 Nb.appendCell(document.notebook, cell);
-                return objectHandle(document, cell.id, type as ObjectTypes<S>) as AddedCell<S, T>;
+                return getObjectCell(document, cell.id, type as ObjectTypes<S>) as AddedCell<S, T>;
             }
 
             const morphism = value as AddValue<S, MorphismTypes<S>>;
             const judgment = Model.newMorphismDecl(type.morType);
             judgment.name = morphism.label ?? "";
-            judgment.dom = endpointValue(document, morphism.from);
-            judgment.cod = endpointValue(document, morphism.to);
+            judgment.dom = obFromObjectCell(document, morphism.from);
+            judgment.cod = obFromObjectCell(document, morphism.to);
             const cell = Nb.newFormalCell<ModelJudgment>(judgment);
             Nb.appendCell(document.notebook, cell);
-            return morphismHandle(shape, document, cell.id, type as MorphismTypes<S>) as AddedCell<
+            return getMorphismCell(shape, document, cell.id, type as MorphismTypes<S>) as AddedCell<
                 S,
                 T
             >;
         },
         cells() {
-            return document.notebook.cellOrder.map((cellId) => cellHandle(shape, document, cellId));
+            return document.notebook.cellOrder.map((cellId) =>
+                getModelCell(shape, document, cellId),
+            );
         },
         update(patch) {
             if (patch.title !== undefined) {

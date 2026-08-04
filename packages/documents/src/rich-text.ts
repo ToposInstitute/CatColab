@@ -8,7 +8,7 @@ export interface RichTextCell {
     update(patch: Partial<{ content: string }>): void;
 }
 
-function richTextCell(document: NotebookDocument, cellId: string) {
+function getStoredRichTextCell(document: NotebookDocument, cellId: string) {
     const cell = document.notebook.cellContents[cellId];
     if (!cell) {
         throw new Error(`Cell ${cellId} does not exist.`);
@@ -19,18 +19,18 @@ function richTextCell(document: NotebookDocument, cellId: string) {
     return cell;
 }
 
-export function richTextHandle(document: NotebookDocument, cellId: string): RichTextCell {
+export function getRichTextCell(document: NotebookDocument, cellId: string): RichTextCell {
     return {
         kind: "rich-text",
         id: cellId,
         get content() {
-            return richTextCell(document, cellId).content;
+            return getStoredRichTextCell(document, cellId).content;
         },
         update(patch) {
             if (patch.content === undefined) {
                 return;
             }
-            richTextCell(document, cellId).content = patch.content;
+            getStoredRichTextCell(document, cellId).content = patch.content;
         },
     };
 }
