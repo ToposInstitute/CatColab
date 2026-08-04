@@ -7,7 +7,25 @@ import { describe, expect, test } from "vitest";
 // with no arguments uses a plain in-memory store for documents. All cells are
 // added with a single `add` method: `RichText` for prose, or an object/morphism
 // type from the logic for formal cells.
-import { createBinder, RichText } from "catcolab-documents";
+import {
+    createBinder,
+    defineMorphism,
+    defineObject,
+    defineShape,
+    RichText,
+} from "catcolab-documents";
+
+const Entity = defineObject({ tag: "Basic", content: "Entity" });
+const AttrType = defineObject({ tag: "Basic", content: "AttrType" });
+const Attr = defineMorphism(
+    { tag: "Basic", content: "Attr" },
+    { domain: Entity.obType, codomain: AttrType.obType },
+);
+const SimpleSchema = defineShape({
+    theory: "simple-schema",
+    objects: [Entity, AttrType],
+    morphisms: [Attr],
+});
 
 describe("creating and editing notebooks", () => {
     test("createNotebook creates a titled notebook for a logic", async () => {
@@ -36,6 +54,24 @@ describe("creating and editing notebooks", () => {
         expect(arrow.from?.id).toBe(source.id);
         expect(arrow.to?.id).toBe(target.id);
         expect(notebook.cells().length).toBe(4);
+    });
+
+    test("morphisms can have different domain and codomain object types", async () => {
+        const binder = createBinder();
+        const notebook = await binder.createNotebook(SimpleSchema, { title: "A schema" });
+
+        const entity = notebook.add(Entity, { label: "Person" });
+        const attrType = notebook.add(AttrType, { label: "String" });
+        const attr = notebook.add(Attr, {
+            label: "name",
+            from: entity,
+            to: attrType,
+        });
+
+        expect(attr.from?.type).toBe(Entity);
+        expect(attr.from?.id).toBe(entity.id);
+        expect(attr.to?.type).toBe(AttrType);
+        expect(attr.to?.id).toBe(attrType.id);
     });
 
     test("cells can be added with null", async () => {
