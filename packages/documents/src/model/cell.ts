@@ -1,8 +1,7 @@
 import { Nb } from "catcolab-document-methods";
 import type { Ob } from "catcolab-document-types";
-import { modelJudgment, type ModelDocument } from "./model-document";
-import { richTextHandle, type RichTextCell } from "./rich-text";
-import { findMorphismType, findObjectType } from "./shape";
+import { richTextHandle, type RichTextCell } from "../rich-text";
+import { findMorphismType, findObjectType } from "../shape";
 import type {
     EndpointObjectTypes,
     MorphismType,
@@ -10,7 +9,8 @@ import type {
     ObjectType,
     ObjectTypes,
     Shape,
-} from "./shape";
+} from "../shape";
+import { modelJudgment, type ModelDocument } from "./document";
 
 export interface ObjectCell<O extends ObjectType> {
     readonly kind: "object";

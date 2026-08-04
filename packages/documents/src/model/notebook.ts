@@ -1,17 +1,7 @@
 import { Model, Nb } from "catcolab-document-methods";
 import type { ModelJudgment } from "catcolab-document-types";
-import {
-    cellHandle,
-    endpointValue,
-    morphismHandle,
-    objectHandle,
-    type Cell,
-    type MorphismCell,
-    type ObjectCell,
-} from "./cell";
-import type { ModelDocument } from "./model-document";
-import type { NotebookDocument } from "./notebook-document";
-import { richTextHandle, type RichTextCell } from "./rich-text";
+import type { NotebookDocument } from "../notebook-document";
+import { richTextHandle, type RichTextCell } from "../rich-text";
 import type {
     CellType,
     EndpointObjectTypes,
@@ -21,7 +11,17 @@ import type {
     ObjectTypes,
     RichTextType,
     Shape,
-} from "./shape";
+} from "../shape";
+import {
+    cellHandle,
+    endpointValue,
+    morphismHandle,
+    objectHandle,
+    type Cell,
+    type MorphismCell,
+    type ObjectCell,
+} from "./cell";
+import type { ModelDocument } from "./document";
 
 /**
  * The value given to [`Notebook.add`].
