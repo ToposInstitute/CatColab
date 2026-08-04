@@ -4,8 +4,8 @@ import type { NotebookDocument } from "../notebook-document";
 import { getRichTextCell, type RichTextCell } from "../rich-text";
 import type {
     CellType,
-    CodomainObjectTypes,
-    DomainObjectTypes,
+    CodomainObjectTypeOf,
+    DomainObjectTypeOf,
     MorphismType,
     MorphismTypes,
     ObjectType,
@@ -34,8 +34,8 @@ type CellValuesOf<S extends Shape, T extends CellType<S>> = T extends RichTextTy
       : T extends MorphismType
         ? {
               label: string | null;
-              from: ObjectCell<DomainObjectTypes<S, T>> | null;
-              to: ObjectCell<CodomainObjectTypes<S, T>> | null;
+              from: ObjectCell<DomainObjectTypeOf<S, T>> | null;
+              to: ObjectCell<CodomainObjectTypeOf<S, T>> | null;
           }
         : never;
 /**

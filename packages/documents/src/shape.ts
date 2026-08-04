@@ -57,7 +57,7 @@ export type ObjectTypes<S extends Shape> = NonNullable<S["objects"]>[number];
 export type MorphismTypes<S extends Shape> = NonNullable<S["morphisms"]>[number];
 export type CellType<S extends Shape> = RichTextType | ObjectTypes<S> | MorphismTypes<S>;
 
-type ObjectTypesOver<O, EndpointObType> = O extends ObjectType
+type MatchingObjectTypeOf<O, EndpointObType> = O extends ObjectType
     ? O["obType"] extends EndpointObType
         ? EndpointObType extends O["obType"]
             ? O
@@ -65,28 +65,28 @@ type ObjectTypesOver<O, EndpointObType> = O extends ObjectType
         : never
     : never;
 
-type HomObjectTypes<S extends Shape, M extends MorphismType> = M["morType"] extends {
+type HomObjectTypeOf<S extends Shape, M extends MorphismType> = M["morType"] extends {
     tag: "Hom";
     content: infer EndpointObType;
 }
-    ? ObjectTypesOver<ObjectTypes<S>, EndpointObType>
+    ? MatchingObjectTypeOf<ObjectTypes<S>, EndpointObType>
     : ObjectTypes<S>;
 
-type ObjectTypesAtEndpoint<S extends Shape, M extends MorphismType, E> = E extends ObType
-    ? ObjectTypesOver<ObjectTypes<S>, E>
-    : HomObjectTypes<S, M>;
+type EndpointObjectTypeOf<S extends Shape, M extends MorphismType, E> = E extends ObType
+    ? MatchingObjectTypeOf<ObjectTypes<S>, E>
+    : HomObjectTypeOf<S, M>;
 
-export type DomainObjectTypes<S extends Shape, M extends MorphismType> = M extends {
+export type DomainObjectTypeOf<S extends Shape, M extends MorphismType> = M extends {
     readonly endpoints: { readonly domain: infer E };
 }
-    ? ObjectTypesAtEndpoint<S, M, E>
-    : HomObjectTypes<S, M>;
+    ? EndpointObjectTypeOf<S, M, E>
+    : HomObjectTypeOf<S, M>;
 
-export type CodomainObjectTypes<S extends Shape, M extends MorphismType> = M extends {
+export type CodomainObjectTypeOf<S extends Shape, M extends MorphismType> = M extends {
     readonly endpoints: { readonly codomain: infer E };
 }
-    ? ObjectTypesAtEndpoint<S, M, E>
-    : HomObjectTypes<S, M>;
+    ? EndpointObjectTypeOf<S, M, E>
+    : HomObjectTypeOf<S, M>;
 
 export function findObjectType<S extends Shape>(
     shape: S,
