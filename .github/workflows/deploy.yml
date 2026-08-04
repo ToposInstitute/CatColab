@@ -9,6 +9,10 @@ on:
 env:
   BRANCH_NAME: ${{ github.event.workflow_run.head_branch }}
 
+concurrency:
+  group: deploy-${{ github.event.workflow_run.head_branch }}
+  cancel-in-progress: true
+
 permissions:
   deployments: write
   statuses: write
