@@ -1,5 +1,6 @@
 let
   allUserKeys = {
+    tslil = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKvWJTuBjKsZTDpxlmIB432YqrqhxrTwutKHABlPGvt/ tslil@a6b530d2";
     owen = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIF2sBTuqGoEXRWpBRqTBwZZPDdLGGJ0GQcuX5dfIZKb4 o@red-special";
     epatters = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAKXx6wMJSeYKCHNmbyR803RQ72uto9uYsHhAPPWNl2D evan@epatters.org";
     jmoggr = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMiaHaeJ5PQL0mka/lY1yGXIs/bDK85uY1O3mLySnwHd j@jmoggr.com";
@@ -14,6 +15,7 @@ let
     catcolab = rec {
       hostKey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPyxORhhfO+9F2hQZ3I/EiSpfg+caWpG6c8AuG5u1XtK root@ip-172-31-14-38.us-east-2.compute.internal";
       userKeys = with allUserKeys; [
+        tslil
         epatters
         jmoggr
         kasbah
@@ -24,6 +26,7 @@ let
     catcolab-next = rec {
       hostKey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIHn7l+VBTwN08mde2SDw6I1UPahIe17F3rLxvPL+IHcc root@ip-172-31-43-26.us-east-2.compute.internal";
       userKeys = with allUserKeys; [
+        tslil
         owen
         epatters
         jmoggr
