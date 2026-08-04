@@ -5,14 +5,13 @@ import {
     endpointValue,
     morphismHandle,
     objectHandle,
-    richTextHandle,
     type Cell,
     type MorphismCell,
     type ObjectCell,
-    type RichTextCell,
 } from "./cell";
 import type { ModelDocument } from "./model-document";
 import type { NotebookDocument } from "./notebook-document";
+import { richTextHandle, type RichTextCell } from "./rich-text";
 import type {
     CellType,
     EndpointObjectTypes,

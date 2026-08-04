@@ -1,6 +1,7 @@
 import { Nb } from "catcolab-document-methods";
 import type { Ob } from "catcolab-document-types";
 import { modelJudgment, type ModelDocument } from "./model-document";
+import { richTextHandle, type RichTextCell } from "./rich-text";
 import { findMorphismType, findObjectType } from "./shape";
 import type {
     EndpointObjectTypes,
@@ -10,14 +11,6 @@ import type {
     ObjectTypes,
     Shape,
 } from "./shape";
-
-export interface RichTextCell {
-    readonly kind: "rich-text";
-    readonly id: string;
-    readonly content: string;
-
-    update(patch: Partial<{ content: string }>): void;
-}
 
 export interface ObjectCell<O extends ObjectType> {
     readonly kind: "object";
@@ -49,30 +42,6 @@ export type Cell<S extends Shape> =
     | RichTextCell
     | ObjectCell<ObjectTypes<S>>
     | MorphismCell<S, MorphismTypes<S>>;
-
-export function richTextHandle(document: ModelDocument, cellId: string): RichTextCell {
-    return {
-        kind: "rich-text",
-        id: cellId,
-        get content() {
-            const cell = Nb.getCellById(document.notebook, cellId);
-            if (cell.tag !== "rich-text") {
-                throw new Error(`Cell ${cellId} is not rich text.`);
-            }
-            return cell.content;
-        },
-        update(patch) {
-            if (patch.content === undefined) {
-                return;
-            }
-            const cell = Nb.getCellById(document.notebook, cellId);
-            if (cell.tag !== "rich-text") {
-                throw new Error(`Cell ${cellId} is not rich text.`);
-            }
-            cell.content = patch.content;
-        },
-    };
-}
 
 export function objectHandle<O extends ObjectType>(
     document: ModelDocument,
