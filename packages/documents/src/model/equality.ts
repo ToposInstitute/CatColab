@@ -1,5 +1,5 @@
 import type { MorType, ObType } from "catcolab-document-types";
-import { assertExhaustive } from "./util/assert_exhaustive";
+import { assertExhaustive } from "../util/assert_exhaustive";
 
 export function objectTypesEqual(left: ObType, right: ObType): boolean {
     switch (left.tag) {

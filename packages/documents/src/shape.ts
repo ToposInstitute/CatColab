@@ -1,5 +1,5 @@
 import type { Modality, MorType, ObOp, ObType } from "catcolab-document-types";
-import { morphismTypesEqual, objectTypesEqual } from "./equality";
+import { morphismTypesEqual, objectTypesEqual } from "./model/equality";
 
 export interface ObjectType<O extends ObType = ObType> {
     readonly kind: "object";
