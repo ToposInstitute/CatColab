@@ -3,8 +3,8 @@ import type { Ob } from "catcolab-document-types";
 import { getRichTextCell, type RichTextCell } from "../rich-text";
 import { findMorphismType, findObjectType } from "../shape";
 import type {
-    CodomainObjectTypes,
-    DomainObjectTypes,
+    CodomainObjectTypeOf,
+    DomainObjectTypeOf,
     MorphismType,
     MorphismTypes,
     ObjectType,
@@ -27,14 +27,14 @@ export interface MorphismCell<S extends Shape, M extends MorphismType> {
     readonly id: string;
     readonly type: M;
     readonly label: string;
-    readonly from: ObjectCell<DomainObjectTypes<S, M>> | null;
-    readonly to: ObjectCell<CodomainObjectTypes<S, M>> | null;
+    readonly from: ObjectCell<DomainObjectTypeOf<S, M>> | null;
+    readonly to: ObjectCell<CodomainObjectTypeOf<S, M>> | null;
 
     update(
         patch: Partial<{
             label: string | null;
-            from: ObjectCell<DomainObjectTypes<S, M>> | null;
-            to: ObjectCell<CodomainObjectTypes<S, M>> | null;
+            from: ObjectCell<DomainObjectTypeOf<S, M>> | null;
+            to: ObjectCell<CodomainObjectTypeOf<S, M>> | null;
         }>,
     ): void;
 }
@@ -133,7 +133,7 @@ export function getMorphismCell<S extends Shape, M extends MorphismTypes<S>>(
                 throw new Error(`Cell ${cellId} is not a morphism.`);
             }
             return objectCellFromOb(shape, document, judgment.dom) as ObjectCell<
-                DomainObjectTypes<S, M>
+                DomainObjectTypeOf<S, M>
             > | null;
         },
         get to() {
@@ -142,7 +142,7 @@ export function getMorphismCell<S extends Shape, M extends MorphismTypes<S>>(
                 throw new Error(`Cell ${cellId} is not a morphism.`);
             }
             return objectCellFromOb(shape, document, judgment.cod) as ObjectCell<
-                CodomainObjectTypes<S, M>
+                CodomainObjectTypeOf<S, M>
             > | null;
         },
         update(patch) {
