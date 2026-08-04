@@ -2,7 +2,7 @@ export { createBinder } from "./binder";
 export type { Binder } from "./binder";
 export type { MorphismCell, ObjectCell } from "./model/cell";
 export type { ModelDocument } from "./model/document";
-export { notebookFromModel } from "./model/notebook";
+export { modelNotebookFromDoc as notebookFromModel } from "./model/notebook";
 export type { Notebook } from "./model/notebook";
 export type { NotebookDocument } from "./notebook-document";
 export type { RichTextCell } from "./rich-text";
