@@ -65,12 +65,28 @@ type ObjectTypesOver<O, EndpointObType> = O extends ObjectType
         : never
     : never;
 
-export type EndpointObjectTypes<S extends Shape, M extends MorphismType> = M["morType"] extends {
+type HomObjectTypes<S extends Shape, M extends MorphismType> = M["morType"] extends {
     tag: "Hom";
     content: infer EndpointObType;
 }
     ? ObjectTypesOver<ObjectTypes<S>, EndpointObType>
     : ObjectTypes<S>;
+
+type ObjectTypesAtEndpoint<S extends Shape, M extends MorphismType, E> = E extends ObType
+    ? ObjectTypesOver<ObjectTypes<S>, E>
+    : HomObjectTypes<S, M>;
+
+export type DomainObjectTypes<S extends Shape, M extends MorphismType> = M extends {
+    readonly endpoints: { readonly domain: infer E };
+}
+    ? ObjectTypesAtEndpoint<S, M, E>
+    : HomObjectTypes<S, M>;
+
+export type CodomainObjectTypes<S extends Shape, M extends MorphismType> = M extends {
+    readonly endpoints: { readonly codomain: infer E };
+}
+    ? ObjectTypesAtEndpoint<S, M, E>
+    : HomObjectTypes<S, M>;
 
 export function findObjectType<S extends Shape>(
     shape: S,
