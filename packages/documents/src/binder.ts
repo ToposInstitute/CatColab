@@ -1,6 +1,6 @@
 import { Model } from "catcolab-document-methods";
 import type { ModelDocument } from "./model/document";
-import { notebookFromModel, type Notebook } from "./model/notebook";
+import { modelNotebookFromDoc, type Notebook } from "./model/notebook";
 import type { Shape } from "./shape";
 
 export interface Binder {
@@ -19,7 +19,7 @@ export function createBinder(): Binder {
             const document = Model.newModelDocument({ theory: shape.theory });
             document.name = options.title;
 
-            return notebookFromModel(shape, document);
+            return modelNotebookFromDoc(shape, document);
         },
     };
 }
