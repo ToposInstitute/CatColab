@@ -6,12 +6,11 @@ backend, with the frontend hosted on netlify and the backend for each deployment
 EC2 instances.
 
 - Production deployment `catcolab`
-  * frontend: `catcolab.org`
-  * backend: `backend.catcolab.org`
+    - frontend: `catcolab.org`
+    - backend: `backend.catcolab.org`
 - Staging deployment `catcolab-next`
-  * frontend: `next.catcolab.org`
-  * backend: `backend-next.catcolab.org`
-
+    - frontend: `next.catcolab.org`
+    - backend: `backend-next.catcolab.org`
 
 ## PR Previews
 
@@ -46,9 +45,45 @@ Setting up the Postgres database locally:
 
 1. Assumptions: There is a `postgres` user on the machine. The cluster does not contain a `catcolab` user or a `catcolab` database. Rust and cargo are installed.
 1. Get the `DATABASE_URL` from the decrypted `.env.age` file.
-  - In `infrastructure/secrets/`, run `nix develop` followed by `EDITOR=vim agenix -e .env.age`. You should change the `EDITOR` variable to your preferred editor tool.
+
+- In `infrastructure/secrets/`, run `nix develop` followed by `EDITOR=vim agenix -e .env.age`. You should change the `EDITOR` variable to your preferred editor tool.
 
 1. In `infrastructure/scripts`, run `su -m postgres -- ./initdb.sh "<DATABASE_URL>"`.
 1. Run migrations on the database:
-  - Install `sqlx-cli` with `cargo install sqlx-cli`
-  - In `packages/backend/`, run `~/.cargo/bin/sqlx migrate run`
+
+- Install `sqlx-cli` with `cargo install sqlx-cli`
+- In `packages/backend/`, run `~/.cargo/bin/sqlx migrate run`
+
+## Secrets
+
+Secrets are stored in `infrastructure/secrets/`. The sercrets are managed with `agenix`. They are encrypted for users listed in `ssh-keys.nix`.
+
+- `agenix -e example.age` to edit a secrets file.
+- `agenix -r` to re-encrypt all secrets (e.g. when modifying the user list).
+
+## Running backend commands on deployments
+
+To run a backend command on the the running server in the correct environments you first have to find out the nix store path for it. After ssh-ing in:
+
+```
+systemctl status backend
+```
+
+Should show you a path like:
+
+```
+/nix/store/0aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-backend-0.1.0/
+```
+
+You can then:
+
+```
+pid="$(systemctl show --property MainPID --value backend.service)"
+sudo nsenter -t "$pid" -a --wd=/nix/store/0aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-backend-0.1.0/ -e -S follow -G follow /bin/sh
+```
+
+And can do something like:
+
+```
+bin/backend invalidate-inference-keys
+```
