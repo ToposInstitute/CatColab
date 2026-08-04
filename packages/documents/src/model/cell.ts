@@ -3,12 +3,12 @@ import type { Ob } from "catcolab-document-types";
 import { getRichTextCell, type RichTextCell } from "../rich-text";
 import { findMorphismType, findObjectType } from "../shape";
 import type {
-    CodomainObjectTypeOf,
-    DomainObjectTypeOf,
+    CodomainObjectTypesOf,
+    DomainObjectTypesOf,
     MorphismType,
-    MorphismTypes,
+    MorphismTypesOf,
     ObjectType,
-    ObjectTypes,
+    ObjectTypesOf,
     Shape,
 } from "../shape";
 import { getModelJudgment, type ModelDocument } from "./document";
@@ -27,22 +27,22 @@ export interface MorphismCell<S extends Shape, M extends MorphismType> {
     readonly id: string;
     readonly type: M;
     readonly label: string;
-    readonly from: ObjectCell<DomainObjectTypeOf<S, M>> | null;
-    readonly to: ObjectCell<CodomainObjectTypeOf<S, M>> | null;
+    readonly from: ObjectCell<DomainObjectTypesOf<S, M>> | null;
+    readonly to: ObjectCell<CodomainObjectTypesOf<S, M>> | null;
 
     update(
         patch: Partial<{
             label: string | null;
-            from: ObjectCell<DomainObjectTypeOf<S, M>> | null;
-            to: ObjectCell<CodomainObjectTypeOf<S, M>> | null;
+            from: ObjectCell<DomainObjectTypesOf<S, M>> | null;
+            to: ObjectCell<CodomainObjectTypesOf<S, M>> | null;
         }>,
     ): void;
 }
 
-export type Cell<S extends Shape> =
+export type CellOf<S extends Shape> =
     | RichTextCell
-    | ObjectCell<ObjectTypes<S>>
-    | MorphismCell<S, MorphismTypes<S>>;
+    | ObjectCell<ObjectTypesOf<S>>
+    | MorphismCell<S, MorphismTypesOf<S>>;
 
 export function getObjectCell<O extends ObjectType>(
     document: ModelDocument,
@@ -77,7 +77,7 @@ function objectCellFromOb<S extends Shape>(
     shape: S,
     document: ModelDocument,
     endpoint: Ob | null,
-): ObjectCell<ObjectTypes<S>> | null {
+): ObjectCell<ObjectTypesOf<S>> | null {
     if (endpoint?.tag !== "Basic") {
         return null;
     }
@@ -110,7 +110,7 @@ export function obFromObjectCell(
     return { tag: "Basic", content: judgment.id };
 }
 
-export function getMorphismCell<S extends Shape, M extends MorphismTypes<S>>(
+export function getMorphismCell<S extends Shape, M extends MorphismTypesOf<S>>(
     shape: S,
     document: ModelDocument,
     cellId: string,
@@ -133,7 +133,7 @@ export function getMorphismCell<S extends Shape, M extends MorphismTypes<S>>(
                 throw new Error(`Cell ${cellId} is not a morphism.`);
             }
             return objectCellFromOb(shape, document, judgment.dom) as ObjectCell<
-                DomainObjectTypeOf<S, M>
+                DomainObjectTypesOf<S, M>
             > | null;
         },
         get to() {
@@ -142,7 +142,7 @@ export function getMorphismCell<S extends Shape, M extends MorphismTypes<S>>(
                 throw new Error(`Cell ${cellId} is not a morphism.`);
             }
             return objectCellFromOb(shape, document, judgment.cod) as ObjectCell<
-                CodomainObjectTypeOf<S, M>
+                CodomainObjectTypesOf<S, M>
             > | null;
         },
         update(patch) {
@@ -174,7 +174,7 @@ export function getModelCell<S extends Shape>(
     shape: S,
     document: ModelDocument,
     cellId: string,
-): Cell<S> {
+): CellOf<S> {
     const cell = Nb.getCellById(document.notebook, cellId);
     if (cell.tag === "rich-text") {
         return getRichTextCell(document, cellId);

@@ -3,13 +3,13 @@ import type { ModelJudgment } from "catcolab-document-types";
 import type { NotebookDocument } from "../notebook-document";
 import { getRichTextCell, type RichTextCell } from "../rich-text";
 import type {
-    CellType,
-    CodomainObjectTypeOf,
-    DomainObjectTypeOf,
+    CellTypeOf,
+    CodomainObjectTypesOf,
+    DomainObjectTypesOf,
     MorphismType,
-    MorphismTypes,
+    MorphismTypesOf,
     ObjectType,
-    ObjectTypes,
+    ObjectTypesOf,
     RichTextType,
     Shape,
 } from "../shape";
@@ -18,7 +18,7 @@ import {
     getMorphismCell,
     getObjectCell,
     obFromObjectCell,
-    type Cell,
+    type CellOf,
     type MorphismCell,
     type ObjectCell,
 } from "./cell";
@@ -27,22 +27,22 @@ import type { ModelDocument } from "./document";
 /**
  * The value given to [`Notebook.add`].
  */
-type CellValuesOf<S extends Shape, T extends CellType<S>> = T extends RichTextType
+type CellValuesOf<S extends Shape, T extends CellTypeOf<S>> = T extends RichTextType
     ? { content: string }
     : T extends ObjectType
       ? { label: string | null }
       : T extends MorphismType
         ? {
               label: string | null;
-              from: ObjectCell<DomainObjectTypeOf<S, T>> | null;
-              to: ObjectCell<CodomainObjectTypeOf<S, T>> | null;
+              from: ObjectCell<DomainObjectTypesOf<S, T>> | null;
+              to: ObjectCell<CodomainObjectTypesOf<S, T>> | null;
           }
         : never;
 /**
  * The type of a cell after being added to a notebook. This resolves to a
- * [`Cell`] switched by the [`T`] [`CellType`] passed to it.
+ * [`CellOf`] switched by the [`T`] [`CellTypeOf`] passed to it.
  */
-type AddedCellOf<S extends Shape, T extends CellType<S>> = T extends RichTextType
+type AddedCellOf<S extends Shape, T extends CellTypeOf<S>> = T extends RichTextType
     ? RichTextCell
     : T extends ObjectType
       ? ObjectCell<T>
@@ -55,8 +55,8 @@ export interface Notebook<S extends Shape, D extends NotebookDocument = Notebook
     readonly document: D;
     readonly title: string;
 
-    add<T extends CellType<S>>(type: T, values: CellValuesOf<S, T>): AddedCellOf<S, T>;
-    cells(): readonly Cell<S>[];
+    add<T extends CellTypeOf<S>>(type: T, values: CellValuesOf<S, T>): AddedCellOf<S, T>;
+    cells(): readonly CellOf<S>[];
     update(patch: Partial<{ title: string }>): void;
 }
 
@@ -70,7 +70,7 @@ export function modelNotebookFromDoc<S extends Shape, D extends ModelDocument>(
         get title() {
             return document.name;
         },
-        add<T extends CellType<S>>(type: T, values: CellValuesOf<S, T>) {
+        add<T extends CellTypeOf<S>>(type: T, values: CellValuesOf<S, T>) {
             if (type.kind === "rich-text") {
                 const richText = values as { content: string };
                 const cell = Nb.newRichTextCell(richText.content);
@@ -84,13 +84,13 @@ export function modelNotebookFromDoc<S extends Shape, D extends ModelDocument>(
                 judgment.name = object.label ?? "";
                 const cell = Nb.newFormalCell<ModelJudgment>(judgment);
                 Nb.appendCell(document.notebook, cell);
-                return getObjectCell(document, cell.id, type as ObjectTypes<S>) as AddedCellOf<
+                return getObjectCell(document, cell.id, type as ObjectTypesOf<S>) as AddedCellOf<
                     S,
                     T
                 >;
             }
 
-            const morphism = values as CellValuesOf<S, MorphismTypes<S>>;
+            const morphism = values as CellValuesOf<S, MorphismTypesOf<S>>;
             const judgment = Model.newMorphismDecl(type.morType);
             judgment.name = morphism.label ?? "";
             judgment.dom = obFromObjectCell(document, morphism.from);
@@ -101,7 +101,7 @@ export function modelNotebookFromDoc<S extends Shape, D extends ModelDocument>(
                 shape,
                 document,
                 cell.id,
-                type as MorphismTypes<S>,
+                type as MorphismTypesOf<S>,
             ) as AddedCellOf<S, T>;
         },
         cells() {
