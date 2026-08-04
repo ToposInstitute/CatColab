@@ -1,6 +1,6 @@
 import { Model } from "catcolab-document-methods";
-import type { ModelDocument } from "./model-document";
-import { notebookFromModel, type Notebook } from "./notebook";
+import type { ModelDocument } from "./model/document";
+import { notebookFromModel, type Notebook } from "./model/notebook";
 import type { Shape } from "./shape";
 
 export interface Binder {
