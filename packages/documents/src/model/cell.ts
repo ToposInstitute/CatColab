@@ -1,6 +1,6 @@
 import { Nb } from "catcolab-document-methods";
 import type { Ob } from "catcolab-document-types";
-import { richTextHandle, type RichTextCell } from "../rich-text";
+import { getRichTextCell, type RichTextCell } from "../rich-text";
 import { findMorphismType, findObjectType } from "../shape";
 import type {
     EndpointObjectTypes,
@@ -10,7 +10,7 @@ import type {
     ObjectTypes,
     Shape,
 } from "../shape";
-import { modelJudgment, type ModelDocument } from "./document";
+import { getModelJudgment, type ModelDocument } from "./document";
 
 export interface ObjectCell<O extends ObjectType> {
     readonly kind: "object";
@@ -43,7 +43,7 @@ export type Cell<S extends Shape> =
     | ObjectCell<ObjectTypes<S>>
     | MorphismCell<S, MorphismTypes<S>>;
 
-export function objectHandle<O extends ObjectType>(
+export function getObjectCell<O extends ObjectType>(
     document: ModelDocument,
     cellId: string,
     type: O,
@@ -53,7 +53,7 @@ export function objectHandle<O extends ObjectType>(
         id: cellId,
         type,
         get label() {
-            const judgment = modelJudgment(document, cellId);
+            const judgment = getModelJudgment(document, cellId);
             if (judgment.tag !== "object") {
                 throw new Error(`Cell ${cellId} is not an object.`);
             }
@@ -63,7 +63,7 @@ export function objectHandle<O extends ObjectType>(
             if (patch.label === undefined) {
                 return;
             }
-            const judgment = modelJudgment(document, cellId);
+            const judgment = getModelJudgment(document, cellId);
             if (judgment.tag !== "object") {
                 throw new Error(`Cell ${cellId} is not an object.`);
             }
@@ -72,7 +72,7 @@ export function objectHandle<O extends ObjectType>(
     };
 }
 
-function endpointHandle<S extends Shape>(
+function objectCellFromOb<S extends Shape>(
     shape: S,
     document: ModelDocument,
     endpoint: Ob | null,
@@ -88,28 +88,28 @@ function endpointHandle<S extends Shape>(
         }
         if (cell.content.id === endpoint.content) {
             const type = findObjectType(shape, cell.content.obType);
-            return type ? objectHandle(document, cellId, type) : null;
+            return type ? getObjectCell(document, cellId, type) : null;
         }
     }
 
     return null;
 }
 
-export function endpointValue(
+export function obFromObjectCell(
     document: ModelDocument,
     endpoint: ObjectCell<ObjectType> | null,
 ): Ob | null {
     if (!endpoint) {
         return null;
     }
-    const judgment = modelJudgment(document, endpoint.id);
+    const judgment = getModelJudgment(document, endpoint.id);
     if (judgment.tag !== "object") {
         throw new Error(`Cell ${endpoint.id} is not an object.`);
     }
     return { tag: "Basic", content: judgment.id };
 }
 
-export function morphismHandle<S extends Shape, M extends MorphismTypes<S>>(
+export function getMorphismCell<S extends Shape, M extends MorphismTypes<S>>(
     shape: S,
     document: ModelDocument,
     cellId: string,
@@ -120,40 +120,40 @@ export function morphismHandle<S extends Shape, M extends MorphismTypes<S>>(
         id: cellId,
         type,
         get label() {
-            const judgment = modelJudgment(document, cellId);
+            const judgment = getModelJudgment(document, cellId);
             if (judgment.tag !== "morphism") {
                 throw new Error(`Cell ${cellId} is not a morphism.`);
             }
             return judgment.name;
         },
         get from() {
-            const judgment = modelJudgment(document, cellId);
+            const judgment = getModelJudgment(document, cellId);
             if (judgment.tag !== "morphism") {
                 throw new Error(`Cell ${cellId} is not a morphism.`);
             }
-            return endpointHandle(shape, document, judgment.dom) as ObjectCell<
+            return objectCellFromOb(shape, document, judgment.dom) as ObjectCell<
                 EndpointObjectTypes<S, M>
             > | null;
         },
         get to() {
-            const judgment = modelJudgment(document, cellId);
+            const judgment = getModelJudgment(document, cellId);
             if (judgment.tag !== "morphism") {
                 throw new Error(`Cell ${cellId} is not a morphism.`);
             }
-            return endpointHandle(shape, document, judgment.cod) as ObjectCell<
+            return objectCellFromOb(shape, document, judgment.cod) as ObjectCell<
                 EndpointObjectTypes<S, M>
             > | null;
         },
         update(patch) {
-            const judgment = modelJudgment(document, cellId);
+            const judgment = getModelJudgment(document, cellId);
             if (judgment.tag !== "morphism") {
                 throw new Error(`Cell ${cellId} is not a morphism.`);
             }
             const dom = Object.hasOwn(patch, "from")
-                ? endpointValue(document, patch.from ?? null)
+                ? obFromObjectCell(document, patch.from ?? null)
                 : undefined;
             const cod = Object.hasOwn(patch, "to")
-                ? endpointValue(document, patch.to ?? null)
+                ? obFromObjectCell(document, patch.to ?? null)
                 : undefined;
 
             if (patch.label !== undefined) {
@@ -169,14 +169,14 @@ export function morphismHandle<S extends Shape, M extends MorphismTypes<S>>(
     };
 }
 
-export function cellHandle<S extends Shape>(
+export function getModelCell<S extends Shape>(
     shape: S,
     document: ModelDocument,
     cellId: string,
 ): Cell<S> {
     const cell = Nb.getCellById(document.notebook, cellId);
     if (cell.tag === "rich-text") {
-        return richTextHandle(document, cellId);
+        return getRichTextCell(document, cellId);
     }
 
     switch (cell.content.tag) {
@@ -185,14 +185,14 @@ export function cellHandle<S extends Shape>(
             if (!type) {
                 throw new Error(`Object cell ${cellId} is not supported by the notebook shape.`);
             }
-            return objectHandle(document, cellId, type);
+            return getObjectCell(document, cellId, type);
         }
         case "morphism": {
             const type = findMorphismType(shape, cell.content.morType);
             if (!type) {
                 throw new Error(`Morphism cell ${cellId} is not supported by the notebook shape.`);
             }
-            return morphismHandle(shape, document, cellId, type);
+            return getMorphismCell(shape, document, cellId, type);
         }
         default:
             throw new Error(`Formal cell ${cellId} is not supported yet.`);
