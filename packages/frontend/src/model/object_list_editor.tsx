@@ -2,12 +2,11 @@ import { createEffect, type JSX, splitProps, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
 import { InlineListEditor, type TextInputOptions } from "catcolab-ui-components";
-import type { Ob, QualifiedName } from "catlog-wasm";
-import { ObIdInput } from "../components";
+import type { Ob } from "catlog-wasm";
 import { removeProxyAndCopy } from "../util/remove_proxy_and_copy";
 import { LiveModelContext } from "./context";
 import { buildObList, extractObList } from "./ob_operations";
-import type { ObInputProps } from "./object_input";
+import { ObInput, type ObInputProps } from "./object_input";
 
 type ObListEditorProps = ObInputProps &
     TextInputOptions & {
@@ -37,9 +36,6 @@ export function ObListEditor(allProps: ObListEditorProps) {
         props.setOb(buildObList(modeAppType().content.modality, removeProxyAndCopy(objects)));
     };
 
-    const completions = (): QualifiedName[] | undefined =>
-        liveModel().elaboratedModel()?.obGeneratorsWithType(modeAppType().content.obType);
-
     // Make the default value the empty list, rather than null.
     createEffect(() => {
         if (!props.ob) {
@@ -50,15 +46,11 @@ export function ObListEditor(allProps: ObListEditorProps) {
     return (
         <InlineListEditor items={obList()} setItems={setObList} {...listProps}>
             {(ob, setOb, options) => (
-                <ObIdInput
+                <ObInput
+                    obType={modeAppType().content.obType}
                     ob={ob()}
                     setOb={setOb}
                     placeholder={props.placeholder}
-                    idToLabel={(id) => liveModel().elaboratedModel()?.obGeneratorLabel(id)}
-                    labelToId={(label) =>
-                        liveModel().elaboratedModel()?.obGeneratorWithLabel(label)
-                    }
-                    completions={completions()}
                     {...options}
                 />
             )}

@@ -158,7 +158,7 @@ mod tests {
     fn validate_subreachability() {
         // Define a petri net
         let th = Rc::new(th_sym_monoidal_category());
-        let (ob_type, op) = (ModalObType::new(name("Object")), name("tensor"));
+        let (ob_type, op) = (modal_ob_type(name("Object")), name("tensor"));
         let mut model = ModalDblModel::new(th);
         let (p1, p2, p3, t1, t2, t3) =
             (name("p1"), name("p2"), name("p3"), name("t1"), name("t2"), name("t3"));

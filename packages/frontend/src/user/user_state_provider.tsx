@@ -35,24 +35,32 @@ export function UserStateProvider(props: { children: JSX.Element }) {
         teardownDocHandle();
         setUserState(INITIAL_USER_STATE);
 
-        const userStateDocId = unwrap(await api.rpc.get_user_state_doc_id.query());
-        if (currentUserId !== userId) {
-            return;
+        try {
+            const userStateDocId = unwrap(await api.rpc.get_user_state_doc_id.query());
+            if (currentUserId !== userId) {
+                return;
+            }
+
+            const docHandle: DocHandle<UserState> = await api.repo.find(
+                userStateDocId as DocumentId,
+            );
+            if (currentUserId !== userId) {
+                return;
+            }
+
+            currentDocHandle = docHandle;
+            const onChange = ({ doc }: { doc: UserState }) => {
+                setUserState(reconcile(normalizeImmutableStrings(doc)));
+            };
+            currentChangeHandler = onChange;
+
+            setUserState(reconcile(normalizeImmutableStrings(docHandle.doc())));
+            docHandle.on("change", onChange);
+        } catch (e) {
+            // Failed to load user state (e.g. unauthenticated or backend error). Leave the
+            // initial state in place rather than escaping as an unhandled rejection.
+            console.error("Failed to load user state", e);
         }
-
-        const docHandle: DocHandle<UserState> = await api.repo.find(userStateDocId as DocumentId);
-        if (currentUserId !== userId) {
-            return;
-        }
-
-        currentDocHandle = docHandle;
-        const onChange = ({ doc }: { doc: UserState }) => {
-            setUserState(reconcile(normalizeImmutableStrings(doc)));
-        };
-        currentChangeHandler = onChange;
-
-        setUserState(reconcile(normalizeImmutableStrings(docHandle.doc())));
-        docHandle.on("change", onChange);
     });
 
     onCleanup(() => {

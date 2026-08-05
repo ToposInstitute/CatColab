@@ -10,6 +10,10 @@ import type {
 import type { DiagramAnalysisMeta, ModelAnalysisMeta } from "../theory";
 import * as GraphLayoutConfig from "../visualization/graph_layout_config";
 import type * as Checkers from "./analyses/checker_types";
+import {
+    defaultPolarityContent,
+    type PolarityContent,
+} from "./analyses/polarity_propagation_config";
 import { defaultSchemaERDConfig, type SchemaERDConfig } from "./analyses/schema_erd_config";
 import type * as Simulators from "./analyses/simulator_types";
 import type * as SQLDownloadConfig from "./analyses/sql";
@@ -306,6 +310,56 @@ export const petriNetVisualization = (
 });
 
 const PetriNetVisualization = lazy(() => import("./analyses/petri_net_visualization"));
+
+export const hypergraphVisualization = (
+    options: AnalysisOptions & {
+        /** Object type whose generators become the hypergraph's vertices.
+        Defaults to all objects. */
+        vertexObType?: ObType;
+        /** Morphism type whose generators become the vertices, incident to
+        hyperedges via tabulated references. Overrides `vertexObType`. */
+        vertexMorType?: MorType;
+        /** Morphism type whose generators become the hyperedges.
+        Defaults to all morphisms. */
+        hyperedgeMorType?: MorType;
+    },
+): ModelAnalysisMeta<GraphLayoutConfig.Config> => {
+    const { vertexObType, vertexMorType, hyperedgeMorType, ...rest } = options;
+    return {
+        ...rest,
+        component: (props) => (
+            <HypergraphVisualization
+                vertexObType={vertexObType}
+                vertexMorType={vertexMorType}
+                hyperedgeMorType={hyperedgeMorType}
+                {...props}
+            />
+        ),
+        initialContent: GraphLayoutConfig.defaultConfig,
+    };
+};
+
+const HypergraphVisualization = lazy(() => import("./analyses/hypergraph_visualization"));
+
+export const causalDigraphVisualization = (
+    options: AnalysisOptions,
+): ModelAnalysisMeta<GraphLayoutConfig.Config> => ({
+    ...options,
+    component: CausalDigraphVisualization,
+    initialContent: GraphLayoutConfig.defaultConfig,
+});
+
+const CausalDigraphVisualization = lazy(() => import("./analyses/causal_digraph_visualization"));
+
+export const polarityPropagation = (
+    options: AnalysisOptions,
+): ModelAnalysisMeta<PolarityContent> => ({
+    ...options,
+    component: (props) => <PolarityPropagation title={options.name} {...props} />,
+    initialContent: defaultPolarityContent,
+});
+
+const PolarityPropagation = lazy(() => import("./analyses/polarity_propagation"));
 
 export function reachability(
     options: Partial<AnalysisOptions> & {

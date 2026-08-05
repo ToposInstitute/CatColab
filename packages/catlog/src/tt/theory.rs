@@ -82,7 +82,7 @@ impl TheoryDef {
             TheoryDef::Discrete(_) => ObType::Discrete(name),
             TheoryDef::DiscreteTab(_) => ObType::DiscreteTab(name.into()),
             TheoryDef::ModalUnital(_) | TheoryDef::ModalNonUnital(_) => {
-                ObType::Modal(modal::ModeApp::new(name))
+                ObType::Modal(modal::modal_ob_type(name))
             }
         };
         all_the_same!(match self {
@@ -104,7 +104,7 @@ impl TheoryDef {
                 MorType::DiscreteTab(discrete_tabulator::TabMorType::Basic(name))
             }
             TheoryDef::ModalUnital(_) | TheoryDef::ModalNonUnital(_) => {
-                MorType::Modal(modal::ModeApp::new(name).into())
+                MorType::Modal(modal::modal_ob_type(name).into())
             }
         };
         all_the_same!(match self {
@@ -184,7 +184,10 @@ impl TheoryDef {
         match self {
             TheoryDef::Discrete(_) => None,
             TheoryDef::DiscreteTab(th) => Some(th.tabulator(mor_type.try_into().unwrap()).into()),
-            TheoryDef::ModalUnital(_) | TheoryDef::ModalNonUnital(_) => None,
+            TheoryDef::ModalUnital(_) | TheoryDef::ModalNonUnital(_) => {
+                let mor_type: modal::ModalMorType = mor_type.try_into().ok()?;
+                Some(ObType::Modal(modal::modal_tabulator(mor_type)))
+            }
         }
     }
 

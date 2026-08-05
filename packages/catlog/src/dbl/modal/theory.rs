@@ -162,10 +162,37 @@ impl<T> ModeApp<T> {
     }
 }
 
+/// The argument of a [basic type](ModalType) in a modal double theory.
+///
+/// A basic type is either a generating type, referred to by name, or a
+/// [tabulator](https://ncatlab.org/nlab/show/tabulator) of a morphism type. The
+/// latter is a *minimal* form of tabulator: it provides the tabulator object (so
+/// that morphisms of an edge can be referred to as objects) but none of the
+/// projection operations, cone cells, or universal property of a full tabulator.
+#[derive(Clone, Debug, PartialEq, Eq, Hash, From)]
+pub enum ModalTypeData {
+    /// Generating type, referred to by name.
+    #[from]
+    Basic(QualifiedName),
+
+    /// Tabulator of a morphism type, viewed as an object type.
+    Tabulator(Box<ModalMorType>),
+}
+
 /// A basic type in a modal double theory.
 ///
 /// These are (object or morphism) types that cannot be built out of others.
-pub type ModalType = ModeApp<QualifiedName>;
+pub type ModalType = ModeApp<ModalTypeData>;
+
+/// Constructs a basic (generating) object type from a name.
+pub fn modal_ob_type(id: QualifiedName) -> ModalObType {
+    ModeApp::new(ModalTypeData::Basic(id))
+}
+
+/// Constructs the tabulator object type of a morphism type.
+pub fn modal_tabulator(m: ModalMorType) -> ModalObType {
+    ModeApp::new(ModalTypeData::Tabulator(Box::new(m)))
+}
 
 /// A basic operation in a modal double theory.
 ///
@@ -278,7 +305,11 @@ impl<Kind: DblTheoryKind> Set for ModalObTypes<Kind> {
     type Elem = ModalObType;
 
     fn contains(&self, ob: &Self::Elem) -> bool {
-        self.0.ob_generators.contains(&ob.arg)
+        match &ob.arg {
+            ModalTypeData::Basic(name) => self.0.ob_generators.contains(name),
+            // The tabulator of a valid morphism type is a valid object type.
+            ModalTypeData::Tabulator(m) => m.contained_in(ModalProedgeGraph::ref_cast(&self.0)),
+        }
     }
 }
 
@@ -295,13 +326,24 @@ impl<Kind: DblTheoryKind> Graph for ModalProedgeGraph<Kind> {
         self.0.loose_computad().has_vertex(ob)
     }
     fn has_edge(&self, proedge: &Self::E) -> bool {
-        self.0.loose_computad().has_edge(&proedge.arg)
+        // Only a basic, named generator is a basic morphism type; a tabulator
+        // is an object type, never a basic proedge.
+        match &proedge.arg {
+            ModalTypeData::Basic(name) => self.0.loose_computad().has_edge(name),
+            ModalTypeData::Tabulator(_) => false,
+        }
     }
     fn src(&self, proedge: &Self::E) -> Self::V {
-        proedge.as_ref().flat_map(|e| self.0.loose_computad().src(e))
+        proedge.as_ref().flat_map(|e| match e {
+            ModalTypeData::Basic(name) => self.0.loose_computad().src(name),
+            ModalTypeData::Tabulator(_) => unreachable!("tabulator is not a basic morphism type"),
+        })
     }
     fn tgt(&self, proedge: &Self::E) -> Self::V {
-        proedge.as_ref().flat_map(|e| self.0.loose_computad().tgt(e))
+        proedge.as_ref().flat_map(|e| match e {
+            ModalTypeData::Basic(name) => self.0.loose_computad().tgt(name),
+            ModalTypeData::Tabulator(_) => unreachable!("tabulator is not a basic morphism type"),
+        })
     }
 }
 

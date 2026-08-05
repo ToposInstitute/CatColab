@@ -8,6 +8,26 @@ import type { QubitServer, RpcResult } from "catcolab-api";
 /** RPC client for communicating with the CatColab backend. */
 export type RpcClient = QubitServer;
 
+/** Resolve after `ms` milliseconds. Used to bound an await that could otherwise hang. */
+const delay = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
+
+/** Reject if `promise` doesn't settle within `ms` milliseconds. */
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+    return new Promise<T>((resolve, reject) => {
+        const timer = setTimeout(() => reject(new Error(`Timed out after ${ms}ms`)), ms);
+        promise.then(
+            (value) => {
+                clearTimeout(timer);
+                resolve(value);
+            },
+            (err) => {
+                clearTimeout(timer);
+                reject(err);
+            },
+        );
+    });
+}
+
 /** Create a fetch function that automatically attaches Firebase auth tokens. */
 export function createFetchWithAuth(firebaseApp?: FirebaseApp): typeof fetch {
     let currentUser: User | null = null;
@@ -23,15 +43,21 @@ export function createFetchWithAuth(firebaseApp?: FirebaseApp): typeof fetch {
     });
 
     return async (input, init?) => {
-        await authInitialized;
+        // Don't block forever if auth never initializes (e.g. unauthorized preview domain).
+        await Promise.race([authInitialized, delay(3000)]);
         if (currentUser) {
-            const token = await currentUser.getIdToken();
-            const headers = new Headers(init?.headers);
-            headers.set("Authorization", `Bearer ${token}`);
-            init = {
-                ...init,
-                headers,
-            };
+            try {
+                const token = await withTimeout(currentUser.getIdToken(), 5000);
+                const headers = new Headers(init?.headers);
+                headers.set("Authorization", `Bearer ${token}`);
+                init = {
+                    ...init,
+                    headers,
+                };
+            } catch (e) {
+                // Fall through to an unauthenticated request rather than hanging.
+                console.warn("Auth token unavailable; proceeding unauthenticated", e);
+            }
         }
         return await fetch(input, init);
     };
