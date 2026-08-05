@@ -11,6 +11,26 @@ const MorphismCellEditor = lazy(() => import("../../model/morphism_cell_editor")
 export default function createPetriNetTheory(theoryMeta: TheoryMeta): Theory {
     const thSymMonoidalCategory = new ThSymMonoidalCategory();
 
+    // const _diagramAnalyses: DiagramAnalysisMeta[] = [
+    //     analyses.diagramGraph({
+    //         id: "graph",
+    //         name: "Visualization",
+    //         description: "Visualize the instance as a graph",
+    //         help: "visualization",
+    //     }),
+    // ];
+
+    // if (import.meta.env.DEV) {
+    //     diagramAnalyses.push(
+    //         analyses.tabularView({
+    //             id: "tabularview",
+    //             name: "Tabular Visualization",
+    //             description: "Visualize the instance as a table",
+    //             help: "tabularview",
+    //         }),
+    //     );
+    // }
+
     return new Theory({
         ...theoryMeta,
         theory: thSymMonoidalCategory.theory(),
