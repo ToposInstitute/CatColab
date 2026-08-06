@@ -118,9 +118,20 @@ jobs:
           rustflags: ""
 
       - name: Format/linting/import sorting
+        env:
+          SQLX_OFFLINE: true
         run: |
           pnpm --filter "./packages/*" run build:deps
           pnpm --filter "./packages/*" run ci
+
+      - name: Typescript documents package tests
+        run: |
+          pnpm --filter catcolab-documents test
+          pnpm --filter catcolab-documents test:lts
+
+      - name: Typescript logic package tests
+        run: |
+          pnpm --filter catcolab-logics test
 
   build_nixos_system:
     name: build NixOS system

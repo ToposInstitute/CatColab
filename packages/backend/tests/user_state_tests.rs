@@ -77,13 +77,13 @@ mod integration_tests {
             "version": "2",
             "type": "instance",
             "name": name,
-            "instanceOf": {
+            "instanceIn": {
                 "_id": parent_ref_id.to_string(),
                 "_version": null,
                 "_server": "test",
-                "type": "instance-of"
+                "type": "instance-in"
             },
-            "tables": {}
+            "tables": []
         })
     }
 
@@ -747,7 +747,7 @@ mod integration_tests {
         assert_eq!(child_diagram.depends_on[0].relation_type, "diagram-in");
         assert_eq!(child_instance.depends_on.len(), 1);
         assert_eq!(child_instance.depends_on[0].ref_id, parent_id);
-        assert_eq!(child_instance.depends_on[0].relation_type, "instance-of");
+        assert_eq!(child_instance.depends_on[0].relation_type, "instance-in");
 
         assert_eq!(parent.used_by.len(), 2);
         let used_by_ref_ids: Vec<_> = parent.used_by.iter().map(|doc| doc.ref_id).collect();

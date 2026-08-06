@@ -1,0 +1,11 @@
+/* The docked history panel, mirroring the frontend's `.history-sidebar`. */
+.historySidebar {
+    position: relative;
+    width: 260px;
+    flex-shrink: 0;
+    border-left: 0;
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+    background: rgb(248 248 248 / 70%);
+}

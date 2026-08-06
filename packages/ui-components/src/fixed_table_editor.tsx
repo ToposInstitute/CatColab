@@ -93,8 +93,8 @@ export const createNumericalColumn = <Row,>(args: {
     setData?: (row: Row, data: number) => void;
 }): TextColumnSchema<Row> => ({
     contentType: "string",
-    name: args.name,
-    header: args.header,
+    ...(args.name === undefined ? {} : { name: args.name }),
+    ...(args.header === undefined ? {} : { header: args.header }),
     content(row) {
         let value = args.data(row);
         if (value === undefined) {
@@ -107,16 +107,18 @@ export const createNumericalColumn = <Row,>(args: {
         const parsed = Number(text);
         return !Number.isNaN(parsed) && (args.validate?.(row, parsed) ?? true);
     },
-    setContent:
-        args.setData &&
-        ((row, text) => {
-            const parsed = Number(text);
-            const isValid = !Number.isNaN(parsed) && (args.validate?.(row, parsed) ?? true);
-            if (isValid) {
-                args.setData?.(row, parsed);
-            }
-            return isValid;
-        }),
+    ...(args.setData
+        ? {
+              setContent: (row: Row, text: string) => {
+                  const parsed = Number(text);
+                  const isValid = !Number.isNaN(parsed) && (args.validate?.(row, parsed) ?? true);
+                  if (isValid) {
+                      args.setData?.(row, parsed);
+                  }
+                  return isValid;
+              },
+          }
+        : {}),
 });
 
 /** Edit tabular data given by a fixed list of rows.

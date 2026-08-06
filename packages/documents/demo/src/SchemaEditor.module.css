@@ -1,0 +1,330 @@
+/* The whole left half: the schema panel (with its optional script pane stacked
+   below) plus its (optional) history sidebar, laid side by side. The divider to
+   the instance sits on this layout. */
+.panelLayout {
+    position: relative;
+    display: flex;
+    flex-direction: row;
+    height: 100%;
+    min-height: 0;
+    border-right: 0;
+}
+
+/* The panel and its bottom script pane, stacked vertically. */
+.panelColumn {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 0;
+    height: 100%;
+    min-height: 0;
+}
+
+.panel {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 0;
+    min-height: 0;
+    overflow-y: auto;
+    background: rgb(255 255 255 / 84%);
+}
+
+/* A sticky header, mirroring the instance editor's. */
+.header {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    min-height: 3.25rem;
+    padding: 0.75rem 1rem;
+    border-bottom: 0;
+    background: rgb(255 255 255 / 96%);
+}
+
+.header h2 {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 650;
+}
+
+.headerRight {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+/* The notebook, mirroring CatColab's `.notebook-container` gutter layout. */
+.notebookContainer {
+    --gutter-width: 50px;
+    width: 100%;
+    max-width: calc(80ex + var(--gutter-width));
+    margin: 0 auto;
+    padding-left: var(--gutter-width);
+    padding-right: 1.5rem;
+}
+
+.notebookCells {
+    list-style: none;
+    margin: 1rem 0;
+    padding: 0;
+}
+
+/* One cell row: gutter (left, in the negative space), content, and a type tag. */
+.cell {
+    position: relative;
+    margin: 0.25em 0;
+    display: flex;
+    flex-direction: row;
+    align-items: baseline;
+    justify-content: space-between;
+    padding: 0.1rem 0;
+}
+
+.cellGutter {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    transform: translate(-100%, -50%);
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.15rem;
+    opacity: 0;
+}
+
+.cell:hover .cellGutter,
+.cell:focus-within .cellGutter {
+    opacity: 1;
+}
+
+.cellContent {
+    flex-grow: 1;
+    max-width: 100%;
+}
+
+.cellTag {
+    color: var(--color-gray-600);
+    font-size: 11pt;
+    align-self: flex-start;
+    padding-left: 1ex;
+    white-space: nowrap;
+    transform: rotate(0.7deg);
+}
+
+/* Formal-judgment sizing, exactly as CatColab. */
+.formalJudgment {
+    --formal-judgment-font-size: 1.3em;
+    font-size: var(--formal-judgment-font-size);
+    line-height: 1.1;
+}
+
+.code {
+    font-family: var(--mono-font);
+}
+
+/* An entity declaration: a monospace name in a 1px box that hugs its content. */
+.objectDecl {
+    width: fit-content;
+}
+
+.box {
+    position: relative;
+    display: inline-block;
+    padding: 5px 7px;
+}
+
+/* Inline name inputs that size to their content, like the frontend's
+   `InlineInput`: a hidden filler span sets the width and the real input is
+   stretched over it, so the field hugs the text with no default fixed width
+   (which otherwise leaves empty space to the right of the name in the box). */
+.inlineInput {
+    display: inline-block;
+    position: relative;
+}
+
+.inlineInputFiller {
+    display: inline-block;
+    visibility: hidden;
+    white-space-collapse: preserve;
+    padding: 0 5px;
+    min-width: 1ex;
+}
+
+/* The real input, stretched over the filler that sizes the container. Its metrics
+   (font, padding) come from the caller's `.nameInput` / `.arrowName` class, which
+   must match the filler's so the two align exactly. */
+.inlineInputField {
+    position: absolute;
+    inset: 0;
+}
+
+/* Inline, borderless name inputs that blend into the text (like InlineInput). */
+.nameInput,
+.arrowName {
+    font: inherit;
+    color: inherit;
+    border: none;
+    background: transparent;
+    outline: none;
+    padding: 0 5px;
+    min-width: 1ex;
+}
+
+.nameInput::placeholder,
+.arrowName::placeholder {
+    color: var(--color-text-placeholder);
+}
+
+/* A morphism declaration: dom  ──name──▶  cod. */
+.morphismDecl {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 1ex;
+}
+
+.arrowWithName {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 2.5ex;
+}
+
+.arrowName {
+    text-align: center;
+    width: 100%;
+}
+
+/* The arrow sits *below* the name, in its own container. The container carries a
+   top margin (a gap under the name) and a large bottom margin so the diagonal
+   arrowhead pieces — positioned relative to the container — have room and never
+   overlap the name above. Mirrors the frontend's `.arrowContainer`. */
+.arrowContainer {
+    position: relative;
+    width: 100%;
+    margin-top: 0.3em;
+    margin-bottom: calc(var(--formal-judgment-font-size) + 0.1em);
+}
+
+/* Endpoint pickers: kept inline and unobtrusive over the mono name. */
+.endpoint {
+    font: inherit;
+    color: inherit;
+    padding: 0 2px;
+    border: 1px solid transparent;
+    border-radius: 2px 6px 3px 5px;
+    background: transparent;
+    cursor: pointer;
+}
+
+.endpoint:hover,
+.endpoint:focus {
+    border-color: var(--color-gray-450);
+    background: var(--color-gray-100);
+}
+
+/* The gutter delete affordance. */
+.gutterDelete {
+    width: 1.4rem;
+    height: 1.4rem;
+    line-height: 1;
+    font-size: 1rem;
+    border: none;
+    border-radius: 42% 58% 46% 54%;
+    background: transparent;
+    color: var(--color-gray-600);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.gutterDelete:hover {
+    background: var(--color-icon-button-danger-hover);
+    color: var(--color-icon-button-danger-text);
+}
+
+/* End-of-notebook placeholder, matching `.notebook-cell-placeholder`. */
+.notebookCellPlaceholder {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    column-gap: 0.5ex;
+    margin: 1rem 0;
+    color: var(--color-gray-600);
+}
+
+/* New-cell button + popover menu. */
+.addCell {
+    position: relative;
+    display: inline-flex;
+}
+
+.addCellButton {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.4rem;
+    height: 1.4rem;
+    font-size: 1.1rem;
+    line-height: 1;
+    border: none;
+    border: 1px solid transparent;
+    border-radius: 48%;
+    background: transparent;
+    color: var(--color-gray-600);
+    cursor: pointer;
+}
+
+.addCellButton:hover {
+    background: var(--color-icon-button-utility-hover-bg);
+    border-color: var(--pencil);
+}
+
+.addCellBackdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 10;
+}
+
+.addCellMenu {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    z-index: 11;
+    min-width: 16rem;
+    margin: 0;
+    padding: 0.35rem;
+    background: var(--color-background);
+    color: var(--ink);
+    transform: rotate(-0.35deg);
+}
+
+.addCellMenuList {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.addCellOption {
+    padding: 5px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.addCellOption:hover {
+    background: var(--color-highlight-bg);
+    transform: rotate(0.2deg);
+}
+
+.addCellName {
+    font-weight: 500;
+    color: var(--color-foreground);
+}
+
+.addCellDescription {
+    font-size: 0.75em;
+    color: var(--color-text-muted);
+}

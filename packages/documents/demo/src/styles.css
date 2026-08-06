@@ -1,0 +1,185 @@
+:root {
+    --paper: #fff;
+    --paper-deep: #f5f5f5;
+    --paper-blue: #eee;
+    --ink: #000;
+    --ink-soft: #000;
+    --pencil: #000;
+    --teal-ink: #000;
+    --red-ink: #000;
+    --yellow-pencil: #000;
+    --main-font: Inter, sans-serif;
+    --mono-font: "Source Code Pro", monospace;
+    --color-background: var(--paper);
+    --color-foreground: var(--ink);
+    --color-text-secondary: var(--ink-soft);
+    --color-text-muted: #666;
+    --color-text-placeholder: #aaa;
+    --color-gray-50: #f8f8f8;
+    --color-gray-100: #f0f0f0;
+    --color-gray-150: #ddd;
+    --color-gray-200: #e8e8e8;
+    --color-gray-300: #000;
+    --color-gray-400: #000;
+    --color-gray-450: #000;
+    --color-gray-600: #000;
+    --color-hover-bg: #f1f1f1;
+    --color-highlight-bg: #ddd;
+    --color-topos-primary: var(--teal-ink);
+    --color-topos-primary-hover: #000;
+    --color-alert-danger: var(--red-ink);
+    --color-form-invalid-bg: #eee;
+    --color-icon-button-positive-hover: #e5e5e5;
+    --color-icon-button-positive-active: #ccc;
+    --color-icon-button-danger-hover: #e5e5e5;
+    --color-icon-button-danger-text: var(--red-ink);
+    --color-icon-button-utility-hover-bg: #eee;
+    --color-button-utility-bg: transparent;
+    --color-button-utility-hover-bg: #eee;
+    --color-button-utility-border: var(--ink-soft);
+    --color-border: var(--pencil);
+    --color-foreground-secondary: var(--ink-soft);
+
+    --background: var(--paper);
+    --panel-bg: var(--paper);
+    --header-bg: #f8f8f8;
+    --foreground: var(--ink);
+    --muted: var(--ink-soft);
+    --border: var(--pencil);
+    --row-hover: #f1f1f1;
+    --button-bg: transparent;
+    --button-hover: #eee;
+    --accent: var(--teal-ink);
+    --ok: var(--teal-ink);
+    --ok-bg: #e5e5e5;
+    --danger: var(--red-ink);
+    --danger-bg: #eee;
+
+    color: var(--ink);
+    font-family: var(--main-font);
+}
+
+* {
+    box-sizing: border-box;
+}
+
+html,
+body {
+    margin: 0;
+    height: 100%;
+    background-color: #fff;
+    color: var(--ink);
+}
+
+button {
+    font-family: inherit;
+    color: inherit;
+}
+
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+wired-button:focus-visible,
+wired-icon-button:focus-visible {
+    outline: 2px solid var(--teal-ink);
+    outline-offset: 3px;
+}
+
+wired-button,
+wired-icon-button,
+wired-checkbox,
+wired-combo,
+wired-input,
+wired-listbox,
+wired-radio-group,
+wired-textarea,
+wired-toggle {
+    font-family: var(--main-font);
+    color: var(--ink);
+}
+
+wired-button {
+    --wired-rendered-stroke-width: 1.1;
+    font-size: 0.72rem;
+}
+
+wired-card {
+    color: var(--ink);
+    background: var(--paper);
+}
+
+wired-checkbox {
+    --wired-checkbox-icon-color: var(--teal-ink);
+}
+
+wired-combo {
+    --wired-combo-popup-bg: var(--paper);
+    --wired-item-selected-bg: var(--teal-ink);
+    --wired-item-selected-color: var(--paper);
+}
+
+::selection {
+    background: rgb(180 180 180 / 55%);
+}
+
+/**
+ * jspreadsheet-ce overrides: retheme its default grid to CatColab's palette and
+ * typography. The library ships plain (non-variable) CSS, so we match its
+ * selectors closely enough to win on specificity/order.
+ */
+.jss_worksheet {
+    font-family: var(--main-font);
+    font-size: 0.98rem;
+    border: 0;
+    transform: rotate(-0.08deg);
+    background: transparent;
+}
+
+/* Roomier cells so rows are taller and easier to read. */
+.jss_worksheet > tbody > tr > td {
+    height: 2.4rem;
+    padding: 6px 10px;
+    background: rgb(255 255 255 / 90%);
+}
+
+/* The in-cell editor jspreadsheet renders on edit is a bare <input>/<textarea>
+   that does not inherit the cell's font, so it falls back to the browser default
+   and the text visibly changes font while editing. Force it to match the cell. */
+.jss_worksheet > tbody > tr > td > input,
+.jss_worksheet > tbody > tr > td > textarea,
+.jss_worksheet .editor > input,
+.jss_worksheet .editor > textarea {
+    font-family: var(--main-font);
+    font-size: 1.05rem;
+}
+
+.jss_worksheet > thead > tr > td,
+.jss_worksheet > tbody > tr > td:first-child {
+    background-color: var(--paper-deep);
+    color: var(--ink-soft);
+    font-weight: 600;
+    border-color: var(--pencil);
+    padding: 6px 10px;
+}
+
+.jss_worksheet > thead > tr > td.selected {
+    background-color: var(--color-gray-200);
+}
+
+.jss_worksheet > tbody > tr > td {
+    border-color: var(--pencil);
+    border-style: solid;
+    color: var(--ink);
+}
+
+.jss_worksheet .selection {
+    background-color: var(--color-icon-button-positive-hover);
+}
+
+.jss_worksheet .selection-left,
+.jss_worksheet .selection-right,
+.jss_worksheet .selection-top,
+.jss_worksheet .selection-bottom {
+    border-color: var(--color-topos-primary);
+}

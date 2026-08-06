@@ -30,7 +30,7 @@ export function InputField(allProps: InputFieldProps & Omit<ComponentProps<"inpu
             </dt>
             <dd>
                 <input {...inputProps} id={fieldId} />
-                <FieldError error={props.error} />
+                <FieldError {...(props.error === undefined ? {} : { error: props.error })} />
             </dd>
         </>
     );
@@ -114,7 +114,7 @@ export function TextAreaField(allProps: InputFieldProps & Omit<ComponentProps<"t
             </dt>
             <dd>
                 <textarea id={fieldId} {...textProps} />
-                <FieldError error={props.error} />
+                <FieldError {...(props.error === undefined ? {} : { error: props.error })} />
             </dd>
         </>
     );

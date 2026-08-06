@@ -4,6 +4,11 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+patchedDependencies:
+  '@automerge/automerge@3.3.1':
+    hash: f0e3054d8f45c1d0655364015a1d437667a2ffe362febc0485002d1de75f4ffc
+    path: ../document-methods/patches/@automerge__automerge@3.3.1.patch
+
 importers:
 
   .:
@@ -15,8 +20,8 @@ importers:
         specifier: ^1.0.3
         version: 1.0.3
       '@automerge/automerge':
-        specifier: ^3.2.5
-        version: 3.2.5
+        specifier: ^3.3.1
+        version: 3.3.1(patch_hash=f0e3054d8f45c1d0655364015a1d437667a2ffe362febc0485002d1de75f4ffc)
       '@automerge/automerge-repo':
         specifier: ^2.5.5
         version: 2.5.5
@@ -244,8 +249,8 @@ packages:
   '@automerge/automerge-repo@2.5.5':
     resolution: {integrity: sha512-A7vrMvIx5axW3smczZStONaZsksFSjKK8e0Th0u+oEV3aMsylaExpDvjRE2ZIZotJT30+l3tCUlge/n/XGK25Q==}
 
-  '@automerge/automerge@3.2.5':
-    resolution: {integrity: sha512-tCdaGDTLaRzBJV+Q9zMyyEH/vUFkBNh21jpwlpcEYV7gs5r63xh9UFa1N3yNJ5ZzmiLBD42TIBeqK+g54sLp0w==}
+  '@automerge/automerge@3.3.1':
+    resolution: {integrity: sha512-ZnVHlUCPB9w3CFlqWe/ex2q3JIpJ5g0jAlxpX4NxHpjad/WwnyeUM3hQC+IrPO1P5kPX18agxesnXBVUA/qlvg==}
 
   '@automerge/prosemirror@0.2.0':
     resolution: {integrity: sha512-Mixxftvfs12tKi7DsStobrQxFayoLJXhEjbrnmNnaQbMzwHrUzuwac+OUvw6ujbtXaulWX+JE8hAuHFAGRDsvQ==}
@@ -2925,6 +2930,7 @@ packages:
 
   uuid@9.0.1:
     resolution: {integrity: sha512-b+1eJOlsR9K8HJpow9Ok3fiWOWSIcIzXodvv0rQjVoOVNpWMpxf1wZNpt4y9h10odCNrqnYp1OBzRktckBe3sA==}
+    deprecated: uuid@10 and below is no longer supported.  For ESM codebases, update to uuid@latest.  For CommonJS codebases, use uuid@11 (but be aware this version will likely be deprecated in 2028).
     hasBin: true
 
   uvu@0.5.6:
@@ -3187,7 +3193,7 @@ snapshots:
 
   '@automerge/automerge-repo@2.5.5':
     dependencies:
-      '@automerge/automerge': 3.2.5
+      '@automerge/automerge': 3.3.1(patch_hash=f0e3054d8f45c1d0655364015a1d437667a2ffe362febc0485002d1de75f4ffc)
       bs58check: 3.0.1
       cbor-x: 1.6.0
       debug: 4.4.3
@@ -3198,11 +3204,11 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@automerge/automerge@3.2.5': {}
+  '@automerge/automerge@3.3.1(patch_hash=f0e3054d8f45c1d0655364015a1d437667a2ffe362febc0485002d1de75f4ffc)': {}
 
   '@automerge/prosemirror@0.2.0':
     dependencies:
-      '@automerge/automerge': 3.2.5
+      '@automerge/automerge': 3.3.1(patch_hash=f0e3054d8f45c1d0655364015a1d437667a2ffe362febc0485002d1de75f4ffc)
       ordered-map: 0.1.0
       prosemirror-changeset: 2.3.1
       prosemirror-history: 1.4.1

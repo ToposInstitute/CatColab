@@ -18,10 +18,12 @@ export function Dialog(props: {
     trigger?: Component<ComponentProps<"button">>;
 }) {
     return (
-        <Root open={props.open} onOpenChange={props.onOpenChange} closeOnOutsideFocus={false}>
-            <Show when={props.trigger}>
-                <Trigger as={props.trigger} />
-            </Show>
+        <Root
+            {...(props.open === undefined ? {} : { open: props.open })}
+            onOpenChange={props.onOpenChange}
+            closeOnOutsideFocus={false}
+        >
+            <Show when={props.trigger}>{(trigger) => <Trigger as={trigger()} />}</Show>
             <Portal>
                 <Overlay />
                 <Content class="popup">

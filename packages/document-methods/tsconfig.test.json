@@ -1,0 +1,11 @@
+{
+    "extends": ["./tsconfig.json", "@tsconfig/strictest/tsconfig.json"],
+    "compilerOptions": {
+        "noEmit": true,
+        "types": ["node"],
+        "jsx": "preserve",
+        "jsxImportSource": "solid-js",
+        "lib": ["ES2023", "DOM", "DOM.Iterable"]
+    },
+    "include": ["vite.config.ts", "demo/src/datascript-lib.d.ts"]
+}

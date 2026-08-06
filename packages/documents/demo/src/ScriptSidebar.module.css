@@ -1,0 +1,159 @@
+/* The single script panel, docked along the bottom of the whole app and taking
+   up a fixed slice of its height (it edits both the schema and the instance). */
+.scriptSidebar {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 40vh;
+    flex: none;
+    border-top: 0;
+    min-height: 0;
+    overflow: hidden;
+    background: rgb(255 255 255 / 96%);
+}
+
+.header {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.5rem 0.75rem;
+    border-bottom: 0;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--color-text-secondary);
+}
+
+/* The editing area: a highlighted layer and the transparent textarea stacked on
+   top of one another. Both must share identical text metrics so the caret and
+   the highlighted glyphs line up exactly. This box is the single scroll
+   container: both layers grow to their content height inside it and scroll
+   together as one, so wheel/trackpad scrolling works in every browser (Firefox
+   in particular does not reliably wheel-scroll an absolutely-positioned,
+   content-clipping textarea). */
+.editorArea {
+    position: relative;
+    flex: 1;
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+}
+
+/* Shared text metrics for both the textarea and the highlight layer. Any change
+   here must apply to both, or the two will drift out of alignment. */
+.editorArea,
+.editor,
+.highlight :global(pre),
+.highlight :global(code) {
+    font-family: var(--mono-font);
+    font-size: 1.15rem;
+    line-height: 1.6;
+    tab-size: 2;
+}
+
+/* The highlighted code, drawn underneath the textarea. `CodeView` emits its own
+   <pre>; strip its background and padding so it aligns with the textarea and
+   shows this panel's background instead. It is pinned to the top of the scroll
+   container and drawn at its full content height, so it scrolls together with
+   the textarea overlaid on it. */
+.highlight {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    min-height: 100%;
+    padding: 0.75rem;
+    pointer-events: none;
+    white-space: pre-wrap;
+    word-break: break-word;
+    overflow: visible;
+}
+
+.highlight :global(pre),
+.highlight :global(code) {
+    margin: 0;
+    padding: 0;
+    background: transparent !important;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+/* The textarea sits on top, its text transparent so only its caret and
+   selection show; the highlight layer beneath supplies the visible glyphs. It
+   lives in the flow of the scrolling `.editorArea` and is grown by JS to its
+   content height (never scrolling internally — `overflow: hidden`), so the
+   container scrolls it and the highlight layer together as one. `min-height:
+   100%` keeps it filling the pane (and clickable) when the code is short. */
+.editor {
+    position: relative;
+    z-index: 1;
+    display: block;
+    width: 100%;
+    min-height: 100%;
+    height: auto;
+    resize: none;
+    border: none;
+    outline: none;
+    margin: 0;
+    padding: 0.75rem;
+    background: transparent;
+    color: transparent;
+    caret-color: var(--color-foreground);
+    white-space: pre-wrap;
+    word-break: break-word;
+    overflow: hidden;
+}
+
+.editor::placeholder {
+    color: var(--color-text-placeholder);
+}
+
+/* The textarea's text is transparent, so its selection highlight would paint an
+   opaque band over the highlighted code beneath. Use a translucent selection so
+   the highlighted glyphs stay legible through the selection. */
+.editor::selection {
+    background: color-mix(in srgb, var(--color-topos-primary) 30%, transparent);
+}
+
+.footer {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    border-top: 0;
+}
+
+.runButton {
+    display: inline-block;
+    font-size: 0.8rem;
+    font-weight: 500;
+    background: transparent;
+    color: var(--teal-ink);
+}
+
+.runButton:hover {
+    background: var(--color-topos-primary-hover);
+    border-color: var(--color-topos-primary-hover);
+}
+
+/* The result/error line shown after running. */
+.status {
+    flex: 1;
+    min-width: 0;
+    font-size: 0.75rem;
+    white-space: pre-wrap;
+    word-break: break-word;
+    max-height: 6rem;
+    overflow-y: auto;
+    font-family: var(--mono-font);
+}
+
+.status[data-tag="ok"] {
+    color: var(--color-topos-primary-hover);
+}
+
+.status[data-tag="error"] {
+    color: var(--color-alert-danger);
+}

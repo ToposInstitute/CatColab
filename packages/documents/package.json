@@ -1,0 +1,77 @@
+{
+    "name": "catcolab-documents",
+    "version": "0.1.0",
+    "private": true,
+    "license": "MIT",
+    "type": "module",
+    "exports": {
+        ".": "./src/index.ts"
+    },
+    "scripts": {
+        "build:wasm": "wasm-pack build ../document-types && pnpm --prefix ../catlog-wasm run build:browser",
+        "demo": "vite --config demo/vite.config.ts",
+        "demo:build": "vite build --config demo/vite.config.ts",
+        "format": "oxfmt .",
+        "lint": "oxlint --fix && oxfmt .",
+        "test": "vitest run",
+        "test:lts": "literate-typescript test/*.lts.md",
+        "test:db-dump": "vitest --config vitest.db-dump.config.ts --run",
+        "test:watch": "vitest",
+        "check": "tsc -p tsconfig.test.json && pnpm run lint",
+        "ci": "oxlint --deny-warnings && oxfmt --check ."
+    },
+    "dependencies": {
+        "@standard-schema/spec": "^1.1.0",
+        "arktype": "^2.2.1",
+        "catcolab-document-types": "link:../document-types/pkg",
+        "catlog-wasm": "link:../catlog-wasm/dist/pkg-browser",
+        "uuid": "^13.0.0"
+    },
+    "devDependencies": {
+        "@atlaskit/pragmatic-drag-and-drop": "^1.3.0",
+        "@atlaskit/pragmatic-drag-and-drop-hitbox": "^1.0.3",
+        "@automerge/automerge": "^3.3.1",
+        "@automerge/automerge-repo": "^2.5.5",
+        "@automerge/automerge-repo-solid-primitives": "^2.0.0",
+        "@automerge/prosemirror": "^0.2.0",
+        "@catcolab-dev-tools/literate-typescript": "workspace:*",
+        "@catcolab-dev-tools/vite-plugin-monorepo-dedupe": "link:../../tools/vite-plugin-monorepo-dedupe",
+        "@corvu/popover": "^0.2.0",
+        "@mcp-b/webmcp-polyfill": "^3.0.0",
+        "@tsconfig/strictest": "^2.0.8",
+        "@types/node": "^24.0.0",
+        "@types/uuid": "^10.0.0",
+        "@types/vhtml": "^2.2.9",
+        "@viz-js/viz": "^3.15.0",
+        "catcolab-analyses": "workspace:*",
+        "catcolab-documents": "workspace:*",
+        "catcolab-logics": "workspace:*",
+        "catcolab-ui-components": "link:../ui-components",
+        "datascript": "^1.7.8",
+        "fast-check": "^4.9.0",
+        "happy-dom": "^20.0.0",
+        "jspreadsheet-ce": "^5.0.4",
+        "jsuites": "^6.4.2",
+        "lucide-solid": "^0.471.0",
+        "prosemirror-model": "^1.25.9",
+        "prosemirror-state": "^1.4.4",
+        "prosemirror-view": "^1.41.9",
+        "roughjs": "4.3.1",
+        "solid-js": "^1.9.10",
+        "tiny-invariant": "^1.3.3",
+        "typescript": "^6.0.3",
+        "vhtml": "^2.2.0",
+        "vite": "^7.2.2",
+        "vite-plugin-solid": "^2.11.10",
+        "vite-plugin-wasm": "^3.5.0",
+        "vitest": "^4.0.8",
+        "wasm-pack": "^0.15.0",
+        "wired-elements": "^3.0.0-rc.6"
+    },
+    "pnpm": {
+        "patchedDependencies": {
+            "@automerge/automerge@3.3.1": "../document-methods/patches/@automerge__automerge@3.3.1.patch",
+            "@automerge/automerge-repo-solid-primitives@2.5.6": "../document-methods/patches/@automerge__automerge-repo-solid-primitives@2.5.6.patch"
+        }
+    }
+}
