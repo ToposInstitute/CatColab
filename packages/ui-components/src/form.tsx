@@ -14,7 +14,7 @@ export function FormGroup(props: { compact?: boolean } & ComponentProps<"dl">) {
 
 type InputFieldProps = {
     label: string | JSX.Element;
-    error?: string;
+    error?: string | undefined;
 };
 
 /** Input field in a form group. */
@@ -30,7 +30,7 @@ export function InputField(allProps: InputFieldProps & Omit<ComponentProps<"inpu
             </dt>
             <dd>
                 <input {...inputProps} id={fieldId} />
-                <FieldError {...(props.error === undefined ? {} : { error: props.error })} />
+                <FieldError error={props.error} />
             </dd>
         </>
     );
@@ -114,14 +114,14 @@ export function TextAreaField(allProps: InputFieldProps & Omit<ComponentProps<"t
             </dt>
             <dd>
                 <textarea id={fieldId} {...textProps} />
-                <FieldError {...(props.error === undefined ? {} : { error: props.error })} />
+                <FieldError error={props.error} />
             </dd>
         </>
     );
 }
 
 /** Validation error for a field. */
-export const FieldError = (props: { error?: string }) => (
+export const FieldError = (props: { error?: string | undefined }) => (
     <Show when={props.error}>
         <div class="error">{props.error}</div>
     </Show>

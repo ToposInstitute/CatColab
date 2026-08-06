@@ -40,7 +40,7 @@ export function getParentRefId(document: Document): string | null {
         case "diagram":
             return document.diagramIn._id;
         case "instance":
-            return document.instanceIn._id;
+            return document.instanceOf._id;
         case "analysis":
             return document.analysisOf._id;
         case "llmconversation":

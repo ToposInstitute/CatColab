@@ -12,6 +12,9 @@ type BaseColumnSchema = {
     /** Name of column. */
     name?: string;
 
+    /** Class applied to the column's name in the table head. */
+    nameClass?: string;
+
     /** Is the column a header? */
     header?: boolean;
 };
@@ -135,7 +138,13 @@ export function FixedTableEditor<Row>(props: {
         <table class="fixed-table-editor">
             <thead>
                 <tr>
-                    <For each={props.schema}>{(col) => <th scope="col">{col.name}</th>}</For>
+                    <For each={props.schema}>
+                        {(col) => (
+                            <th scope="col" class={col.nameClass}>
+                                {col.name}
+                            </th>
+                        )}
+                    </For>
                 </tr>
             </thead>
             <tbody>

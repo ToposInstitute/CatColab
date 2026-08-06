@@ -267,9 +267,7 @@ export function TextInput(allProps: TextInputProps) {
                     <Completions
                         completions={options.completions ?? []}
                         text={props.text}
-                        {...(options.completionsEmptyText === undefined
-                            ? {}
-                            : { emptyText: options.completionsEmptyText })}
+                        emptyText={options.completionsEmptyText}
                         ref={(ref) => setCompletionsRef(ref)}
                         onComplete={() => {
                             setCompletionsOpen(false);

@@ -15,6 +15,20 @@ export function IconButton(
     const [props, buttonProps] = splitProps(allProps, ["children", "tooltip", "variant"]);
     const [buttonRef, triggerProps] = splitProps(buttonProps, ["ref"]);
 
+    // corvu's trigger declares `ref` as non-nullable-when-present, so it cannot
+    // receive our possibly-undefined `ref` directly. Forward it through a
+    // callback rather than a conditional spread: Solid compiles a spread into
+    // `mergeProps`, whose proxy re-evaluates the spread expression on every read
+    // of a prop absent from the sibling static props, which silently subscribes
+    // unrelated computations to the spread's condition. Solid always hands
+    // components a callback ref, so the element form needs no handling here.
+    const forwardButtonRef = (element: HTMLButtonElement) => {
+        const ref = buttonRef.ref;
+        if (typeof ref === "function") {
+            ref(element);
+        }
+    };
+
     const buttonClass = () => {
         const baseClass = "icon-button";
         switch (props.variant) {
@@ -38,11 +52,7 @@ export function IconButton(
         >
             <Tooltip hoverableContent={false} openOnFocus={false}>
                 <Tooltip.Anchor>
-                    <Tooltip.Trigger
-                        class={buttonClass()}
-                        {...triggerProps}
-                        {...(buttonRef.ref === undefined ? {} : { ref: buttonRef.ref })}
-                    >
+                    <Tooltip.Trigger class={buttonClass()} {...triggerProps} ref={forwardButtonRef}>
                         {props.children}
                     </Tooltip.Trigger>
                 </Tooltip.Anchor>

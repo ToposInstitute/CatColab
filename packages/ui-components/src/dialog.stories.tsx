@@ -1,8 +1,11 @@
-import { createSignal } from "solid-js";
+import FileUser from "lucide-solid/icons/file-user";
+import { type ComponentProps, createSignal } from "solid-js";
 import type { Meta, StoryObj } from "storybook-solidjs-vite";
+import { expect, screen, userEvent, waitFor, within } from "storybook/test";
 
 import { Button } from "./button";
 import { Dialog } from "./dialog";
+import { IconButton } from "./icon_button";
 
 const meta = {
     title: "Messages/Dialog",
@@ -39,6 +42,51 @@ export const Basic: Story = {
                 </Dialog>
             </div>
         );
+    },
+    // Regression test: the dialog must actually mount its content when `open`
+    // flips, and unmount it again when it flips back. The content is portaled
+    // out of the canvas, so it is queried through `screen`.
+    play: async () => {
+        await userEvent.click(screen.getByRole("button", { name: "Open Basic Dialog" }));
+
+        const dialog = await screen.findByRole("dialog");
+        await expect(
+            within(dialog).getByText("This is a basic dialog with a title and content."),
+        ).toBeInTheDocument();
+
+        await userEvent.click(within(dialog).getByRole("button", { name: "Close" }));
+        await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    },
+};
+
+const PermissionsTrigger = (props: ComponentProps<"button">) => (
+    <IconButton {...props} aria-label="Change who has access" tooltip="Who has access?">
+        <FileUser />
+    </IconButton>
+);
+
+/** A dialog opened by its own `trigger`, as the permissions dialogs do. */
+export const WithTrigger: Story = {
+    render: () => {
+        const [open, setOpen] = createSignal(false);
+        return (
+            <Dialog
+                open={open()}
+                onOpenChange={setOpen}
+                title="Permissions"
+                trigger={PermissionsTrigger}
+            >
+                <p>This dialog is opened by the trigger it renders itself.</p>
+            </Dialog>
+        );
+    },
+    play: async () => {
+        await userEvent.click(screen.getByRole("button", { name: "Change who has access" }));
+
+        const dialog = await screen.findByRole("dialog");
+        await expect(
+            within(dialog).getByText("This dialog is opened by the trigger it renders itself."),
+        ).toBeInTheDocument();
     },
 };
 

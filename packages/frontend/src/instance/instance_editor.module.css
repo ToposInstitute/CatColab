@@ -1,0 +1,26 @@
+.editor {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    padding: 1rem;
+    overflow: auto;
+}
+
+.table {
+    width: fit-content;
+}
+
+.header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.header h3 {
+    margin: 0;
+}
+
+.unnamed {
+    color: var(--color-text-placeholder);
+}

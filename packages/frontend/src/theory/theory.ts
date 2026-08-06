@@ -91,7 +91,7 @@ export class Theory {
 
     /** Human-readable name for instances of models of theory.
 
-    Defaults to "Instance of".
+    Defaults to "Diagram in".
      */
     readonly instanceOfName: string;
 
@@ -176,7 +176,7 @@ export class Theory {
         this.equationCellMeta = props.equationCellMeta;
 
         // Instances.
-        this.instanceOfName = props.instanceOfName ?? "Instance of";
+        this.instanceOfName = props.instanceOfName ?? "Diagram in";
         this.instanceTypes = props.instanceTypes ?? [];
         [this.instanceObTypeMap, this.instanceMorTypeMap] = [new ObTypeMap(), new MorTypeMap()];
         for (const meta of this.instanceTypes) {

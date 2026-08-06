@@ -142,9 +142,11 @@ function DocumentRow(props: DocumentRowProps) {
         const parentRelType =
             props.doc.typeName === "diagram"
                 ? "diagram-in"
-                : props.doc.typeName === "analysis"
-                  ? "analysis-of"
-                  : undefined;
+                : props.doc.typeName === "instance"
+                  ? "instance-in"
+                  : props.doc.typeName === "analysis"
+                    ? "analysis-of"
+                    : undefined;
         if (!parentRelType) {
             return undefined;
         }
@@ -160,6 +162,8 @@ function DocumentRow(props: DocumentRowProps) {
             let prefix = "";
             if (props.doc.typeName === "diagram") {
                 prefix = "Orphaned diagram";
+            } else if (props.doc.typeName === "instance") {
+                prefix = "Orphaned instance";
             } else if (props.doc.typeName === "analysis") {
                 prefix = "Orphaned analysis";
             } else {
@@ -172,6 +176,8 @@ function DocumentRow(props: DocumentRowProps) {
         let prefix = "";
         if (props.doc.typeName === "diagram") {
             prefix = "Diagram in ";
+        } else if (props.doc.typeName === "instance") {
+            prefix = "Data instance of ";
         } else if (props.doc.typeName === "analysis") {
             prefix = "Analysis of ";
         } else {
