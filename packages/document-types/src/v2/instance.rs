@@ -1,3 +1,4 @@
+use crate::v2::uuid_path::UuidPath;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use tsify::Tsify;
@@ -7,6 +8,7 @@ use uuid::Uuid;
 /// attribute morphism then we provide the value of the type; if the column corresponds to a
 /// mapping morphism then we provide the uuid of the row.
 #[derive(PartialEq, Debug, Serialize, Deserialize, Tsify)]
+#[tsify(into_wasm_abi, from_wasm_abi)]
 pub enum FieldValue {
     /// Base type: the empty type.
     Null,
@@ -24,20 +26,75 @@ pub enum FieldValue {
 
 /// A single row of a table.
 #[derive(PartialEq, Debug, Serialize, Deserialize, Tsify)]
+#[tsify(into_wasm_abi, from_wasm_abi, hashmap_as_object)]
 pub struct TableRow {
     /// The row "number".
     pub id: Uuid,
     /// The content of the row, given as a map from column IDs to values.
-    pub fields: HashMap<Uuid, FieldValue>,
+    pub fields: HashMap<UuidPath, FieldValue>,
 }
 
 /// A single table, corresponding to a single entity.
 #[derive(PartialEq, Debug, Serialize, Deserialize, Tsify)]
+#[tsify(into_wasm_abi, from_wasm_abi, hashmap_as_object)]
 pub struct Table {
-    /// The uuid of the entity to which this table corresponds.
-    pub id: Uuid,
+    /// The uuid path of the entity to which this table corresponds.
+    pub id: UuidPath,
     /// The rows of the table.
     pub rows: HashMap<Uuid, TableRow>,
     /// The order of the rows of the table.
     pub row_order: Vec<Uuid>,
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use serde_json::{Value, json};
+
+    #[test]
+    fn table_round_trips_through_json_with_string_keys() {
+        let row_id = Uuid::from_u128(1);
+        let col_id = Uuid::from_u128(2);
+        let ent_id = Uuid::from_u128(3);
+
+        let mut fields = HashMap::new();
+        fields.insert(UuidPath(vec![col_id]), FieldValue::Int(42));
+
+        let mut rows = HashMap::new();
+        rows.insert(row_id, TableRow { id: row_id, fields });
+
+        let table = Table {
+            id: UuidPath(vec![ent_id]),
+            rows,
+            row_order: vec![row_id],
+        };
+
+        let value = serde_json::to_value(&table).expect("serialize to JSON");
+
+        // Map keys must be plain strings in the resulting JSON object.
+        let rows_obj = value.get("rows").and_then(Value::as_object).expect("rows object");
+        assert!(rows_obj.contains_key(&row_id.to_string()));
+
+        let round_tripped: Table = serde_json::from_value(value).expect("deserialize from JSON");
+        assert_eq!(round_tripped, table);
+    }
+
+    #[test]
+    fn multi_segment_key_round_trips() {
+        let a = Uuid::from_u128(10);
+        let b = Uuid::from_u128(11);
+        let key = UuidPath(vec![a, b]);
+
+        let serialized = serde_json::to_value(&key).expect("serialize");
+        assert_eq!(serialized, json!(format!("{a}.{b}")));
+
+        let deserialized: UuidPath = serde_json::from_value(serialized).expect("deserialize");
+        assert_eq!(deserialized, key);
+    }
+
+    #[test]
+    fn empty_key_is_rejected() {
+        let result: Result<UuidPath, _> = serde_json::from_value(json!(""));
+        assert!(result.is_err());
+    }
 }
