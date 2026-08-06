@@ -21,6 +21,6 @@ export const CodeView = (props: CodeViewProps) => {
         // shiki uses hast-util-to-html which escapes html entities so no need
         // for extra sanitization and setting innerHTML should be safe
         // oxlint-disable-next-line solid/no-innerhtml
-        <div innerHTML={html()} />
+        <div innerHTML={html() ?? ""} />
     );
 };

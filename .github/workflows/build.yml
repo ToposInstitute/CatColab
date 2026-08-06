@@ -12,6 +12,7 @@ jobs:
   build_dev_docs:
     name: Build developer docs
     runs-on: ubuntu-latest
+    needs: build_instances_mockup
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
@@ -57,6 +58,12 @@ jobs:
           else
             echo "🔨 Dev docs built and cached"
           fi
+
+      - name: Include instances mockup in developer docs
+        uses: actions/download-artifact@v4
+        with:
+          name: instances-mockup
+          path: dev-docs/output/instances-mockup
 
       - name: Upload developer docs
         uses: actions/upload-artifact@v7
@@ -167,6 +174,70 @@ jobs:
         with:
           name: frontend_docs
           path: packages/frontend/docs
+
+  build_instances_mockup:
+    name: Build instances mockup
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          # Need full history for `git log` for cache key
+          fetch-depth: 0
+
+      - name: Compute cache key
+        id: cache-key
+        run: |
+          hash=$(git log -1 --format="%H" -- packages/documents packages/logics packages/analyses packages/document-methods/patches packages/catlog-wasm packages/document-types packages/ui-components tools/vite-plugin-monorepo-dedupe pnpm-lock.yaml pnpm-workspace.yaml)
+          echo "git-hash=${hash}" >> $GITHUB_OUTPUT
+          echo "Instances mockup hash: ${hash}"
+
+      - name: Cache instances mockup build
+        id: cache-instances-mockup
+        uses: actions/cache@v4
+        with:
+          path: packages/documents/demo/dist
+          key: instances-mockup-${{ steps.cache-key.outputs.git-hash }}
+
+      - name: Setup pnpm
+        if: steps.cache-instances-mockup.outputs.cache-hit != 'true'
+        uses: pnpm/action-setup@v4
+
+      - name: Setup NodeJS
+        if: steps.cache-instances-mockup.outputs.cache-hit != 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: "pnpm"
+
+      - name: Install Rust toolchain from file
+        if: steps.cache-instances-mockup.outputs.cache-hit != 'true'
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          # Don't override flags in cargo config files.
+          rustflags: ""
+
+      - name: Build instances mockup
+        if: steps.cache-instances-mockup.outputs.cache-hit != 'true'
+        run: |
+          pnpm install
+          pnpm --filter ./packages/documents run build:wasm
+          pnpm --filter ./packages/documents exec wasm-pack build ../catlog-wasm --target browser -d ./dist/pkg-browser --debug
+          pnpm --filter ./packages/documents run demo:build
+
+      - name: Report cache status
+        run: |
+          if [ "${{ steps.cache-instances-mockup.outputs.cache-hit }}" = "true" ]; then
+            echo "✅ Instances mockup restored from cache"
+          else
+            echo "🔨 Instances mockup built and cached"
+          fi
+
+      - name: Upload instances mockup
+        uses: actions/upload-artifact@v4
+        with:
+          name: instances-mockup
+          path: packages/documents/demo/dist
 
   build_rust_docs:
     name: Build Rust docs

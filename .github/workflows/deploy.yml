@@ -90,6 +90,7 @@ jobs:
           mv rust_docs site/dev/rust
           mv frontend_docs site/dev/frontend
           mv ui-components site/dev/ui-components
+          mv instances-mockup site/dev/instances-mockup
           mv math-docs site/math
           mv rfc site/rfc
           echo '/dev/rust /dev/rust/catlog' >> site/_redirects

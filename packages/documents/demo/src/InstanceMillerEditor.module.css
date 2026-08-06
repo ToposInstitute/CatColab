@@ -1,0 +1,252 @@
+.browser {
+    display: grid;
+    grid-template-columns: minmax(10rem, 0.8fr) minmax(12rem, 1fr) minmax(18rem, 1.4fr);
+    flex: 1;
+    min-height: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    background: rgb(248 248 248 / 55%);
+    font-size: 1rem;
+}
+
+.column {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    height: 100%;
+    border-right: 1px solid #ccc;
+    background: var(--color-background);
+}
+
+.columnHeading {
+    position: relative;
+    display: flex;
+    flex: none;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    min-height: 2.75rem;
+    padding: 0.8rem 0.85rem;
+    border-bottom: 1px solid #ccc;
+    color: var(--color-text-secondary);
+    background: var(--color-gray-50);
+}
+
+.columnHeading h3 {
+    margin: 0;
+    overflow: hidden;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-overflow: ellipsis;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    white-space: nowrap;
+}
+
+.columnHeading wired-icon-button {
+    flex: none;
+    color: var(--color-topos-primary-hover);
+    font-size: 1.2rem;
+    --wired-icon-size: 1.1rem;
+}
+
+.columnHeading wired-icon-button:hover {
+    color: var(--color-topos-primary-hover);
+    background: var(--color-icon-button-positive-hover);
+    border-color: var(--color-topos-primary);
+}
+
+.list,
+.fields {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+}
+
+.listItem {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    align-items: center;
+    width: 100%;
+    min-height: 2.75rem;
+    padding: 0.55rem 0.65rem 0.55rem 0.85rem;
+    border: 0;
+    border-bottom: 1px solid #ddd;
+    background: transparent;
+    font-size: 1.3em;
+    text-align: left;
+    cursor: pointer;
+}
+
+.listItem:hover {
+    background: var(--color-hover-bg);
+}
+
+.listItem.selected {
+    background-color: var(--color-gray-200);
+    transform: rotate(-0.25deg);
+}
+
+.itemLabel {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.count {
+    min-width: 1.5rem;
+    margin-left: 0.5rem;
+    padding: 0.1rem 0.4rem;
+    border-radius: 999px;
+    color: var(--color-text-secondary);
+    background: var(--color-gray-100);
+    font-size: 0.7rem;
+    text-align: center;
+}
+
+.chevron {
+    margin-left: 0.4rem;
+    color: var(--color-text-muted);
+    font-size: 1.25rem;
+    line-height: 1;
+}
+
+.recordColumn {
+    min-width: 0;
+}
+
+.recordHeading {
+    position: relative;
+    display: flex;
+    flex: none;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    min-height: 4.4rem;
+    padding: 0.7rem 0.85rem;
+    border-bottom: 1px solid #ccc;
+    background: var(--color-gray-50);
+}
+
+.recordHeading h3 {
+    margin: 0.15rem 0 0;
+    overflow: hidden;
+    font-size: 1.3em;
+    font-weight: 550;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.eyebrow,
+.fieldKind {
+    color: var(--color-text-muted);
+    font-size: 0.68rem;
+    font-weight: 550;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.deleteButton {
+    color: var(--color-alert-danger);
+    background: transparent;
+    font-size: 0.75rem;
+}
+
+.deleteButton:hover {
+    border-color: var(--color-alert-danger);
+    background: var(--color-form-invalid-bg);
+}
+
+.fields {
+    padding: 0.9rem;
+}
+
+.field {
+    display: block;
+    margin-bottom: 1rem;
+}
+
+.fieldLabel {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-bottom: 0.35rem;
+    font-size: 0.9rem;
+    font-weight: 550;
+}
+
+.input {
+    width: 100%;
+    min-width: 0;
+    padding: 0.4rem 0.55rem;
+    border: 1px solid var(--color-gray-400);
+    border-radius: 3px;
+    color: var(--color-foreground);
+    background: var(--color-background);
+    font: inherit;
+    font-size: 1.3em;
+}
+
+.input:focus {
+    border-color: var(--color-topos-primary);
+    outline: 2px solid var(--color-icon-button-positive-hover);
+    outline-offset: 0;
+}
+
+.input.invalid {
+    border-color: var(--color-alert-danger);
+    background: var(--color-form-invalid-bg);
+}
+
+.mappingControl {
+    display: flex;
+    gap: 0.3rem;
+}
+
+.openButton {
+    flex: 0 0 2.25rem;
+    color: var(--color-text-secondary);
+    background: var(--color-gray-50);
+    font-size: 1.35rem;
+    --wired-icon-size: 1.3rem;
+}
+
+.openButton:hover:not(:disabled) {
+    color: var(--color-topos-primary-hover);
+    background: var(--color-icon-button-positive-hover);
+}
+
+.openButton:disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+
+.checkboxRow {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: 2.5rem;
+    color: var(--color-text-secondary);
+    font-size: 1.3em;
+}
+
+.checkboxRow input {
+    width: 1rem;
+    height: 1rem;
+    accent-color: var(--color-topos-primary);
+}
+
+.empty {
+    padding: 1rem;
+    color: var(--color-text-muted);
+    font-size: 0.8rem;
+    font-style: italic;
+}
+
+@media (max-width: 720px) {
+    .browser {
+        grid-template-columns: 12rem 12rem min(18rem, 80vw);
+    }
+}

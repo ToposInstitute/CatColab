@@ -103,7 +103,10 @@ function findDuplicateInstallRoots(
         ) {
             continue;
         }
-        for (const id of Object.keys(chunk.modules as Record<string, unknown>)) {
+        for (const rawId of Object.keys(chunk.modules as Record<string, unknown>)) {
+            // Rollup prefixes some virtualized module IDs with NUL. Treat those
+            // as the same filesystem module when comparing install roots.
+            const id = rawId.startsWith("\0") ? rawId.slice(1) : rawId;
             // Find the *last* node_modules/<dep> segment.
             const lastIdx = id.lastIndexOf("/node_modules/");
             if (lastIdx === -1) {

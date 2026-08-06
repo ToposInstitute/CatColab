@@ -220,7 +220,7 @@ export function TextInput(allProps: TextInputProps) {
 
     return (
         <Popover
-            open={options.completions && isCompletionsOpen()}
+            open={options.completions !== undefined && isCompletionsOpen()}
             onOpenChange={(open) => {
                 setCompletionsOpen(open);
                 if (!open) {
@@ -267,8 +267,10 @@ export function TextInput(allProps: TextInputProps) {
                     <Completions
                         completions={options.completions ?? []}
                         text={props.text}
-                        emptyText={options.completionsEmptyText}
-                        ref={setCompletionsRef}
+                        {...(options.completionsEmptyText === undefined
+                            ? {}
+                            : { emptyText: options.completionsEmptyText })}
+                        ref={(ref) => setCompletionsRef(ref)}
                         onComplete={() => {
                             setCompletionsOpen(false);
                             // Move to the next item once the input is filled

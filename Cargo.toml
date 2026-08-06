@@ -8,9 +8,12 @@ members = ["packages/*"]
 
 exclude = [
   "packages/algjulia-interop",
+  "packages/analyses",
   "packages/document-methods",
+  "packages/documents",
   "packages/frontend",
   "packages/gaios",
+  "packages/logics",
   "packages/ui-components",
 ]
 

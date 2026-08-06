@@ -1,0 +1,40 @@
+diff --git a/dist/mjs/apply_patches.js b/dist/mjs/apply_patches.js
+index a21173a8b375a53694381ab45577d8cba6502db1..9dce8c62ddd29130dd1cd5f1015b20e4d3f7174e 100644
+--- a/dist/mjs/apply_patches.js
++++ b/dist/mjs/apply_patches.js
+@@ -35,20 +35,28 @@ function applyPutPatch(doc, path, patch) {
+ }
+ function applyInsertPatch(doc, path, patch) {
+     let { obj: parent, prop } = pathElemAt(path, -1);
+-    if (!Array.isArray(parent)) {
+-        throw new RangeError(`target is not an array for patch`);
++    if (Array.isArray(parent)) {
++        if (!(typeof prop === "number")) {
++            throw new RangeError(`index is not a number for patch`);
++        }
++        parent.splice(prop, 0, ...patch.values);
+     }
+-    if (!(typeof prop === "number")) {
+-        throw new RangeError(`index is not a number for patch`);
++    else if (typeof parent === "object" && parent !== null) {
++        parent[prop] = patch.values[0];
++    }
++    else {
++        throw new RangeError(`target is not an array or object for patch`);
+     }
+-    parent.splice(prop, 0, ...patch.values);
+ }
+ function applyDelPatch(doc, path, patch) {
+     let { obj: parent, prop, parentPath } = pathElemAt(path, -1);
+-    if (!(typeof prop === "number")) {
++    if (typeof prop === "string" && typeof parent === "object" && parent !== null && !Array.isArray(parent)) {
++        delete parent[prop];
++    }
++    else if (!(typeof prop === "number")) {
+         throw new RangeError(`index is not a number for patch`);
+     }
+-    if (Array.isArray(parent)) {
++    else if (Array.isArray(parent)) {
+         parent.splice(prop, patch.length || 1);
+     }
+     else if (typeof parent === "string") {

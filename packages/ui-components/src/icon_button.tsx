@@ -13,6 +13,7 @@ export function IconButton(
     } & ComponentProps<"button">,
 ) {
     const [props, buttonProps] = splitProps(allProps, ["children", "tooltip", "variant"]);
+    const [buttonRef, triggerProps] = splitProps(buttonProps, ["ref"]);
 
     const buttonClass = () => {
         const baseClass = "icon-button";
@@ -37,7 +38,11 @@ export function IconButton(
         >
             <Tooltip hoverableContent={false} openOnFocus={false}>
                 <Tooltip.Anchor>
-                    <Tooltip.Trigger class={buttonClass()} {...buttonProps}>
+                    <Tooltip.Trigger
+                        class={buttonClass()}
+                        {...triggerProps}
+                        {...(buttonRef.ref === undefined ? {} : { ref: buttonRef.ref })}
+                    >
                         {props.children}
                     </Tooltip.Trigger>
                 </Tooltip.Anchor>
