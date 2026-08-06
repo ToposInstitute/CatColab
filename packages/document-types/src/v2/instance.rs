@@ -41,3 +41,30 @@ pub struct Table {
     /// The order of the rows of the table.
     pub row_order: Vec<Uuid>,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::Table;
+    use serde_json::json;
+
+    #[test]
+    fn accepts_qualified_generator_names() {
+        let table: Table = serde_json::from_value(json!({
+            "id": "019fd6d1-199c-7274-8870-89bb236ef1ab",
+            "entity": "019fd6d1-199c-7274-8870-89bb236ef1ab.019fd6d1-199c-7274-8870-89bb236ef1ac",
+            "rows": [{
+                "id": "019fd6d1-199c-7274-8870-89bb236ef1ad",
+                "content": {
+                    "019fd6d1-199c-7274-8870-89bb236ef1ab.019fd6d1-199c-7274-8870-89bb236ef1ae": {
+                        "tag": "string",
+                        "content": "value"
+                    }
+                }
+            }]
+        }))
+        .expect("qualified names should deserialize");
+
+        assert!(table.entity.contains('.'));
+        assert!(table.rows[0].content.keys().next().unwrap().contains('.'));
+    }
+}
