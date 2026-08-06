@@ -105,6 +105,10 @@ export function NotebookEditor<T>(props: {
     // is anchored to, so positioning is automatic.
     const [createPopoverTarget, setCreatePopoverTarget] = createSignal<CreatePopoverTarget>(null);
 
+    // cellOrder and cellContents can be briefly inconsistent.
+    const cellOrder = () =>
+        props.notebook.cellOrder.filter((cellId) => props.notebook.cellContents[cellId]);
+
     // Set up commands and their keyboard shortcuts.
     const insertCommands = (): Completion[] =>
         cellConstructors().map((cc) => {
@@ -115,13 +119,11 @@ export function NotebookEditor<T>(props: {
                 shortcut: shortcut && [cellShortcutModifier, ...shortcut],
                 onComplete: () => {
                     const activeCellId = cellFocus.activeChild();
-                    const activeIndex = activeCellId
-                        ? props.notebook.cellOrder.indexOf(activeCellId)
-                        : -1;
+                    const activeIndex = activeCellId ? cellOrder().indexOf(activeCellId) : -1;
                     const cellIndex =
                         activeIndex >= 0
-                            ? Math.min(activeIndex + 1, props.notebook.cellOrder.length)
-                            : props.notebook.cellOrder.length;
+                            ? Math.min(activeIndex + 1, cellOrder().length)
+                            : cellOrder().length;
                     const newCell = cc.construct();
                     props.changeNotebook((nb) => {
                         Nb.insertCellAtIndex(nb, newCell, cellIndex);
@@ -223,7 +225,7 @@ export function NotebookEditor<T>(props: {
             canMonitor({ source }) {
                 return (
                     isCellDragData(source.data) &&
-                    props.notebook.cellOrder.some((cellId) => cellId === source.data.cellId)
+                    cellOrder().some((cellId) => cellId === source.data.cellId)
                 );
             },
             onDrop({ location, source }) {
@@ -264,7 +266,7 @@ export function NotebookEditor<T>(props: {
 
     return (
         <div class="notebook">
-            <Show when={props.notebook.cellOrder.length === 0}>
+            <Show when={cellOrder().length === 0}>
                 <div class="notebook-cell-placeholder">
                     <CellTypePopover
                         completions={appendCommands()}
@@ -278,28 +280,24 @@ export function NotebookEditor<T>(props: {
                 </div>
             </Show>
             <ul class="notebook-cells">
-                <For each={props.notebook.cellOrder}>
+                <For each={cellOrder()}>
                     {(cellId, i) => {
                         const focus = () => cellFocus.childFocus(cellId);
 
                         const cellActions: CellActions = {
                             activateAbove() {
                                 if (i() > 0) {
-                                    cellFocus.setActiveChild(
-                                        props.notebook.cellOrder[i() - 1] ?? null,
-                                    );
+                                    cellFocus.setActiveChild(cellOrder()[i() - 1] ?? null);
                                 }
                             },
                             activateBelow() {
                                 if (i() < Nb.numCells(props.notebook) - 1) {
-                                    cellFocus.setActiveChild(
-                                        props.notebook.cellOrder[i() + 1] ?? null,
-                                    );
+                                    cellFocus.setActiveChild(cellOrder()[i() + 1] ?? null);
                                 }
                             },
                             deleteBackward() {
                                 const index = i();
-                                const nextActiveId = props.notebook.cellOrder[index - 1] ?? null;
+                                const nextActiveId = cellOrder()[index - 1] ?? null;
                                 props.changeNotebook((nb) => {
                                     Nb.deleteCellAtIndex(nb, index);
                                 });
@@ -308,9 +306,7 @@ export function NotebookEditor<T>(props: {
                             deleteForward() {
                                 const index = i();
                                 const nextActiveId =
-                                    props.notebook.cellOrder[index + 1] ??
-                                    props.notebook.cellOrder[index - 1] ??
-                                    null;
+                                    cellOrder()[index + 1] ?? cellOrder()[index - 1] ?? null;
                                 props.changeNotebook((nb) => {
                                     Nb.deleteCellAtIndex(nb, index);
                                 });
@@ -409,7 +405,7 @@ export function NotebookEditor<T>(props: {
                     }}
                 </For>
             </ul>
-            <Show when={props.notebook.cellOrder.length > 0}>
+            <Show when={cellOrder().length > 0}>
                 <div class="notebook-cell-placeholder">
                     <CellTypePopover
                         completions={appendCommands()}
