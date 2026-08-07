@@ -25,17 +25,18 @@ You can find the auto-generated documentation for this Rust crate at [next.catco
 
     (where `USER_NAME` is your system username).
 
-4. Change to the backend directory: `CatColab/packages/backend`
-5. Update the `DATABASE_URL` variable in `.env.development` with database username, password, and port. (If you used the above Docker command _as is_ it should already be correct; if you used `createdb` then you should change `catcolab:password` to just your username).
-6. Copy `.env.development` as `.env` to the `backend` and `migrator` package directories:
+3. Change to the backend directory: `CatColab/packages/backend`
+4. Update the `DATABASE_URL` variable in `.env.development` with database username, password, and port. (If you used the above Docker command _as is_ it should already be correct; if you used `createdb` then you should change `catcolab:password` to just your username).
+5. Copy `.env.development` as `.env` to the `backend` and `migrator` package directories:
 
     ```sh
     cp .env.development .env && cp .env.development ../migrator/.env
     ```
-7. Run the initial database migration: `cargo run -p migrator apply`
-8. Generate the TypeScript bindings for the RPC API: `cargo run generate-bindings`
-7. Build the backend binary: `cargo build`
-8. Run the unit tests: `cargo test`
+
+6. Run the initial database migration: `cargo run -p migrator apply`
+7. Generate the TypeScript bindings for the RPC API: `cargo run generate-bindings`
+8. Build the backend binary: `cargo build`
+9. Run the unit tests: `cargo test`
 
 ## Usage
 
@@ -61,6 +62,7 @@ To launch the frontend using the local backend:
 cd packages/frontend
 pnpm run dev
 ```
+
 ## Database schema
 
 ![Entity-relationship diagram](schema.svg)
@@ -81,12 +83,11 @@ These are references to documents, referring to them by their latest snapshot: t
 
 ### users
 
-This table refers to our users. We use Firebase so our `id` in this table are Firebase user IDs. We also store a unique username for them when the user sets it.
+This table refers to our users. We use Firebase so our `id` in this table are Firebase user IDs.
 
 ### snapshots
 
 These are timestamped snapshots of the Automerge document.
-
 
 ## Running migrations
 
@@ -94,6 +95,7 @@ This package runs databaes migrations using `migrator` subcommand which uses the
 [sqlx_migrator](https://github.com/iamsauravsharma/sqlx_migrator) framework.
 
 ### Usage
+
 The migrator tool can be run from any directory using the `cargo run -p backend migrator ...` command.
 The migrator tool uses the default CLI interface provided by `sqlx_migrator`, which is very similar to
 the `sqlx` CLI.
