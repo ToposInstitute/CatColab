@@ -47,5 +47,5 @@ export function createChildTestDocument(name: string, parentRefId: string): Json
         },
         notebook: { cellOrder: [], cellContents: {} },
         version: "1",
-    } as unknown as JsonValue;
+    };
 }

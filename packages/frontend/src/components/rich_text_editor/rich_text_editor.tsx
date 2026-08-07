@@ -451,7 +451,7 @@ export function MenuBar(
                     <select
                         value={props.headingLevel ?? 0}
                         onInput={(e) => {
-                            const lvl = Number((e.currentTarget as HTMLSelectElement).value);
+                            const lvl = Number(e.currentTarget.value);
                             props.onHeadingClicked?.(lvl);
                         }}
                     >

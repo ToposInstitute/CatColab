@@ -118,7 +118,7 @@ export function makeLiveDoc<Doc extends Document>(
 export function makeDocHandleReactive<T extends object>(handle: DocHandle<T>): T {
     const init = handle.doc();
 
-    const [store, setStore] = createStore<T>(init as T);
+    const [store, setStore] = createStore<T>(init);
 
     const onChange = (payload: DocHandleChangePayload<T>) => {
         // Use [`reconcile`](https://www.solidjs.com/tutorial/stores_immutable)

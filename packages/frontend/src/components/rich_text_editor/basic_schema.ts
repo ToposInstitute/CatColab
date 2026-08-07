@@ -3,7 +3,7 @@
 import { next as am } from "@automerge/automerge/slim";
 import type { MappedSchemaSpec } from "@automerge/prosemirror";
 import type { BlockMarker } from "@automerge/prosemirror/dist/types";
-import type { DOMOutputSpec, Mark, MarkSpec, Node, NodeSpec } from "prosemirror-model";
+import type { DOMOutputSpec, Mark, Node } from "prosemirror-model";
 
 // basics
 const pDOM: DOMOutputSpec = ["p", 0];
@@ -26,7 +26,7 @@ export const basicSchema = {
         /// NodeSpec The top level document node.
         doc: {
             content: "block+",
-        } as NodeSpec,
+        },
 
         /// A plain paragraph textblock. Represented in the DOM
         /// as a `<p>` element.
@@ -40,7 +40,7 @@ export const basicSchema = {
             toDOM() {
                 return pDOM;
             },
-        } as NodeSpec,
+        },
 
         unknownBlock: {
             automerge: {
@@ -66,7 +66,7 @@ export const basicSchema = {
             toDOM() {
                 return blockquoteDOM;
             },
-        } as NodeSpec,
+        },
 
         /// A horizontal rule (`<hr>`).
         horizontal_rule: {
@@ -75,7 +75,7 @@ export const basicSchema = {
             toDOM() {
                 return hrDOM;
             },
-        } as NodeSpec,
+        },
 
         /// A heading textblock, with a `level` attribute that
         /// should hold the number 1 to 6. Parsed and serialized as `<h1>` to
@@ -121,12 +121,12 @@ export const basicSchema = {
             toDOM() {
                 return preDOM;
             },
-        } as NodeSpec,
+        },
 
         /// The text node.
         text: {
             group: "inline",
-        } as NodeSpec,
+        },
 
         /// An inline image (`<img>`) node. Supports `src`,
         /// `alt`, and `href` attributes. The latter two default to the empty
@@ -172,7 +172,7 @@ export const basicSchema = {
                 const { src, alt, title } = node.attrs;
                 return ["img", { src, alt, title }];
             },
-        } as NodeSpec,
+        },
 
         ordered_list: {
             group: "block",
@@ -191,7 +191,7 @@ export const basicSchema = {
             toDOM(node) {
                 return node.attrs.order === 1 ? olDOM : ["ol", { start: node.attrs.order }, 0];
             },
-        } as NodeSpec,
+        },
 
         bullet_list: {
             content: "list_item+",
@@ -302,7 +302,7 @@ export const basicSchema = {
             automerge: {
                 markName: "em",
             },
-        } as MarkSpec,
+        },
 
         /// A strong mark. Rendered as `<strong>`, parse rules also match
         /// `<b>` and `font-weight: bold`.
@@ -331,7 +331,7 @@ export const basicSchema = {
             automerge: {
                 markName: "strong",
             },
-        } as MarkSpec,
+        },
 
         /// Code font mark. Represented as a `<code>` element.
         code: {
@@ -339,6 +339,6 @@ export const basicSchema = {
             toDOM() {
                 return codeDOM;
             },
-        } as MarkSpec,
+        },
     },
 } satisfies MappedSchemaSpec;
