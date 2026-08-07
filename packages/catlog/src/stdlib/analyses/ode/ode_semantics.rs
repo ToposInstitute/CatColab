@@ -220,9 +220,9 @@ pub struct Contribution<P: ODEParameterType> {
 /// The sign of a contribution, since we work in *signed* multicategories.
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
 pub enum ContributionSign {
-    /// Positive contribution: (d/dt)y -= x.
+    /// Positive contribution: (d/dt)y += x.
     Positive,
-    /// Negative contribution: (d/dt)y += x.
+    /// Negative contribution: (d/dt)y -= x.
     Negative,
 }
 
@@ -251,12 +251,6 @@ impl ODESemanticsEquationsData for () {}
 //     tsify(into_wasm_abi, from_wasm_abi, hashmap_as_object)
 // )]
 pub trait ODESemanticsProblemData<P: ODEParameterType> {
-    // REQUEST  | These getters (`equations_data`, `initial_values`, and `duration`) are annoying
-    //   FOR    | boilerplate to ask for. Is there a nice way to get rid of them here? Without them,
-    // FEEDBACK | the call to `self.initial_values` in `build_analysis()` fails because there is no
-    // _________/ way of knowing whether a struct implementing this trait actually has those fields.
-    // In short:
-    //     is there a better way to ensure that any struct implementing a trait has specific fields?
     /// Further data needed to specify the ODE equations.
     fn equations_data(&self) -> impl ODESemanticsEquationsData {}
     /// Map from object IDs to initial values (nonnegative reals).
