@@ -52,11 +52,11 @@ describe("validate", () => {
 
         expect(result.content).toBe(again.content);
         expect(result.content.judgmentsOf(Type).map((judgment) => judgment.label)).toEqual([
-            ["A"],
-            ["B"],
+            "A",
+            "B",
         ]);
         expect(result.content.judgmentsOf(Aspect).map((judgment) => judgment.label)).toEqual([
-            ["has"],
+            "has",
         ]);
         expect(result.content.get(Type, source.id)).toMatchObject({
             tag: "Ok",

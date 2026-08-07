@@ -13,8 +13,6 @@ import type {
     DblModelDiagram,
     DblTheory,
     InvalidDiscreteDblModelDiagram,
-    MorGenerator,
-    ObGenerator,
 } from "catlog-wasm";
 import type { Notebook } from "./binder";
 import type { RichTextContent } from "./notebook";
@@ -1107,14 +1105,33 @@ export type ShapeAddCapability<S extends AnyShape> = UnionToIntersection<
  * and one that fails to even elaborate map to an `Err`, their errors surfaced
  * as [Standard Schema](https://standardschema.dev) {@link Issue}s.
  */
-/** An elaborated object judgment selected by a notebook object definition. */
-export type ValidatedObjectJudgment<Def extends ObjectDef = ObjectDef> = ObGenerator & {
-    readonly obType: Def["obType"];
+/**
+ * An elaborated object judgment selected by a notebook object definition.
+ *
+ * Aligned with {@link ObjectCell}: its `label` is a display string (dot-joined
+ * qualified segments, `""` when unlabeled) and `type` is the object definition,
+ * rather than exposing the raw catlog-wasm presentation.
+ */
+export type ObjectJudgment<Def extends ObjectDef = ObjectDef> = {
+    readonly id: string;
+    readonly type: Def;
+    readonly label: string;
 };
 
-/** An elaborated morphism judgment selected by a notebook morphism definition. */
-export type ValidatedMorphismJudgment<Def extends MorphismDef = MorphismDef> = MorGenerator & {
-    readonly morType: Def["morType"];
+/**
+ * An elaborated morphism judgment selected by a notebook morphism definition.
+ *
+ * Aligned with {@link MorphismCell}: `from`/`to` are the resolved object
+ * judgments its domain and codomain point at (available for `Basic` endpoints
+ * that resolve to an object in the elaborated model, `undefined` otherwise),
+ * and `label` is a display string.
+ */
+export type MorphismJudgment<Def extends MorphismDef = MorphismDef> = {
+    readonly id: string;
+    readonly type: Def;
+    readonly label: string;
+    readonly from: ObjectJudgment | undefined;
+    readonly to: ObjectJudgment | undefined;
 };
 
 /**
@@ -1124,16 +1141,10 @@ export type ValidatedMorphismJudgment<Def extends MorphismDef = MorphismDef> = M
  * convention as {@link Notebook.get}.
  */
 export type ValidatedModel<TShape extends AnyShape = AnyShape> = DblModel & {
-    judgmentsOf<Def extends ShapeObjects<TShape>>(type: Def): ValidatedObjectJudgment<Def>[];
-    judgmentsOf<Def extends ShapeMorphisms<TShape>>(type: Def): ValidatedMorphismJudgment<Def>[];
-    get<Def extends ShapeObjects<TShape>>(
-        type: Def,
-        id: string,
-    ): Result<ValidatedObjectJudgment<Def>>;
-    get<Def extends ShapeMorphisms<TShape>>(
-        type: Def,
-        id: string,
-    ): Result<ValidatedMorphismJudgment<Def>>;
+    judgmentsOf<Def extends ShapeObjects<TShape>>(type: Def): ObjectJudgment<Def>[];
+    judgmentsOf<Def extends ShapeMorphisms<TShape>>(type: Def): MorphismJudgment<Def>[];
+    get<Def extends ShapeObjects<TShape>>(type: Def, id: string): Result<ObjectJudgment<Def>>;
+    get<Def extends ShapeMorphisms<TShape>>(type: Def, id: string): Result<MorphismJudgment<Def>>;
 };
 
 export type ModelValidationResult<TShape extends AnyShape = AnyShape> = Result<

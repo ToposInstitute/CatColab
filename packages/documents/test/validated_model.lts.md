@@ -40,9 +40,9 @@ const entities = model.judgmentsOf(Entity);
 const mappings = model.judgmentsOf(Mapping);
 const attributes = model.judgmentsOf(Attr);
 
-console.log("entities:", entities.map((judgment) => judgment.label?.join(".")).join(", "));
-console.log("mapping:", mappings[0]?.label?.join("."));
-console.log("attribute:", attributes[0]?.label?.join("."));
+console.log("entities:", entities.map((judgment) => judgment.label).join(", "));
+console.log("mapping:", mappings[0]?.label);
+console.log("attribute:", attributes[0]?.label);
 console.log("all objects:", model.obGenerators().length);
 ```
 
@@ -133,7 +133,7 @@ if (validation.tag !== "Ok") {
 
 const importedEntity = validation.content
     .judgmentsOf(Entity)
-    .find((judgment) => judgment.label?.join(".") === "Import.External");
+    .find((judgment) => judgment.label === "Import.External");
 if (!importedEntity) {
     throw new Error("Imported entity is missing");
 }

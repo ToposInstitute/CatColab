@@ -13,11 +13,15 @@ export {
 } from "./store";
 export {
     createBinder,
+    isRow,
     type Binder,
+    type Column,
     type Instance,
+    type InstanceTable,
     type ModelObjectRef,
     type Row,
     type RowValue,
+    type TableCell,
     type Notebook,
     type Transaction,
 } from "./binder";
@@ -62,8 +66,8 @@ export {
     type SupportsInstances,
     type ModelValidationResult,
     type ValidatedModel,
-    type ValidatedObjectJudgment,
-    type ValidatedMorphismJudgment,
+    type ObjectJudgment,
+    type MorphismJudgment,
     type AnalysisDef,
     type AnalysisCell,
     type AnalysisShape,
