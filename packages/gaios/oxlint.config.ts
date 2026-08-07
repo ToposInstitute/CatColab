@@ -7,9 +7,13 @@ export default defineConfig({
     options: {
         typeAware: true,
     },
-    jsPlugins: ["eslint-plugin-solid"],
+    jsPlugins: [
+        "eslint-plugin-solid",
+        { name: "catcolab", specifier: "@catcolab-dev-tools/oxlint-plugin-catcolab" },
+    ],
     rules: {
         ...baseConfig.rules,
+        "catcolab/no-conditional-jsx-spread": "error",
         "solid/reactivity": "off",
         "solid/no-destructure": "warn",
         "solid/jsx-no-undef": "error",

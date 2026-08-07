@@ -78,6 +78,7 @@
         "uuid": "^13.0.0"
     },
     "devDependencies": {
+        "@catcolab-dev-tools/oxlint-plugin-catcolab": "link:../../tools/oxlint-plugin-catcolab",
         "@catcolab-dev-tools/vite-plugin-monorepo-dedupe": "link:../../tools/vite-plugin-monorepo-dedupe",
         "@mdx-js/mdx": "^2.3.0",
         "@types/html-escaper": "^3.0.4",

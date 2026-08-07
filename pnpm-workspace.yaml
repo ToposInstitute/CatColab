@@ -10,4 +10,5 @@ packages:
   - "packages/document-methods"
   - "packages/ui-components"
   - "packages/gaios"
+  - "tools/oxlint-plugin-catcolab"
   - "tools/vite-plugin-monorepo-dedupe"
