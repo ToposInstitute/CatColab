@@ -50,6 +50,9 @@ async function getDocParent(doc: Document, api: Api): Promise<LiveDocWithRef | u
         case "analysis":
             parentLink = doc.analysisOf;
             break;
+        case "instance":
+            parentLink = doc.instanceOf;
+            break;
         default:
             break;
     }
@@ -119,7 +122,10 @@ function DocumentsTreeNode(props: {
         }
         return docInfo.usedBy
             .filter(
-                (rel) => rel.relationType === "diagram-in" || rel.relationType === "analysis-of",
+                (rel) =>
+                    rel.relationType === "diagram-in" ||
+                    rel.relationType === "instance-in" ||
+                    rel.relationType === "analysis-of",
             )
             .map((rel) => uuidStringify(rel.refId));
     });

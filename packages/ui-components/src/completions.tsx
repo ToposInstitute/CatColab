@@ -36,10 +36,10 @@ export type CompletionsRef = {
 
 export function Completions(props: {
     completions: Completion[];
-    text?: string;
-    emptyText?: string;
-    onComplete?: () => void;
-    ref?: (ref: CompletionsRef) => void;
+    text?: string | undefined;
+    emptyText?: string | undefined;
+    onComplete?: (() => void) | undefined;
+    ref?: ((ref: CompletionsRef) => void) | undefined;
 }) {
     const [presumptive, setPresumptive] = createSignal(0);
 

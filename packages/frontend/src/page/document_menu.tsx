@@ -4,6 +4,7 @@ import Ellipsis from "lucide-solid/icons/ellipsis";
 import { createMemo, createResource, Match, Show, Switch, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
+import { Instance } from "catcolab-document-methods";
 import { DocumentTypeIcon, IconButton } from "catcolab-ui-components";
 import { createAnalysis } from "../analysis";
 import { type DocRef, type DocumentType, type LiveDoc, useApi } from "../api";
@@ -69,6 +70,14 @@ export function DocumentMenu(props: {
         handleDocCreated("analysis", newRef);
     };
 
+    const onNewInstance = async () => {
+        invariant(props.liveDoc.doc.type === "model", "Instances must be created from a model");
+
+        const init = Instance.newInstanceDocument(api.makeUnversionedRef(props.docRef.refId));
+        const newRef = await api.createDoc(init);
+        handleDocCreated("instance", newRef);
+    };
+
     const theories = useContext(TheoryLibraryContext);
     invariant(theories, "Library of theories should be provided as context");
 
@@ -103,6 +112,12 @@ export function DocumentMenu(props: {
             </Popover.Trigger>
             <Popover.Portal>
                 <Popover.Content class="menu popup">
+                    <Show when={theory()?.supportsInstances}>
+                        <MenuItem onSelect={() => onNewInstance()}>
+                            <DocumentTypeIcon documentType="instance" />
+                            <MenuItemLabel>{"New data instance of this model"}</MenuItemLabel>
+                        </MenuItem>
+                    </Show>
                     <Switch>
                         <Match when={theory()?.supportsInstances}>
                             <MenuItem onSelect={() => onNewDiagram()}>
