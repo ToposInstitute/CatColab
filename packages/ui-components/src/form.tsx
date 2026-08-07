@@ -38,19 +38,28 @@ export function InputField(allProps: InputFieldProps & Omit<ComponentProps<"inpu
 
 /** Checkbox field in a form group. */
 export function CheckboxField(
-    allProps: { label: string | JSX.Element } & Omit<ComponentProps<"input">, "id" | "type">,
+    allProps: { label: string | JSX.Element, checkboxOnLeft?: boolean } & Omit<ComponentProps<"input">, "id" | "type">,
 ) {
     const fieldId = createUniqueId();
 
-    const [props, inputProps] = splitProps(allProps, ["label"]);
+    const [props, inputProps] = splitProps(allProps, ["label", "checkboxOnLeft"]);
+
+    const label = (
+        <label for={fieldId}>{props.label}</label>
+    );
+    const checkbox = (
+        <input {...inputProps} type="checkbox" id={fieldId} />
+    );
+
+    const elements = props.checkboxOnLeft ? [checkbox, label] : [label, checkbox];
 
     return (
         <>
             <dt>
-                <label for={fieldId}>{props.label}</label>
+                {elements[0]}
             </dt>
             <dd>
-                <input {...inputProps} type="checkbox" id={fieldId} />
+                {elements[1]}
             </dd>
         </>
     );
