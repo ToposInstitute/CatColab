@@ -18,6 +18,9 @@ export default defineConfig({
         // Too many legitimate uses of type assertions in the codebase (e.g.,
         // narrowing Automerge values, wasm interop types).
         "typescript/no-unsafe-type-assertion": "off",
+        // We nest functions for readability that don't always capture values
+        // of the outer scope.
+        "unicorn/consistent-function-scoping": "off",
         // SolidJS ref pattern: `let ref!: HTMLElement` is assigned by Solid's
         // JSX `ref={}` attribute at render time. The linter can't see this.
         "no-unassigned-vars": "off",

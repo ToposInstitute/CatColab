@@ -10,7 +10,7 @@ pass to `structuredClone`, or store outside an Automerge change callback.
 
 */
 export function materializeFromAutomerge<T>(doc: Doc<unknown>, subtree: T): T {
-    const objId = getObjectId(subtree as object);
+    const objId = getObjectId(subtree);
     invariant(objId, "Value is not an Automerge map or list");
     return getBackend(doc).materialize(objId) as T;
 }

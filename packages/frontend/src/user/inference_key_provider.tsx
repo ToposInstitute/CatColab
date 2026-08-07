@@ -13,13 +13,13 @@ export function InferenceKeyProvider(props: { children: JSX.Element }) {
 
     const [inferenceKey, { mutate }] = createResource(
         () => auth.data?.uid ?? null,
-        async () => {
+        async (): Promise<InferenceKeyResult> => {
             const result = await api.rpc.get_inference_key.query();
             if (result.tag === "Ok") {
-                return { tag: "Ready", key: result.content } as InferenceKeyResult;
+                return { tag: "Ready", key: result.content };
             }
             if (result.code === 503) {
-                return { tag: "Unavailable" } as InferenceKeyResult;
+                return { tag: "Unavailable" };
             }
             throw new Error(result.message);
         },
