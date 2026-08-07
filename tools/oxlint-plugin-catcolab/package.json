@@ -1,0 +1,15 @@
+{
+    "name": "@catcolab-dev-tools/oxlint-plugin-catcolab",
+    "version": "0.0.0",
+    "private": true,
+    "type": "module",
+    "exports": {
+        ".": "./src/index.js"
+    },
+    "scripts": {
+        "format": "oxfmt .",
+        "lint": "oxfmt .",
+        "check": "pnpm run lint",
+        "ci": "oxfmt --check ."
+    }
+}

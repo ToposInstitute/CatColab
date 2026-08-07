@@ -77,6 +77,7 @@ let
         ../../packages/frontend
         ../../packages/ui-components
         ../../tools/vite-plugin-monorepo-dedupe
+        ../../tools/oxlint-plugin-catcolab
         ../../packages/document-methods
         ../../packages/backend/pkg
       ];
@@ -207,6 +208,7 @@ let
         cp -r packages/ui-components $out/packages/
         mkdir -p $out/tools
         cp -r tools/vite-plugin-monorepo-dedupe $out/tools/
+        cp -r tools/oxlint-plugin-catcolab $out/tools/
         cp -r packages/document-methods $out/packages/
         mkdir -p $out/packages/document-types
         cp -r packages/document-types/pkg $out/packages/document-types/
