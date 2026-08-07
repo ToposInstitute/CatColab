@@ -5,8 +5,10 @@ import { useFirebaseApp } from "solid-firebase";
 import { createMemo, createSignal, For, type JSX, Show, useContext } from "solid-js";
 import { stringify as uuidStringify } from "uuid";
 
+import type { UserSettings } from "catcolab-api";
 import { RelativeTime, createVirtualList, DocumentTypeIcon } from "catcolab-ui-components";
 import { TheoryLibraryContext } from "../theory";
+import { isDocumentVisible } from "./user_settings";
 import { currentUserPermission, formatOwners, useUserState } from "./user_state_context";
 
 import "./documents.css";
@@ -17,9 +19,11 @@ export function filterDocuments(
     opts: {
         query: string;
         deleted: boolean;
+        settings?: UserSettings;
     },
 ): (DocInfo & { refId: string })[] {
     return (Object.entries(documents) as [string, DocInfo][])
+        .filter(([, doc]) => isDocumentVisible(doc, opts.settings))
         .filter(([, doc]) => (opts.deleted ? doc.deletedAt !== null : doc.deletedAt === null))
         .map(([refId, doc]) => Object.assign({ refId }, doc))
         .filter((doc) => {

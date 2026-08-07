@@ -10,6 +10,7 @@ import { IconButton } from "catcolab-ui-components";
 import { BrandedToolbar, PageActionsContext } from "../page";
 import { DocumentList, filterDocuments } from "./document_list";
 import { LoginGate } from "./login";
+import { useUserSettings } from "./user_settings";
 import { useUserState } from "./user_state_context";
 
 import "./documents.css";
@@ -34,6 +35,7 @@ export default function UserDocuments() {
 
 function DocumentsSearch() {
     const userState = useUserState();
+    const { settings } = useUserSettings();
     const [searchQuery, setSearchQuery] = createSignal("");
     const actions = useContext(PageActionsContext);
     invariant(actions, "Page actions should be provided");
@@ -42,6 +44,7 @@ function DocumentsSearch() {
         filterDocuments(userState.documents, {
             query: searchQuery().trim().toLowerCase(),
             deleted: false,
+            settings: settings(),
         }),
     );
 
