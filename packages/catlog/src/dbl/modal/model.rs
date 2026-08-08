@@ -10,8 +10,11 @@ use itertools::Itertools;
 use ref_cast::RefCast;
 
 use super::theory::*;
-use crate::dbl::theory::DblTheoryKind;
-use crate::dbl::{graph::VDblGraph, model::*, theory::DblTheory};
+use crate::dbl::{
+    category::VDblCategory,
+    graph::VDblGraph,
+    model::*,    theory::{DblTheory, DblTheoryKind},
+};
 use crate::tt::util::pretty::*;
 use crate::validate::{self, Validate};
 use crate::{one::computad::*, one::*, zero::*};
@@ -73,7 +76,7 @@ impl MorListData {
 }
 
 /// A model of a modal double theory.
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct ModalDblModel<Kind> {
     theory: Rc<ModalDblTheory<Kind>>,
     ob_generators: HashFinSet<QualifiedName>,
@@ -99,6 +102,30 @@ impl<Kind: DblTheoryKind> ModalDblModel<Kind> {
     /// Gets the computing generating the morphisms of the model.
     fn computad(&self) -> Computad<'_, ModalOb, ModalDblModelObs<Kind>, QualifiedName> {
         Computad::new(ModalDblModelObs::ref_cast(self), &self.mor_generators)
+    }
+
+    /// Infers missing data in the model, where possible.
+    ///
+    /// Objects used in the domain or codomain of morphisms, but not contained as
+    /// objects of the model, are added and their types are inferred. It is not
+    /// always possible to do this consistently, so it is important to `validate`
+    /// the model even after calling this method.
+    pub fn infer_missing(&mut self) {
+        let edges: Vec<_> = self.mor_generators().collect();
+        for e in edges {
+            if let Some(x) = self.get_dom(&e).filter(|x| !self.has_ob(x)) {
+                let ob_type = self.theory.src(&self.mor_generator_type(&e));
+                if let Some(id) = x.clone().generator() {
+                    self.add_ob(id.clone(), ob_type)
+                };
+            }
+            if let Some(x) = self.get_cod(&e).filter(|x| !self.has_ob(x)) {
+                let ob_type = self.theory.tgt(&self.mor_generator_type(&e));
+                if let Some(id) = x.clone().generator() {
+                    self.add_ob(id.clone(), ob_type)
+                };
+            }
+        }
     }
 }
 
@@ -409,6 +436,13 @@ impl<Kind: DblTheoryKind> ModalDblModel<Kind> {
             Ok(InferredType::Type(other_type)) => other_type == *ob_type,
             _ => false,
         }
+    }
+
+    // TODO
+    /// Iterates over failures of model to be well defined.
+    pub fn iter_invalid(&self) -> impl Iterator<Item = InvalidDblModel> + '_ {
+        // type Invalid = InvalidDblModel;
+        vec![].into_iter()
     }
 }
 
@@ -723,6 +757,9 @@ mod tests {
         );
         model.add_mor(name("nullary"), ModalOb::List(List::Plain, vec![]), x.clone(), mor_type);
         assert!(model.validate().is_ok());
+
+        println!("{model}");
+        dbg!(&model.mor_types);
     }
 
     #[test]
