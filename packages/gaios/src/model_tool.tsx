@@ -2,6 +2,7 @@ import type { DocHandle, Repo } from "@automerge/automerge-repo";
 import { createResource, Switch, Match } from "solid-js";
 import { render } from "solid-js/web";
 
+import { newAnalysisDocument } from "../../frontend/src/analysis";
 import {
     createModelLibraryWithRepo,
     ModelLibraryContext,
@@ -54,6 +55,14 @@ export function renderModelTool(handle: DocHandle<ModelDoc>, element: ToolElemen
                         {(liveModel) => (
                             <TheoryLibraryContext.Provider value={stdTheories}>
                                 <ModelLibraryContext.Provider value={modelLibrary}>
+                                    <div style={{ display: "flex", "justify-content": "flex-end" }}>
+                                        <button
+                                            type="button"
+                                            onClick={() => openNewAnalysis(handle, element)}
+                                        >
+                                            New analysis
+                                        </button>
+                                    </div>
                                     <ModelDocumentHead liveModel={liveModel()} />
                                     <ModelNotebookEditor
                                         liveModel={liveModel()}
@@ -67,5 +76,28 @@ export function renderModelTool(handle: DocHandle<ModelDoc>, element: ToolElemen
             </div>
         ),
         element,
+    );
+}
+
+/** Create a new analysis of the model and open it in the analysis tool.
+
+The analysis lives in its own Automerge document that references the model
+through its `analysisOf` field, mirroring how CatColab's own backend links the
+two. `_server` is empty because documents here live in the Patchwork repo
+rather than on a CatColab server.
+ */
+async function openNewAnalysis(handle: DocHandle<ModelDoc>, element: ToolElement) {
+    const analysisDoc = newAnalysisDocument("model", {
+        _id: handle.url,
+        _version: null,
+        _server: "",
+    });
+    const analysisHandle = await element.repo.create2(analysisDoc);
+    element.dispatchEvent(
+        new CustomEvent("patchwork:open-document", {
+            detail: { url: analysisHandle.url, toolId: "catcolab-analysis" },
+            bubbles: true,
+            composed: true,
+        }),
     );
 }
