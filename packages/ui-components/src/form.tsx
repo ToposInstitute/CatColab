@@ -26,11 +26,11 @@ export function InputField(allProps: InputFieldProps & Omit<ComponentProps<"inpu
     return (
         <>
             <dt>
-                <label for={fieldId}>{props.label}</label>
-            </dt>
-            <dd>
                 <input {...inputProps} id={fieldId} />
                 <FieldError error={props.error} />
+            </dt>
+            <dd>
+                <label for={fieldId}>{props.label}</label>
             </dd>
         </>
     );
@@ -38,28 +38,19 @@ export function InputField(allProps: InputFieldProps & Omit<ComponentProps<"inpu
 
 /** Checkbox field in a form group. */
 export function CheckboxField(
-    allProps: { label: string | JSX.Element, checkboxOnLeft?: boolean } & Omit<ComponentProps<"input">, "id" | "type">,
+    allProps: { label: string | JSX.Element } & Omit<ComponentProps<"input">, "id" | "type">,
 ) {
     const fieldId = createUniqueId();
 
-    const [props, inputProps] = splitProps(allProps, ["label", "checkboxOnLeft"]);
-
-    const label = (
-        <label for={fieldId}>{props.label}</label>
-    );
-    const checkbox = (
-        <input {...inputProps} type="checkbox" id={fieldId} />
-    );
-
-    const elements = props.checkboxOnLeft ? [checkbox, label] : [label, checkbox];
+    const [props, inputProps] = splitProps(allProps, ["label"]);
 
     return (
         <>
             <dt>
-                {elements[0]}
+                <input {...inputProps} type="checkbox" id={fieldId} />
             </dt>
             <dd>
-                {elements[1]}
+                <label for={fieldId}>{props.label}</label>
             </dd>
         </>
     );
@@ -91,9 +82,6 @@ export function SelectField(
     return (
         <>
             <dt>
-                <label for={fieldId}>{props.label}</label>
-            </dt>
-            <dd>
                 <select
                     id={fieldId}
                     value={selectProps.value}
@@ -105,6 +93,9 @@ export function SelectField(
                 >
                     {props.children}
                 </select>
+            </dt>
+            <dd>
+                <label for={fieldId}>{props.label}</label>
             </dd>
         </>
     );
@@ -119,11 +110,11 @@ export function TextAreaField(allProps: InputFieldProps & Omit<ComponentProps<"t
     return (
         <>
             <dt>
-                <label for={fieldId}>{props.label}</label>
-            </dt>
-            <dd>
                 <textarea id={fieldId} {...textProps} />
                 <FieldError error={props.error} />
+            </dt>
+            <dd>
+                <label for={fieldId}>{props.label}</label>
             </dd>
         </>
     );
