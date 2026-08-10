@@ -14,7 +14,7 @@ export const plugins = [
         id: "catcolab-model",
         name: "CatColab",
         icon: "Zap",
-        supportedDataTypes: ["catcolab-model"],
+        supportedDatatypes: ["catcolab-model"],
         async load() {
             const { renderModelTool } = await import("./model_tool");
             return renderModelTool;
