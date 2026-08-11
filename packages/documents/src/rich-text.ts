@@ -1,14 +1,16 @@
+import type { RichTextContent } from "catcolab-document-types";
+import type { DocumentStore } from "./document-store";
 import type { NotebookDocument } from "./notebook-document";
 
 export interface RichTextCell {
     readonly kind: "rich-text";
     readonly id: string;
-    readonly content: string;
+    readonly content: RichTextContent;
 
-    update(patch: Partial<{ content: string }>): void;
+    update(patch: Partial<{ content: RichTextContent }>): void;
 }
 
-function getStoredRichTextCell(document: NotebookDocument, cellId: string) {
+function getStoredRichTextCell(document: Readonly<NotebookDocument>, cellId: string) {
     const cell = document.notebook.cellContents[cellId];
     if (!cell) {
         throw new Error(`Cell ${cellId} does not exist.`);
@@ -19,18 +21,26 @@ function getStoredRichTextCell(document: NotebookDocument, cellId: string) {
     return cell;
 }
 
-export function getRichTextCell(document: NotebookDocument, cellId: string): RichTextCell {
+export function getRichTextCell<Handle>(
+    store: DocumentStore<Handle>,
+    handle: Handle,
+    cellId: string,
+): RichTextCell {
     return {
         kind: "rich-text",
         id: cellId,
         get content() {
+            const document = store.getDocumentView(handle) as Readonly<NotebookDocument>;
             return getStoredRichTextCell(document, cellId).content;
         },
         update(patch) {
-            if (patch.content === undefined) {
+            const content = patch.content;
+            if (content === undefined) {
                 return;
             }
-            getStoredRichTextCell(document, cellId).content = patch.content;
+            store.changeDocument(handle, (document) => {
+                getStoredRichTextCell(document as NotebookDocument, cellId).content = content;
+            });
         },
     };
 }
