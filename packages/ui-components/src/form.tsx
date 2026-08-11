@@ -26,11 +26,11 @@ export function InputField(allProps: InputFieldProps & Omit<ComponentProps<"inpu
     return (
         <>
             <dt>
-                <label for={fieldId}>{props.label}</label>
-            </dt>
-            <dd>
                 <input {...inputProps} id={fieldId} />
                 <FieldError error={props.error} />
+            </dt>
+            <dd>
+                <label for={fieldId}>{props.label}</label>
             </dd>
         </>
     );
@@ -47,10 +47,10 @@ export function CheckboxField(
     return (
         <>
             <dt>
-                <label for={fieldId}>{props.label}</label>
+                <input {...inputProps} type="checkbox" id={fieldId} />
             </dt>
             <dd>
-                <input {...inputProps} type="checkbox" id={fieldId} />
+                <label for={fieldId}>{props.label}</label>
             </dd>
         </>
     );
@@ -82,9 +82,6 @@ export function SelectField(
     return (
         <>
             <dt>
-                <label for={fieldId}>{props.label}</label>
-            </dt>
-            <dd>
                 <select
                     id={fieldId}
                     value={selectProps.value}
@@ -96,6 +93,9 @@ export function SelectField(
                 >
                     {props.children}
                 </select>
+            </dt>
+            <dd>
+                <label for={fieldId}>{props.label}</label>
             </dd>
         </>
     );
@@ -110,11 +110,11 @@ export function TextAreaField(allProps: InputFieldProps & Omit<ComponentProps<"t
     return (
         <>
             <dt>
-                <label for={fieldId}>{props.label}</label>
-            </dt>
-            <dd>
                 <textarea id={fieldId} {...textProps} />
                 <FieldError error={props.error} />
+            </dt>
+            <dd>
+                <label for={fieldId}>{props.label}</label>
             </dd>
         </>
     );
