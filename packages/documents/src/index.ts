@@ -1,8 +1,10 @@
-export { createBinder } from "./binder";
+export { createBinder, createBinderWithStore } from "./binder";
 export type { Binder } from "./binder";
+export type { DocumentStore, DocumentRef } from "./document-store";
+export type { Issue, PathSegment, Result } from "./result";
+export { createInMemoryStore } from "./document-store";
 export type { MorphismCell, ObjectCell } from "./model/cell";
 export type { ModelDocument } from "./model/document";
-export { modelNotebookFromDoc as notebookFromModel } from "./model/notebook";
 export type { Notebook } from "./model/notebook";
 export type { NotebookDocument } from "./notebook-document";
 export type { RichTextCell } from "./rich-text";

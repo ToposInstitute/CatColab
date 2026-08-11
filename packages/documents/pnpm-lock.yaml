@@ -17,6 +17,9 @@ importers:
       catlog-wasm:
         specifier: link:../catlog-wasm/dist/pkg-browser
         version: link:../catlog-wasm/dist/pkg-browser
+      uuid:
+        specifier: ^13.0.0
+        version: 13.0.2
     devDependencies:
       '@automerge/automerge':
         specifier: ^3.3.1
@@ -69,9 +72,6 @@ importers:
       typescript:
         specifier: ^6.0.3
         version: 6.0.3
-      uuid:
-        specifier: ^13.0.0
-        version: 13.0.2
       vite:
         specifier: ^7.2.2
         version: 7.3.6(@types/node@24.13.3)

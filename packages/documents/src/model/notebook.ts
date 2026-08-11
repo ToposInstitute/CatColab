@@ -1,5 +1,6 @@
 import { Model, Nb } from "catcolab-document-methods";
 import type { ModelJudgment } from "catcolab-document-types";
+import type { DocumentStore } from "../document-store";
 import type { NotebookDocument } from "../notebook-document";
 import { getRichTextCell, type RichTextCell } from "../rich-text";
 import type {
@@ -52,30 +53,43 @@ type AddedCellOf<S extends Shape, T extends CellTypeOf<S>> = T extends RichTextT
 
 export interface Notebook<S extends Shape, D extends NotebookDocument = NotebookDocument> {
     readonly shape: S;
-    readonly document: D;
+    readonly document: Readonly<D>;
     readonly title: string;
 
     add<T extends CellTypeOf<S>>(type: T, values: CellValuesOf<S, T>): AddedCellOf<S, T>;
     cells(): readonly CellOf<S>[];
     update(patch: Partial<{ title: string }>): void;
+    dump(): D;
+    onChange(callback: () => void): () => void;
 }
 
-export function modelNotebookFromDoc<S extends Shape, D extends ModelDocument>(
+export function modelNotebookFromStore<Handle, S extends Shape>(
     shape: S,
-    document: D,
-): Notebook<S, D> {
+    store: DocumentStore<Handle>,
+    handle: Handle,
+): Notebook<S, ModelDocument> {
+    function appendCell(
+        cell: ReturnType<typeof Nb.newRichTextCell> | Nb.FormalCell<ModelJudgment>,
+    ) {
+        store.changeDocument(handle, (document) => {
+            Nb.appendCell((document as ModelDocument).notebook, cell);
+        });
+    }
+
     return {
         shape,
-        document,
+        get document() {
+            return store.getDocumentView(handle) as Readonly<ModelDocument>;
+        },
         get title() {
-            return document.name;
+            return (store.getDocumentView(handle) as Readonly<ModelDocument>).name;
         },
         add<T extends CellTypeOf<S>>(type: T, values: CellValuesOf<S, T>) {
             if (type.kind === "rich-text") {
                 const richText = values as { content: string };
                 const cell = Nb.newRichTextCell(richText.content);
-                Nb.appendCell(document.notebook, cell);
-                return getRichTextCell(document, cell.id) as AddedCellOf<S, T>;
+                appendCell(cell);
+                return getRichTextCell(store, handle, cell.id) as AddedCellOf<S, T>;
             }
 
             if (type.kind === "object") {
@@ -83,36 +97,50 @@ export function modelNotebookFromDoc<S extends Shape, D extends ModelDocument>(
                 const judgment = Model.newObjectDecl(type.obType);
                 judgment.name = object.label ?? "";
                 const cell = Nb.newFormalCell<ModelJudgment>(judgment);
-                Nb.appendCell(document.notebook, cell);
-                return getObjectCell(document, cell.id, type as ObjectTypesOf<S>) as AddedCellOf<
-                    S,
-                    T
-                >;
+                appendCell(cell);
+                return getObjectCell(
+                    store,
+                    handle,
+                    cell.id,
+                    type as ObjectTypesOf<S>,
+                ) as AddedCellOf<S, T>;
             }
 
             const morphism = values as CellValuesOf<S, MorphismTypesOf<S>>;
             const judgment = Model.newMorphismDecl(type.morType);
             judgment.name = morphism.label ?? "";
+            const document = store.getDocumentView(handle) as Readonly<ModelDocument>;
             judgment.dom = obFromObjectCell(document, morphism.from);
             judgment.cod = obFromObjectCell(document, morphism.to);
             const cell = Nb.newFormalCell<ModelJudgment>(judgment);
-            Nb.appendCell(document.notebook, cell);
+            appendCell(cell);
             return getMorphismCell(
                 shape,
-                document,
+                store,
+                handle,
                 cell.id,
                 type as MorphismTypesOf<S>,
             ) as AddedCellOf<S, T>;
         },
         cells() {
+            const document = store.getDocumentView(handle) as Readonly<ModelDocument>;
             return document.notebook.cellOrder.map((cellId) =>
-                getModelCell(shape, document, cellId),
+                getModelCell(shape, store, handle, cellId),
             );
         },
         update(patch) {
             if (patch.title !== undefined) {
-                document.name = patch.title;
+                store.changeDocument(handle, (document) => {
+                    (document as ModelDocument).name = patch.title as string;
+                });
             }
+        },
+        dump() {
+            const document = store.getDocumentView(handle) as Readonly<ModelDocument>;
+            return store.copyValue(handle, document) as ModelDocument;
+        },
+        onChange(callback) {
+            return store.subscribe(handle, callback);
         },
     };
 }
