@@ -79,6 +79,16 @@ export function renderModelTool(handle: DocHandle<ModelDoc>, element: ToolElemen
     );
 }
 
+/** Patchwork metadata carried inside a document under the `@patchwork` key. */
+type PatchworkMetadata = {
+    type?: string;
+    suggestedImportUrl?: string;
+    frozenImportUrl?: string;
+    title?: string;
+};
+
+type WithPatchworkMetadata<T> = T & { "@patchwork"?: PatchworkMetadata };
+
 /** Create a new analysis of the model and open it in the analysis tool.
 
 The analysis lives in its own Automerge document that references the model
@@ -92,7 +102,25 @@ async function openNewAnalysis(handle: DocHandle<ModelDoc>, element: ToolElement
         _version: null,
         _server: "",
     });
-    const analysisHandle = await element.repo.create2(analysisDoc);
+
+    // Patchwork resolves a doc's tool from the doc's own metadata: `type` names
+    // the datatype and the import URLs say where to load the plugin from. Copy
+    // the import URLs from the model so both docs use the same plugin build.
+    const modelMeta = (handle.doc() as WithPatchworkMetadata<ModelDoc>)["@patchwork"];
+    const docWithMeta: WithPatchworkMetadata<typeof analysisDoc> = {
+        ...analysisDoc,
+        "@patchwork": {
+            type: "catcolab-analysis",
+            ...(modelMeta?.suggestedImportUrl && {
+                suggestedImportUrl: modelMeta.suggestedImportUrl,
+            }),
+            ...(modelMeta?.frozenImportUrl && {
+                frozenImportUrl: modelMeta.frozenImportUrl,
+            }),
+        },
+    };
+
+    const analysisHandle = await element.repo.create2(docWithMeta);
     element.dispatchEvent(
         new CustomEvent("patchwork:open-document", {
             detail: { url: analysisHandle.url, toolId: "catcolab-analysis" },
