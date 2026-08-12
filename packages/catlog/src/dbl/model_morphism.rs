@@ -21,12 +21,47 @@
 
 use thiserror::Error;
 
+use crate::zero::QualifiedName;
+
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 #[cfg(feature = "serde-wasm")]
 use tsify::Tsify;
 
 pub use super::discrete::model_morphism::*;
+
+/// A functor between models of a double theory.
+///
+/// This struct borrows its data to perform validation. The domain and codomain are
+/// assumed to be valid models of double theories. If that is in question, the
+/// models should be validated *before* validating this object.
+pub struct DblModelMorphism<'a, Map, Dom, Cod>(pub &'a Map, pub &'a Dom, pub &'a Cod);
+
+/// Trait for mutating morphisms between double models.
+pub trait MutDblModelMapping {
+    /// Object generators for the DblModelMapping.
+    type ObGen;
+    /// Morphism generators for the DblModelMapping.
+    type MorGen;
+
+    /// Constructs a model mapping from a pair of hash maps.
+    fn new(
+        ob_pairs: impl IntoIterator<Item = (QualifiedName, Self::ObGen)>,
+        mor_pairs: impl IntoIterator<Item = (QualifiedName, Self::MorGen)>,
+    ) -> Self;
+
+    /// Assigns an object generator, returning the previous assignment.
+    fn assign_ob(&mut self, x: QualifiedName, y: Self::ObGen) -> Option<Self::ObGen>;
+
+    /// Assigns a morphism generator, returning the previous assignment.
+    fn assign_mor(&mut self, e: QualifiedName, n: Self::MorGen) -> Option<Self::MorGen>;
+
+    /// Unassigns an object generator, returning the previous assignment.
+    fn unassign_ob(&mut self, x: &QualifiedName) -> Option<Self::ObGen>;
+
+    /// Unassigns a morphism generator, returning the previous assignment.
+    fn unassign_mor(&mut self, e: &QualifiedName) -> Option<Self::MorGen>;
+}
 
 /// An invalid assignment in a morphism between models of a double theory.
 #[derive(Clone, Debug, Error, PartialEq, Eq)]
