@@ -35,7 +35,7 @@ export function renderAnalysisTool(handle: DocHandle<AnalysisDoc>, element: Tool
     return render(() => <AnalysisTool handle={handle} element={element} />, element);
 }
 
-function AnalysisTool(props: { handle: DocHandle<AnalysisDoc>; element: ToolElement }) {
+export function AnalysisTool(props: { handle: DocHandle<AnalysisDoc>; element: ToolElement }) {
     // oxlint-disable-next-line solid/reactivity -- the host element and its repo are fixed for the tool's lifetime
     const modelLibrary = createModelLibraryWithRepo(props.element.repo, stdTheories);
 
