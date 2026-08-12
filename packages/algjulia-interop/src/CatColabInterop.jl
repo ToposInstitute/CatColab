@@ -11,6 +11,7 @@ include("Types.jl")
 @reexport using .Types
 
 include("CatlabInterop.jl")
+include("DecapodesInterop/DecapodesInterop.jl")
 # Add more interops here...
 
 

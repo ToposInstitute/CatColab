@@ -2,8 +2,8 @@
 """ Common types useful for deserializing CatColab JSON payloads """
 module Types 
 
-export ObType, MorType, DiagramObGenerator, DiagramMorGenerator, ObGenerator, 
-       MorGenerator, Diagram, Model, ModelDiagram
+export ObType, Modality, MorType, DiagramObGenerator, DiagramMorGenerator, ObGenerator, 
+       MorGenerator, Diagram, Model, ModelDiagram, Analysis
 
 using StructTypes
 
@@ -12,6 +12,18 @@ struct ObType
     content::String
 end
 StructTypes.StructType(::Type{ObType}) = StructTypes.Struct()
+
+struct Modality
+	modality::String
+	objects::Vector{ObType}
+end
+StructTypes.StructType(::Type{Modality}) = StructTypes.Struct()
+
+struct ObTypeOrModality
+    tag::String
+    content::Union{String, Modality}
+end
+StructTypes.StructType(::Type{ObTypeOrModality}) = StructTypes.Struct()
 
 struct MorType 
     tag::String 
@@ -31,15 +43,15 @@ struct DiagramMorGenerator
     id::String
     morType::MorType
     over::ObType
-    dom::ObType
-    cod::ObType
+	dom::ObTypeOrModality 
+	cod::ObTypeOrModality
 end
 StructTypes.StructType(::Type{DiagramMorGenerator}) = StructTypes.Struct()
 
 struct ObGenerator 
     id::String
     label::Vector{String}
-    obType::ObType
+	obType::ObType
 end 
 StructTypes.StructType(::Type{ObGenerator}) = StructTypes.Struct()
 
@@ -47,8 +59,8 @@ struct MorGenerator
     id::String
     label::Vector{String}
     morType::MorType
-    dom::ObType
-    cod::ObType
+	dom::ObTypeOrModality 
+	cod::ObTypeOrModality
 end
 StructTypes.StructType(::Type{MorGenerator}) = StructTypes.Struct()
 
@@ -64,11 +76,17 @@ struct Model
 end
 StructTypes.StructType(::Type{Model}) = StructTypes.Struct()
 
-
 struct ModelDiagram 
     model::Model
     diagram::Diagram
 end
 StructTypes.StructType(::Type{ModelDiagram}) = StructTypes.Struct()
+
+struct Analysis
+	model::Model
+	diagram::Diagram
+	analysis::Dict
+end
+StructTypes.StructType(::Type{Analysis}) = StructTypes.Struct()
 
 end # module
