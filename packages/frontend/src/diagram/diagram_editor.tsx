@@ -10,6 +10,7 @@ import { type CellConstructor, type FormalCellEditorProps, NotebookEditor } from
 import type { InstanceTypeMeta } from "../theory";
 import { LiveDiagramContext } from "./context";
 import type { LiveDiagramDoc } from "./document";
+import { DiagramInstantiationCellEditor } from "./diagram_instantiation_cell_editor";
 import { DiagramMorphismCellEditor } from "./morphism_cell_editor";
 import { DiagramObjectCellEditor } from "./object_cell_editor";
 
@@ -19,8 +20,10 @@ export function DiagramNotebookEditor(props: { liveDiagram: LiveDiagramDoc; focu
     const liveDoc = () => props.liveDiagram.liveDoc;
     const liveModel = () => props.liveDiagram.liveModel;
 
-    const cellConstructors = () =>
-        (liveModel().theory()?.instanceTypes ?? []).map(diagramCellConstructor);
+    const cellConstructors = () => {
+        const theory = liveModel().theory();
+        return theory ? diagramCellConstructors(theory) : [];
+    };
 
     return (
         <MultiProvider
@@ -80,8 +83,34 @@ function DiagramCellEditor(props: FormalCellEditorProps<DiagramJudgment>) {
                     />
                 )}
             </Match>
+            <Match when={props.content.tag === "instantiation"}>
+
+            <DiagramInstantiationCellEditor
+                    instantiation={props.content as InstantiatedDiagram}
+                    changeContent={(f) => props.changeContent((c) => f(c as InstantiatedDiagram))}
+                    focus={props.focus}
+                    actions={props.actions}
+                />
+
+            </Match>{" "}
         </Switch>
     );
+}
+
+function diagramCellConstructors(theory: Theory): CellConstructor<DiagramJudgment>[] {
+    const constructors: CellConstructor<DiagramJudgment>[] = [];
+    constructors.push({
+        name: "Instantiate",
+        description: "Instantiate an existing model into this one",
+        shortcut: ["I"],
+        construct() {
+            return Nb.newFormalCell(Diagram.newInstantiatedDiagram());
+        },
+    });
+    for (const meta of theory.instanceTypes ?? []) {
+        constructors.push(diagramCellConstructor(meta));
+    }
+    return constructors;
 }
 
 function diagramCellConstructor(meta: InstanceTypeMeta): CellConstructor<DiagramJudgment> {
@@ -113,6 +142,8 @@ function judgmentLabel(judgment: DiagramJudgment): string | undefined {
             return theory?.instanceObTypeMeta(judgment.obType)?.name;
         case "morphism":
             return theory?.instanceMorTypeMeta(judgment.morType)?.name;
+        case "instantiation":
+            return theory?.name;
         case "equation":
             return "Equation";
         default:

@@ -1,75 +1,46 @@
 import type { DocInfo } from "catcolab-api/src/user_state";
+import type { Accessor } from "solid-js";
 import { batch, createEffect, Index, Show, splitProps, untrack, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
+import { Nb } from "catcolab-document-methods";
 import {
     type FocusHandle,
     NameInput,
     type TextInputOptions,
     useChildFocus,
 } from "catcolab-ui-components";
-import type { DblModel, InstantiatedModel, Ob, SpecializeModel } from "catlog-wasm";
-import { useApi } from "../api";
-import { DocumentPicker, IdInput, IdInputPlaceholder } from "../components";
+import type { Ob, DblModel } from "catlog-wasm";
 import type { CellActions } from "../notebook";
-import { DocRefIdContext } from "../page/context";
-import { useUserState } from "../user/user_state_context";
-import { LiveModelContext, ModelLibraryContext } from "./context";
+import { IdInput, IdInputPlaceholder } from "./id_input.tsx";
+import { DocumentPicker } from "./document_picker.tsx";
 import { ObInput } from "./object_input";
 
 import "./instantiation_cell_editor.css";
 
-/** Editor for an instantiation cell in a model */
-export function InstantiationCellEditor(props: {
-    instantiation: InstantiatedModel;
-    modifyInstantiation: (f: (inst: InstantiatedModel) => void) => void;
-    focus: FocusHandle;
-    actions: CellActions;
-}) {
-    const api = useApi();
-    const docRefId = useContext(DocRefIdContext);
-    const liveModel = useContext(LiveModelContext);
-    const userState = useUserState();
+export type Specialization = { id: string | null; ob: Ob | null };
 
-    const filterCompletions = (refId: string, doc: DocInfo) => {
-        if (doc.typeName !== "model") {
-            return false;
-        }
-        if (docRefId && refId === docRefId()) {
-            return false;
-        }
-        const theory = liveModel?.().liveDoc.doc.theory;
-        if (theory && doc.theory !== theory) {
-            return false;
-        }
-        return true;
-    };
+export interface InstantiatedSomething {
+    name: string;
+    specializations: Specialization[];
+}
 
-    const refId = () => props.instantiation.model?._id;
-    const setRefId = (refId: string | null) => {
-        props.modifyInstantiation((inst) => {
-            inst.model = refId ? api.makeUnversionedLink(refId, "instantiation") : null;
-            // Auto-fill the name from the selected model's title when unnamed.
-            if (refId && !inst.name) {
-                const docName = userState.documents[refId]?.name;
-                if (docName) {
-                    inst.name = docName;
-                }
-            }
-        });
-    };
-
-    const models = useContext(ModelLibraryContext);
-    invariant(models);
-    const instantiated = models.useElaboratedModel(refId);
-
+export function InstantiationCellEditor(
+    props: {
+        instantiation: InstantiatedSomething;
+        modifyInstantiation: (f: (inst: InstantiatedSomething) => void) => void;
+        pickerConfig: PickerConfig;
+        specializationConfig: InstantiationConfig;
+    } & CellEditorProps,
+) {
     // oxlint-disable-next-line solid/reactivity -- Focus handles are stable for a mounted cell.
     const focus = useChildFocus<InstantiationCellComponent>(props.focus, {
-        default: refId() == null ? "model" : "name",
+        default: props.config.refId() == null ? props.config.kind : "name",
     });
     const specializationFocus = useChildFocus<number>(focus.childFocus("specializations"), {
         default: 0,
     });
+
     const activateIndex = (index: number) =>
         batch(() => {
             focus.setActiveChild("specializations");
@@ -103,7 +74,10 @@ export function InstantiationCellEditor(props: {
      * kept so the user can correct them.
      */
     const pruneEmptySpecializations = () => {
-        const specs = props.instantiation.specializations;
+        const specs = props.instantiation?.specializations;
+        if (specs == undefined) {
+            return;
+        }
         // Collect indices of empty rows in increasing order.
         const removedIndices: number[] = [];
         for (let i = 0; i < specs.length; i++) {
@@ -151,18 +125,19 @@ export function InstantiationCellEditor(props: {
     });
 
     const exitDownFromTop = () => {
-        if (props.instantiation.specializations.length === 0) {
+        if (props.instantiation?.specializations.length === 0) {
             props.actions.activateBelow();
         } else {
             activateIndex(0);
         }
     };
 
+    // In diagrams, there are instantiatedJudgments, obJudgments, obGenerators, etc.
     return (
         <div class="formal-judgment">
-            <div class="model-instantiation-decl">
+            <div class="something-instantiation-decl">
                 <NameInput
-                    name={props.instantiation.name}
+                    name={props.instantiation?.name}
                     setName={(name) =>
                         props.modifyInstantiation((inst) => {
                             inst.name = name;
@@ -174,42 +149,42 @@ export function InstantiationCellEditor(props: {
                     deleteForward={props.actions.deleteForward}
                     exitUp={props.actions.activateAbove}
                     exitDown={exitDownFromTop}
-                    exitRight={() => focus.setActiveChild("model")}
-                    exitForward={() => focus.setActiveChild("model")}
+                    exitRight={() => focus.setActiveChild(props.config.kind)}
+                    exitForward={() => focus.setActiveChild(props.config.kind)}
                     focus={focus.childFocus("name")}
                 />
                 <span class="is-a" />
                 <DocumentPicker
-                    refId={refId() ?? null}
+                    refId={props.config.refId() ?? null}
                     setRefId={(newRefId) => {
-                        setRefId(newRefId);
-                        // After picking a model, move focus out of the picker
+                        props.config.setRefId(newRefId);
+                        // After picking a something, move focus out of the picker
                         // and into the specializations area so the user can
                         // keep going on the keyboard. If there are no rows
                         // yet, add an empty one to focus.
                         if (newRefId) {
-                            if (props.instantiation.specializations.length === 0) {
+                            if (props.instantiation?.specializations.length === 0) {
                                 insertSpecializationAtTop();
                             } else {
                                 activateIndex(0);
                             }
                         }
                     }}
-                    filterCompletions={filterCompletions}
+                    filterCompletions={props.config.filterCompletions}
                     placeholder="..."
                     deleteBackward={() => focus.setActiveChild("name")}
                     exitUp={props.actions.activateAbove}
                     exitDown={exitDownFromTop}
                     exitLeft={() => focus.setActiveChild("name")}
                     exitBackward={() => focus.setActiveChild("name")}
-                    focus={focus.childFocus("model")}
+                    focus={focus.childFocus(props.config.kind)}
                 />
             </div>
             <ul
                 class="model-specializations"
-                classList={{ "has-instantiated": instantiated() != null }}
+                classList={{ "has-instantiated": props.config.hasInstantiated() != null }}
             >
-                <Index each={props.instantiation.specializations}>
+                <Index each={props.instantiation?.specializations}>
                     {(spec, i) => (
                         <li>
                             <SpecializationEditor
@@ -222,7 +197,7 @@ export function InstantiationCellEditor(props: {
                                     });
                                 }}
                                 onIdTextChange={(text) => idInputTexts.set(i, text)}
-                                instantiatedModel={instantiated()?.validatedModel.model ?? null}
+                                instantiated={props.instantiated}
                                 focus={specializationFocus.childFocus(i)}
                                 createBelow={() => {
                                     props.modifyInstantiation((inst) => {
@@ -251,16 +226,16 @@ export function InstantiationCellEditor(props: {
                         </li>
                     )}
                 </Index>
-                <Show when={instantiated()}>
+                <Show when={props.instantiated}>
                     <li
-                        class="model-specialization-add"
+                        class="something-specialization-add"
                         onMouseDown={(evt) => {
                             appendSpecialization();
                             props.focus.setFocused(true);
                             evt.preventDefault();
                         }}
                     >
-                        <div class="model-specialization">
+                        <div class="something-specialization">
                             <IdInputPlaceholder />
                             <span class="specialize-as" />
                             <IdInputPlaceholder />
@@ -272,15 +247,72 @@ export function InstantiationCellEditor(props: {
     );
 }
 
-type InstantiationCellComponent = "name" | "model" | "specializations";
+type InstantiationCellComponent = "name" | string | "specializations";
+
+export interface ObLookup {
+    hasOb(ob: Ob): boolean;
+    obGenerators(): QualifiedName[];
+    obGeneratorLabel(id: QualifiedName): QualifiedLabel | undefined;
+    obGeneratorWithLabel(label: QualifiedLabel): NameLookup;
+    obType(ob: Ob): ObType;
+}
+
+export interface PickerConfig {
+    kind: string;
+    refId(): string | undefined;
+    setRefId(refId: string | null): void;
+    filterCompletions(refId: string, doc: DocInfo): boolean;
+    hasInstantiated: Accessor<boolean>;
+}
+
+export interface SpecConfig {
+    completions: Accessor<QualifiedName[] | undefined>;
+    idToLavel(id: QualifiedName): Qua
+}
+
+export interface InstantiationConfig {
+    kind: string;
+    refId(): string | undefined;
+    setRefId(refId: string | null): void;
+    filterCompletions(refId: string, doc: DocInfo): boolean;
+    /** Whether an instantiated doc has been resolved — drives the CSS class and add-row */
+    hasInstantiated: Accessor<boolean>;
+
+    // Id-side completions for specialization rows
+    completions: Accessor<QualifiedName[] | undefined>;
+    idToLabel(id: QualifiedName): QualifiedLabel | undefined;
+    labelToId(label: QualifiedLabel): NameLookup | undefined;
+
+    // Ob-side render prop
+    obSide(
+        props: {
+            specialization: { id: string | null; ob: Ob | null };
+            modifySpecialization: (f: (spec: { id: string | null; ob: Ob | null }) => void) => void;
+            focus: FocusHandle;
+        } & Pick<TextInputOptions, "createBelow" | "exitDown" | "exitUp">,
+    ): JSX.Element;
+}
 
 function SpecializationEditor(
     allProps: {
-        specialization: SpecializeModel;
-        modifySpecialization: (f: (spec: SpecializeModel) => void) => void;
-        instantiatedModel: DblModel | null;
-        /** Called when the displayed text of the id input changes. */
+        specialization: { id: string | null; ob: Ob | null };
+        modifySpecialization: (f: (spec: { id: string | null; ob: Ob | null }) => void) => void;
+        completions?: QualifiedName[];
+        idToLabel: (id: QualifiedName) => QualifiedLabel | undefined;
+        labelToId: (label: QualifiedLabel) => NameLookup | undefined;
         onIdTextChange?: (text: string) => void;
+        obSide: (
+            props: {
+                specialization: { id: string | null; ob: Ob | null };
+                modifySpecialization: (
+                    f: (spec: { id: string | null; ob: Ob | null }) => void,
+                ) => void;
+                focus: FocusHandle;
+                deleteBackward: () => void;
+                exitBackward: () => void;
+                exitLeft: () => void;
+            } & Pick<TextInputOptions, "createBelow" | "exitDown" | "exitUp">,
+        ) => JSX.Element;
         focus: FocusHandle;
     } & Pick<TextInputOptions, "createBelow" | "deleteBackward" | "exitDown" | "exitUp">,
 ) {
@@ -289,18 +321,8 @@ function SpecializationEditor(
     // oxlint-disable-next-line solid/reactivity -- Focus handles are stable for a mounted row.
     const focus = useChildFocus<SpecializationEditorInput>(props.focus, { default: "id" });
 
-    const obType = () => {
-        const id = props.specialization.id;
-        if (id) {
-            const ob: Ob = { tag: "Basic", content: id };
-            if (props.instantiatedModel?.hasOb(ob)) {
-                return props.instantiatedModel.obType(ob);
-            }
-        }
-    };
-
     return (
-        <div class="model-specialization">
+        <div class="document-specialization">
             <IdInput
                 placeholder="..."
                 id={props.specialization.id}
@@ -310,9 +332,9 @@ function SpecializationEditor(
                     });
                 }}
                 onTextChange={props.onIdTextChange}
-                completions={props.instantiatedModel?.obGenerators()}
-                idToLabel={(id) => props.instantiatedModel?.obGeneratorLabel(id)}
-                labelToId={(label) => props.instantiatedModel?.obGeneratorWithLabel(label)}
+                completions={props.completions}
+                idToLabel={props.idToLabel}
+                labelToId={props.labelToId}
                 focus={focus.childFocus("id")}
                 deleteBackward={props.deleteBackward}
                 exitForward={() => focus.setActiveChild("ob")}
@@ -320,25 +342,15 @@ function SpecializationEditor(
                 {...inputProps}
             />
             <span class="specialize-as" />
-            <Show when={obType()} fallback={<IdInputPlaceholder />}>
-                {(obType) => (
-                    <ObInput
-                        placeholder="..."
-                        ob={props.specialization.ob}
-                        setOb={(ob) => {
-                            props.modifySpecialization((spec) => {
-                                spec.ob = ob;
-                            });
-                        }}
-                        obType={obType()}
-                        focus={focus.childFocus("ob")}
-                        deleteBackward={() => focus.setActiveChild("id")}
-                        exitBackward={() => focus.setActiveChild("id")}
-                        exitLeft={() => focus.setActiveChild("id")}
-                        {...inputProps}
-                    />
-                )}
-            </Show>
+            {props.obSide({
+                specialization: props.specialization,
+                modifySpecialization: props.modifySpecialization,
+                focus: focus.childFocus("ob"),
+                deleteBackward: () => focus.setActiveChild("id"),
+                exitBackward: () => focus.setActiveChild("id"),
+                exitLeft: () => focus.setActiveChild("id"),
+                ...inputProps,
+            })}
         </div>
     );
 }
