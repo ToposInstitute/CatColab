@@ -4,6 +4,28 @@ local rootdir = os.getenv "QUARTO_PROJECT_DIR"
 local cachedir = rootdir .. "/.svg-cache"
 local tikz_user_preamble = ""
 
+-- The math macros shared between prose (KaTeX, via `{{< include _macros.qmd >}}`)
+-- and tikz blocks (lualatex): read once from _macros.qmd and spliced into the
+-- template at its @MACROS marker, with HTML comments converted to TeX comments.
+local function load_shared_macros()
+  local f = io.open(rootdir .. "/_macros.qmd", "r")
+  if f == nil then return "" end
+  local content = f:read "*all"
+  f:close()
+  return (content:gsub("<!%-%-(.-)%-%->", function(c) return (("%" .. c):gsub("\n", "\n%%")) end))
+end
+
+local tikz_shared_macros = load_shared_macros()
+
+-- Substitute both markers in a template prefix. Function-valued replacements
+-- so that `%` in the substituted text is taken literally rather than as a
+-- gsub capture reference.
+local function resolve_preamble(template_before)
+  return template_before
+    :gsub("@MACROS", function() return tikz_shared_macros end)
+    :gsub("@OPTIONAL_PREAMBLE", function() return tikz_user_preamble end)
+end
+
 local thisfile = io.open(rootdir .. "/filters.lua")
 local thiscontent = thisfile:read "*all"
 thisfile:close()
@@ -56,7 +78,7 @@ local function tikz2image(template)
     system.with_temporary_directory("tikz2image", function(tmpdir)
       system.with_working_directory(tmpdir, function()
         local f = io.open("tikz.tex", "w")
-        local before = template[1]:gsub("@OPTIONAL_PREAMBLE", tikz_user_preamble)
+        local before = resolve_preamble(template[1])
         f:write(before .. trim(src) .. template[2])
         f:close()
         print()
@@ -101,7 +123,7 @@ local function handle_codeblock(el)
     if FORMAT:match "latex" then
       return pandoc.RawBlock("latex", el.text)
     end
-    local before = tikz_template[1]:gsub("@OPTIONAL_PREAMBLE", tikz_user_preamble)
+    local before = resolve_preamble(tikz_template[1])
     return pandoc.Div(
       memoize_svg(el.text, tikz2image(tikz_template), before .. tikz_template[2]),
       { class = "tikz" }
