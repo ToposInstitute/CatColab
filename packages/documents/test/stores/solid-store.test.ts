@@ -9,7 +9,7 @@ import type { Document } from "catcolab-document-types";
 // backends through `createBinder` and the `DocumentStore` type. A simple
 // SolidJS store keeps a draft document plus a Solid store view reconciled on
 // every change.
-import { createBinder, type DocumentStore } from "catcolab-documents";
+import { createBinderWithStore, type DocumentStore } from "catcolab-documents";
 
 type SolidStoreHandle = {
     draftDoc: Document;
@@ -59,9 +59,10 @@ const solidStore: DocumentStore<SolidStoreHandle> = {
     }),
 };
 
-describe.skip("SolidJS binder", () => {
-    test("a binder over a Solid store is used just as the default binder", async () => {
-        const solidBinder = createBinder(solidStore);
+describe("SolidJS binder", () => {
+    // Still pending: `cellsOf` is not implemented yet.
+    test.skip("a binder over a Solid store is used just as the default binder", async () => {
+        const solidBinder = createBinderWithStore(solidStore);
 
         const notebook = await solidBinder.createNotebook(SimpleOlog, { title: "An Olog" });
         expect(notebook.title).toBe("An Olog");
@@ -76,7 +77,7 @@ describe.skip("SolidJS binder", () => {
     });
 
     test("changes notify subscribers through the store", async () => {
-        const solidBinder = createBinder(solidStore);
+        const solidBinder = createBinderWithStore(solidStore);
         const notebook = await solidBinder.createNotebook(SimpleOlog, { title: "An Olog" });
 
         let changes = 0;
@@ -88,5 +89,23 @@ describe.skip("SolidJS binder", () => {
         expect(changes).toBeGreaterThan(0);
 
         unsubscribe();
+
+        const afterUnsubscribe = changes;
+        notebook.add(Type, { label: "B" });
+        expect(changes).toBe(afterUnsubscribe);
+    });
+
+    test("reads and writes go through the store's document view", async () => {
+        const solidBinder = createBinderWithStore(solidStore);
+        const notebook = await solidBinder.createNotebook(SimpleOlog, { title: "An Olog" });
+
+        const a = notebook.add(Type, { label: "A" });
+        expect(a.label).toBe("A");
+
+        a.update({ label: "A2" });
+        expect(a.label).toBe("A2");
+
+        notebook.update({ title: "Another Olog" });
+        expect(notebook.title).toBe("Another Olog");
     });
 });

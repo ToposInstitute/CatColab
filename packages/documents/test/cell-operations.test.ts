@@ -114,7 +114,7 @@ describe.skip("getting a cell by id", () => {
     });
 });
 
-describe.skip("subscribing to changes", () => {
+describe("subscribing to changes", () => {
     test("onChange triggers on any change to the notebook, with no arguments", async () => {
         const { notebook, a } = await threeObjectNotebook();
 

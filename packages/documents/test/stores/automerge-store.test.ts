@@ -9,7 +9,7 @@ import { SimpleOlog, Type } from "catcolab-logics/simple-olog";
 import { describe, expect, test } from "vitest";
 
 import type { Document } from "catcolab-document-types";
-import { createBinder, type DocumentStore } from "catcolab-documents";
+import { createBinderWithStore, type DocumentStore } from "catcolab-documents";
 
 const repo = new Repo();
 
@@ -40,19 +40,59 @@ const automergeStore: DocumentStore<DocHandle<Document>> = {
     }),
 };
 
-describe.skip("Automerge binder", () => {
+describe("Automerge binder", () => {
     test("a binder over an Automerge store is used just as the default binder", async () => {
-        const automergeBinder = createBinder(automergeStore);
+        const automergeBinder = createBinderWithStore(automergeStore);
 
         const notebook = await automergeBinder.createNotebook(SimpleOlog, { title: "An Olog" });
         expect(notebook.title).toBe("An Olog");
+
+        const a = notebook.add(Type, { label: "A" });
+        expect(a.label).toBe("A");
+
+        a.update({ label: "A2" });
+        expect(a.label).toBe("A2");
     });
 
-    test("edits are persisted in the Automerge document", async () => {
+    test("changes made through the notebook notify Automerge subscribers", async () => {
+        const automergeBinder = createBinderWithStore(automergeStore);
+        const notebook = await automergeBinder.createNotebook(SimpleOlog, { title: "An Olog" });
+
+        let changes = 0;
+        const unsubscribe = notebook.onChange(() => {
+            changes += 1;
+        });
+
+        notebook.add(Type, { label: "A" });
+        expect(changes).toBeGreaterThan(0);
+
+        unsubscribe();
+
+        const afterUnsubscribe = changes;
+        notebook.add(Type, { label: "B" });
+        expect(changes).toBe(afterUnsubscribe);
+    });
+
+    test("dump copies the document out of the Automerge backend", async () => {
+        const automergeBinder = createBinderWithStore(automergeStore);
+        const notebook = await automergeBinder.createNotebook(SimpleOlog, { title: "An Olog" });
+        notebook.add(Type, { label: "A" });
+
+        const dumped = notebook.dump();
+        expect(dumped.name).toBe("An Olog");
+        // The dump is a plain value, detached from the live document.
+        expect(structuredClone(dumped)).toEqual(dumped);
+
+        notebook.update({ title: "Another Olog" });
+        expect(dumped.name).toBe("An Olog");
+    });
+
+    // Still pending: `loadNotebook` and `cellsOf` are not implemented yet.
+    test.skip("edits are persisted in the Automerge document", async () => {
         // This minimal store snapshots its view per handle, so it demonstrates
         // creation and persistence; a store with *live* reads projects its
         // handle instead (see backend-store.test.ts).
-        const automergeBinder = createBinder(automergeStore);
+        const automergeBinder = createBinderWithStore(automergeStore);
 
         const notebook = await automergeBinder.createNotebook(SimpleOlog, { title: "An Olog" });
         notebook.add(Type, { label: "A" });
