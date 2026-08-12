@@ -4,9 +4,12 @@ use all_the_same::all_the_same;
 use derive_more::{From, TryInto};
 use tattle::display::SourceInfo;
 
+use std::rc::Rc;
+
 use super::{eval::*, prelude::*, text_elab, theory::*, toplevel::*, val::*};
 use crate::dbl::{
-    discrete, discrete_tabulator, modal,
+    discrete::{self, DiscreteDblModelInstance, DiscreteInstanceTerm},
+    discrete_tabulator, modal,
     model::{DblModel, DblModelPrinter, MutDblModel},
     theory::{DblTheory, DblTheoryKind, NonUnital, Unital},
 };
@@ -398,6 +401,198 @@ impl<'a> ModelGenerator<'a> {
             }
             TyV_::Unit => None,
             TyV_::Meta(_) => None,
+            TyV_::Over(_) => None,
         }
+    }
+}
+
+/// Generates a [`DiscreteDblModelInstance`] from an elaborated [`Diag`].
+///
+/// Walks the instance body's [`TmV_::Instance`] payload, registering
+/// each generator with its fiber, each equation as a pair of
+/// [`DiscreteInstanceTerm`]s, and each sub-instance's contents under
+/// the appropriate prefix.
+///
+/// Restricted to discrete double theories for the moment.
+pub fn instance_from_diag(
+    toplevel: &Toplevel,
+    th: &TheoryDef,
+    diag: &Diag,
+) -> Result<(DiscreteDblModelInstance, Namespace), String> {
+    let TheoryDef::Discrete(_) = th else {
+        return Err("instance generation only supports discrete double theories".into());
+    };
+    let (cod_model, _) = Model::from_ty(toplevel, th, &diag.model);
+    let cod_model = cod_model
+        .as_discrete()
+        .ok_or_else(|| "expected a discrete codomain model".to_string())?;
+    let mut instance = DiscreteDblModelInstance::new(Rc::new(cod_model));
+    let TmV_::Instance(body) = &*diag.body_val else {
+        return Err("expected a TmV::Instance body".into());
+    };
+    let mut namespace = Namespace::new_for_uuid();
+    extract_instance_body(&mut instance, &mut namespace, &[], body)?;
+    Ok((instance, namespace))
+}
+
+fn extract_instance_body(
+    instance: &mut DiscreteDblModelInstance,
+    namespace: &mut Namespace,
+    prefix: &[NameSegment],
+    body: &InstanceBodyV,
+) -> Result<(), String> {
+    for (name, (label, path)) in &body.generators {
+        if let NameSegment::Uuid(uuid) = name {
+            namespace.set_label(*uuid, *label);
+        }
+        let mut qsegs = prefix.to_vec();
+        qsegs.push(*name);
+        let qname: QualifiedName = qsegs.into();
+        let fiber: QualifiedName = path.iter().map(|(seg, _)| *seg).collect::<Vec<_>>().into();
+        instance.add_generator(qname, fiber);
+    }
+    for (lhs, rhs) in &body.equations {
+        let lhs_t = tm_to_discrete_instance_term_with_prefix(instance, lhs, prefix)?;
+        let rhs_t = tm_to_discrete_instance_term_with_prefix(instance, rhs, prefix)?;
+        instance.add_equation(lhs_t, rhs_t);
+    }
+    for (name, (label, sub_v)) in &body.sub_instances {
+        if let NameSegment::Uuid(uuid) = name {
+            namespace.set_label(*uuid, *label);
+        }
+        let TmV_::Instance(sub_body) = &**sub_v else {
+            return Err("sub-instance is not a TmV::Instance".into());
+        };
+        let mut sub_prefix = prefix.to_vec();
+        sub_prefix.push(*name);
+        extract_instance_body(instance, namespace, &sub_prefix, sub_body)?;
+    }
+    Ok(())
+}
+
+/// Convert an `@over`-typed term value into a [`DiscreteInstanceTerm`],
+/// prefixing each generator name with the path into any enclosing
+/// sub-instances.
+///
+/// Nested [`TmV_::OverApp`]s are flattened into a single morphism path
+/// applied to the generator at the leaf, matching the flat canonical
+/// shape of [`DiscreteInstanceTerm`].
+fn tm_to_discrete_instance_term_with_prefix(
+    instance: &DiscreteDblModelInstance,
+    tm: &TmV,
+    prefix: &[NameSegment],
+) -> Result<DiscreteInstanceTerm, String> {
+    // Walk outer-to-inner, recording each applied morphism.
+    let mut mors_outer_first: Vec<QualifiedName> = Vec::new();
+    let mut cur = tm;
+    let base: QualifiedName = loop {
+        match &**cur {
+            TmV_::Neu(n, _) => {
+                let mut segs = prefix.to_vec();
+                segs.extend(neu_full_name(n));
+                break segs.into();
+            }
+            TmV_::OverApp(mor_name, _, _, inner) => {
+                mors_outer_first.push(QualifiedName::single(*mor_name));
+                cur = inner;
+            }
+            _ => return Err("term is not a generator or codomain-morphism application".into()),
+        }
+    };
+    // Path order is innermost-first (apply first goes first).
+    mors_outer_first.reverse();
+    let path = match Path::from_vec(mors_outer_first) {
+        Some(p) => p,
+        None => {
+            let fiber = instance
+                .fiber_of(&base)
+                .ok_or_else(|| format!("instance term mentions unknown generator {base}"))?;
+            Path::Id(fiber.clone())
+        }
+    };
+    Ok(DiscreteInstanceTerm { path, base })
+}
+
+/// Read off the full name of a neutral, including its leading variable
+/// name and any subsequent projection segments. Unlike
+/// [`TmN::to_qualified_name`] this does *not* treat the leading
+/// variable as an implicit root — for instance-body terms the leading
+/// variable is itself a generator name (e.g. `v1`) or sub-instance
+/// name (e.g. `we`), and must contribute a segment.
+fn neu_full_name(n: &TmN) -> Vec<NameSegment> {
+    let mut segments = Vec::new();
+    let mut cur = n;
+    loop {
+        match &**cur {
+            TmN_::Var(_, name, _) => {
+                segments.push(*name);
+                break;
+            }
+            TmN_::Proj(n1, f, _) => {
+                segments.push(*f);
+                cur = n1;
+            }
+        }
+    }
+    segments.reverse();
+    segments
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::tt::text_elab::{TT_PARSE_CONFIG, TopElabResult, TopElaborator};
+    use crate::tt::theory::std_theories;
+
+    fn elaborate_to_toplevel(src: &str) -> Toplevel {
+        let reporter = Reporter::new();
+        let mut toplevel = Toplevel::new(std_theories());
+        let _ = TT_PARSE_CONFIG.with_parsed_top(src, reporter.clone(), |topntns| {
+            let mut topelab = TopElaborator::new(reporter.clone());
+            for topntn in topntns.iter() {
+                if let Some(TopElabResult::Declaration(name, decl)) =
+                    topelab.elab(&toplevel, topntn)
+                {
+                    toplevel.declarations.insert(name, decl);
+                }
+            }
+            Some(())
+        });
+        assert!(!reporter.errored(), "elaboration produced errors");
+        toplevel
+    }
+
+    #[test]
+    fn instance_over_weighted_graph() {
+        let src = r#"
+set_theory ThSchema
+
+type WeightedGraph := [
+  V : Entity,
+  E : Entity,
+  Weight : AttrType,
+  src : (Hom Entity)[E, V],
+  tgt : (Hom Entity)[E, V],
+  weight : Attr[E, Weight]
+]
+
+def I : WeightedGraph := [
+    V := [v],
+    E := [e],
+    src(e) := v
+]
+"#;
+        let toplevel = elaborate_to_toplevel(src);
+        let diag = match toplevel.declarations.get(&name_seg("I")) {
+            Some(TopDecl::Diag(d)) => d.clone(),
+            _ => panic!("expected I to be a diagram declaration"),
+        };
+        let (instance, _ns) =
+            instance_from_diag(&toplevel, &diag.theory.definition, &diag).unwrap();
+
+        let e_qname: QualifiedName = vec![name_seg("e")].into();
+        let e_fiber: QualifiedName = vec![name_seg("E")].into();
+        assert_eq!(instance.fiber_of(&e_qname), Some(&e_fiber));
+        assert_eq!(instance.equations().count(), 1);
     }
 }
