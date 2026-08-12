@@ -1,0 +1,65 @@
+#!/usr/bin/env bash
+# Dump all active model documents from a CatColab deployment.
+#
+# Usage: dump-model-fixtures <ssh-target> <document-server> <output-file>
+# Example: dump-model-fixtures catcolab@backend-next.catcolab.org next.catcolab.org dumps/next-model-fixtures.json
+
+set -euo pipefail
+umask 077
+
+ssh_target="${1:?Usage: dump-model-fixtures <ssh-target> <document-server> <output-file>}"
+document_server="${2:?Usage: dump-model-fixtures <ssh-target> <document-server> <output-file>}"
+output_file="${3:?Usage: dump-model-fixtures <ssh-target> <document-server> <output-file>}"
+models_file=$(mktemp)
+output_dir=$(dirname "$output_file")
+if [[ ! -d "$output_dir" ]]; then
+  echo "Error: output directory does not exist: $output_dir" >&2
+  exit 1
+fi
+output_tmp=$(mktemp "$output_dir/.model-fixtures.XXXXXX")
+trap 'rm -f "$models_file" "$output_tmp"' EXIT
+
+echo "Dumping active model documents from $ssh_target..." >&2
+echo "Warning: the output contains private user-authored notebook content." >&2
+
+ssh "$ssh_target" bash -s > "$models_file" <<'REMOTE_SCRIPT'
+set -euo pipefail
+
+if [[ ! -f /run/agenix/catcolabSecrets ]]; then
+  echo "Error: /run/agenix/catcolabSecrets not found" >&2
+  exit 1
+fi
+
+db_url=$(grep '^DATABASE_URL=' /run/agenix/catcolabSecrets | cut -d= -f2-)
+if [[ -z "$db_url" ]]; then
+  echo "Error: DATABASE_URL not found in /run/agenix/catcolabSecrets" >&2
+  exit 1
+fi
+
+psql "$db_url" -t -A -c "
+  SELECT COALESCE(
+    json_agg(
+      json_build_object(
+        'refId', r.id::text,
+        'document', s.content
+      )
+      ORDER BY r.id
+    ),
+    '[]'::json
+  )
+  FROM refs r
+  JOIN snapshots s
+    ON s.id = r.current_snapshot
+   AND s.for_ref = r.id
+  WHERE r.deleted_at IS NULL
+    AND s.content->>'type' = 'model';
+"
+REMOTE_SCRIPT
+
+jq --arg server "$document_server" '{formatVersion: 1, server: $server, models: .}' \
+  "$models_file" > "$output_tmp"
+jq empty "$output_tmp"
+mv "$output_tmp" "$output_file"
+
+model_count=$(jq '.models | length' "$output_file")
+echo "Dumped $model_count active model documents to $output_file" >&2
