@@ -84,6 +84,9 @@ export default defineConfig({
         "no-underscore-dangle": "off",
         // We have some tests that just see if anything breaks when things are run
         "vitest/expect-expect": "off",
+        // Asserting on error message wording couples tests to prose we expect
+        // to change; `toThrow()` on its own is a deliberate choice.
+        "vitest/require-to-throw-message": "off",
         // Allow underscore-prefixed names for intentionally unused bindings
         // (e.g., `_e` in catch blocks, `_unused` destructured fields).
         "no-unused-vars": [
