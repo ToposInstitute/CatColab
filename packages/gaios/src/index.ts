@@ -26,7 +26,8 @@ export const plugins = [
         name: "CatColab Analysis",
         icon: "ChartSpline",
         // A blank analysis references no model, so hide it from the "new
-        // document" menu; analyses are created from the model tool instead.
+        // document" menu; the model tool creates an analysis automatically
+        // for every model instead.
         unlisted: true,
         async load() {
             const { dataType } = await import("./analysis_datatype");
