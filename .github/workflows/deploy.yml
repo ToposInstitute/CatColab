@@ -86,12 +86,16 @@ jobs:
         id: netlify_deploy
         run: |
           mv app site/
+          mv gaios site/gaios
           mv dev-docs site/dev
           mv rust_docs site/dev/rust
           mv frontend_docs site/dev/frontend
           mv ui-components site/dev/ui-components
           mv math-docs site/math
           mv rfc site/rfc
+          # Patchwork shells load the gaios plugin cross-origin, so its
+          # package.json and module files need permissive CORS headers.
+          printf '/gaios/*\n  Access-Control-Allow-Origin: *\n' >> site/_headers
           echo '/dev/rust /dev/rust/catlog' >> site/_redirects
           echo '/dev/core /dev/rust/catlog' >> site/_redirects
           echo '/dev/backend /dev/rust/backend' >> site/_redirects
@@ -108,6 +112,10 @@ jobs:
         if: github.event.workflow_run.event == 'release'
         run: |
           mv app site/
+          mv gaios site/gaios
+          # Patchwork shells load the gaios plugin cross-origin, so its
+          # package.json and module files need permissive CORS headers.
+          printf '/gaios/*\n  Access-Control-Allow-Origin: *\n' >> site/_headers
           echo '/* /index.html 200' >> site/_redirects
           cd .netlify-env
           npx netlify deploy --dir ../site --site ${{ secrets.NETLIFY_PROD_SITE_ID }} --auth ${{ secrets.NETLIFY_API_TOKEN }} --prod

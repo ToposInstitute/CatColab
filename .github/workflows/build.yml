@@ -319,6 +319,90 @@ jobs:
           name: rfc
           path: rfc/_site
 
+  build_gaios:
+    name: Build gaios Patchwork plugin
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          # Need full history for `git log` for cache key
+          fetch-depth: 0
+
+      - name: Compute cache key
+        id: cache-key
+        run: |
+          # Get git hash of the most recent commit affecting gaios or any of its dependencies
+          hash=$(git log -1 --format="%H" -- packages/gaios packages/frontend packages/backend/pkg packages/catlog packages/catlog-wasm packages/document-types packages/document-methods packages/ui-components Cargo.toml Cargo.lock)
+          echo "git-hash=${hash}" >> $GITHUB_OUTPUT
+          echo "Gaios git hash: ${hash}"
+
+      - name: Cache gaios build
+        id: cache-gaios-build
+        uses: actions/cache@v6
+        with:
+          path: packages/gaios/dist
+          key: gaios-build-${{ steps.cache-key.outputs.git-hash }}
+
+      - name: Setup pnpm
+        if: steps.cache-gaios-build.outputs.cache-hit != 'true'
+        uses: pnpm/action-setup@v6
+
+      - name: Setup NodeJS
+        if: steps.cache-gaios-build.outputs.cache-hit != 'true'
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: "pnpm"
+
+      - name: Install Rust toolchain from file
+        if: steps.cache-gaios-build.outputs.cache-hit != 'true'
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          # Don't override flags in cargo config files.
+          rustflags: ""
+
+      - name: Build gaios plugin
+        if: steps.cache-gaios-build.outputs.cache-hit != 'true'
+        run: |
+          pnpm install
+          pnpm --filter ./packages/gaios run build-deps
+          pnpm --filter ./packages/gaios run build
+
+      - name: Report cache status
+        run: |
+          if [ "${{ steps.cache-gaios-build.outputs.cache-hit }}" = "true" ]; then
+            echo "✅ Gaios build restored from cache"
+          else
+            echo "🔨 Gaios build completed and cached"
+          fi
+
+      # A Patchwork module is a directory serving a package.json whose
+      # `exports["."]` points at the entry module. Consumers (e.g. GaiOS)
+      # reference the deployed directory's URL in their modules.json.
+      - name: Assemble Patchwork package
+        run: |
+          mkdir gaios-pkg
+          cp -R packages/gaios/dist gaios-pkg/dist
+          cat > gaios-pkg/package.json <<'EOF'
+          {
+            "name": "catcolab",
+            "title": "CatColab",
+            "version": "0.0.1",
+            "type": "module",
+            "private": true,
+            "exports": {
+              ".": "./dist/index.js"
+            }
+          }
+          EOF
+
+      - name: Upload gaios plugin
+        uses: actions/upload-artifact@v7
+        with:
+          name: gaios
+          path: gaios-pkg
+
   build_ui_components:
     name: Build ui-components Storybook
     runs-on: ubuntu-latest
