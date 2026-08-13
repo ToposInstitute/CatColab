@@ -7,7 +7,7 @@ import { describe, expect, test } from "vitest";
 // namespace.
 import { createBinder } from "catcolab-documents";
 
-describe.skip("tabular instances", () => {
+describe("tabular instances", () => {
     test("an instance of a schema has a similar add method and rowsOf", async () => {
         const binder = createBinder();
 

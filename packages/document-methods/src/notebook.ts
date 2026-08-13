@@ -6,8 +6,20 @@ import type { Cell, Notebook } from "catcolab-document-types";
 /** A cell containing custom data, usually a formal object. */
 export type FormalCell<T> = Cell<T> & { tag: "formal" };
 
-/** A cell containing rich text. */
-export type RichTextCell = Cell<unknown> & { tag: "rich-text" };
+/**
+ * Automerge-backed rich text edited by the frontend ProseMirror editor.
+ *
+ * At runtime this is the value at the rich-text cell's `content` path. The
+ * frontend passes that path to `@automerge/prosemirror`, which stores text,
+ * marks, and block metadata directly on the Automerge text object rather than
+ * as serialized ProseMirror JSON.
+ */
+export type RichTextContent = string;
+
+/** A cell containing frontend rich text. */
+export type RichTextCell = Omit<Cell<unknown> & { tag: "rich-text" }, "content"> & {
+    content: RichTextContent;
+};
 
 /** Creates an empty notebook. */
 export const newNotebook = <T>(): Notebook<T> => ({
@@ -15,8 +27,8 @@ export const newNotebook = <T>(): Notebook<T> => ({
     cellContents: {},
 });
 
-/** Creates a rich text cell with the given content. */
-export const newRichTextCell = (content?: string): RichTextCell => ({
+/** Creates a rich text cell with the given frontend rich-text content. */
+export const newRichTextCell = (content?: RichTextContent): RichTextCell => ({
     tag: "rich-text",
     id: v7(),
     content: content ?? "",

@@ -1,0 +1,120 @@
+/* The tab rail lists every table as a tab and always stays on the left; open
+   tables scroll and wrap in the remaining space without flowing underneath the
+   rail. */
+.tables {
+    flex: 1;
+    min-width: 0;
+    min-height: 0;
+    display: flex;
+    overflow: hidden;
+}
+
+.tabRail {
+    flex: none;
+    box-sizing: border-box;
+    width: 14rem;
+    max-width: 40%;
+    overflow: auto;
+    /* Cards carry a 5px margin for their drop indicators, so trim the panel
+       padding by that much to keep the same visual inset. */
+    padding: calc(0.75rem - 5px);
+    border-right: 1px solid var(--color-border);
+}
+
+/* Open tables retain their natural width and wrap, while this canvas remains
+   horizontally scrollable when one table is wider than the available space. */
+.openTables {
+    flex: 1;
+    min-width: 0;
+    overflow: auto;
+    padding: calc(0.75rem - 5px);
+    display: flex;
+    flex-wrap: wrap;
+    gap: calc(0.75rem - 10px);
+    align-content: flex-start;
+}
+
+.tableCard {
+    position: relative;
+    height: fit-content;
+    /* Space for the drop indicator, which sits centered in this margin. Using a
+       margin (not a negative pseudo-element offset) keeps the leftmost/topmost
+       card's indicator inside the scroll container so `overflow` never clips
+       it. The negative gap compensation keeps cards visually flush by default. */
+    margin: 5px;
+    overflow: visible;
+    transition: opacity 120ms ease;
+}
+
+/* The tabs stack vertically and share the rail's width. */
+.tabStack {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+    gap: 0;
+    height: fit-content;
+}
+
+/* A tab's drag/drop wrapper. Its 5px margin hosts the drop indicator, matching
+   the open grid cards. */
+.tabCard {
+    position: relative;
+    margin: 5px;
+    overflow: visible;
+    transition: opacity 120ms ease;
+}
+
+.dragging {
+    opacity: 0.45;
+}
+
+.dropBefore::before,
+.dropAfter::after {
+    position: absolute;
+    z-index: 5;
+    top: -4px;
+    bottom: -4px;
+    width: 3px;
+    border-radius: 999px;
+    background: var(--color-topos-primary);
+    content: "";
+}
+
+.dropBefore::before {
+    left: -4px;
+}
+
+.dropAfter::after {
+    right: -4px;
+}
+
+/* Inside the vertical tab rail, the before/after drop indicators run
+   horizontally above/below the tab, matching the stack's flow axis. */
+.tabStack .dropBefore::before {
+    top: -4px;
+    bottom: auto;
+    right: 0;
+    left: 0;
+    width: auto;
+    height: 3px;
+}
+
+.tabStack .dropAfter::after {
+    top: auto;
+    bottom: -4px;
+    right: 0;
+    left: 0;
+    width: auto;
+    height: 3px;
+}
+
+@media (max-width: 720px) {
+    .openTables {
+        flex-wrap: nowrap;
+    }
+
+    .tabRail {
+        max-width: 50%;
+    }
+}

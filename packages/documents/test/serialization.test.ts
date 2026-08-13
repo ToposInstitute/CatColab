@@ -6,7 +6,7 @@ import { describe, expect, test } from "vitest";
 // mismatches, and loading from a `DocumentRef`.
 import { createBinder } from "catcolab-documents";
 
-describe.skip("serialization", () => {
+describe("serialization", () => {
     test("a dumped notebook can be loaded", async () => {
         const binder = createBinder();
         const notebook = await binder.createNotebook(PetriNet, { title: "Example Petri-net" });

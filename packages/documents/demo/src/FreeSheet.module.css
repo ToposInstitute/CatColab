@@ -1,0 +1,73 @@
+/* The Sheet mode body: the live tables in a strip on top, the free-form
+   scratch grid filling the rest below. */
+.sheetView {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+}
+
+/* The existing tables — the same rail-and-grids workspace as the Tables view —
+   capped to the upper half so the scratch grid keeps room below. */
+.tablesArea {
+    display: flex;
+    flex: 0 1 auto;
+    min-height: 0;
+    max-height: 50%;
+    border-bottom: 2px solid var(--pencil);
+}
+
+.sheetPane {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+}
+
+.toolbar {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.5rem 0.75rem;
+}
+
+.hint {
+    color: var(--muted, var(--color-text-muted));
+    font-size: 0.85rem;
+    font-style: italic;
+}
+
+.grid {
+    flex: 1;
+    min-width: 0;
+    min-height: 0;
+    padding: 0 0.75rem 0.75rem;
+    overflow: auto;
+}
+
+/* The per-column type tag in the scratch grid's letter headers. */
+.scratchTypeSelect {
+    max-width: 5.5rem;
+    margin-left: 0.35rem;
+    padding: 0 0.1rem;
+    border: 1px solid var(--color-gray-450);
+    border-radius: 3px;
+    background: var(--paper, #fff);
+    color: var(--color-text-muted);
+    font: inherit;
+    font-size: 0.68rem;
+    font-style: italic;
+    cursor: pointer;
+}
+
+/* An explicit tag reads as a commitment, not a hint. */
+.scratchTypeTagged {
+    border-color: var(--teal-ink, #2a7);
+    color: var(--color-foreground);
+    font-style: normal;
+    font-weight: 600;
+}

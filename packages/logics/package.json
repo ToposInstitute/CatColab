@@ -16,6 +16,7 @@
         "ci": "oxlint --deny-warnings && oxfmt --check ."
     },
     "dependencies": {
+        "catcolab-analyses": "workspace:*",
         "catcolab-documents": "link:../documents",
         "catlog-wasm": "link:../catlog-wasm/dist/pkg-browser"
     },

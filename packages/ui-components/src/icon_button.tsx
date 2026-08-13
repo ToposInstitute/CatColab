@@ -13,7 +13,6 @@ export function IconButton(
     } & ComponentProps<"button">,
 ) {
     const [props, buttonProps] = splitProps(allProps, ["children", "tooltip", "variant"]);
-
     const buttonClass = () => {
         const baseClass = "icon-button";
         switch (props.variant) {

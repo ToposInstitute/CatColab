@@ -228,7 +228,7 @@ async function until(predicate: () => boolean) {
     }
 }
 
-describe.skip("SolidJS validation & completions", () => {
+describe("SolidJS validation & completions", () => {
     test("the validated model feeds completions and codomain selection", async () => {
         const notebook = await solidBinder.createNotebook(SimpleSchema, {
             title: "Company schema",

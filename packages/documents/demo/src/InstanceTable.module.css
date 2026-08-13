@@ -1,0 +1,402 @@
+.table {
+    display: flex;
+    flex-direction: column;
+    /* Size the frame to the jspreadsheet table's exact width so the header and
+       footer align flush with the grid rather than overhanging it. */
+    width: fit-content;
+    max-width: 100%;
+    color: var(--ink);
+    background: var(--color-background);
+}
+
+.tableHeader {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.4rem 0.75rem;
+    border-bottom: 0;
+    background: var(--color-gray-50);
+    flex: none;
+}
+
+.tableTitle {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+}
+
+.dragHandle {
+    display: grid;
+    width: 1.75rem;
+    height: 1.75rem;
+    margin-right: 0.25rem;
+    padding: 0;
+    border: 0;
+    border-radius: 3px;
+    place-items: center;
+    color: var(--color-text-secondary);
+    background: transparent;
+    cursor: grab;
+    touch-action: none;
+}
+
+.dragHandle:hover {
+    color: var(--color-foreground);
+    background: var(--color-button-utility-hover-bg);
+}
+
+.dragHandle:active {
+    cursor: grabbing;
+}
+
+/* The chevron in the table header that collapses the table to just its header.
+   Left-pointing when expanded, right-pointing (to reopen) when collapsed. */
+.tableCollapseButton {
+    display: grid;
+    width: 1.75rem;
+    height: 1.75rem;
+    margin-left: 0.75rem;
+    padding: 0;
+    border: 0;
+    border-radius: 3px;
+    place-items: center;
+    color: var(--color-text-secondary);
+    background: transparent;
+    cursor: pointer;
+    flex: none;
+}
+
+.tableCollapseButton:hover {
+    color: var(--color-foreground);
+    background: var(--color-button-utility-hover-bg);
+}
+
+/* A collapsed table keeps its jspreadsheet mounted but shows only the header,
+   filling its card so stacked headers share one width. */
+.collapsedTable {
+    width: 100%;
+}
+
+.collapsedTable .tableHeader {
+    cursor: pointer;
+}
+
+.collapsedTable .grid,
+.collapsedTable .tableFooter {
+    display: none;
+}
+
+.entityName {
+    font-weight: 500;
+    font-size: 1.05rem;
+}
+
+/* Match the schema editor's de-emphasized "Unnamed" placeholder styling. */
+.unnamed {
+    color: var(--color-text-placeholder);
+}
+
+/* The grid area sizes to the jspreadsheet table's full content, no inner scroll. */
+.grid {
+    flex: none;
+    width: fit-content;
+}
+
+.noRows {
+    min-width: 12rem;
+    padding: 1rem 1.25rem;
+    color: var(--color-text-secondary);
+    font-size: 0.85rem;
+    font-style: italic;
+}
+
+/* jspreadsheet sets an inline pixel width on its wrapper divs that is a few
+   pixels wider than the actual table (it reserves space for a scrollbar),
+   leaving the header/footer overhanging the grid on the right. Override those
+   inline widths (hence `!important`) so every wrapper shrinks to the table's
+   real width and the frame fits flush. It also pads the wrappers a few pixels
+   on the right/bottom for the same reason, so drop that too. */
+.grid :global(.jss_spreadsheet),
+.grid :global(.jtabs-content),
+.grid :global(.jss_container),
+.grid :global(.jss_content) {
+    width: fit-content !important;
+    padding: 0 !important;
+}
+
+/* `.jss_content` is inline-block, whose baseline leaves a few pixels of gap
+   below the table; make it block so the frame ends flush at the bottom. */
+.grid :global(.jss_content) {
+    display: block !important;
+}
+
+/* jspreadsheet's table uses `border-collapse: separate`, so its own 1px outer
+   border sits *outside* the cell borders, reading as a thin gap all around the
+   grid. Collapse the borders so the outer edge and the cells' borders merge and
+   the grid meets the frame flush on every side. */
+.grid :global(table.jss_worksheet) {
+    border-collapse: collapse !important;
+}
+
+.grid :global(table.jss_worksheet thead td[data-x]) {
+    position: relative;
+    user-select: none;
+    padding-left: 28px;
+    padding-right: 22px;
+}
+
+.mappingCell {
+    position: relative;
+    padding-right: 24px;
+}
+
+.foreignKeyButton {
+    position: absolute;
+    top: 50%;
+    right: 3px;
+    display: grid;
+    width: 18px;
+    height: 18px;
+    padding: 0;
+    border: 0;
+    border-radius: 3px;
+    transform: translateY(-50%);
+    place-items: center;
+    color: var(--color-text-secondary);
+    background: transparent;
+    cursor: pointer;
+}
+
+.foreignKeyButton:hover {
+    color: var(--color-foreground);
+    background: var(--color-button-utility-hover-bg);
+}
+
+.columnDragHandle {
+    position: absolute;
+    top: 50%;
+    left: 6px;
+    width: 14px;
+    height: 18px;
+    padding: 0;
+    border: 0;
+    transform: translateY(-50%);
+    color: var(--color-text-secondary);
+    background: transparent;
+    cursor: grab;
+}
+
+.columnDragHandle::before {
+    position: absolute;
+    top: 5px;
+    left: 3px;
+    width: 2px;
+    height: 2px;
+    border-radius: 50%;
+    background: currentColor;
+    box-shadow:
+        4px 0 currentColor,
+        0 4px currentColor,
+        4px 4px currentColor;
+    content: "";
+}
+
+.columnDragHandle:hover {
+    color: var(--color-foreground);
+}
+
+.columnDragHandle:active {
+    cursor: grabbing;
+}
+
+/* The right-aligned chevron in a visible column header that collapses it. */
+.collapseHandle {
+    position: absolute;
+    top: 50%;
+    right: 4px;
+    display: grid;
+    width: 16px;
+    height: 18px;
+    padding: 0;
+    border: 0;
+    transform: translateY(-50%);
+    place-items: center;
+    color: var(--color-text-secondary);
+    background: transparent;
+    cursor: pointer;
+}
+
+.collapseHandle:hover {
+    color: var(--color-foreground);
+}
+
+/* The stub header for a run of collapsed columns: only the expand button.
+   `!important` beats the header padding override above. */
+.collapsedHeader {
+    padding: 0 !important;
+    user-select: none;
+}
+
+.expandHandle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1px;
+    width: 100%;
+    min-height: 20px;
+    padding: 2px 0;
+    border: 0;
+    color: var(--color-text-secondary);
+    background: transparent;
+    font-size: 0.68rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.expandHandle:hover {
+    color: var(--color-foreground);
+    background: var(--color-button-utility-hover-bg);
+}
+
+.columnDragPreview {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 1000;
+    overflow: hidden;
+    contain: strict;
+    border: 1px solid var(--color-gray-400);
+    border-radius: 4px;
+    background: var(--color-background);
+    box-shadow: 0 8px 20px rgb(0 0 0 / 18%);
+    opacity: 0.9;
+    pointer-events: none;
+}
+
+.columnDragPreview :global(table.jss_worksheet) {
+    border: 0;
+}
+
+.columnDragSource {
+    opacity: 0.45;
+}
+
+.columnDropBefore::before,
+.columnDropAfter::after {
+    position: absolute;
+    z-index: 2;
+    top: 2px;
+    bottom: 2px;
+    width: 3px;
+    border-radius: 999px;
+    background: var(--color-topos-primary);
+    content: "";
+}
+
+.columnDropBefore::before {
+    left: -2px;
+}
+
+.columnDropAfter::after {
+    right: -2px;
+}
+
+/* The "+ Row" footer, sitting directly under the table. */
+.tableFooter {
+    position: relative;
+    display: flex;
+    flex: none;
+    border-top: 0;
+    background: var(--color-gray-50);
+}
+
+.addRow {
+    display: block;
+    width: 100%;
+    padding: 0.45rem 0.75rem;
+    border: 0;
+    font-size: 0.8rem;
+    background: transparent;
+    color: var(--color-text-secondary);
+    cursor: pointer;
+}
+
+.addRow:hover {
+    background: var(--color-button-utility-hover-bg);
+    color: var(--color-foreground);
+}
+
+/* The per-column type controls injected into header cells (Sheet view). */
+.headerTypeSelect {
+    max-width: 6.5rem;
+    margin-left: 0.35rem;
+    padding: 0 0.1rem;
+    border: 1px solid var(--color-gray-450);
+    border-radius: 3px;
+    background: var(--paper, #fff);
+    color: var(--color-text-muted);
+    font: inherit;
+    font-size: 0.68rem;
+    cursor: pointer;
+}
+
+.headerTypeSelect:hover {
+    color: var(--color-foreground);
+}
+
+.headerTypeBadge {
+    margin-left: 0.35rem;
+    padding: 0.05rem 0.3rem;
+    border: 1px solid var(--color-gray-450);
+    border-radius: 3px;
+    background: var(--color-background);
+    color: var(--color-text-muted);
+    font-size: 0.68rem;
+    font-weight: 400;
+    white-space: nowrap;
+}
+
+/* The "+ Column" button with its drop-up menu of column kinds. */
+.addColumnWrap {
+    position: relative;
+    display: flex;
+    flex: 1;
+}
+
+.addColumnMenu {
+    position: absolute;
+    bottom: 100%;
+    left: 0;
+    z-index: 20;
+    display: grid;
+    min-width: 11rem;
+    max-height: 14rem;
+    overflow-y: auto;
+    margin-bottom: 0.2rem;
+    border: 2px solid var(--pencil);
+    border-radius: 4px 9px 3px 8px;
+    background: var(--paper, #fff);
+    box-shadow: 2px 3px 0 rgb(0 0 0 / 12%);
+}
+
+.addColumnChoice {
+    padding: 0.45rem 0.75rem;
+    border: 0;
+    background: transparent;
+    color: var(--color-text-secondary);
+    font-size: 0.8rem;
+    text-align: left;
+    cursor: pointer;
+}
+
+.addColumnChoice:hover {
+    background: var(--color-button-utility-hover-bg);
+    color: var(--color-foreground);
+}
+
+.invalidCell {
+    background: var(--danger-bg) !important;
+    color: var(--danger) !important;
+    font-style: italic;
+}

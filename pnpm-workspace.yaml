@@ -1,16 +1,19 @@
-# 9 days, in minutes
-minimumReleaseAge: 12960
-minimumReleaseAgeExclude:
-  - wasm-pack
-  - echarts
 packages:
   - "dev-docs"
   - "packages/backend/pkg"
   - "packages/frontend"
   - "packages/document-methods"
+  - "packages/analyses"
   - "packages/documents"
   - "packages/logics"
   - "packages/ui-components"
   - "packages/gaios"
   - "tools/oxlint-plugin-catcolab"
+  - "tools/literate-typescript"
   - "tools/vite-plugin-monorepo-dedupe"
+# 9 days, in minutes
+minimumReleaseAge: 12960
+minimumReleaseAgeExclude:
+  - wasm-pack
+  - echarts
+  - "@automerge/automerge"

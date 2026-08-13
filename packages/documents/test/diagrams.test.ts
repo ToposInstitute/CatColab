@@ -16,7 +16,7 @@ async function ologModel() {
     return { binder, model, A, B, has };
 }
 
-describe.skip("diagram notebooks", () => {
+describe("diagram notebooks", () => {
     test("a diagram notebook is created in a model", async () => {
         const { binder, model } = await ologModel();
 

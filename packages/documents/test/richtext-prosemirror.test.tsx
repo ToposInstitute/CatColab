@@ -132,7 +132,7 @@ function RichTextCellEditor(props: { cell: RichTextCell; onView: (view: EditorVi
     return <div class="rich-text-cell" ref={editorRoot} />;
 }
 
-describe.skip("rich text handling", () => {
+describe("rich text handling", () => {
     test("editorRef lets ProseMirror edit rich text cells through Automerge", async () => {
         const InformalShape = defineShape({ informal: [RichText] });
 

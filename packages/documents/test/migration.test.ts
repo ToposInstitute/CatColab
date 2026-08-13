@@ -6,7 +6,7 @@ import { describe, expect, test } from "vitest";
 // place and returns a `Result` carrying a notebook of the target shape.
 import { createBinder } from "catcolab-documents";
 
-describe.skip("migrating between logics", () => {
+describe("migrating between logics", () => {
     test("migrateTo rewrites an olog into a schema in place", async () => {
         const binder = createBinder();
         const olog = await binder.createNotebook(SimpleOlog, { title: "An Olog" });

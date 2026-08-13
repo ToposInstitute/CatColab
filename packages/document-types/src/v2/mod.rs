@@ -25,6 +25,8 @@ pub use notebook::*;
 pub use rich_text::*;
 pub use theory::*;
 
+mod uuid_path;
+
 #[cfg(test)]
 mod test {
     use super::document::Document;

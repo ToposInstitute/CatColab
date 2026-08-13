@@ -19,9 +19,7 @@ export function Dialog(props: {
 }) {
     return (
         <Root open={props.open} onOpenChange={props.onOpenChange} closeOnOutsideFocus={false}>
-            <Show when={props.trigger}>
-                <Trigger as={props.trigger} />
-            </Show>
+            <Show when={props.trigger}>{(trigger) => <Trigger as={trigger()} />}</Show>
             <Portal>
                 <Overlay />
                 <Content class="popup">

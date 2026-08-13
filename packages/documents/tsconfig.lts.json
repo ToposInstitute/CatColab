@@ -1,0 +1,16 @@
+{
+    "extends": ["./tsconfig.json", "@tsconfig/strictest/tsconfig.json"],
+    "compilerOptions": {
+        "noEmit": true,
+        "noUnusedLocals": false,
+        "noUnusedParameters": false,
+        "jsx": "preserve",
+        "jsxImportSource": "solid-js",
+        "lib": ["ES2023", "DOM"],
+        "paths": {
+            "catcolab-document-methods": ["../document-methods/src/index.ts"],
+            "documents/test/*": ["./test/*.ts"]
+        }
+    },
+    "include": [".lts/**/*.ts", ".lts/**/*.tsx"]
+}

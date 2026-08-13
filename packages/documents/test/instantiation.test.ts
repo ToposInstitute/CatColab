@@ -8,7 +8,7 @@ import { describe, expect, test } from "vitest";
 // defined in the local binder.
 import { createBinder, Instantiation } from "catcolab-documents";
 
-describe.skip("instantiation", () => {
+describe("instantiation", () => {
     test("a notebook from the same binder can be instantiated with specializations", async () => {
         const binder = createBinder();
         const notebook = await binder.createNotebook(SimpleOlog, { title: "An Olog" });

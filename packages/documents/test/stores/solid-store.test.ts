@@ -59,7 +59,7 @@ const solidStore: DocumentStore<SolidStoreHandle> = {
     }),
 };
 
-describe.skip("SolidJS binder", () => {
+describe("SolidJS binder", () => {
     test("a binder over a Solid store is used just as the default binder", async () => {
         const solidBinder = createBinder(solidStore);
 

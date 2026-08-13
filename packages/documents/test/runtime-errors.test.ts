@@ -29,7 +29,7 @@ function issuesOf(fn: () => unknown): string {
     throw new Error("Expected the call to throw.");
 }
 
-describe.skip("runtime errors", () => {
+describe("runtime errors", () => {
     test("invalid shapes throw with a Standard Schema compatible issues array", async () => {
         const binder = createBinder();
         const notebook = await binder.createNotebook(SimpleOlog, { title: "An Olog" });

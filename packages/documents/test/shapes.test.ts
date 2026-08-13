@@ -128,7 +128,7 @@ function addListMorphism(notebook: NotebookOfLists): string {
     throw new Error("Did not find any supported List morphism in the notebook.");
 }
 
-describe.skip("generic shapes of notebooks", () => {
+describe("generic shapes of notebooks", () => {
     test("a generic function against a subset shape works with notebooks from either logic", async () => {
         const binder = createBinder();
 
@@ -215,5 +215,19 @@ describe.skip("generic shapes of notebooks", () => {
             title: "example",
         });
         expect(addListMorphism(entityObjects)).toBe("ListMor");
+    });
+
+    test("table objects must be definitions already declared by the shape", () => {
+        const EntityLookalike = defineObject(Entity.obType);
+
+        expect(() =>
+            defineShape({
+                theory: "invalid-instance-shape",
+                objects: [Entity],
+                supportsInstances: {
+                    tableObjects: [EntityLookalike],
+                },
+            }),
+        ).toThrow("declared in the shape's `objects` list");
     });
 });

@@ -1,0 +1,144 @@
+.app {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
+}
+
+/* Floating, always-on-top controls in the bottom-right corner of the app:
+   the app-wide script toggle and the "Clear all data" reset. */
+.floatingControls {
+    position: fixed;
+    right: 1rem;
+    bottom: 1rem;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.35rem;
+    background: var(--color-background);
+    transform: rotate(-0.35deg);
+}
+
+.resetButton {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 4px 10px;
+    font-size: 0.8rem;
+    border: 1px solid var(--color-button-utility-border);
+    border-radius: 6px;
+    background: var(--color-button-utility-bg);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.resetButton:hover {
+    background: var(--color-icon-button-danger-hover);
+    border-color: var(--color-icon-button-danger-hover);
+    color: var(--color-icon-button-danger-text);
+}
+
+.split {
+    display: grid;
+    /* The columns are set inline from the draggable split fraction; this is the
+       initial fallback before that style applies. */
+    grid-template-columns: minmax(0, 0.4fr) 0 minmax(0, 0.6fr);
+    flex: 1;
+    min-height: 0;
+}
+
+/* The draggable divider between the schema and instance panels. It has no
+   width in the grid (a 0 column) but overflows a wider hit area centered on
+   the seam. */
+.splitDivider {
+    position: relative;
+    z-index: 10;
+    width: 9px;
+    margin: 0 -4px;
+    cursor: col-resize;
+    touch-action: none;
+}
+
+.splitDivider::before {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 50%;
+    width: 1px;
+    background: var(--color-border);
+    transform: translateX(-50%);
+    content: "";
+}
+
+.splitDivider:hover::before,
+.splitDivider:active::before {
+    width: 3px;
+    background: var(--color-topos-primary);
+}
+
+.storageProblemDialog {
+    max-width: 32rem;
+    padding: 0.5rem 1rem 1rem;
+    background: var(--paper);
+}
+
+.storageProblemDialog h2 {
+    margin: 0 0 0.75rem;
+    font-size: 1.25rem;
+    transform: rotate(-0.5deg);
+}
+
+.storageProblemDetail {
+    padding: 0.75rem;
+    border: 2px solid var(--yellow-pencil);
+    border-radius: 3px 8px 2px 7px;
+    background: var(--color-warning-bg, #f5f5f5);
+    color: var(--color-warning-text, #333);
+}
+
+.storageProblemActions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    margin-top: 1rem;
+}
+
+.loading {
+    display: grid;
+    height: 100%;
+    place-content: center;
+    place-items: center;
+    gap: 0.75rem;
+    padding: 2rem;
+    color: var(--muted);
+}
+
+.loading wired-spinner {
+    width: 58px;
+    height: 58px;
+    color: var(--teal-ink);
+}
+
+.dangerButton,
+.clearButton {
+    color: var(--red-ink);
+}
+
+@media (max-width: 720px) {
+    /* Stack the panels vertically on narrow screens; the inline column split is
+       overridden here, and the divider is hidden since it only resizes columns. */
+    .split {
+        grid-template-columns: minmax(0, 1fr) !important;
+        grid-template-rows: minmax(16rem, 42%) 0 minmax(0, 1fr);
+    }
+
+    .splitDivider {
+        display: none;
+    }
+
+    .floatingControls {
+        right: 0.5rem;
+        bottom: 0.5rem;
+    }
+}

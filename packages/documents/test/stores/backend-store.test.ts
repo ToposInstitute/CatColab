@@ -94,7 +94,7 @@ const backendStore: DocumentStore<StoreHandle> = {
     },
 };
 
-describe.skip("backend binder", () => {
+describe("backend binder", () => {
     test("notebooks with instantiations resolve through the backend and validate", async () => {
         const backendBinder = createBinder(backendStore);
 

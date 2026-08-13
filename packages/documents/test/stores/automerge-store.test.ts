@@ -40,7 +40,7 @@ const automergeStore: DocumentStore<DocHandle<Document>> = {
     }),
 };
 
-describe.skip("Automerge binder", () => {
+describe("Automerge binder", () => {
     test("a binder over an Automerge store is used just as the default binder", async () => {
         const automergeBinder = createBinder(automergeStore);
 

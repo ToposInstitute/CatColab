@@ -10,7 +10,7 @@ import { describe, expect, test } from "vitest";
 // equations, instances and a migration to `simple-olog`.
 import { createBinder, RichText } from "catcolab-documents";
 
-describe.skip("the simple-schema logic", () => {
+describe("the simple-schema logic", () => {
     test("Entity and AttrType are basic objects; Mapping and Attr relate them", async () => {
         const binder = createBinder();
         const notebook = await binder.createNotebook(SimpleSchema, { title: "Example schema" });
@@ -59,7 +59,7 @@ describe.skip("the simple-schema logic", () => {
         expect(note.content).toBe("A note.");
     });
 
-    test("supportsInstances generates the .Diagram shape", async () => {
+    test("supportsInstances generates diagram and instance shapes", async () => {
         const binder = createBinder();
         const model = await binder.createNotebook(SimpleSchema, { title: "Example schema" });
 
@@ -72,6 +72,9 @@ describe.skip("the simple-schema logic", () => {
 
         const x = diagram.add(SimpleSchema.Diagram.Individual, { label: "x", over: person });
         expect(x.over?.label).toBe("Person");
+        expect(SimpleSchema.Instance).not.toBe(SimpleSchema.Diagram);
+        expect(SimpleSchema.Instance.objects).toBe(SimpleSchema.objects);
+        expect(SimpleSchema.Instance.tableObjects).toEqual([Entity]);
     });
 
     test("schemas migrate to simple-olog", async () => {

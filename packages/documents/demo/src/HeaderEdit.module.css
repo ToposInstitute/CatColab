@@ -1,0 +1,13 @@
+/* The inline column-name editor overlaying a spreadsheet header cell. */
+.headerEditor {
+    position: absolute;
+    inset: 0;
+    z-index: 10;
+    width: 100%;
+    padding: 0 0.4rem;
+    border: 2px solid var(--teal-ink, #2a7);
+    background: var(--paper, #fff);
+    color: var(--ink, inherit);
+    font: inherit;
+    text-align: center;
+}

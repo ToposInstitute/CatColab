@@ -9,7 +9,7 @@ import { describe, expect, test } from "vitest";
 // recurses into instantiations.
 import { CellKind, createBinder, Instantiation, RichText } from "catcolab-documents";
 
-describe.skip("iterating through cells", () => {
+describe("iterating through cells", () => {
     test("cells() iterates all cells with kind discriminants", async () => {
         const binder = createBinder();
         const notebook = await binder.createNotebook(SimpleOlog, { title: "An Olog" });

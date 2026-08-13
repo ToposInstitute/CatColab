@@ -6,7 +6,7 @@ import { describe, expect, test } from "vitest";
 // commit.
 import { createBinder } from "catcolab-documents";
 
-describe.skip("transactions", () => {
+describe("transactions", () => {
     test("changes stage on the transaction, apply on commit and revert as a batch", async () => {
         const binder = createBinder();
         const schema = await binder.createNotebook(SimpleSchema, { title: "Example schema" });

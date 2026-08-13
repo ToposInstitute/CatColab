@@ -6,7 +6,7 @@ import { describe, expect, test } from "vitest";
 // `supportsEquations: true`.
 import { createBinder, PathEquation } from "catcolab-documents";
 
-describe.skip("path equations", () => {
+describe("path equations", () => {
     test("a path equation cell relates two paths of morphisms", async () => {
         const binder = createBinder();
         const notebook = await binder.createNotebook(SimpleSchema, { title: "Example schema" });

@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      catcolab-analyses:
+        specifier: workspace:*
+        version: link:../analyses
       catcolab-documents:
         specifier: link:../documents
         version: link:../documents

@@ -9,7 +9,7 @@ import { describe, expect, test } from "vitest";
 // type from the logic for formal cells.
 import { createBinder, RichText } from "catcolab-documents";
 
-describe.skip("creating and editing notebooks", () => {
+describe("creating and editing notebooks", () => {
     test("createNotebook creates a titled notebook for a logic", async () => {
         const binder = createBinder();
         const notebook = await binder.createNotebook(SimpleOlog, { title: "An Olog" });

@@ -1,0 +1,246 @@
+.querySidebar {
+    position: relative;
+    display: flex;
+    flex: none;
+    flex-direction: column;
+    width: 100%;
+    height: 44vh;
+    min-height: 0;
+    overflow: hidden;
+    background: rgb(255 255 255 / 97%);
+}
+
+.header {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.5rem 0.75rem;
+    color: var(--color-text-secondary);
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+.header a {
+    margin-left: auto;
+    color: inherit;
+    font-family: var(--mono-font);
+    font-size: 0.68rem;
+}
+
+.body {
+    display: grid;
+    grid-template-columns: minmax(20rem, 44%) minmax(0, 1fr);
+    flex: 1;
+    min-height: 0;
+}
+
+.editorColumn {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+    border-right: 1px solid var(--color-border);
+}
+
+.editorArea {
+    position: relative;
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    overflow-x: hidden;
+    overflow-y: auto;
+}
+
+.editorArea,
+.editor,
+.highlight :global(pre),
+.highlight :global(code) {
+    font-family: var(--mono-font);
+    font-size: 1.15rem;
+    line-height: 1.6;
+    tab-size: 2;
+}
+
+.highlight {
+    position: absolute;
+    top: 0;
+    right: 0;
+    left: 0;
+    min-height: 100%;
+    padding: 0.75rem;
+    pointer-events: none;
+    white-space: pre-wrap;
+    word-break: break-word;
+    overflow: visible;
+}
+
+.highlight :global(pre),
+.highlight :global(code) {
+    margin: 0;
+    padding: 0;
+    background: transparent !important;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.editor {
+    position: relative;
+    z-index: 1;
+    display: block;
+    width: 100%;
+    min-height: 100%;
+    height: auto;
+    resize: none;
+    border: none;
+    outline: none;
+    margin: 0;
+    padding: 0.75rem;
+    background: transparent;
+    color: transparent;
+    caret-color: var(--color-foreground);
+    white-space: pre-wrap;
+    word-break: break-word;
+    overflow: hidden;
+}
+
+.editor::selection {
+    background: color-mix(in srgb, var(--color-topos-primary) 30%, transparent);
+}
+
+.footer {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    min-height: 3rem;
+    padding: 0.45rem 0.75rem;
+}
+
+.runButton {
+    color: var(--teal-ink);
+}
+
+.shortcut {
+    color: var(--color-text-muted);
+    font-family: var(--mono-font);
+    font-size: 0.65rem;
+}
+
+.status {
+    min-width: 0;
+    margin-left: auto;
+    overflow: hidden;
+    font-family: var(--mono-font);
+    font-size: 0.7rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.status[data-tag="error"] {
+    color: var(--color-alert-danger);
+}
+
+.results {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+    overflow: auto;
+}
+
+.tableScroller {
+    flex: 1;
+    min-height: 7rem;
+    overflow: auto;
+}
+
+.tableScroller :global(.jss_spreadsheet),
+.tableScroller :global(.jtabs-content),
+.tableScroller :global(.jss_container),
+.tableScroller :global(.jss_content) {
+    width: fit-content !important;
+    min-width: 100%;
+    padding: 0 !important;
+}
+
+.tableScroller :global(.jss_content) {
+    display: block !important;
+}
+
+.tableScroller :global(table.jss_worksheet) {
+    min-width: 100%;
+    border-collapse: collapse !important;
+    font-family: var(--mono-font);
+}
+
+.tableScroller :global(table.jss_worksheet thead td) {
+    font-weight: 600;
+}
+
+/* Query results are immutable, but read-only is a behavior rather than a
+   disabled state. Override jspreadsheet's faded `.readonly` presentation so
+   result values have the same contrast as the editable instance tables. */
+.tableScroller :global(.jss_worksheet > tbody > tr > td.readonly) {
+    background: rgb(255 255 255 / 90%);
+    color: var(--ink);
+}
+
+.emptyResult {
+    display: grid;
+    min-height: 5rem;
+    place-items: center;
+    padding: 1rem;
+    color: var(--color-text-muted);
+    font-size: 0.8rem;
+}
+
+.schemaHelp {
+    flex: none;
+    max-height: 45%;
+    overflow: auto;
+    border-top: 1px solid var(--color-border);
+    padding: 0.55rem 0.75rem;
+    font-size: 0.75rem;
+}
+
+.schemaHelp summary {
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.schemaHelp dl {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: 0.3rem 0.8rem;
+    margin: 0.65rem 0 0;
+}
+
+.schemaHelp dt {
+    font-family: var(--mono-font);
+}
+
+.schemaHelp dd {
+    margin: 0;
+    color: var(--color-text-muted);
+}
+
+@media (max-width: 720px) {
+    .querySidebar {
+        height: 58vh;
+    }
+
+    .body {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: minmax(10rem, 1fr) minmax(8rem, 1fr);
+    }
+
+    .editorColumn {
+        border-right: 0;
+        border-bottom: 1px solid var(--color-border);
+    }
+
+    .shortcut {
+        display: none;
+    }
+}

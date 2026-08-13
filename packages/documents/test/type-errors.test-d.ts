@@ -11,7 +11,7 @@ import { describe, test } from "vitest";
 // mode); nothing here executes.
 import { createBinder } from "catcolab-documents";
 
-describe.skip("type errors", () => {
+describe("type errors", () => {
     test("invalid shapes are type errors in a simple olog", async () => {
         const binder = createBinder();
         const notebook = await binder.createNotebook(SimpleOlog, { title: "An Olog" });

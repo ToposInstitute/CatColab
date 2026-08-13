@@ -220,7 +220,7 @@ export function TextInput(allProps: TextInputProps) {
 
     return (
         <Popover
-            open={options.completions && isCompletionsOpen()}
+            open={options.completions !== undefined && isCompletionsOpen()}
             onOpenChange={(open) => {
                 setCompletionsOpen(open);
                 if (!open) {

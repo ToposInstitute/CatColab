@@ -9,7 +9,7 @@ import { describe, expect, test } from "vitest";
 // equations, instances (diagrams) and a migration to `simple-schema`.
 import { createBinder, PathEquation, RichText } from "catcolab-documents";
 
-describe.skip("the simple-olog logic", () => {
+describe("the simple-olog logic", () => {
     test("Type is the basic Object and Aspect is a Hom over it", async () => {
         const binder = createBinder();
         const notebook = await binder.createNotebook(SimpleOlog, { title: "An Olog" });
@@ -62,7 +62,7 @@ describe.skip("the simple-olog logic", () => {
         expect(notebook.cellsOf(PathEquation).length).toBe(1);
     });
 
-    test("supportsInstances generates the .Diagram shape", async () => {
+    test("supportsInstances generates diagram and instance shapes", async () => {
         const binder = createBinder();
         const model = await binder.createNotebook(SimpleOlog, { title: "An Olog" });
 
@@ -81,6 +81,9 @@ describe.skip("the simple-olog logic", () => {
 
         expect(x.over?.label).toBe("A");
         expect(f.over?.label).toBe("has");
+        expect(SimpleOlog.Instance).not.toBe(SimpleOlog.Diagram);
+        expect(SimpleOlog.Instance.objects).toBe(SimpleOlog.objects);
+        expect(SimpleOlog.Instance.tableObjects).toEqual([Type]);
     });
 
     test("ologs migrate to simple-schema", async () => {

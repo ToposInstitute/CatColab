@@ -1,0 +1,124 @@
+/* The whole right half: the instance panel (with its optional script pane
+   stacked below) plus its (optional) history sidebar, laid side by side.
+   `min-width: 0` caps this grid item's min-content contribution so a wide
+   spreadsheet scrolls inside the panel instead of widening the whole app
+   split. */
+.panelLayout {
+    display: flex;
+    flex-direction: row;
+    height: 100%;
+    min-height: 0;
+    min-width: 0;
+}
+
+/* The panel and its bottom script pane, stacked vertically. */
+.panelColumn {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 0;
+    height: 100%;
+    min-height: 0;
+}
+
+.panel {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+    background: var(--background);
+}
+
+.header {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    min-height: 3.25rem;
+    padding: 0.75rem 1rem;
+    border-bottom: 0;
+    background: rgb(255 255 255 / 94%);
+}
+
+.headerLeft {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.headerRight {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.viewSwitch {
+    display: flex;
+    padding: 0;
+    background: transparent;
+    --wired-radio-group-item-padding: 2px 5px;
+}
+
+.viewSwitch wired-radio {
+    color: var(--color-text-secondary);
+    font-size: 0.75rem;
+}
+
+.viewSwitch wired-radio:hover {
+    color: var(--color-foreground);
+}
+
+.viewSwitch wired-radio[checked] {
+    color: var(--color-topos-primary-hover);
+}
+
+.header h2 {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 450;
+}
+
+.badge {
+    font-size: 0.75rem;
+    font-weight: 500;
+    padding: 0.2rem 0.6rem;
+    border-radius: 42% 58% 45% 55%;
+    border: 1px solid currentColor;
+}
+
+.badge[data-tag="Valid"] {
+    background: var(--color-icon-button-positive-hover);
+    color: var(--color-topos-primary-hover);
+    border-color: var(--color-icon-button-positive-active);
+}
+
+.badge[data-tag="Invalid"],
+.badge[data-tag="Illformed"] {
+    background: var(--color-form-invalid-bg);
+    color: var(--color-alert-danger);
+}
+
+.empty {
+    flex: 1;
+    padding: 1rem;
+    color: var(--muted);
+    font-style: italic;
+}
+
+@media (max-width: 720px) {
+    .header {
+        display: grid;
+        grid-template-columns: 1fr auto;
+    }
+
+    .headerRight {
+        grid-column: 1 / -1;
+        align-items: center;
+        justify-content: flex-end;
+        flex-direction: row;
+        flex-wrap: wrap;
+    }
+}

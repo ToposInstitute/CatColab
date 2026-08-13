@@ -17,7 +17,7 @@ async function wellFormedOlog() {
     return notebook;
 }
 
-describe.skip("validate", () => {
+describe("validate", () => {
     test("a well-formed notebook validates to an Ok carrying the model", async () => {
         const notebook = await wellFormedOlog();
 
@@ -36,9 +36,40 @@ describe.skip("validate", () => {
         expect(result.content.obGenerators().length).toBe(2);
         expect(result.content.morGenerators().length).toBe(1);
     });
+
+    test("queries typed presentation judgments without replacing the core model", async () => {
+        const notebook = await wellFormedOlog();
+        const source = notebook.cellsOf(Type)[0];
+        if (!source) {
+            throw new Error("expected an object cell");
+        }
+
+        const result = await notebook.validate();
+        const again = await notebook.validate();
+        if (result.tag !== "Ok" || again.tag !== "Ok") {
+            throw new Error("expected the notebook to validate");
+        }
+
+        expect(result.content).toBe(again.content);
+        expect(result.content.judgmentsOf(Type).map((judgment) => judgment.label)).toEqual([
+            "A",
+            "B",
+        ]);
+        expect(result.content.judgmentsOf(Aspect).map((judgment) => judgment.label)).toEqual([
+            "has",
+        ]);
+        expect(result.content.get(Type, source.id)).toMatchObject({
+            tag: "Ok",
+            content: { id: source.id },
+        });
+        expect(result.content.get(Aspect, source.id)).toMatchObject({
+            tag: "Err",
+            content: [{ path: ["id"] }],
+        });
+    });
 });
 
-describe.skip("onValidate", () => {
+describe("onValidate", () => {
     test("always calls the callback at least once with the current validation", async () => {
         const notebook = await wellFormedOlog();
 
@@ -82,7 +113,7 @@ describe.skip("onValidate", () => {
     });
 });
 
-describe.skip("validation result", () => {
+describe("validation result", () => {
     test("an ill-formed notebook results in an Err carrying issues", async () => {
         const binder = createBinder();
 

@@ -112,7 +112,7 @@ function typeOnly<T>(): T {
     throw new Error("type-level only");
 }
 
-describe.skip("generic shapes (type level)", () => {
+describe("generic shapes (type level)", () => {
     test("a notebook lacking a shape's objects is rejected", async () => {
         const binder = createBinder();
 
@@ -341,5 +341,32 @@ describe.skip("generic shapes (type level)", () => {
 
         const bothNotebook = typeOnly<Notebook<typeof BothObjectsShape>>();
         badAddObject2(bothNotebook);
+    });
+
+    test("instance table objects must be declared objects", () => {
+        defineShape({
+            theory: "valid-instance-shape",
+            objects: [BasicObj, EntityObj],
+            supportsInstances: {
+                tableObjects: [EntityObj],
+            },
+        });
+
+        // @ts-expect-error EntityObj is not declared in the shape's objects list.
+        defineShape({
+            theory: "invalid-instance-shape",
+            objects: [BasicObj],
+            supportsInstances: {
+                tableObjects: [EntityObj],
+            },
+        });
+
+        // @ts-expect-error Table objects require a declared objects list.
+        defineShape({
+            theory: "missing-instance-objects",
+            supportsInstances: {
+                tableObjects: [EntityObj],
+            },
+        });
     });
 });

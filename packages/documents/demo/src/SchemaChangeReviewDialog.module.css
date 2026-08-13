@@ -1,0 +1,234 @@
+.dialog {
+    width: min(44rem, calc(100vw - 2rem));
+    max-height: min(48rem, calc(100vh - 3rem));
+    overflow-y: auto;
+    padding: 1.1rem 1.25rem 1.25rem;
+    background: var(--paper);
+    color: var(--ink);
+}
+
+.header h2,
+.section h3 {
+    margin: 0;
+}
+
+.header h2 {
+    font-size: 1.35rem;
+    transform: rotate(-0.3deg);
+}
+
+.header p:last-child {
+    max-width: 60ch;
+    margin-bottom: 0;
+    color: var(--color-text-muted);
+}
+
+.eyebrow {
+    margin: 0 0 0.25rem;
+    color: var(--teal-ink);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+
+.declaration {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+    gap: 0.75rem;
+    margin: 1.1rem 0;
+    padding: 0.85rem;
+    border: 2px solid var(--pencil);
+    border-radius: 5px 11px 4px 9px;
+    background: rgb(255 255 255 / 55%);
+}
+
+.declaration > div {
+    display: grid;
+    gap: 0.25rem;
+    min-width: 0;
+}
+
+.declaration > div > span {
+    color: var(--color-text-muted);
+    font-size: 0.72rem;
+    font-weight: 650;
+    text-transform: uppercase;
+}
+
+.morphism {
+    transform: scale(0.82);
+    transform-origin: top left;
+}
+
+.section {
+    margin-top: 1.15rem;
+}
+
+.section h3,
+.rules legend {
+    font-size: 0.95rem;
+    font-weight: 700;
+}
+
+.summary {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.55rem;
+    margin-top: 0.55rem;
+}
+
+.summary div {
+    display: grid;
+    gap: 0.1rem;
+    padding: 0.55rem 0.65rem;
+    border-bottom: 2px solid var(--pencil);
+    background: var(--color-background);
+}
+
+.summary strong {
+    font-size: 1.2rem;
+}
+
+.summary span {
+    color: var(--color-text-muted);
+    font-size: 0.75rem;
+}
+
+.summary .problem {
+    border-color: var(--yellow-pencil);
+}
+
+.rules {
+    margin: 1.15rem 0 0;
+    padding: 0;
+    border: 0;
+}
+
+.rules legend {
+    margin-bottom: 0.55rem;
+}
+
+.rules wired-radio-group {
+    display: grid;
+    gap: 0.45rem;
+}
+
+.rules wired-radio {
+    display: block;
+    padding: 0.55rem 0.65rem;
+    border: 1px solid var(--color-gray-450);
+    border-radius: 4px 8px 3px 7px;
+    cursor: pointer;
+}
+
+.rules wired-radio.selected {
+    border-color: var(--teal-ink);
+    background: var(--color-highlight-bg);
+}
+
+.rules wired-radio span {
+    display: inline-grid;
+    gap: 0.1rem;
+    margin-left: 0.3rem;
+    vertical-align: middle;
+}
+
+.rules small {
+    color: var(--color-text-muted);
+}
+
+.rules strong {
+    font-weight: 500;
+}
+
+.previewHeading {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.previewHeading span {
+    color: var(--color-text-muted);
+    font-size: 0.75rem;
+}
+
+.tableScroller {
+    margin-top: 0.5rem;
+    overflow-x: auto;
+}
+
+/*
+ * The preview borrows jspreadsheet's `jss_worksheet` class for its look, but
+ * that stylesheet also sets `width: 0` and `table-layout: fixed` — sized for
+ * live grids, collapsing a plain table. The extra `.tableScroller` ancestor
+ * outweighs the single-class rule regardless of stylesheet order.
+ */
+.tableScroller .preview {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    table-layout: auto;
+}
+
+.preview td:nth-child(3),
+.preview td:nth-child(4) {
+    font-family: var(--mono-font);
+}
+
+.afterInput {
+    width: 100%;
+    min-width: 7rem;
+    padding: 0;
+    border: 0;
+    outline: 0;
+    color: inherit;
+    background: transparent;
+    font: inherit;
+}
+
+.afterInput::placeholder {
+    color: var(--color-text-placeholder);
+}
+
+.invalidCell {
+    background: var(--color-warning-bg, #fff3cd) !important;
+}
+
+.noChanges {
+    margin: 0.5rem 0 0;
+    color: var(--color-text-muted);
+}
+
+.warning {
+    margin: 1rem 0 0;
+    padding: 0.65rem 0.75rem;
+    border: 2px solid var(--yellow-pencil);
+    border-radius: 3px 8px 2px 7px;
+    background: var(--color-warning-bg, #f5f5f5);
+}
+
+.actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.55rem;
+    margin-top: 1.2rem;
+}
+
+@media (max-width: 620px) {
+    .dialog {
+        width: calc(100vw - 1rem);
+        max-height: calc(100vh - 1rem);
+        padding: 0.9rem;
+    }
+
+    .declaration {
+        grid-template-columns: 1fr;
+    }
+
+    .summary {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}

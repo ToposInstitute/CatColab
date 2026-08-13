@@ -39,8 +39,12 @@ let
     "packages/frontend" = ../frontend/pnpm-lock.yaml;
     "packages/ui-components" = ../ui-components/pnpm-lock.yaml;
     "packages/document-methods" = ../document-methods/pnpm-lock.yaml;
+    "packages/documents" = ../documents/pnpm-lock.yaml;
+    "packages/logics" = ../logics/pnpm-lock.yaml;
+    "packages/analyses" = ../analyses/pnpm-lock.yaml;
     "packages/backend/pkg" = ../backend/pkg/pnpm-lock.yaml;
     "tools/vite-plugin-monorepo-dedupe" = ../../tools/vite-plugin-monorepo-dedupe/pnpm-lock.yaml;
+    "tools/literate-typescript" = ../../tools/literate-typescript/pnpm-lock.yaml;
   };
 
   processedLocks = lib.mapAttrs (_: processLock) lockfilesToProcess;
@@ -78,7 +82,11 @@ let
         ../../packages/ui-components
         ../../tools/vite-plugin-monorepo-dedupe
         ../../tools/oxlint-plugin-catcolab
+        ../../tools/literate-typescript
         ../../packages/document-methods
+        ../../packages/documents
+        ../../packages/logics
+        ../../packages/analyses
         ../../packages/backend/pkg
       ];
     };
@@ -209,7 +217,11 @@ let
         mkdir -p $out/tools
         cp -r tools/vite-plugin-monorepo-dedupe $out/tools/
         cp -r tools/oxlint-plugin-catcolab $out/tools/
+        cp -r tools/literate-typescript $out/tools/
         cp -r packages/document-methods $out/packages/
+        cp -r packages/documents $out/packages/
+        cp -r packages/logics $out/packages/
+        cp -r packages/analyses $out/packages/
         mkdir -p $out/packages/document-types
         cp -r packages/document-types/pkg $out/packages/document-types/
 
