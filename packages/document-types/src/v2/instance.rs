@@ -36,7 +36,7 @@ pub struct TableRow {
 #[tsify(into_wasm_abi, from_wasm_abi, hashmap_as_object)]
 pub struct Table {
     /// The `QualifiedName` of the entity to which this table corresponds.
-    pub id: String,
+    pub entity_id: String,
     /// The rows of the table.
     pub rows: HashMap<Uuid, TableRow>,
     /// The order of the rows of the table.
@@ -61,7 +61,7 @@ mod test {
         rows.insert(row_id, TableRow { fields });
 
         let table = Table {
-            id: ent_id.to_string(),
+            entity_id: ent_id.to_string(),
             rows,
             row_order: vec![row_id],
         };
@@ -93,7 +93,7 @@ mod test {
         rows.insert(row_id, TableRow { fields });
 
         let table = Table {
-            id: ent_id.to_string(),
+            entity_id: ent_id.to_string(),
             rows,
             row_order: vec![row_id],
         };
