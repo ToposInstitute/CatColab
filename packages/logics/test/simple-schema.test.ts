@@ -10,7 +10,7 @@ import { describe, expect, test } from "vitest";
 // equations, instances and a migration to `simple-olog`.
 import { createBinder, RichText } from "catcolab-documents";
 
-describe.skip("the simple-schema logic", () => {
+describe("the simple-schema logic", () => {
     test("Entity and AttrType are basic objects; Mapping and Attr relate them", async () => {
         const binder = createBinder();
         const notebook = await binder.createNotebook(SimpleSchema, { title: "Example schema" });
@@ -32,7 +32,7 @@ describe.skip("the simple-schema logic", () => {
         expect(name.type.morType).toEqual({ tag: "Basic", content: "Attr" });
     });
 
-    test("notebooks validate against the core theory of schemas", async () => {
+    test.skip("notebooks validate against the core theory of schemas", async () => {
         const binder = createBinder();
         const notebook = await binder.createNotebook(SimpleSchema, { title: "Example schema" });
 
@@ -59,7 +59,7 @@ describe.skip("the simple-schema logic", () => {
         expect(note.content).toBe("A note.");
     });
 
-    test("supportsInstances generates the .Diagram shape", async () => {
+    test.skip("supportsInstances generates the .Diagram shape", async () => {
         const binder = createBinder();
         const model = await binder.createNotebook(SimpleSchema, { title: "Example schema" });
 
@@ -74,7 +74,7 @@ describe.skip("the simple-schema logic", () => {
         expect(x.over?.label).toBe("Person");
     });
 
-    test("schemas migrate to simple-olog", async () => {
+    test.skip("schemas migrate to simple-olog", async () => {
         const binder = createBinder();
         const schema = await binder.createNotebook(SimpleSchema, { title: "Example schema" });
 
