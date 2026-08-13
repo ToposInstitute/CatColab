@@ -39,8 +39,5 @@
         "vite-plugin-css-injected-by-js": "^3.5.2",
         "vite-plugin-solid": "^2.10.2",
         "vite-plugin-wasm": "^3.3.0"
-    },
-    "pushwork": {
-        "url": "automerge:4ZKwgmJPWMM1iaECyiXux9tCvnkH"
     }
 }
