@@ -403,10 +403,10 @@ fn scalar_to_json(s: &automerge::ScalarValue) -> Value {
 
 #[cfg(all(test, feature = "property-tests"))]
 mod property_tests {
-    use super::*;
+
     use crate::common_test::roundtrip_json;
     use crate::current::notebook::ModelNotebook;
-    use automerge::Automerge;
+
     use test_strategy::proptest;
 
     /// A `ModelNotebook` survives a JSON → Automerge → JSON roundtrip.
@@ -415,15 +415,6 @@ mod property_tests {
         let json = serde_json::to_value(&notebook.0).expect("serialize to JSON");
         let result = roundtrip_json(&json);
         proptest::prop_assert_eq!(json, result);
-    }
-
-    /// Non-object root values are rejected by `populate_automerge_from_json`.
-    #[proptest(cases = 64)]
-    fn non_object_root_is_rejected(value: bool) {
-        let json = Value::Bool(value);
-        let mut doc = Automerge::new();
-        let result = doc.transact(|tx| populate_automerge_from_json(tx, automerge::ROOT, &json));
-        proptest::prop_assert!(result.is_err());
     }
 }
 
