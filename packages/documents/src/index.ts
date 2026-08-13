@@ -1,9 +1,10 @@
 export { createBinder, createBinderWithStore } from "./binder";
+export { CellKind } from "./model/cell";
 export type { Binder } from "./binder";
 export type { DocumentStore, DocumentRef } from "./document-store";
 export type { Issue, PathSegment, Result } from "./result";
 export { createInMemoryStore } from "./document-store";
-export type { MorphismCell, ObjectCell } from "./model/cell";
+export type { CellOf as NotebookCell, MorphismCell, ObjectCell } from "./model/cell";
 export type { ModelDocument } from "./model/document";
 export type { Notebook } from "./model/notebook";
 export type { NotebookDocument } from "./notebook-document";
