@@ -36,10 +36,12 @@ pub struct TableRow {
 #[tsify(into_wasm_abi, from_wasm_abi, hashmap_as_object)]
 pub struct Table {
     /// The `QualifiedName` of the entity to which this table corresponds.
+    #[serde(rename = "entityId")]
     pub entity_id: String,
     /// The rows of the table.
     pub rows: HashMap<Uuid, TableRow>,
     /// The order of the rows of the table.
+    #[serde(rename = "rowOrder")]
     pub row_order: Vec<Uuid>,
 }
 
