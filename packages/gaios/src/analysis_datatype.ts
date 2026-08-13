@@ -1,16 +1,12 @@
-import { type AnalysisDocument, newAnalysisDocument } from "../../frontend/src/analysis";
+import { type AnalysisDocument } from "../../frontend/src/analysis";
 
 export type AnalysisDoc = AnalysisDocument;
 
-// SCHEMA
-
-// Analyses are normally created fully formed by the model tool, which pairs
-// every model with an analysis and knows which model to reference. This init
-// only runs if a bare analysis document is created some other way; the tool
-// then shows an error because the empty `analysisOf` reference cannot be
-// resolved.
-export const init = (doc: AnalysisDoc) => {
-    Object.assign(doc, newAnalysisDocument("model", { _id: "", _version: null, _server: "" }));
+export const init = () => {
+    // We can't create an analysis document here because it requires a model
+    // GAIOS doesn't have a mechanism right now for picking another document during creation
+    // as a stop gap solution we create an analysis document automatically whenever a model is created
+    throw new Error("can't create analysis without a model");
 };
 
 const getTitle = (doc: AnalysisDoc) => doc.name || "Analysis";
