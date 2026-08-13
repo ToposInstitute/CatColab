@@ -27,8 +27,6 @@ pub enum FieldValue {
 #[derive(PartialEq, Debug, Serialize, Deserialize, Tsify)]
 #[tsify(into_wasm_abi, from_wasm_abi, hashmap_as_object)]
 pub struct TableRow {
-    /// The row "number".
-    pub id: Uuid,
     /// The content of the row, given as a map from morphism `QualifiedName` to values.
     pub fields: HashMap<String, FieldValue>,
 }
@@ -60,7 +58,7 @@ mod test {
         fields.insert(col_id.to_string(), FieldValue::Int(42));
 
         let mut rows = HashMap::new();
-        rows.insert(row_id, TableRow { id: row_id, fields });
+        rows.insert(row_id, TableRow { fields });
 
         let table = Table {
             id: ent_id.to_string(),
@@ -92,7 +90,7 @@ mod test {
         fields.insert(key.clone(), FieldValue::RowRef(row_id));
 
         let mut rows = HashMap::new();
-        rows.insert(row_id, TableRow { id: row_id, fields });
+        rows.insert(row_id, TableRow { fields });
 
         let table = Table {
             id: ent_id.to_string(),
