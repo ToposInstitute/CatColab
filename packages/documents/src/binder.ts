@@ -5,7 +5,7 @@ import type {
     AnalysisType,
     Cell,
     DiagramJudgment,
-    FieldValue,
+    FieldValue as StoredFieldValue,
     Document,
     Link,
     Modality,
@@ -15,7 +15,7 @@ import type {
     Ob,
     SpecializeModel,
     Table,
-    TableRow,
+    TableRow as StoredTableRow,
 } from "catcolab-document-types";
 import {
     type DblModel,
@@ -23,6 +23,7 @@ import {
     type DblTheory,
     elaborateDiagram,
     type InvalidDblModel,
+    type InvalidDiscreteDblModelDiagram,
     type MorGenerator,
     type ObGenerator,
 } from "catlog-wasm";
@@ -259,16 +260,11 @@ const sameModelValidation = <TShape extends AnyShape>(
 /**
  * Non-enumerable key under which a wrapped judgment stashes the raw catlog-wasm
  * presentation it was built from. The instance internals read it back to seed
- * their ref caches (see {@link rawObGenerator}/{@link rawMorGenerator}) so that a
- * judgment obtained from one notebook's validation can be used to add rows or
- * set values on an instance whose schema has not yet elaborated. It is a symbol
+ * their ref caches (see {@link rawMorGenerator}) so a value can be set on an
+ * instance whose schema has not yet elaborated. It is a symbol
  * so it never collides with, or leaks into, the public judgment surface.
  */
 const rawGenerator: unique symbol = Symbol("rawGenerator");
-
-/** Recover the raw {@link ObGenerator} stashed on a wrapped object judgment. */
-const rawObGenerator = (value: object): ObGenerator | undefined =>
-    (value as { [rawGenerator]?: ObGenerator })[rawGenerator];
 
 /** Recover the raw {@link MorGenerator} stashed on a wrapped morphism judgment. */
 const rawMorGenerator = (value: object): MorGenerator | undefined =>
@@ -441,6 +437,17 @@ const modelErrorToIssue = (error: InvalidDblModel): Issue => {
                 path: [error.content],
             };
     }
+};
+
+/** Convert a diagram-in-model validation failure into a Standard Schema issue. */
+const diagramErrorToIssue = (error: InvalidDiscreteDblModelDiagram): Issue => {
+    if (error.tag === "Dom") {
+        return modelErrorToIssue(error.err);
+    }
+    return {
+        message: `Instance mapping is invalid (${error.err.tag})`,
+        ...(error.err.tag === "Eq" ? {} : { path: [error.err.content] }),
+    };
 };
 
 /**
@@ -1218,11 +1225,13 @@ const modelHasMorphism = (model: DblModel, id: string): boolean => {
 };
 
 /**
- * Whether a {@link RowValue} is a {@link Row} (a mapping's value) rather than a
+ * Whether a cell's content is a {@link TableRow} (a mapping's value) rather than a
  * literal (an attribute's value). Use to pattern match a value read back from
- * {@link Row.get} without casting.
+ * {@link TableRow.get} without casting.
  */
-export function isRow(value: RowValue | undefined): value is Row;
+export function isRow(
+    value: LiteralValue | TableRow | undefined,
+): value is TableRow;
 export function isRow(value: unknown): value is { readonly id: string };
 export function isRow(value: unknown): boolean {
     return (
@@ -1239,7 +1248,7 @@ const tableFor = (d: InstanceDocument, objectId: string): Table | undefined => d
 const findRow = (
     d: InstanceDocument,
     rowId: string,
-): { table: Table; row: TableRow } | undefined => {
+): { table: Table; row: StoredTableRow } | undefined => {
     for (const table of Object.values(d.tables)) {
         const row = table.rows[rowId];
         if (row) {
@@ -1250,23 +1259,18 @@ const findRow = (
 };
 
 /**
- * Attach an *instance* notebook: an ergonomic, row-oriented surface over an
+ * Attach an *instance* notebook: a table-editor surface over an
  * {@link InstanceDocument}, which stores its data as an array of *tables* — one
  * per schema entity, keyed throughout by the schema's generator UUIDs (see
  * {@link InstanceDocument}).
  *
- * An instance is a database of the schema it is of: `instance.add(person, { …
- * })` inserts a *row* into the table of the schema object `person` (creating
- * that table on first use), and the inline args name the schema's outgoing
- * mappings and attributes — each writes the row's content value for that
- * morphism's UUID, wiring the row to another row (a mapping) or a literal value
- * (an attribute). Rows are never named: identity is the row's UUID and its
- * content.
+ * Each table inserts its own rows and exposes their cells for editing. Rows are
+ * never named: identity is the row's UUID and its content.
  *
  * Because tables reference schema objects, and content values reference schema
  * morphisms, by UUID, the surface only ever *displays* the parts of the schema
  * still live: a deleted schema morphism's values remain in each row's content
- * but resolve to no live column, so {@link Row.values} silently omits them, and
+ * but resolve to no live column, so the table omits them, and
  * a deleted schema entity's whole table is retained but hidden. Restoring the
  * generator (undo/redo/rollback) re-associates the retained data with no
  * diffing. This is the whole point of the UUID-keyed representation.
@@ -1289,10 +1293,8 @@ function attachInstanceNotebook<
     const doc = store.getDocumentView(handle) as InstanceDocument;
     const change = (fn: (doc: InstanceDocument) => void) =>
         store.changeDocument(handle, fn as (doc: Document) => void);
-    const copy = <T>(value: T): T => store.copyValue(handle, value);
     const isPlainStore = (store as DocumentStore<unknown>) === plainStore;
     let elaboratedModel = initialModel;
-    const objectRefs = new Map<string, ObGenerator>();
     const morphismRefs = new Map<string, MorGenerator>();
 
     const modelDocument = (): ModelDocument => store.getDocumentView(model.handle) as ModelDocument;
@@ -1348,10 +1350,6 @@ function attachInstanceNotebook<
         if (localObjectIds.has(id)) {
             return undefined;
         }
-        const referenced = objectRefs.get(id);
-        if (referenced) {
-            return referenced;
-        }
         if (elaboratedModel) {
             return modelHasObject(elaboratedModel, id)
                 ? elaboratedModel.obPresentation(id)
@@ -1386,40 +1384,39 @@ function attachInstanceNotebook<
         return undefined;
     };
 
-    /** A read-only schema object cell handle for a schema object judgment id. */
-    const schemaObjectCell = (id: string): ObjectCell => {
-        const presentation = objectPresentation(id);
-        const obType = presentation?.obType ?? { tag: "Basic" as const, content: "" };
-        return {
-            kind: CellKind.Object,
-            id,
-            type: defineObject(obType),
-            get label() {
-                return objectPresentation(id)?.label?.join(".");
-            },
-        } as unknown as ObjectCell;
+    /** The cell type held by a schema morphism with the given codomain. */
+    const codType = (codId: string): TableHeader["type"] | undefined => {
+        const obType = objectPresentation(codId)?.obType;
+        if (obType === undefined) {
+            return undefined;
+        }
+        return shape.tableObjects.some((definition) =>
+            sameTypeValue(definition, defineObject(obType)),
+        )
+            ? { tag: "RowRef", content: { id: codId } }
+            : { tag: "String" };
     };
 
-    /** Wrap one schema morphism presentation as a {@link Column} handle. */
-    const columnHandle = (morphism: MorGenerator): Column => ({
-        id: morphism.id,
-        label: morphism.label?.join("."),
-        get to() {
-            const codId = obRefId(morphism.cod);
-            if (codId === undefined || !objectPresentation(codId)) {
-                return undefined;
-            }
-            return schemaObjectCell(codId);
-        },
-    });
+    /** Wrap one schema morphism presentation as a {@link TableHeader} handle. */
+    const headerHandle = (morphism: MorGenerator): TableHeader | undefined => {
+        const codId = obRefId(morphism.cod);
+        const type = codId === undefined ? undefined : codType(codId);
+        return type
+            ? {
+                  id: morphism.id,
+                  label: morphism.label?.join(".") ?? "",
+                  type,
+              }
+            : undefined;
+    };
 
     /**
-     * The columns of one schema entity: every schema morphism out of it, in
+     * The headers of one schema entity: every schema morphism out of it, in
      * generator order. Drawn from the elaborated schema model when one has been
      * resolved (as {@link Instance.tables} always does), which covers imported
      * morphisms; before then only the schema document's own morphisms are seen.
      */
-    const columnsOf = (entityId: string): Column[] => {
+    const headersOf = (entityId: string): TableHeader[] => {
         const model = elaboratedModel;
         const presentations = model
             ? model
@@ -1427,45 +1424,34 @@ function attachInstanceNotebook<
                   .map((id) => model.morPresentation(id))
                   .filter(
                       (morphism): morphism is MorGenerator =>
-                          morphism !== undefined && obRefId(morphism.dom) === entityId,
+                          morphism !== undefined &&
+                          morphismPresentation(morphism.id) !== undefined &&
+                          obRefId(morphism.dom) === entityId,
                   )
             : schemaMorphisms()
                   .filter((m) => obRefId(m.dom) === entityId)
                   .map((m) => morphismPresentation(m.id))
                   .filter((morphism): morphism is MorGenerator => morphism !== undefined);
-        return presentations.map(columnHandle);
+        return presentations.flatMap((morphism) => headerHandle(morphism) ?? []);
     };
 
     /** Build a table handle over the table instantiating one schema entity. */
     const tableHandle = (entityId: string): InstanceTable => ({
         id: entityId,
+        entityId,
         get label() {
             return objectPresentation(entityId)?.label?.join(".") ?? "";
         },
-        addRow(args?: Record<string, RowValue>): Row {
-            return insertRow({ id: entityId }, args);
+        addRow(args?: Record<string, LiteralValue | TableRow>): TableRow {
+            return insertRow(entityId, args);
         },
         get rows() {
             return tableFor(doc, entityId)?.row_order.map((rowId) => rowHandle(rowId)) ?? [];
         },
-        get columns() {
-            return columnsOf(entityId);
+        get headers() {
+            return headersOf(entityId);
         },
     });
-
-    /** The morphism named `key` whose domain is `objectId`, if any. */
-    const morphismByName = (key: string, objectId: string): { readonly id: string } | undefined => {
-        const local = schemaMorphisms().find((m) => m.name === key && obRefId(m.dom) === objectId);
-        if (local) {
-            return local;
-        }
-        return elaboratedModel
-            ?.morGenerators()
-            .map((id) => elaboratedModel?.morPresentation(id))
-            .find(
-                (morphism) => morphism?.label?.at(-1) === key && obRefId(morphism.dom) === objectId,
-            );
-    };
 
     /** The morphism with the given generator id, if it is still live. */
     const morphismById = (id: string): (ModelJudgment & { tag: "morphism" }) | undefined =>
@@ -1474,92 +1460,78 @@ function attachInstanceNotebook<
     /** The schema object id a row is a record of, if the row exists. */
     const objectIdOfRow = (rowId: string): string | undefined => findRow(doc, rowId)?.table.id;
 
-    /** Encode a `RowValue` as a stored field value. */
-    const encodeRowValue = (value: Exclude<RowValue, undefined>): FieldValue =>
-        isRow(value) ? { RowRef: value.id } : encodeCellValue(value as string | number | boolean);
+    /** Encode a row or literal as a stored field value. */
+    const encodeRowValue = (value: Exclude<LiteralValue, null> | TableRow): StoredFieldValue =>
+        isRow(value) ? { RowRef: (value as TableRowHandle).id } : encodeCellValue(value);
 
-    /** Decode a stored field value back into the row surface's vocabulary. */
-    const decodeCellValue = (value: FieldValue): RowValue | undefined => {
-        if (value === "Null") {
-            return undefined;
-        }
-        if ("RowRef" in value) {
-            return rowHandle(value.RowRef);
-        }
-        if ("Bool" in value) {
-            return value.Bool;
-        }
-        if ("Int" in value) {
-            return value.Int;
-        }
-        if ("Float" in value) {
-            return value.Float;
-        }
-        return value.String;
-    };
-
-    /**
-     * Insert a row into a schema object's table — creating that table on first
-     * use — then set the inline mapping/attribute values named by `args`.
-     * Returns the new row handle.
-     */
-    const insertRow = (object: ModelObjectRef, args?: Record<string, RowValue>): Row => {
-        // Seed the ref cache from either a raw presentation or a wrapped
-        // judgment, so a row can be added from a judgment obtained by validating
-        // another notebook, before this instance's schema has elaborated.
-        const objectGenerator =
-            rawObGenerator(object) ?? ("obType" in object ? (object as ObGenerator) : undefined);
-        if (objectGenerator) {
-            objectRefs.set(object.id, objectGenerator);
-        }
-        const presentation = objectPresentation(object.id);
-        if (!presentation) {
-            throw new Error(
-                `Cannot add a row for judgment "${object.id}": it is not a known model object.`,
-            );
-        }
-        if (
-            !shape.tableObjects.some((definition) =>
-                sameTypeValue(definition, defineObject(presentation.obType)),
-            )
-        ) {
-            throw new Error(
-                `Cannot add a row for judgment "${object.id}": its object type does not ` +
-                    "support instance rows.",
-            );
-        }
+    /** Insert a row into a table, creating its stored table on first use. */
+    const insertRow = (
+        entityId: string,
+        args?: Record<string, LiteralValue | TableRow>,
+    ): TableRow => {
         const rowId = v7();
         change((d) => {
-            let table = tableFor(d, object.id);
+            let table = tableFor(d, entityId);
             if (!table) {
-                d.tables[object.id] = newTable(object.id);
+                d.tables[entityId] = newTable(entityId);
                 // Re-read the table off the draft: an Automerge store *copies*
                 // the assigned object into the document, so mutating the original
                 // would be lost.
-                table = tableFor(d, object.id) as Table;
+                table = tableFor(d, entityId) as Table;
             }
             table.rows[rowId] = { id: rowId, fields: {} };
             table.row_order.push(rowId);
         });
-        const handle = rowHandle(rowId);
-        for (const [key, value] of Object.entries(args ?? {})) {
-            if (value === undefined) {
-                continue;
-            }
-            const morphism = morphismByName(key, object.id);
-            if (!morphism) {
-                const name = presentation.label?.join(".") ?? object.id;
+        const row = rowHandle(rowId);
+        row.update(args ?? {});
+        return row;
+    };
+
+    /** Update a row's values by schema morphism label. */
+    const updateRow = (rowId: string, args: Record<string, LiteralValue | TableRow>): void => {
+        const entityId = objectIdOfRow(rowId);
+        if (entityId === undefined) {
+            throw new Error(`No instance row with id "${rowId}".`);
+        }
+        const headers = headersOf(entityId);
+        for (const [key, value] of Object.entries(args)) {
+            const header = headers.find((header) => header.label === key);
+            if (!header) {
+                const name = objectPresentation(entityId)?.label?.join(".") ?? entityId;
                 throw new Error(
                     `No mapping or attribute named "${key}" on schema object "${name}".`,
                 );
             }
-            handle.set(morphism, value);
+            setValue(rowId, header.id, value);
         }
-        return handle;
+    };
+
+    /** Delete a row, leaving references to it dangling. */
+    const deleteRow = (rowId: string): void => {
+        const found = findRow(doc, rowId);
+        if (!found) {
+            throw new Error(`No instance row with id "${rowId}".`);
+        }
+        const entityId = found.table.id;
+        change((d) => {
+            const table = tableFor(d, entityId);
+            if (!table) {
+                return;
+            }
+            delete table.rows[rowId];
+            const index = table.row_order.indexOf(rowId);
+            if (index >= 0) {
+                table.row_order.splice(index, 1);
+            }
+        });
     };
 
     /** Set (or clear) a row's value for one schema morphism, replacing any prior value. */
-    const setValue = (rowId: string, morphismId: string, value?: RowValue): void => {
+    const setValue = (
+        rowId: string,
+        morphismId: string,
+        value: LiteralValue | TableRow,
+    ): void => {
         if (findRow(doc, rowId) === undefined) {
             throw new Error(`No instance row with id "${rowId}".`);
         }
@@ -1568,55 +1540,12 @@ function attachInstanceNotebook<
             if (!found) {
                 return;
             }
-            if (value === undefined) {
+            if (value === null) {
                 // Clearing removes the key outright (rather than storing a
-                // `null` cell value), matching an unset column.
+                // `Null` cell value), matching an unset column.
                 delete found.row.fields[morphismId];
             } else {
                 found.row.fields[morphismId] = encodeRowValue(value);
-            }
-        });
-    };
-
-    /** Update a row's values by schema morphism name, leaving unspecified values unchanged. */
-    const updateRow = (rowId: string, args: Record<string, RowValue>): void => {
-        const objectId = objectIdOfRow(rowId);
-        if (objectId === undefined) {
-            throw new Error(`No instance row with id "${rowId}".`);
-        }
-        for (const [key, value] of Object.entries(args)) {
-            const morphism = morphismByName(key, objectId);
-            if (!morphism) {
-                const name = schemaObjectJudgment(objectId)?.name ?? objectId;
-                throw new Error(
-                    `No mapping or attribute named "${key}" on schema object "${name}".`,
-                );
-            }
-            setValue(rowId, morphism.id, value);
-        }
-    };
-
-    /**
-     * Delete a row: remove it (and the mapping/attribute values drawn out of it)
-     * from its table. Values in *other* rows referencing it (foreign keys
-     * pointing at it) are left in place and become invalid on the next {@link
-     * Instance.validate}, mirroring a deleted mapping target. The table itself
-     * is kept, even when emptied.
-     */
-    const deleteRow = (rowId: string): void => {
-        change((d) => {
-            const found = findRow(d, rowId);
-            if (!found) {
-                return;
-            }
-            // Delete the row entry and drop it from the order in place rather
-            // than reassigning filtered copies: a filtered copy would re-insert
-            // the surviving rows, which an Automerge store rejects ("cannot
-            // create a reference to an existing document object").
-            delete found.table.rows[rowId];
-            const index = found.table.row_order.indexOf(rowId);
-            if (index >= 0) {
-                found.table.row_order.splice(index, 1);
             }
         });
     };
@@ -1634,135 +1563,154 @@ function attachInstanceNotebook<
     };
 
     /**
-     * A row's cells, one per live column of its entity and in the same order
-     * as the owning table's {@link InstanceTable.columns}. Each cell keeps the
-     * stored {@link FieldValue} shape — an unset column is `"Null"` — except
-     * that a stored `RowRef` uuid is resolved into the linked {@link Row}
-     * handle, tagged `Row`. Data under a
+     * A row's cells, one per live header of its entity and in the same order
+     * as the owning table's {@link InstanceTable.headers}. Each stored {@link
+     * FieldValue} is classified against its header's current type — an unset
+     * column is `Null`, a fitting value a {@link TableCellValue}, a
+     * value the schema no longer accepts an {@link InvalidTableCellValue}. Cells
+     * are live views, so an invalid cell heals itself on re-read when the
+     * schema or the linked row is restored. When the header's codomain does
+     * not resolve (type unknown), values are decoded by their stored shape
+     * alone — validation owns the dangling schema morphism. Data under a
      * column that is no longer a live schema morphism is retained in the
-     * document but not listed, like {@link Row.valuesById}.
+     * document but not listed.
      */
-    const cellsOf = (rowId: string, entityId: string): TableCell[] => {
+    const fieldsOf = (rowId: string, entityId: string): FieldValue[] => {
         const fields = findRow(doc, rowId)?.row.fields;
-        return columnsOf(entityId).map((column) => {
-            const value = fields?.[column.id];
+        return headersOf(entityId).map((header) => {
+            const path: FieldPath = ["tables", entityId, "rows", rowId, "fields", header.id];
+            const value = fields?.[header.id];
+            const type = header.type;
             if (value === undefined || value === "Null") {
-                return "Null";
+                return { tag: "Null", path };
             }
             if ("RowRef" in value) {
-                // A dangling reference (deleted target row) still yields a
-                // handle — its `index` is -1 — as in Row.get: validation owns
-                // flagging it.
-                return { Row: rowHandle(value.RowRef) };
+                // A deleted target row wins over a mistyped header: all we
+                // know of the value then is its stored uuid.
+                const target = findRow(doc, value.RowRef);
+                if (!target) {
+                    return { tag: "DanglingRowRef", path, content: value.RowRef };
+                }
+                const mistyped = type.tag !== "RowRef" || target.table.id !== type.content.id;
+                return {
+                    tag: mistyped ? "MistypedRowRef" : "RowRef",
+                    path,
+                    content: rowHandle(value.RowRef),
+                };
             }
-            // Rebuild the literal as a plain object rather than exposing the
-            // store's (possibly proxied) value.
+            // Rebuild the literal as a plain value rather than exposing the
+            // store's (possibly proxied) one.
             if ("Bool" in value) {
-                return { Bool: value.Bool };
+                if (type.tag === "RowRef") {
+                    return {
+                        tag: "MistypedLiteral",
+                        path,
+                        content: { tag: "Bool", content: value.Bool },
+                    };
+                }
+                return { tag: "Bool", path, content: value.Bool };
             }
             if ("Int" in value) {
-                return { Int: value.Int };
+                if (type.tag === "RowRef") {
+                    return {
+                        tag: "MistypedLiteral",
+                        path,
+                        content: { tag: "Int", content: value.Int },
+                    };
+                }
+                return { tag: "Int", path, content: value.Int };
             }
             if ("Float" in value) {
-                return { Float: value.Float };
+                if (type.tag === "RowRef") {
+                    return {
+                        tag: "MistypedLiteral",
+                        path,
+                        content: { tag: "Float", content: value.Float },
+                    };
+                }
+                return { tag: "Float", path, content: value.Float };
             }
-            return { String: value.String };
+            if (type.tag === "RowRef") {
+                return {
+                    tag: "MistypedLiteral",
+                    path,
+                    content: { tag: "String", content: value.String },
+                };
+            }
+            return { tag: "String", path, content: value.String };
         });
     };
 
     /** Build a row handle over the row with the given id. */
-    const rowHandle = (id: string): Row => ({
+    const rowHandle = (id: string): TableRowHandle => ({
         id,
         get index() {
             return findRow(doc, id)?.table.row_order.indexOf(id) ?? -1;
         },
-        update(args: Record<string, RowValue>) {
+        update(args: Record<string, LiteralValue | TableRow>) {
             updateRow(id, args);
-        },
-        set(morphism: { readonly id: string }, value?: RowValue) {
-            cacheMorphismRef(morphism);
-            setValue(id, morphism.id, value);
         },
         delete() {
             deleteRow(id);
         },
-        get entity() {
+        set(morphism: { readonly id: string }, value: LiteralValue | TableRow) {
+            cacheMorphismRef(morphism);
+            setValue(id, morphism.id, value);
+        },
+        get fields() {
             const objectId = objectIdOfRow(id);
             if (objectId === undefined) {
                 throw new Error(`Row "${id}" is not in the instance.`);
             }
-            return schemaObjectCell(objectId);
+            return fieldsOf(id, objectId);
         },
         get cells() {
             const objectId = objectIdOfRow(id);
             if (objectId === undefined) {
                 throw new Error(`Row "${id}" is not in the instance.`);
             }
-            return cellsOf(id, objectId);
-        },
-        get(morphism: { readonly id: string }): RowValue | undefined {
-            cacheMorphismRef(morphism);
-            const found = findRow(doc, id);
-            if (!found) {
-                return undefined;
-            }
-            const value = found.row.fields[morphism.id];
-            // Only surface the value if the morphism is still a live schema
-            // morphism (a deleted column's data is retained but hidden).
-            if (value === undefined || !morphismPresentation(morphism.id)) {
-                return undefined;
-            }
-            return decodeCellValue(value);
-        },
-        get valuesById() {
-            const out: Record<string, RowValue> = {};
-            const found = findRow(doc, id);
-            if (!found) {
-                return out;
-            }
-            for (const [morphismId, value] of Object.entries(found.row.fields)) {
-                // A value whose morphism is no longer a live schema morphism is
-                // retained in the document but omitted from the view, so a
-                // deleted column drops out without losing its data.
-                if (!morphismPresentation(morphismId)) {
-                    continue;
-                }
-                const decoded = decodeCellValue(value);
-                if (decoded !== undefined) {
-                    out[morphismId] = decoded;
-                }
-            }
-            return out;
-        },
-        get values() {
-            const out: Record<string, RowValue> = {};
-            const found = findRow(doc, id);
-            if (!found) {
-                return out;
-            }
-            for (const [morphismId, value] of Object.entries(found.row.fields)) {
-                // A value whose morphism is no longer a live schema morphism is
-                // retained in the document but omitted from the view, so a
-                // deleted column drops out without losing its data.
-                const morphism = morphismPresentation(morphismId);
-                if (!morphism) {
-                    continue;
-                }
-                // NOTE: keyed by morphism *name*, so two morphisms sharing a name
-                // collide here (last wins). For a UUID-keyed, collision-free read
-                // use `get(morphism)` or `valuesById`; the stored content is
-                // always UUID-keyed and unaffected by this convenience view.
-                const decoded = decodeCellValue(value);
-                if (decoded !== undefined) {
-                    const name = morphism.label?.join(".");
-                    if (name) {
-                        out[name] = decoded;
-                    }
-                }
-            }
-            return out;
+            return fieldsOf(id, objectId);
         },
     });
+
+    const fieldIssues = (): TableFieldIssue[] =>
+        tablesForCurrentModel().flatMap((table) =>
+            table.rows.flatMap((row) =>
+                row.fields.flatMap<TableFieldIssue>((field, index) => {
+                    const header = table.headers[index];
+                    if (!header || isCellValid(field)) {
+                        return [];
+                    }
+                    const expected =
+                        header.type.tag === "RowRef"
+                            ? (tableHandle(header.type.content.id).label || header.type.content.id)
+                            : header.type.tag;
+                    if (field.tag === "DanglingRowRef") {
+                        return [{
+                            message: `\`${header.label || header.id}\` refers to a row that no longer exists`,
+                            path: field.path,
+                            issueType: field.tag,
+                        }];
+                    }
+                    if (field.tag === "MistypedRowRef") {
+                        const found = findRow(doc, field.content.id);
+                        const actual = found
+                            ? tableHandle(found.table.id).label || found.table.id
+                            : "unknown";
+                        return [{
+                            message: `\`${header.label || header.id}\` must be a row of table "${expected}" (was a row of table "${actual}")`,
+                            path: field.path,
+                            issueType: field.tag,
+                        }];
+                    }
+                    return [{
+                        message: `\`${header.label || header.id}\` must be a row of table "${expected}" (was a ${field.content.tag} literal)`,
+                        path: field.path,
+                        issueType: field.tag,
+                    }];
+                }),
+            ),
+        );
 
     /**
      * Elaborate the tables into the {@link DiagramJudgment}s a diagram-in-model
@@ -1771,7 +1719,9 @@ function attachInstanceNotebook<
      * table's schema object; each of the row's content values becomes a morphism
      * judgment over its schema morphism, from the row to either the referenced
      * row (a mapping) or a freshly synthesized value object carrying the literal
-     * (an attribute).
+     * (an attribute). A literal stored under a mapping — mistyped after a schema
+     * change — gets an unresolvable codomain instead, so validation flags it
+     * (see {@link InvalidTableCellValue}).
      *
      * Tables over a deleted schema object, and values over a deleted schema
      * morphism, are skipped: retained data, but not part of the current
@@ -1781,7 +1731,7 @@ function attachInstanceNotebook<
         const judgments: DiagramJudgment[] = [];
         // Only tables over a live schema object contribute; note their rows so a
         // value whose row was skipped is skipped too.
-        const liveRows: Array<{ row: TableRow; objectId: string }> = [];
+        const liveRows: Array<{ row: StoredTableRow; objectId: string }> = [];
         for (const table of Object.values(doc.tables)) {
             const objectId = table.id;
             if (!modelHasObject(schemaModel, objectId)) {
@@ -1818,31 +1768,46 @@ function attachInstanceNotebook<
                 if ("RowRef" in value) {
                     cod = { tag: "Basic", content: value.RowRef };
                 } else {
-                    // Materialize a value object for the literal so the attribute
-                    // has a codomain object to point at, exactly as the schema
-                    // morphism's codomain expects.
-                    const literal =
-                        "Bool" in value
-                            ? value.Bool
-                            : "Int" in value
-                              ? value.Int
-                              : "Float" in value
-                                ? value.Float
-                                : value.String;
-                    const valueId = v7();
                     const codObjectId = obRefId(morphism.cod);
                     const codObject =
                         codObjectId !== undefined && modelHasObject(schemaModel, codObjectId)
                             ? schemaModel.obPresentation(codObjectId)
                             : undefined;
-                    judgments.push({
-                        tag: "object",
-                        id: valueId,
-                        name: String(literal),
-                        obType: codObject?.obType ?? { tag: "Basic", content: "" },
-                        over: codObjectId ? { tag: "Basic", content: codObjectId } : null,
-                    });
-                    cod = { tag: "Basic", content: valueId };
+                    if (
+                        codObject &&
+                        shape.tableObjects.some((definition) =>
+                            sameTypeValue(definition, defineObject(codObject.obType)),
+                        )
+                    ) {
+                        // A literal under a mapping is mistyped (the schema
+                        // changed under the data). Materializing a value object
+                        // over the entity would silently fabricate a phantom
+                        // row named after the literal, so instead point the
+                        // morphism at an unresolvable codomain — validation
+                        // reports it exactly as a dangling row reference.
+                        cod = { tag: "Basic", content: v7() };
+                    } else {
+                        // Materialize a value object for the literal so the
+                        // attribute has a codomain object to point at, exactly
+                        // as the schema morphism's codomain expects.
+                        const literal =
+                            "Bool" in value
+                                ? value.Bool
+                                : "Int" in value
+                                  ? value.Int
+                                  : "Float" in value
+                                    ? value.Float
+                                    : value.String;
+                        const valueId = v7();
+                        judgments.push({
+                            tag: "object",
+                            id: valueId,
+                            name: String(literal),
+                            obType: codObject?.obType ?? { tag: "Basic", content: "" },
+                            over: codObjectId ? { tag: "Basic", content: codObjectId } : null,
+                        });
+                        cod = { tag: "Basic", content: valueId };
+                    }
                 }
                 judgments.push({
                     tag: "morphism",
@@ -1871,68 +1836,51 @@ function attachInstanceNotebook<
     };
 
     const instance = {
-        // A transaction re-attaches this same instance flavor over a store
-        // draft; the *model* notebook is shared, not cloned. Stamped with the
-        // shape like `Binder.createInstance` stamps the original.
-        ...transactionMethods(store, handle, (draft) =>
-            withShape(attachInstanceNotebook(store, draft, shape, model, elaboratedModel), shape),
-        ),
+        modelNotebook: model,
         get title() {
             return doc.name;
         },
-        get theory() {
-            return modelDocument().theory;
-        },
-        handle,
-        modelNotebook: model,
         get document() {
             return doc;
         },
-        dump() {
-            return copy(doc);
+        get tables() {
+            return tablesForCurrentModel();
         },
-        update(u: { title?: string }) {
-            change((d) => {
-                if (u.title !== undefined) {
-                    d.name = u.title;
-                }
-            });
+        get(path: InstancePath): Result<InstanceTable | TableRow | FieldValue> {
+            const [root, tableId, rows, rowId, fields, fieldId] = path;
+            if (root !== "tables" || !tableId) {
+                return { tag: "Err", content: [{ message: "Invalid instance path.", path }] };
+            }
+            const table = tablesForCurrentModel().find((candidate) => candidate.id === tableId);
+            if (!table) {
+                return { tag: "Err", content: [{ message: `No table with id "${tableId}".`, path }] };
+            }
+            if (rows === undefined) {
+                return { tag: "Ok", content: table };
+            }
+            if (rows !== "rows" || !rowId) {
+                return { tag: "Err", content: [{ message: "Invalid instance row path.", path }] };
+            }
+            const row = table.rows.find((candidate) => candidate.id === rowId);
+            if (!row) {
+                return { tag: "Err", content: [{ message: `No row with id "${rowId}".`, path }] };
+            }
+            if (fields === undefined) {
+                return { tag: "Ok", content: row };
+            }
+            if (fields !== "fields" || !fieldId) {
+                return { tag: "Err", content: [{ message: "Invalid instance field path.", path }] };
+            }
+            const index = table.headers.findIndex((header) => header.id === fieldId);
+            const field = row.fields[index];
+            return field
+                ? { tag: "Ok", content: field }
+                : { tag: "Err", content: [{ message: `No field with id "${fieldId}".`, path }] };
         },
-        onChange(callback: () => void): () => void {
-            return store.subscribe(handle, callback);
+        async validate(): Promise<InstanceValidationResult> {
+            return validationResult(await runValidation());
         },
-        onChangeFormalContent,
-        add(object: ModelObjectRef, args?: Record<string, RowValue>): Row {
-            return insertRow(object, args);
-        },
-        addRow(object: ModelObjectRef, args?: Record<string, RowValue>): Row {
-            return insertRow(object, args);
-        },
-        rows(): Row[] {
-            return Object.values(doc.tables).flatMap((table) =>
-                table.row_order.map((rowId) => rowHandle(rowId)),
-            );
-        },
-        rowsOf(object: ModelObjectRef): Row[] {
-            return tableFor(doc, object.id)?.row_order.map((rowId) => rowHandle(rowId)) ?? [];
-        },
-        async tables(): Promise<InstanceTable[]> {
-            const coreTheory = await requireCoreTheory("tables()");
-            const model = await resolveSchemaModel(coreTheory);
-            return model
-                .obGenerators()
-                .map((id) => model.obPresentation(id))
-                .filter((generator) =>
-                    shape.tableObjects.some((definition) =>
-                        sameTypeValue(definition, defineObject(generator.obType)),
-                    ),
-                )
-                .map((generator) => tableHandle(generator.id));
-        },
-        async validate(): Promise<DiagramValidationResult> {
-            return (await runValidation()).result;
-        },
-        onValidate(callback: (result: DiagramValidationResult) => void): () => void {
+        onValidate(callback: (result: InstanceValidationResult) => void): () => void {
             return createValidationObserver<DiagramValidationSnapshot>({
                 validate: async () => ({
                     ...(await runValidation()),
@@ -1944,9 +1892,65 @@ function attachInstanceNotebook<
                 depRootId: doc.instanceOf._id,
                 subscribeOwn: onChangeFormalContent,
                 equivalent: sameDiagramValidation,
-                deliver: (snapshot) => callback(snapshot.result),
+                deliver: (snapshot) => callback(validationResult(snapshot)),
             });
         },
+    };
+
+    const tablesForModel = (model: DblModel): InstanceTable[] =>
+        model
+            .obGenerators()
+            .map((id) => model.obPresentation(id))
+            .filter((generator) =>
+                objectPresentation(generator.id) !== undefined &&
+                shape.tableObjects.some((definition) =>
+                    sameTypeValue(definition, defineObject(generator.obType)),
+                ),
+            )
+            .map((generator) => tableHandle(generator.id));
+
+    const tablesForCurrentModel = (): InstanceTable[] =>
+        elaboratedModel ? tablesForModel(elaboratedModel) : [];
+
+    const validationResult = (snapshot: {
+        result: DiagramValidationResult;
+        model: DblModel | undefined;
+    }): InstanceValidationResult => {
+        const issues = snapshot.model ? fieldIssues() : [];
+        if (snapshot.result.tag === "Valid" && snapshot.model && issues.length === 0) {
+            return {
+                tag: "Ok",
+                content: { instance: instance as Instance },
+            };
+        }
+        if (snapshot.result.tag === "Invalid" || issues.length > 0) {
+            return {
+                tag: "Err",
+                content: {
+                    instance: snapshot.model ? (instance as Instance) : null,
+                    issues: [
+                        ...issues,
+                        ...(snapshot.result.tag === "Invalid"
+                            ? snapshot.result.errors.map(diagramErrorToIssue)
+                            : []),
+                    ],
+                },
+            };
+        }
+        return {
+            tag: "Err",
+            content: {
+                issues: [
+                    {
+                        message:
+                            snapshot.result.tag === "Illformed"
+                                ? snapshot.result.error
+                                : "Instance validation did not resolve a schema model",
+                    },
+                ],
+                instance: snapshot.model ? (instance as Instance) : null,
+            },
+        };
     };
 
     /** The schema's core theory, which elaboration requires; throws when the shape lacks it. */
@@ -1965,7 +1969,7 @@ function attachInstanceNotebook<
 
     /**
      * Resolve the elaborated schema model this instance is of, noting it for
-     * the synchronous surfaces ({@link Row.cells}, ref lookups). Resolution is
+     * the synchronous surfaces ({@link TableRow.cells}, ref lookups). Resolution is
      * cached per store, so repeated calls with an unchanged schema are cheap.
      */
     const resolveSchemaModel = async (coreTheory: DblTheory): Promise<DblModel> => {
@@ -3201,216 +3205,210 @@ interface NotebookMethods<TShape extends AnyShape = AnyShape, Handle = any> {
     add<O extends ShapeObjects<TShape>>(type: O, args: { label: string }): ObjectCell<O>;
 }
 
-/**
- * The value of an inline instance-`add` argument: another {@link Row} (for a
- * mapping) or a literal (for an attribute, auto-materialized as a value row).
- * Loosely typed for now — the key set is not checked against the schema object's
- * outgoing mappings/attributes at compile time; unknown keys throw at runtime.
- */
-export type RowValue = Row | string | number | boolean;
+type TableRowHandle = TableRow;
 
-/** A reference to an object judgment in the model instantiated by an {@link Instance}. */
-export type ModelObjectRef = {
-    readonly id: string;
-};
+/** Path to a table, row, or field in the underlying instance document. */
+export type InstancePath =
+    | readonly ["tables", string]
+    | readonly ["tables", string, "rows", string]
+    | FieldPath;
+
+/** Path to a field in the underlying instance document. */
+export type FieldPath = readonly [
+    "tables",
+    string,
+    "rows",
+    string,
+    "fields",
+    string,
+];
 
 /**
- * A column of an {@link InstanceTable}: one schema morphism (mapping or
- * attribute) out of the table's entity. A column is accepted wherever a schema
- * morphism cell is — {@link Row.get}, {@link Row.set} — so reading and writing a
+ * A header of an {@link InstanceTable}: one schema morphism (mapping or
+ * attribute) out of the table's entity. A header is accepted wherever a schema
+ * morphism cell is — {@link TableRow.get}, {@link TableRow.set} — so reading and writing a
  * row's value for it needs no lookup by name.
  */
-export type Column = {
+export interface TableHeader {
     /** The schema morphism's generator UUID. */
     readonly id: string;
-    /** Display label (dot-joined qualified name), if labeled. */
-    readonly label?: string | undefined;
+    /** Display label (dot-joined qualified name); `""` when unlabeled. */
+    readonly label: string;
     /**
-     * The schema object cell this column points at (the morphism's codomain):
-     * another table's entity for a mapping, an attribute type for an attribute.
-     * Always resolves when the schema validates; validation owns surfacing the
-     * dangling cases where it is `undefined`.
+     * The valid value type for this column. A `RowRef` includes the target
+     * table's entity UUID; attributes use the corresponding literal cell tag.
+     * A morphism whose codomain does not resolve is omitted from the headers.
      */
-    readonly to?: ObjectCell | undefined;
-};
+    readonly type:
+        | { readonly tag: LiteralType }
+        | { readonly tag: "RowRef"; readonly content: { readonly id: string } };
+}
 
 /**
- * A cell of an {@link Instance} table row: either a literal value (an
- * attribute) or the linked row (a mapping). The shape mirrors the stored Rust
- * `FieldValue` (see `document-types/src/v2/instance.rs`) — an unset column is
- * `"Null"` — except that the stored `RowRef` uuid is resolved into the linked
- * {@link Row} handle itself, tagged `Row`. Designed to be pattern matched
- * (e.g. with `ts-pattern`).
+ * A cell of an {@link Instance} table row: either a {@link TableCellValue},
+ * whose stored value fits its header's current schema, or an {@link
+ * InvalidTableCellValue}, whose stored value no longer does (the schema changed, or
+ * a linked row was deleted). The shape mirrors the stored Rust `FieldValue`
+ * (see `document-types/src/v2/instance.rs`), except that stored `RowRef` uuids are resolved
+ * against the current schema and instance. Designed to be pattern matched
+ * (e.g. with `ts-pattern`); validity is checked with {@link isCellValid} or by
+ * matching the tags.
  */
-export type TableCell =
-    | "Null"
-    | { Bool: boolean }
-    | { Int: number }
-    | { Float: number }
-    | { String: string }
-    | { Row: Row };
+export type TableCell = FieldValue;
+
+/** A path-addressed field value exposed by a table row. */
+export type FieldValue = TableCellValue | InvalidTableCellValue;
+
+/** A literal value that can be written to an instance attribute. */
+export type LiteralValue = string | number | boolean | null;
+
+/** A literal cell's stored value tag. */
+export type LiteralType = "Bool" | "Int" | "Float" | "String";
+
+/**
+ * A cell whose stored value fits its header's current schema: a literal under
+ * an attribute, or a live row of the header's target table under a mapping.
+ */
+export type TableCellValue =
+    | { readonly tag: "Null"; readonly path: FieldPath }
+    | { readonly tag: "Bool"; readonly path: FieldPath; readonly content: boolean }
+    | { readonly tag: "Int"; readonly path: FieldPath; readonly content: number }
+    | { readonly tag: "Float"; readonly path: FieldPath; readonly content: number }
+    | { readonly tag: "String"; readonly path: FieldPath; readonly content: string }
+    | { readonly tag: "RowRef"; readonly path: FieldPath; readonly content: TableRow };
+
+/**
+ * A cell whose stored value no longer fits its header's current schema. The
+ * value is retained in the document — validation reports it, and the editor
+ * owns offering the fix — and the cell heals itself on re-read if the schema
+ * or the linked row is restored:
+ *
+ * - `DanglingRowRef`: the linked target row was deleted; carries the stored
+ *   uuid. Takes precedence over `MistypedRowRef` when both would apply.
+ * - `MistypedRowRef`: the linked row is live, but the header no longer accepts
+ *   it — the header is now an attribute, or a mapping into a different table.
+ * - `MistypedLiteral`: a literal stored under a header that is now a mapping.
+ */
+export type InvalidTableCellValue =
+    | { readonly tag: "DanglingRowRef"; readonly path: FieldPath; readonly content: string }
+    | { readonly tag: "MistypedRowRef"; readonly path: FieldPath; readonly content: TableRow }
+    | {
+          readonly tag: "MistypedLiteral";
+          readonly path: FieldPath;
+          readonly content: {
+              readonly tag: LiteralType;
+              readonly content: LiteralValue;
+          };
+      };
+
+/** Whether a {@link TableCell}'s stored value fits its header's current schema. */
+export const isCellValid = (cell: TableCell): cell is TableCellValue =>
+    cell.tag !== "DanglingRowRef" &&
+    cell.tag !== "MistypedRowRef" &&
+    cell.tag !== "MistypedLiteral";
 
 /**
  * A table of an {@link Instance}: the rows instantiating one schema entity,
- * listed by {@link Instance.tables}. `label`, `rows`, and `columns` are live
+ * listed by {@link Instance.tables}. `label`, `rows`, and `headers` are live
  * views — they read through to the instance document and schema on each access
- * — and the rows are full {@link Row} handles, so values are read and written
- * through the table directly. The table's `id` is its entity's, so the table
- * itself is a valid {@link ModelObjectRef}: pass it straight to {@link
- * Instance.add} to insert a row.
+ * — and the rows are full {@link TableRow} handles, so values are read and written
+ * through the table directly.
  */
-export type InstanceTable = {
-    /** The schema entity's generator UUID this table instantiates. */
+export interface InstanceTable {
+    /** The table UUID. Currently identical to the entity UUID in the stored representation. */
     readonly id: string;
+    /** The schema entity's generator UUID this table instantiates. */
+    readonly entityId: string;
     /** The schema entity's display label; `""` when unlabeled. */
     readonly label: string;
-    /** The table's rows, in stored order, as live {@link Row} handles. */
-    readonly rows: Row[];
-    /** The table's columns: the schema morphisms out of its entity. */
-    readonly columns: Column[];
-    /**
-     * Insert a row into this table; see {@link Instance.addRow}. Inline args
-     * name the entity's outgoing mappings and attributes. Returns the new row.
-     */
-    addRow(args?: Record<string, RowValue>): Row;
-};
+    /** The table's rows, in stored order, as live {@link TableRow} handles. */
+    readonly rows: TableRow[];
+    /** The table's headers: the schema morphisms out of its entity. */
+    readonly headers: TableHeader[];
+    /** Insert a row, optionally setting values by column label. */
+    addRow(args?: Record<string, LiteralValue | TableRow>): TableRow;
+}
+
+export interface InstanceValidationSuccess {
+    readonly instance: Instance;
+}
+
+export interface InstanceValidationFailure {
+    readonly instance: Instance | null;
+    readonly issues: ReadonlyArray<Issue | TableFieldIssue>;
+}
+
+/** A validation issue addressing an invalid stored table field. */
+export interface TableFieldIssue extends Issue {
+    readonly path: FieldPath;
+    readonly issueType: "DanglingRowRef" | "MistypedRowRef" | "MistypedLiteral";
+}
+
+/** Instance validation with best-effort schema data on failure. */
+export type InstanceValidationResult = Result<InstanceValidationSuccess, InstanceValidationFailure>;
 
 /**
  * A row of an {@link Instance}: one record of a schema entity. Rows are never
- * named — a row's identity is the row itself, exposed as {@link Row.id} — and its
- * mapping/attribute values are read from {@link Row.values}. Returned by {@link
- * Instance.add} and {@link Instance.rows}, and passed back as a mapping value to
- * later `add` calls.
+ * named. Its position and cells are live views of the instance document.
  */
-export type Row = {
-    /** The row's stable id, used to reference it as a mapping target. */
+export interface TableRow {
+    /** The row UUID. */
     readonly id: string;
     /**
      * The row's 0-based position in its table's row order (matching {@link
-     * InstanceTable.rows}); `-1` when the row is no longer in the instance
-     * (a deleted row, or one reached via a dangling reference).
+     * InstanceTable.rows}); `-1` only for a stale handle kept across the
+     * row's deletion. A row reached through {@link TableRow.cells} is always
+     * live — a deleted mapping target surfaces as a `DanglingRowRef` cell,
+     * never as a handle with a negative index.
      */
     readonly index: number;
-    /** The schema entity (object) this row is a record of. */
-    readonly entity: ObjectCell;
     /**
-     * The row's cells, one {@link TableCell} per live column of its entity,
+     * The row's cells, one {@link TableCell} per live header of its entity,
      * positionally aligned with the owning table's {@link
-     * InstanceTable.columns}: an unset column is `"Null"`, an attribute is its
-     * literal, and a mapping holds the linked target {@link Row}.
+     * InstanceTable.headers}: an unset header is `Null`, an attribute is
+     * its tagged literal, and a mapping holds the linked target {@link TableRow}. A
+     * stored value the current schema no longer accepts is an {@link
+     * InvalidTableCellValue} instead.
      */
-    readonly cells: TableCell[];
-    /** Update mapping and attribute values by their schema names. */
-    update(args: Record<string, RowValue>): void;
-    /**
-     * This row's value for one schema morphism, looked up by the morphism's
-     * *UUID* (the schema mapping / attribute cell): a mapping's value is the
-     * target {@link Row}, an attribute's is the literal it was given, and a
-     * cleared or unset morphism is `undefined`. This is the collision-free
-     * counterpart to {@link Row.values}: because it keys by UUID, two morphisms
-     * sharing a name are read independently.
-     */
-    get(morphism: { readonly id: string }): RowValue | undefined;
-    /**
-     * This row's mapping and attribute values keyed by the schema morphism's
-     * *UUID*, so morphisms sharing a name never collide (unlike {@link
-     * Row.values}). A mapping's value is the target {@link Row}, an attribute's
-     * is the literal it was given.
-     */
-    readonly valuesById: Record<string, RowValue>;
-    /**
-     * This row's mapping and attribute values, keyed by the schema mapping /
-     * attribute *name*: a mapping's value is the target {@link Row}, an
-     * attribute's value is the literal it was given.
-     *
-     * NOTE: names are not unique, so two morphisms sharing a name collide here
-     * (the last wins). Prefer {@link Row.get} or {@link Row.valuesById} — which
-     * key by the morphism's UUID — whenever a schema may have same-named
-     * morphisms. The underlying stored content is always UUID-keyed, so this
-     * collision is only in this convenience view, never in the data.
-     */
-    readonly values: Record<string, RowValue>;
+    readonly fields: FieldValue[];
+    /** @deprecated Use {@link TableRow.fields}. */
+    readonly cells: FieldValue[];
+    /** Set or clear values by column label. */
+    update(args: Record<string, LiteralValue | TableRow>): void;
+    /** Delete this row, leaving references to it dangling. */
+    delete(): void;
     /**
      * Set (or clear) this row's value for one schema morphism, replacing any
-     * previous value for it: a mapping takes a target {@link Row}, an attribute a
-     * literal; passing no value clears it. `morphism` is the schema's mapping /
-     * attribute cell (e.g. from `schema.cellsOf(Attr)`). Keyed by the morphism's
-     * UUID, so same-named morphisms are set independently.
+     * previous value for it: a mapping takes a target {@link TableRow}, an
+     * attribute a {@link LiteralValue} (a boolean, a finite
+     * number stored as `Int` when integral and in i32 range and as `Float`
+     * otherwise, or a string) — or `null` to clear the column. `morphism` is
+     * the schema's mapping / attribute cell (e.g. from `schema.cellsOf(Attr)`).
+     * Keyed by the morphism's UUID, so same-named morphisms are set
+     * independently.
      */
-    set(morphism: { readonly id: string }, value?: RowValue): void;
-    /**
-     * Delete this row and the values drawn out of it. Foreign keys pointing *at*
-     * it from other rows are left dangling and become invalid on the next {@link
-     * Instance.validate}, mirroring a deleted mapping target.
-     */
-    delete(): void;
-};
+    set(morphism: { readonly id: string }, value: LiteralValue | TableRow): void;
+}
 
 /**
  * An *instance* notebook: a database that instantiates a schema, backed by an
  * {@link InstanceDocument} storing an array of *tables* — one table per
  * schema entity, keyed by the schema's generator UUIDs. Obtained from {@link
- * Binder.createInstance}. It speaks in *rows*, not cells: {@link Instance.add}
- * inserts a row for a schema entity and sets its mapping/attribute values
- * inline, and {@link Instance.rows} lists them. It validates against its schema
- * just as a diagram validates in its model.
+ * Binder.createInstance}. Tables provide the editor surface for adding rows and
+ * reading or writing their cells.
  */
 export type Instance<
     _TShape extends InstanceShape = InstanceShape,
     // oxlint-disable-next-line typescript/no-explicit-any
-    Handle = any,
-    TModelShape extends AnyShape = AnyShape,
-> = Update<{
-    title: string;
-}> & {
-    /** Reactive read of the instance's title. */
-    readonly title: string;
-    /** The document theory of the schema this instance is of. */
-    readonly theory: string;
-    /** The store handle this instance is bound to. */
-    readonly handle: Handle;
+    _Handle = any,
+    _TModelShape extends AnyShape = AnyShape,
+> = {
     /** The validatable model notebook this instance is of. */
-    readonly modelNotebook: ValidatableNotebook<Handle, TModelShape>;
-    /** The underlying instance document (an array of tables keyed by schema UUIDs). */
+    readonly modelNotebook: ValidatableNotebook<_Handle, _TModelShape>;
+    /** The instance document title. */
+    readonly title: string;
+    /** The underlying instance document. */
     readonly document: InstanceDocument;
-    /** Make a detached plain-JS snapshot of the underlying document. */
-    dump(): InstanceDocument;
-    /**
-     * Open a *transaction*: a full instance attached over a private store
-     * draft of this document; see {@link NotebookMethods.beginTransaction}. Row
-     * mutations through it are invisible here until
-     * {@link Transaction.commit}.
-     */
-    beginTransaction(): Transaction<Instance<_TShape, Handle, TModelShape>>;
-    /** Undo a committed transaction; see {@link NotebookMethods.revertCommit}. */
-    revertCommit(commit: Commit<unknown>): void;
-    /** Subscribe to changes to this instance's document; see {@link Notebook.onChange}. */
-    onChange(callback: () => void): () => void;
-    /** Subscribe to changes to formal content; see {@link Notebook.onChangeFormalContent}. */
-    onChangeFormalContent(callback: () => void): () => void;
-    /**
-     * Insert a row for the given schema entity. Inline args name the entity's
-     * outgoing mappings and attributes: each wires the new row to the arg's
-     * value — another {@link Row} for a mapping, or (for an attribute) the
-     * literal it points at. Rows are never named. Returns the new row.
-     *
-     * Also available as {@link Instance.addRow}, and on the table itself as
-     * {@link InstanceTable.addRow}.
-     */
-    add(entity: ModelObjectRef, args?: Record<string, RowValue>): Row;
-    /** Alias of {@link Instance.add}. */
-    addRow(entity: ModelObjectRef, args?: Record<string, RowValue>): Row;
-    /**
-     * All of the instance's rows. Value rows auto-created for attribute
-     * literals are not listed. Use {@link Instance.rowsOf} to filter to one
-     * schema entity.
-     */
-    rows(): Row[];
-    /**
-     * The instance's rows of one schema entity. Value rows auto-created for
-     * attribute literals are not listed.
-     */
-    rowsOf(entity: ModelObjectRef): Row[];
     /**
      * List the instance's tables: one {@link InstanceTable} per live
      * row-bearing schema entity (per the shape's `tableObjects`), in schema
@@ -3424,12 +3422,11 @@ export type Instance<
      * calls with an unchanged schema are cheap. Rejects when the schema cannot
      * be resolved (dangling `instanceOf`, cyclic instantiation).
      */
-    tables(): Promise<InstanceTable[]>;
-    /**
-     * Elaborate the instance and validate it against its schema. Returns a
-     * tagged {@link DiagramValidationResult}, like a diagram notebook's.
-     */
-    validate(): Promise<DiagramValidationResult>;
+    readonly tables: InstanceTable[];
+    /** Resolve a table, row, or field by its underlying document path. */
+    get(path: InstancePath): Result<InstanceTable | TableRow | FieldValue>;
+    /** Validate the instance and resolve its schema model and tables. */
+    validate(): Promise<InstanceValidationResult>;
     /**
      * Observe this instance's validation reactively; see
      * {@link Notebook.onValidate}. Re-validation triggers on changes to the
@@ -3437,7 +3434,7 @@ export type Instance<
      * tree — no manual subscription to the schema is needed. Returns an
      * unsubscribe function.
      */
-    onValidate(callback: (result: DiagramValidationResult) => void): () => void;
+    onValidate(callback: (result: InstanceValidationResult) => void): () => void;
 };
 
 /** A diagram shape's individual-def list, defaulted to empty for indexing. */

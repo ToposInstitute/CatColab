@@ -1,5 +1,4 @@
 import type { EvalResult } from "catcolab-document-types";
-import { errorMessage } from "../util/error";
 
 export type { EvalResult } from "catcolab-document-types";
 
@@ -32,8 +31,9 @@ export async function contextExec(code: string, scope: ContextExecScope): Promis
 
         const value = await fn(...bindings.map(([, value]) => value));
         return { tag: "Ok", value: truncateResult(stringify(value)) };
-    } catch (error) {
-        return { tag: "Err", error: truncateResult(errorMessage(error)) };
+    } catch (err) {
+        const error = err instanceof Error ? err.message : String(err);
+        return { tag: "Err", error: truncateResult(error) };
     }
 }
 

@@ -3,7 +3,7 @@ import ChevronRight from "lucide-solid/icons/chevron-right";
 import Plus from "lucide-solid/icons/plus";
 import { createEffect, createMemo, createSignal, For, Show } from "solid-js";
 
-import type { MorphismCell, Row } from "catcolab-documents";
+import type { MorphismCell, ObjectCell, TableRow } from "catcolab-documents";
 import type { DemoDocument } from "./document";
 import { type Column, columnsFor, rowShortLabel, tableSpecs } from "./instance-model";
 
@@ -25,7 +25,8 @@ export function InstanceMillerEditor(props: { doc: DemoDocument }) {
         setEntityId(id);
         const spec = specs().find((candidate) => candidate.entity.id === id);
         const firstRow = spec?.rows[0];
-        setPath(firstRow ? [{ entityId: id, rowId: firstRow.id }] : []);
+        const firstRowId = firstRow && spec ? props.doc.rowId(spec.entity, firstRow) : undefined;
+        setPath(firstRowId ? [{ entityId: id, rowId: firstRowId }] : []);
     };
 
     // Keep navigation valid as schema edits, row deletion, and history change the document.
@@ -45,10 +46,11 @@ export function InstanceMillerEditor(props: { doc: DemoDocument }) {
         const current = path()[0];
         const currentIsValid =
             current?.entityId === selected.entity.id &&
-            selected.rows.some((row) => row.id === current.rowId);
+            selected.rows.some((row) => props.doc.rowId(selected.entity, row) === current.rowId);
         if (!currentIsValid) {
             const firstRow = selected.rows[0];
-            setPath(firstRow ? [{ entityId: selected.entity.id, rowId: firstRow.id }] : []);
+            const firstRowId = firstRow ? props.doc.rowId(selected.entity, firstRow) : undefined;
+            setPath(firstRowId ? [{ entityId: selected.entity.id, rowId: firstRowId }] : []);
         }
     });
 
@@ -89,26 +91,37 @@ export function InstanceMillerEditor(props: { doc: DemoDocument }) {
                         if (!spec) {
                             return;
                         }
-                        const row = props.doc.instance.add(spec.entity, {});
-                        setPath([{ entityId: spec.entity.id, rowId: row.id }]);
+                        const row = props.doc.addRow(spec.entity);
+                        const rowId = props.doc.rowId(spec.entity, row);
+                        setPath(rowId ? [{ entityId: spec.entity.id, rowId }] : []);
                     }}
                 />
                 <div class={styles.list}>
                     <For each={selectedSpec()?.rows ?? []}>
-                        {(row) => (
-                            <button
-                                class={styles.listItem}
-                                classList={{ [styles.selected ?? ""]: path()[0]?.rowId === row.id }}
-                                type="button"
-                                aria-pressed={path()[0]?.rowId === row.id}
-                                onClick={() => setPath([{ entityId: entityId(), rowId: row.id }])}
-                            >
-                                <span class={styles.itemLabel}>
-                                    {rowShortLabel(props.doc, selectedSpec()!.entity, row)}
-                                </span>
-                                <span class={styles.chevron}>›</span>
-                            </button>
-                        )}
+                        {(row) => {
+                            const rowId = () => props.doc.rowId(selectedSpec()!.entity, row);
+                            return (
+                                <button
+                                    class={styles.listItem}
+                                    classList={{
+                                        [styles.selected ?? ""]: path()[0]?.rowId === rowId(),
+                                    }}
+                                    type="button"
+                                    aria-pressed={path()[0]?.rowId === rowId()}
+                                    onClick={() => {
+                                        const id = rowId();
+                                        if (id) {
+                                            setPath([{ entityId: entityId(), rowId: id }]);
+                                        }
+                                    }}
+                                >
+                                    <span class={styles.itemLabel}>
+                                        {rowShortLabel(props.doc, selectedSpec()!.entity, row)}
+                                    </span>
+                                    <span class={styles.chevron}>›</span>
+                                </button>
+                            );
+                        }}
                     </For>
                     <Show when={(selectedSpec()?.rows.length ?? 0) === 0}>
                         <div class={styles.empty}>No rows yet</div>
@@ -156,7 +169,11 @@ function RecordColumn(props: {
         tableSpecs(props.doc).find((spec) => spec.entity.id === props.location.entityId)?.entity;
     const row = () =>
         entity()
-            ? props.doc.instance.rowsOf(entity()!).find((r) => r.id === props.location.rowId)
+            ? props.doc
+                  .rowsOf(entity()!)
+                  .find(
+                      (candidate) => props.doc.rowId(entity()!, candidate) === props.location.rowId,
+                  )
             : undefined;
     const columns = () => (entity() ? columnsFor(props.doc, entity()!) : []);
 
@@ -171,7 +188,16 @@ function RecordColumn(props: {
                             : "Missing row"}
                     </h3>
                 </div>
-                <wired-button class={styles.deleteButton} onClick={() => row()?.delete()}>
+                <wired-button
+                    class={styles.deleteButton}
+                    onClick={() => {
+                        const currentEntity = entity();
+                        const currentRow = row();
+                        if (currentEntity && currentRow) {
+                            currentRow.delete();
+                        }
+                    }}
+                >
                     Delete
                 </wired-button>
             </div>
@@ -186,6 +212,7 @@ function RecordColumn(props: {
                                 {(column) => (
                                     <Field
                                         doc={props.doc}
+                                        entity={entity()!}
                                         row={currentRow}
                                         column={column}
                                         openTarget={props.openTarget}
@@ -202,7 +229,8 @@ function RecordColumn(props: {
 
 function Field(props: {
     doc: DemoDocument;
-    row: Row;
+    entity: ObjectCell;
+    row: TableRow;
     column: Column;
     openTarget: (target: Location) => void;
 }) {
@@ -219,11 +247,18 @@ function Field(props: {
             <Show
                 when={props.column.kind === "mapping"}
                 fallback={
-                    <AttributeInput row={props.row} column={props.column} morphism={morphism()} />
+                    <AttributeInput
+                        doc={props.doc}
+                        entity={props.entity}
+                        row={props.row}
+                        column={props.column}
+                        morphism={morphism()}
+                    />
                 }
             >
                 <MappingInput
                     doc={props.doc}
+                    entity={props.entity}
                     row={props.row}
                     column={props.column as Extract<Column, { kind: "mapping" }>}
                     morphism={morphism()}
@@ -234,16 +269,29 @@ function Field(props: {
     );
 }
 
-function AttributeInput(props: { row: Row; column: Column; morphism: MorphismCell }) {
+function AttributeInput(props: {
+    doc: DemoDocument;
+    entity: ObjectCell;
+    row: TableRow;
+    column: Column;
+    morphism: MorphismCell;
+}) {
     const column = () => props.column as Extract<Column, { kind: "attr" }>;
-    const value = () => props.row.get({ id: column().morphismId });
+    const value = () => props.doc.rowValue(props.entity, props.row, column().morphismId);
     if (column().attrType === "Boolean") {
         return (
             <span class={styles.checkboxRow}>
                 <input
                     type="checkbox"
                     checked={value() === true}
-                    onChange={(event) => props.row.set(props.morphism, event.currentTarget.checked)}
+                    onChange={(event) =>
+                        props.doc.setRowValue(
+                            props.entity,
+                            props.row,
+                            props.morphism,
+                            event.currentTarget.checked,
+                        )
+                    }
                 />
                 <span>{value() === true ? "True" : "False"}</span>
             </span>
@@ -264,9 +312,9 @@ function AttributeInput(props: { row: Row; column: Column; morphism: MorphismCel
             onChange={(event) => {
                 const raw = event.currentTarget.value;
                 if (raw === "") {
-                    props.row.set(props.morphism, undefined);
+                    props.doc.setRowValue(props.entity, props.row, props.morphism, undefined);
                 } else if (!numeric()) {
-                    props.row.set(props.morphism, raw);
+                    props.doc.setRowValue(props.entity, props.row, props.morphism, raw);
                 } else {
                     const number = Number(raw);
                     const validInteger =
@@ -279,7 +327,7 @@ function AttributeInput(props: { row: Row; column: Column; morphism: MorphismCel
                         (column().attrType === "Integer" && validInteger) ||
                         (column().attrType === "Float" && validFloat)
                     ) {
-                        props.row.set(props.morphism, number);
+                        props.doc.setRowValue(props.entity, props.row, props.morphism, number);
                     } else {
                         event.currentTarget.value = String(displayValue());
                     }
@@ -291,17 +339,22 @@ function AttributeInput(props: { row: Row; column: Column; morphism: MorphismCel
 
 function MappingInput(props: {
     doc: DemoDocument;
-    row: Row;
+    entity: ObjectCell;
+    row: TableRow;
     column: Extract<Column, { kind: "mapping" }>;
     morphism: MorphismCell;
     openTarget: (target: Location) => void;
 }) {
-    const rows = () => props.doc.instance.rowsOf(props.column.codomain);
-    const value = () => props.row.get({ id: props.column.morphismId });
+    const rows = () => props.doc.rowsOf(props.column.codomain);
+    const value = () => props.doc.rowValue(props.entity, props.row, props.column.morphismId);
     const target = () => {
         const current = value();
-        return typeof current === "object"
-            ? rows().find((row) => row.id === current.id)
+        if (typeof current !== "object" || current === null) {
+            return undefined;
+        }
+        const currentId = props.doc.rowId(props.column.codomain, current as TableRow);
+        return currentId
+            ? rows().find((row) => props.doc.rowId(props.column.codomain, row) === currentId)
             : undefined;
     };
     const invalid = () => value() !== undefined && !target();
@@ -311,11 +364,19 @@ function MappingInput(props: {
             <select
                 class={styles.input}
                 classList={{ [styles.invalid ?? ""]: invalid() }}
-                value={invalid() ? "__invalid" : (target()?.id ?? "")}
+                value={
+                    invalid()
+                        ? "__invalid"
+                        : (target() && props.doc.rowId(props.column.codomain, target()!)) || ""
+                }
                 aria-invalid={invalid()}
                 onChange={(event) => {
-                    const next = rows().find((row) => row.id === event.currentTarget.value);
-                    props.row.set(props.morphism, next);
+                    const next = rows().find(
+                        (row) =>
+                            props.doc.rowId(props.column.codomain, row) ===
+                            event.currentTarget.value,
+                    );
+                    props.doc.setRowValue(props.entity, props.row, props.morphism, next);
                 }}
             >
                 <option value="">None</option>
@@ -324,7 +385,7 @@ function MappingInput(props: {
                 </Show>
                 <For each={rows()}>
                     {(row) => (
-                        <option value={row.id}>
+                        <option value={props.doc.rowId(props.column.codomain, row) ?? ""}>
                             {rowShortLabel(props.doc, props.column.codomain, row)}
                         </option>
                     )}
@@ -338,9 +399,13 @@ function MappingInput(props: {
                 onClick={() => {
                     const row = target();
                     if (row) {
+                        const rowId = props.doc.rowId(props.column.codomain, row);
+                        if (!rowId) {
+                            return;
+                        }
                         props.openTarget({
                             entityId: props.column.codomain.id,
-                            rowId: row.id,
+                            rowId,
                         });
                     }
                 }}

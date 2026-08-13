@@ -1,129 +1,198 @@
 import { Attr, AttrType, Entity, Mapping, SimpleSchema } from "catcolab-logics/simple-schema";
 import { describe, expect, test } from "vitest";
 
-import { createBinder } from "catcolab-documents";
+import { createBinder, type InstanceTable, type TableRow } from "catcolab-documents";
 
 const binder = createBinder();
 
+const tableFor = (tables: InstanceTable[], id: string): InstanceTable => {
+    const table = tables.find((candidate) => candidate.id === id);
+    if (!table) {
+        throw new Error(`Expected table ${id}`);
+    }
+    return table;
+};
+
+const cellFor = (table: InstanceTable, row: TableRow, id: string) =>
+    row.cells[table.headers.findIndex((header) => header.id === id)];
+
 describe("instance row editing", () => {
-    test("set and delete on rows", async () => {
+    test("addRow sets initial values by column label", async () => {
         const schema = await binder.createNotebook(SimpleSchema, { title: "S" });
         const person = schema.add(Entity, { label: "Person" });
         const company = schema.add(Entity, { label: "Company" });
         const str = schema.add(AttrType, { label: "String" });
         const employer = schema.add(Mapping, { label: "employer", from: person, to: company });
-        const nameAttr = schema.add(Attr, { label: "name", from: person, to: str });
-
+        const name = schema.add(Attr, { label: "name", from: person, to: str });
         const instance = await binder.createInstance(schema, { title: "I" });
-        const acme = instance.add(company, {});
-        const fred = instance.add(person, {});
+        const tables = instance.tables;
+        const personTable = tableFor(tables, person.id);
+        const acme = tableFor(tables, company.id).addRow();
 
-        // Setting an attribute records the literal; setting it again replaces it
-        // (rather than accumulating a second value row).
-        fred.set(nameAttr, "Fred");
-        expect(fred.values["name"]).toBe("Fred");
-        fred.set(nameAttr, "Freddy");
-        expect(fred.values["name"]).toBe("Freddy");
-        // The attribute's value rows are never listed as rows of the entity.
-        expect(instance.rowsOf(person).length).toBe(1);
+        const fred = personTable.addRow({ name: "Fred", employer: acme });
 
-        // Setting a mapping points the row at the target row.
-        fred.set(employer, acme);
-        expect((fred.values["employer"] as { id: string }).id).toBe(acme.id);
-
-        // Clearing an attribute removes its value.
-        fred.set(nameAttr, undefined);
-        expect(fred.values["name"]).toBeUndefined();
-
-        // The instance still validates against its schema after edits.
-        const result = await instance.validate();
-        expect(result.tag).toBe("Valid");
-
-        // Deleting a row removes it (and the value rows its attributes owned).
-        fred.delete();
-        expect(instance.rowsOf(person).length).toBe(0);
+        expect(cellFor(personTable, fred, name.id)).toMatchObject({
+            tag: "String",
+            content: "Fred",
+        });
+        expect(cellFor(personTable, fred, employer.id)).toMatchObject({
+            tag: "RowRef",
+            content: { index: 0 },
+        });
     });
 
-    test("update row values by schema name", async () => {
+    test("set replaces and clears row values", async () => {
         const schema = await binder.createNotebook(SimpleSchema, { title: "S" });
         const person = schema.add(Entity, { label: "Person" });
         const company = schema.add(Entity, { label: "Company" });
         const str = schema.add(AttrType, { label: "String" });
-        schema.add(Mapping, { label: "employer", from: person, to: company });
-        schema.add(Attr, { label: "name", from: person, to: str });
-
+        const employer = schema.add(Mapping, { label: "employer", from: person, to: company });
+        const name = schema.add(Attr, { label: "name", from: person, to: str });
         const instance = await binder.createInstance(schema, { title: "I" });
-        const acme = instance.add(company, {});
-        const fred = instance.add(person, { name: "Fred" });
+        const tables = instance.tables;
+        const personTable = tableFor(tables, person.id);
+        const acme = tableFor(tables, company.id).addRow();
+        const fred = personTable.addRow();
 
-        fred.update({ name: "Freddy", employer: acme });
+        fred.set(name, "Fred");
+        expect(cellFor(personTable, fred, name.id)).toMatchObject({
+            tag: "String",
+            content: "Fred",
+        });
+        fred.set(name, "Freddy");
+        expect(cellFor(personTable, fred, name.id)).toMatchObject({
+            tag: "String",
+            content: "Freddy",
+        });
 
-        expect(fred.values["name"]).toBe("Freddy");
-        expect((fred.values["employer"] as { id: string }).id).toBe(acme.id);
-        expect(() => fred.update({ unknown: "value" })).toThrow(
-            'No mapping or attribute named "unknown" on schema object "Person".',
-        );
+        fred.set(employer, acme);
+        expect(cellFor(personTable, fred, employer.id)).toMatchObject({
+            tag: "RowRef",
+            content: { index: 0 },
+        });
+
+        fred.set(name, null);
+        expect(cellFor(personTable, fred, name.id)).toMatchObject({ tag: "Null" });
+        expect((await instance.validate()).tag).toBe("Ok");
     });
 
-    test("two morphisms sharing a name are read independently by UUID", async () => {
+    test("morphisms sharing a label remain independent by UUID", async () => {
         const schema = await binder.createNotebook(SimpleSchema, { title: "S" });
         const person = schema.add(Entity, { label: "Person" });
         const str = schema.add(AttrType, { label: "String" });
-        // Two distinct attributes with the *same* name: they have distinct UUIDs
-        // but collide in the name-keyed `values` view.
         const alias1 = schema.add(Attr, { label: "alias", from: person, to: str });
         const alias2 = schema.add(Attr, { label: "alias", from: person, to: str });
-        expect(alias1.id).not.toBe(alias2.id);
-
         const instance = await binder.createInstance(schema, { title: "I" });
-        const fred = instance.add(person, {});
+        const table = tableFor(instance.tables, person.id);
+        const fred = table.addRow();
 
         fred.set(alias1, "Freddy");
         fred.set(alias2, "Fred the Great");
+        expect(cellFor(table, fred, alias1.id)).toMatchObject({
+            tag: "String",
+            content: "Freddy",
+        });
+        expect(cellFor(table, fred, alias2.id)).toMatchObject({
+            tag: "String",
+            content: "Fred the Great",
+        });
 
-        // UUID-keyed reads keep the two apart.
-        expect(fred.get(alias1)).toBe("Freddy");
-        expect(fred.get(alias2)).toBe("Fred the Great");
-        expect(fred.valuesById[alias1.id]).toBe("Freddy");
-        expect(fred.valuesById[alias2.id]).toBe("Fred the Great");
-
-        // Setting one does not touch the other.
-        fred.set(alias1, "Freddo");
-        expect(fred.get(alias1)).toBe("Freddo");
-        expect(fred.get(alias2)).toBe("Fred the Great");
-
-        // The document stores two independent cell values, one per morphism UUID.
-        const fredRow = Object.values(instance.document.tables)
-            .flatMap((table) => Object.values(table.rows))
-            .find((row) => row.id === fred.id);
-        expect(Object.keys(fredRow?.fields ?? {}).length).toBe(2);
-
-        // Clearing one leaves the other intact.
-        fred.set(alias1, undefined);
-        expect(fred.get(alias1)).toBeUndefined();
-        expect(fred.get(alias2)).toBe("Fred the Great");
+        fred.set(alias1, null);
+        expect(cellFor(table, fred, alias1.id)).toMatchObject({ tag: "Null" });
+        expect(cellFor(table, fred, alias2.id)).toMatchObject({
+            tag: "String",
+            content: "Fred the Great",
+        });
     });
 
-    test("a dangling foreign key makes the instance invalid", async () => {
+    test("update sets and clears values by column label", async () => {
+        const schema = await binder.createNotebook(SimpleSchema, { title: "S" });
+        const person = schema.add(Entity, { label: "Person" });
+        const company = schema.add(Entity, { label: "Company" });
+        const str = schema.add(AttrType, { label: "String" });
+        const employer = schema.add(Mapping, { label: "employer", from: person, to: company });
+        const name = schema.add(Attr, { label: "name", from: person, to: str });
+        const instance = await binder.createInstance(schema, { title: "I" });
+        const tables = instance.tables;
+        const personTable = tableFor(tables, person.id);
+        const acme = tableFor(tables, company.id).addRow();
+        const fred = personTable.addRow();
+
+        fred.update({ name: "Fred", employer: acme });
+
+        expect(cellFor(personTable, fred, name.id)).toMatchObject({
+            tag: "String",
+            content: "Fred",
+        });
+        expect(cellFor(personTable, fred, employer.id)?.tag).toBe("RowRef");
+
+        fred.update({ name: null });
+
+        expect(cellFor(personTable, fred, name.id)).toMatchObject({ tag: "Null" });
+        expect(() => fred.update({ missing: "value" })).toThrow("No mapping or attribute");
+    });
+
+    test("delete removes a row and leaves references dangling", async () => {
         const schema = await binder.createNotebook(SimpleSchema, { title: "S" });
         const person = schema.add(Entity, { label: "Person" });
         const company = schema.add(Entity, { label: "Company" });
         const employer = schema.add(Mapping, { label: "employer", from: person, to: company });
-
         const instance = await binder.createInstance(schema, { title: "I" });
-        const acme = instance.add(company, {});
-        const fred = instance.add(person, { employer: acme });
+        const tables = instance.tables;
+        const companyTable = tableFor(tables, company.id);
+        const personTable = tableFor(tables, person.id);
+        const acme = companyTable.addRow();
+        const fred = personTable.addRow({ employer: acme });
 
-        // With the target present the instance validates.
-        expect((await instance.validate()).tag).toBe("Valid");
-
-        // Delete the target row: `fred`'s `employer` foreign key now dangles.
         acme.delete();
 
-        // The foreign-key triple is retained (pointing at the gone row's id)...
-        expect((fred.get(employer) as { id: string }).id).toBe(acme.id);
-        // ...and validate() reports it rather than silently inferring the missing
-        // codomain object away (which `inferMissingFrom` used to do).
-        expect((await instance.validate()).tag).toBe("Invalid");
+        expect(companyTable.rows).toEqual([]);
+        expect(cellFor(personTable, fred, employer.id)?.tag).toBe("DanglingRowRef");
+        expect(() => acme.delete()).toThrow("No instance row");
+    });
+
+    test("a dangling row reference makes validation return Err", async () => {
+        const schema = await binder.createNotebook(SimpleSchema, { title: "S" });
+        const person = schema.add(Entity, { label: "Person" });
+        const company = schema.add(Entity, { label: "Company" });
+        const employer = schema.add(Mapping, { label: "employer", from: person, to: company });
+        const instance = await binder.createInstance(schema, { title: "I" });
+        const tables = instance.tables;
+        const companyTable = tableFor(tables, company.id);
+        const personTable = tableFor(tables, person.id);
+        const acme = companyTable.addRow();
+        const fred = personTable.addRow();
+        fred.set(employer, acme);
+        expect((await instance.validate()).tag).toBe("Ok");
+
+        const storedCompany = instance.document.tables[company.id];
+        const acmeId = storedCompany?.row_order[0];
+        if (!storedCompany || !acmeId) {
+            throw new Error("Expected stored company row");
+        }
+        delete storedCompany.rows[acmeId];
+        storedCompany.row_order.splice(0, 1);
+
+        // The dangling reference surfaces as its own cell variant carrying
+        // the stored uuid, not as a row handle.
+        expect(cellFor(personTable, fred, employer.id)).toMatchObject({
+            tag: "DanglingRowRef",
+            content: acmeId,
+        });
+
+        const result = await instance.validate();
+        if (result.tag !== "Err") {
+            throw new Error("Expected validation to fail");
+        }
+        expect(result.content.issues).not.toEqual([]);
+        expect(result.content.instance).not.toBeNull();
+        expect(result.content.instance?.tables.map((table) => table.id)).toEqual(
+            tables.map((table) => table.id),
+        );
+        expect(result.content.issues).toContainEqual({
+            message: "`employer` refers to a row that no longer exists",
+            path: ["tables", person.id, "rows", fred.id, "fields", employer.id],
+            issueType: "DanglingRowRef",
+        });
     });
 });

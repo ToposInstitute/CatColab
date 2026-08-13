@@ -22,7 +22,7 @@
 import type { Heads } from "@automerge/automerge";
 import { type DocHandle, type DocumentId, Repo } from "@automerge/automerge-repo";
 import { makeDocumentProjection } from "@automerge/automerge-repo-solid-primitives";
-import { Attr, AttrType, Entity, SimpleSchema } from "catcolab-logics/simple-schema";
+import { Entity, SimpleSchema } from "catcolab-logics/simple-schema";
 import { createRoot } from "solid-js";
 import { v7 } from "uuid";
 import { describe, expect, test } from "vitest";
@@ -154,35 +154,6 @@ describe("notebook transactions (Automerge store)", () => {
         tx.add(Entity, { label: "Person" });
         tx.commit();
         expect(() => tx.commit()).toThrow(/already been committed/);
-    });
-
-    test("instance transactions: rows and values land at commit, undo at revert", async () => {
-        const binder = createBinder(createAutomergeStore());
-        const schema = await binder.createNotebook(SimpleSchema, { title: "Example schema" });
-        const person = schema.add(Entity, { label: "Person" });
-        const str = schema.add(AttrType, { label: "String" });
-        schema.add(Attr, { label: "name", from: person, to: str });
-
-        const instance = await binder.createInstance(schema, { title: "Instance" });
-        instance.add(person, { name: "Alice" });
-
-        const tx = instance.beginTransaction();
-        tx.add(person, { name: "Bob" });
-        tx.add(person, { name: "Carol" });
-
-        // Only the draft sees the new rows until commit.
-        expect(tx.rowsOf(person)).toHaveLength(3);
-        expect(instance.rowsOf(person)).toHaveLength(1);
-
-        const commit = tx.commit();
-        expect(instance.rowsOf(person).map((row) => row.values["name"])).toEqual([
-            "Alice",
-            "Bob",
-            "Carol",
-        ]);
-
-        instance.revertCommit(commit);
-        expect(instance.rowsOf(person).map((row) => row.values["name"])).toEqual(["Alice"]);
     });
 });
 

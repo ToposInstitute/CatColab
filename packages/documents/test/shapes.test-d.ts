@@ -346,6 +346,7 @@ describe("generic shapes (type level)", () => {
     test("instance table objects must be declared objects", () => {
         defineShape({
             theory: "valid-instance-shape",
+            getCoreTheory: SimpleSchema.getCoreTheory,
             objects: [BasicObj, EntityObj],
             supportsInstances: {
                 tableObjects: [EntityObj],
@@ -355,6 +356,7 @@ describe("generic shapes (type level)", () => {
         // @ts-expect-error EntityObj is not declared in the shape's objects list.
         defineShape({
             theory: "invalid-instance-shape",
+            getCoreTheory: SimpleSchema.getCoreTheory,
             objects: [BasicObj],
             supportsInstances: {
                 tableObjects: [EntityObj],
@@ -364,9 +366,24 @@ describe("generic shapes (type level)", () => {
         // @ts-expect-error Table objects require a declared objects list.
         defineShape({
             theory: "missing-instance-objects",
+            getCoreTheory: SimpleSchema.getCoreTheory,
             supportsInstances: {
                 tableObjects: [EntityObj],
             },
+        });
+
+        // @ts-expect-error Instance support requires a theory.
+        defineShape({
+            getCoreTheory: SimpleSchema.getCoreTheory,
+            objects: [EntityObj],
+            supportsInstances: { tableObjects: [EntityObj] },
+        });
+
+        // @ts-expect-error Instance support requires a core theory loader.
+        defineShape({
+            theory: "missing-instance-core-theory",
+            objects: [EntityObj],
+            supportsInstances: { tableObjects: [EntityObj] },
         });
     });
 });

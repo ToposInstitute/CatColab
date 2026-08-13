@@ -1,7 +1,7 @@
 import { Attr, AttrType, Entity, Mapping, SimpleSchema } from "catcolab-logics/simple-schema";
 import { init_db, q, type Database } from "datascript";
 
-import { type Instance, isRow, type Notebook } from "catcolab-documents";
+import { type InstanceTable, type Notebook, type TableRow } from "catcolab-documents";
 
 export const dataScriptAttributes = {
     schemaId: "catcolab/schema-id",
@@ -31,7 +31,14 @@ export type DataScriptProjection = {
 type Datom = [number, string, unknown];
 type DataScriptDocument = {
     schema: Notebook<typeof SimpleSchema>;
-    instance: Instance<(typeof SimpleSchema)["Instance"]>;
+    tables: () => InstanceTable[];
+    rowId: (entity: { readonly id: string }, row: TableRow) => string | undefined;
+    rowValue: (entity: { readonly id: string }, row: TableRow, morphismId: string) => unknown;
+    rowReferenceId: (
+        entity: { readonly id: string },
+        row: TableRow,
+        morphismId: string,
+    ) => string | undefined;
 };
 
 /** Build an immutable DataScript database from the demo's current visible data. */
@@ -50,10 +57,14 @@ export function projectDataScript(doc: DataScriptDocument): DataScriptProjection
     let nextEid = 1;
     const objectEids = new Map(schemaObjects.map((object) => [object.id, nextEid++]));
     const morphismEids = new Map(morphisms.map(({ cell }) => [cell.id, nextEid++]));
+    const tables = new Map(doc.tables().map((table) => [table.id, table]));
     const rows = entities.flatMap((entity) =>
-        doc.instance.rowsOf(entity).map((row) => ({ entity, row })),
+        (tables.get(entity.id)?.rows ?? []).flatMap((row) => {
+            const rowId = doc.rowId(entity, row);
+            return rowId === undefined ? [] : [{ entity, row, rowId }];
+        }),
     );
-    const rowEids = new Map(rows.map(({ row }) => [row.id, nextEid++]));
+    const rowEids = new Map(rows.map(({ rowId }) => [rowId, nextEid++]));
 
     const entitySegments = uniqueSegments(
         entities.map((entity) => ({ id: entity.id, label: entity.label })),
@@ -131,14 +142,14 @@ export function projectDataScript(doc: DataScriptDocument): DataScriptProjection
         return eid;
     };
 
-    for (const { entity, row } of rows) {
-        const eid = rowEids.get(row.id);
+    for (const { entity, row, rowId } of rows) {
+        const eid = rowEids.get(rowId);
         const entityEid = objectEids.get(entity.id);
         if (eid === undefined || entityEid === undefined) {
             continue;
         }
         datoms.push(
-            [eid, dataScriptAttributes.rowId, row.id],
+            [eid, dataScriptAttributes.rowId, rowId],
             [eid, dataScriptAttributes.entity, entityEid],
         );
 
@@ -150,16 +161,17 @@ export function projectDataScript(doc: DataScriptDocument): DataScriptProjection
             if (!queryAttribute) {
                 continue;
             }
-            const value = row.get(cell);
+            const value = doc.rowValue(entity, row, cell.id);
             if (value === undefined) {
                 continue;
             }
             if (kind === "mapping") {
-                if (isRow(value)) {
+                const targetRowId = doc.rowReferenceId(entity, row, cell.id);
+                if (targetRowId !== undefined) {
                     datoms.push([
                         eid,
                         queryAttribute,
-                        rowEids.get(value.id) ?? danglingEid(value.id),
+                        rowEids.get(targetRowId) ?? danglingEid(targetRowId),
                     ]);
                 }
             } else if (

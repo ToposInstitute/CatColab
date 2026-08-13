@@ -12,11 +12,13 @@ import {
     type DocumentStore,
     type InstanceDocument,
     type Instance,
-    isRow,
+    type InstanceTable,
     type ModelDocument,
     type Notebook,
     type ObjectCell,
-    type Row,
+    type TableRow,
+    type TableCell,
+    isCellValid,
 } from "catcolab-documents";
 import {
     type FloatToIntegerMigrationPlan,
@@ -46,6 +48,7 @@ type SolidStoreHandle = {
 };
 
 const handleById = new Map<string, SolidStoreHandle>();
+const handleByDocument = new WeakMap<object, SolidStoreHandle>();
 let storeBatchDepth = 0;
 const pendingStoreHandles = new Set<SolidStoreHandle>();
 
@@ -88,6 +91,7 @@ const solidStore: DocumentStore<SolidStoreHandle> = {
             ref: { id, version: null, server: "" },
         };
         handleById.set(id, handle);
+        handleByDocument.set(docView, handle);
         return handle;
     },
     getDocumentView: (handle) => handle.docView,
@@ -147,19 +151,19 @@ export type SheetTableCreation = {
  * blank or nothing matches; the caller leaves such references unset.
  */
 export function resolveLinkTarget(
-    doc: Pick<DemoDocument, "schema" | "instance">,
+    doc: Pick<DemoDocument, "schema" | "rowsOf" | "rowValue">,
     targetEntityId: string,
     text: string,
-): Row | undefined {
+): TableRow | undefined {
     const needle = text.trim();
     if (!needle) {
         return undefined;
     }
     const attrs = doc.schema.cellsOf(Attr).filter((cell) => cell.from?.id === targetEntityId);
-    const rows = doc.instance.rowsOf({ id: targetEntityId });
-    const matches = (row: Row, attr: (typeof attrs)[number]) => {
-        const value = row.get(attr);
-        return value !== undefined && !isRow(value) && String(value) === needle;
+    const rows = doc.rowsOf({ id: targetEntityId });
+    const matches = (row: TableRow, attr: (typeof attrs)[number]) => {
+        const value = doc.rowValue({ id: targetEntityId }, row, attr.id);
+        return value !== undefined && !(typeof value === "object") && String(value) === needle;
     };
     const first = attrs[0];
     if (first) {
@@ -174,6 +178,25 @@ export function resolveLinkTarget(
 export type DemoDocument = {
     schema: Notebook<typeof SimpleSchema, SolidStoreHandle>;
     instance: Instance<(typeof SimpleSchema)["Instance"], SolidStoreHandle>;
+    /** Best-effort tables supplied by instance validation. */
+    tables: () => InstanceTable[];
+    refreshTables: () => Promise<InstanceTable[]>;
+    tableFor: (entity: { readonly id: string }) => InstanceTable | undefined;
+    rowsOf: (entity: { readonly id: string }) => TableRow[];
+    rowId: (entity: { readonly id: string }, row: TableRow) => string | undefined;
+    rowValue: (entity: { readonly id: string }, row: TableRow, morphismId: string) => unknown;
+    rowReferenceId: (
+        entity: { readonly id: string },
+        row: TableRow,
+        morphismId: string,
+    ) => string | undefined;
+    setRowValue: (
+        entity: { readonly id: string },
+        row: TableRow,
+        morphism: { readonly id: string },
+        value?: TableRow | string | number | boolean,
+    ) => void;
+    addRow: (entity: { readonly id: string }) => TableRow;
     /** The fixed scalar attribute-type cells, keyed by name. */
     attrTypes: Record<AttrTypeName, NotebookCell<typeof AttrType>>;
     /** Read in a reactive scope to re-run when the schema changes. */
@@ -191,11 +214,19 @@ export type DemoDocument = {
         values?: ReadonlyMap<string, number | undefined>,
     ) => FloatToIntegerMigrationPlan;
     /** Create an entity, its attributes, and its rows from free-sheet columns atomically. */
-    applySheetTableCreation: (creation: SheetTableCreation) => NotebookCell<typeof Entity>;
+    applySheetTableCreation: (creation: SheetTableCreation) => Promise<NotebookCell<typeof Entity>>;
     /** Wipe the persisted schema + instance and reload the page from scratch. */
     clear: () => void;
     /** Persistence failure that needs user recovery, if any. */
     storageProblem: () => string | undefined;
+};
+
+/** Decode the public table cell representation into the demo's editor vocabulary. */
+const cellValue = (cell: TableCell | undefined): unknown => {
+    if (!cell || !isCellValid(cell)) {
+        return undefined;
+    }
+    return cell.tag === "Null" ? undefined : cell.content;
 };
 
 /** The localStorage key under which the demo's schema + instance are persisted. */
@@ -312,7 +343,55 @@ export async function createDemoDocument(): Promise<DemoDocument> {
 
     const [schemaVersion, setSchemaVersion] = createSignal(0);
     const [instanceVersion, setInstanceVersion] = createSignal(0);
-
+    const instanceHandle = handleByDocument.get(instance.document as object);
+    if (!instanceHandle) {
+        throw new Error("Instance is not attached to the demo store.");
+    }
+    const [instanceTables, setInstanceTables] = createSignal<InstanceTable[]>(
+        instance.tables,
+    );
+    const instanceSnapshot = () => solidStore.copyValue(instanceHandle, instance.document);
+    const tableFor = (entity: { readonly id: string }) =>
+        instanceTables().find((table) => table.id === entity.id);
+    const refreshTables = async () => {
+        const tables = instance.tables;
+        setInstanceTables(tables);
+        return tables;
+    };
+    const rowsOf = (entity: { readonly id: string }) => tableFor(entity)?.rows ?? [];
+    const rowId = (entity: { readonly id: string }, row: TableRow) =>
+        instance.document.tables[entity.id]?.row_order[row.index];
+    const rowValue = (entity: { readonly id: string }, row: TableRow, morphismId: string) => {
+        const table = tableFor(entity);
+        return cellValue(
+            table
+                ? row.cells[table.headers.findIndex((header) => header.id === morphismId)]
+                : undefined,
+        );
+    };
+    const rowReferenceId = (entity: { readonly id: string }, row: TableRow, morphismId: string) => {
+        const id = rowId(entity, row);
+        if (!id) {
+            return undefined;
+        }
+        const value = instance.document.tables[entity.id]?.rows[id]?.fields[morphismId];
+        return value && typeof value === "object" && "RowRef" in value ? value.RowRef : undefined;
+    };
+    const setRowValue = (
+        _entity: { readonly id: string },
+        row: TableRow,
+        morphism: { readonly id: string },
+        value?: TableRow | string | number | boolean,
+    ) => {
+        row.set(morphism, value ?? null);
+    };
+    const addRow = (entity: { readonly id: string }) => {
+        const table = tableFor(entity);
+        if (!table) {
+            throw new Error(`No instance table for entity "${entity.id}".`);
+        }
+        return table.addRow();
+    };
     // The latest persisted history states, kept here so the single `persist()`
     // below writes them alongside the document dumps. They are updated by each
     // history's `onChange`, and seeded from any persisted state so a reload
@@ -331,7 +410,7 @@ export async function createDemoDocument(): Promise<DemoDocument> {
         try {
             const state: PersistedState = {
                 schema: schema.dump(),
-                instance: instance.dump(),
+                instance: instanceSnapshot(),
                 ...(schemaHistoryState ? { schemaHistory: schemaHistoryState } : {}),
                 ...(instanceHistoryState ? { instanceHistory: instanceHistoryState } : {}),
             };
@@ -435,10 +514,10 @@ export async function createDemoDocument(): Promise<DemoDocument> {
         },
     });
     const instanceHistory = createLocalHistory<InstanceDocument>({
-        capture: () => instance.dump(),
+        capture: instanceSnapshot,
         restore: (snapshot) => {
             runRestore(() => {
-                solidStore.changeDocument(instance.handle, (doc) => {
+                solidStore.changeDocument(instanceHandle, (doc) => {
                     replaceDocument(doc, snapshot);
                 });
             });
@@ -458,7 +537,7 @@ export async function createDemoDocument(): Promise<DemoDocument> {
         instanceDirty = true;
         scheduleFlush();
     });
-    instance.onChange(() => {
+    solidStore.subscribe(instanceHandle, () => {
         instanceDirty = true;
         scheduleFlush();
     });
@@ -480,7 +559,7 @@ export async function createDemoDocument(): Promise<DemoDocument> {
         rule: FloatToIntegerRule,
         values?: ReadonlyMap<string, number | undefined>,
     ): FloatToIntegerMigrationPlan => {
-        const plan = planFloatToIntegerMigration({ instance }, attribute, rule);
+        const plan = planFloatToIntegerMigration({ rowsOf, rowId, rowValue }, attribute, rule);
         const hasCompleteValues =
             values !== undefined &&
             plan.rows.every((row) => {
@@ -507,24 +586,24 @@ export async function createDemoDocument(): Promise<DemoDocument> {
         instanceHistory.recordNow();
 
         const schemaBefore = schema.dump();
-        const instanceBefore = instance.dump();
+        const instanceBefore = instanceSnapshot();
         runStoreBatch(() => {
             try {
                 attribute.update({ to: attrTypes.Integer });
                 for (const row of plan.rows) {
                     if (values?.has(row.rowId)) {
-                        row.row.set(attribute, values.get(row.rowId));
+                        setRowValue(attribute.from!, row.row, attribute, values.get(row.rowId));
                     } else if (row.classification === "converted") {
-                        row.row.set(attribute, row.output);
+                        setRowValue(attribute.from!, row.row, attribute, row.output);
                     } else if (row.classification === "cleared") {
-                        row.row.set(attribute, undefined);
+                        setRowValue(attribute.from!, row.row, attribute, undefined);
                     }
                 }
             } catch (error) {
                 solidStore.changeDocument(schema.handle, (doc) => {
                     replaceDocument(doc, schemaBefore);
                 });
-                solidStore.changeDocument(instance.handle, (doc) => {
+                solidStore.changeDocument(instanceHandle, (doc) => {
                     replaceDocument(doc, instanceBefore);
                 });
                 throw error;
@@ -547,7 +626,9 @@ export async function createDemoDocument(): Promise<DemoDocument> {
      * the schema and instance histories, so a single undo removes the whole
      * table again. Returns the new entity cell.
      */
-    const applySheetTableCreation = (creation: SheetTableCreation): NotebookCell<typeof Entity> => {
+    const applySheetTableCreation = async (
+        creation: SheetTableCreation,
+    ): Promise<NotebookCell<typeof Entity>> => {
         // Finish any edits pending in the history debounce before establishing
         // the shared creation boundary.
         flush();
@@ -555,7 +636,7 @@ export async function createDemoDocument(): Promise<DemoDocument> {
         instanceHistory.recordNow();
 
         const schemaBefore = schema.dump();
-        const instanceBefore = instance.dump();
+        const instanceBefore = instanceSnapshot();
         // Not batched through `runStoreBatch`: cell handles read through the
         // *published* document view, so a cell added inside a batch has no
         // readable id until the batch ends — but each later step here needs the
@@ -585,8 +666,12 @@ export async function createDemoDocument(): Promise<DemoDocument> {
                         from: entity,
                         to: target,
                     });
-                    return (row: Row, text: string) => {
-                        const targetRow = resolveLinkTarget({ schema, instance }, targetId, text);
+                    return (row: TableRow, text: string) => {
+                        const targetRow = resolveLinkTarget(
+                            { schema, rowsOf, rowValue },
+                            targetId,
+                            text,
+                        );
                         if (targetRow) {
                             row.set(mapping, targetRow);
                         }
@@ -598,15 +683,18 @@ export async function createDemoDocument(): Promise<DemoDocument> {
                     from: entity,
                     to: attrTypes[type],
                 });
-                return (row: Row, text: string) => {
+                return (row: TableRow, text: string) => {
                     const value = parseCellValue(text, type);
                     if (value !== undefined) {
-                        row.set(attr, value);
+                        setRowValue(entity, row, attr, value);
                     }
                 };
             });
             for (const rowValues of creation.rows) {
-                const row = instance.add(entity, {});
+                if (!tableFor(entity)) {
+                    await refreshTables();
+                }
+                const row = addRow(entity);
                 for (const [index, setter] of setters.entries()) {
                     setter(row, rowValues[index] ?? "");
                 }
@@ -615,7 +703,7 @@ export async function createDemoDocument(): Promise<DemoDocument> {
             solidStore.changeDocument(schema.handle, (doc) => {
                 replaceDocument(doc, schemaBefore);
             });
-            solidStore.changeDocument(instance.handle, (doc) => {
+            solidStore.changeDocument(instanceHandle, (doc) => {
                 replaceDocument(doc, instanceBefore);
             });
             throw error;
@@ -633,6 +721,15 @@ export async function createDemoDocument(): Promise<DemoDocument> {
     return {
         schema,
         instance,
+        tables: instanceTables,
+        refreshTables,
+        tableFor,
+        rowsOf,
+        rowId,
+        rowValue,
+        rowReferenceId,
+        setRowValue,
+        addRow,
         attrTypes,
         trackSchema: schemaVersion,
         trackInstance: instanceVersion,
@@ -722,8 +819,8 @@ export function attrCells(doc: DemoDocument) {
 }
 
 /** All rows of an entity in the instance. */
-export function rowsOf(doc: DemoDocument, entity: ObjectCell): Row[] {
-    return doc.instance.rowsOf(entity);
+export function rowsOf(doc: DemoDocument, entity: ObjectCell): TableRow[] {
+    return doc.rowsOf(entity);
 }
 
 export { CellKind };

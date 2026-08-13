@@ -9,13 +9,21 @@ import "./dialog.css";
 /** A dialog overlaid on another window.
 
 This component is a styled wrapper around corvu's `Dialog`.
+
+The dialog is always controlled: `open` is required. Do *not* make it optional
+and forward it with a conditional spread like `{...(open === undefined ? {} :
+{ open })}`. Solid compiles a spread into `mergeProps`, whose proxy evaluates
+the spread expression whenever *any* prop absent from the sibling static props
+is read. corvu builds its whole context and children subtree inside a memo that
+reads `contextId`, so such a spread makes that memo depend on `open`, and every
+open/close disposes and recreates the dialog subtree instead of showing it.
  */
 export function Dialog(props: {
-    open?: boolean;
+    open: boolean;
     onOpenChange: (open: boolean) => void;
     children: JSX.Element;
-    title?: JSX.Element | "string";
-    trigger?: Component<ComponentProps<"button">>;
+    title?: JSX.Element | undefined;
+    trigger?: Component<ComponentProps<"button">> | undefined;
 }) {
     return (
         <Root open={props.open} onOpenChange={props.onOpenChange} closeOnOutsideFocus={false}>
@@ -35,7 +43,7 @@ export function Dialog(props: {
 }
 
 const CloseButton = (props: ComponentProps<"button">) => (
-    <IconButton {...props}>
+    <IconButton {...props} aria-label="Close">
         <X width={20} height={20} />
     </IconButton>
 );

@@ -7,9 +7,7 @@ import { stringify as uuidStringify } from "uuid";
 
 import type { UserSettings } from "catcolab-api";
 import { RelativeTime, createVirtualList, DocumentTypeIcon } from "catcolab-ui-components";
-import type { LinkType } from "catlog-wasm";
 import { TheoryLibraryContext } from "../theory";
-import { assertExhaustive } from "../util/assert_exhaustive";
 import { isDocumentVisible } from "./user_settings";
 import { currentUserPermission, formatOwners, useUserState } from "./user_state_context";
 
@@ -44,45 +42,6 @@ export function filterDocuments(
 
 /** Fixed row height in pixels — must match --doc-row-height in CSS. */
 const ROW_HEIGHT = 45;
-
-type ParentDocumentDetails = {
-    relationType: LinkType;
-    prefix: string;
-    orphanedPrefix: string;
-};
-
-function parentDocumentDetails(typeName: DocInfo["typeName"]): ParentDocumentDetails | undefined {
-    switch (typeName) {
-        case "model":
-            return undefined;
-        case "diagram":
-            return {
-                relationType: "diagram-in",
-                prefix: "Diagram in ",
-                orphanedPrefix: "Orphaned diagram",
-            };
-        case "instance":
-            return {
-                relationType: "instance-of",
-                prefix: "Instance of ",
-                orphanedPrefix: "Orphaned instance",
-            };
-        case "analysis":
-            return {
-                relationType: "analysis-of",
-                prefix: "Analysis of ",
-                orphanedPrefix: "Orphaned analysis",
-            };
-        case "llmconversation":
-            return {
-                relationType: "llmconversation-of",
-                prefix: "LLM conversation about ",
-                orphanedPrefix: "Orphaned LLM conversation",
-            };
-        default:
-            return assertExhaustive(typeName);
-    }
-}
 
 interface DocumentListProps {
     documents: () => (DocInfo & { refId: string })[];
@@ -183,32 +142,52 @@ function DocumentRow(props: DocumentRowProps) {
     });
 
     const parentInfo = createMemo(() => {
-        const details = parentDocumentDetails(props.doc.typeName);
-        if (!details) {
+        // Derive the parent ref ID from dependsOn relations.
+        const parentRelType =
+            props.doc.typeName === "diagram"
+                ? "diagram-in"
+                : props.doc.typeName === "instance"
+                  ? "instance-in"
+                  : props.doc.typeName === "analysis"
+                    ? "analysis-of"
+                    : undefined;
+        if (!parentRelType) {
             return undefined;
         }
-        const relation = props.doc.dependsOn.find(
-            (relation) => relation.relationType === details.relationType,
-        );
-        if (!relation) {
+        const rel = props.doc.dependsOn.find((r) => r.relationType === parentRelType);
+        if (!rel) {
             return undefined;
         }
-        const parentId = uuidStringify(relation.refId);
+        const parentId = uuidStringify(rel.refId);
         const parentDoc = userState.documents[parentId];
+
+        // If parent document doesn't exist, show as orphaned
         if (!parentDoc) {
-            return {
-                prefix: details.orphanedPrefix,
-                parentId: undefined,
-                parentName: undefined,
-                parentType: undefined,
-            };
+            let prefix = "";
+            if (props.doc.typeName === "diagram") {
+                prefix = "Orphaned diagram";
+            } else if (props.doc.typeName === "instance") {
+                prefix = "Orphaned instance";
+            } else if (props.doc.typeName === "analysis") {
+                prefix = "Orphaned analysis";
+            } else {
+                return undefined;
+            }
+            return { prefix, parentId: undefined, parentName: undefined, parentType: undefined };
         }
-        return {
-            prefix: details.prefix,
-            parentId,
-            parentName: parentDoc.name || "Untitled",
-            parentType: parentDoc.typeName,
-        };
+
+        const parentName = parentDoc.name || "Untitled";
+        let prefix = "";
+        if (props.doc.typeName === "diagram") {
+            prefix = "Diagram in ";
+        } else if (props.doc.typeName === "instance") {
+            prefix = "Data instance of ";
+        } else if (props.doc.typeName === "analysis") {
+            prefix = "Analysis of ";
+        } else {
+            return undefined;
+        }
+        return { prefix, parentId, parentName, parentType: parentDoc.typeName };
     });
 
     return (

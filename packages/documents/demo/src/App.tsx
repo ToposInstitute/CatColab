@@ -240,9 +240,9 @@ function Loaded(props: {
             props.doc.clear();
         }
     };
-    const loadExample = () => {
+    const loadExample = async () => {
         if (confirm("Replace the current schema and instance with the planets example?")) {
-            loadExampleData(props.doc);
+            await loadExampleData(props.doc);
             setQuery(EXAMPLE_QUERY);
             props.setScriptOpen(false);
         }

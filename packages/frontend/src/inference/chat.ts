@@ -10,8 +10,7 @@ import type {
 import { type ContextExecScope, type EvalResult, contextExec } from "./context_exec";
 
 const OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1";
-/** Default LLM used for newly created CatColab conversations. */
-export const DEFAULT_LLM_MODEL = "z-ai/glm-5.2";
+const MODEL = "z-ai/glm-5.2";
 
 /** Maximum model completions, including tool-use continuations, in one user turn. */
 export const MAX_CHAT_COMPLETIONS_PER_TURN = 10;
@@ -57,7 +56,7 @@ export async function runOpenAIChatTurn(
     openAITranscript: readonly OpenAITranscriptMessage[],
     scope: ContextExecScope,
     onContent?: (delta: string, snapshot: string) => void,
-    model = DEFAULT_LLM_MODEL,
+    model = MODEL,
 ): Promise<OpenAIChatTurnResult> {
     const contextScope: ContextExecScope = { files: EMPTY_FILES, ...scope };
 

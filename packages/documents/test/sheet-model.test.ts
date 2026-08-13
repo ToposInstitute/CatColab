@@ -1,7 +1,6 @@
 import { Attr, Entity, Mapping } from "catcolab-logics/simple-schema";
 import { describe, expect, test } from "vitest";
 
-import { isRow } from "catcolab-documents";
 import { createDemoDocument } from "../demo/src/document";
 import {
     cellParsesAs,
@@ -222,7 +221,7 @@ describe("sheet table creation", () => {
             undefined,
             ["name", "radius", "habitable"],
         );
-        const entity = doc.applySheetTableCreation({
+        const entity = await doc.applySheetTableCreation({
             entityName: "Planet",
             columns: plan.columns.map((column) => ({
                 name: column.name,
@@ -237,39 +236,39 @@ describe("sheet table creation", () => {
         expect(attrs.map((cell) => cell.label)).toEqual(["name", "radius", "habitable"]);
         expect(attrs.map((cell) => cell.to?.label)).toEqual(["String", "Float", "Boolean"]);
 
-        const rows = doc.instance.rowsOf(entity);
+        const rows = doc.rowsOf(entity);
         expect(rows).toHaveLength(2);
         const name = attrs[0]!;
         const radius = attrs[1]!;
         const habitable = attrs[2]!;
-        expect(rows.map((row) => row.get(name))).toEqual(["Mars", "Earth"]);
-        expect(rows.map((row) => row.get(radius))).toEqual([
+        expect(rows.map((row) => doc.rowValue(entity, row, name.id))).toEqual(["Mars", "Earth"]);
+        expect(rows.map((row) => doc.rowValue(entity, row, radius.id))).toEqual([
             Math.fround(3389.5),
             Math.fround(6371),
         ]);
-        expect(rows.map((row) => row.get(habitable))).toEqual([false, true]);
+        expect(rows.map((row) => doc.rowValue(entity, row, habitable.id))).toEqual([false, true]);
 
         // One undo removes the whole table from both documents together.
         doc.schemaHistory.onUndo();
         expect(doc.schema.cellsOf(Entity).some((cell) => cell.id === entity.id)).toBe(false);
-        expect(doc.instance.rowsOf(entity)).toHaveLength(0);
+        expect(doc.rowsOf(entity)).toHaveLength(0);
 
         doc.instanceHistory.onRedo();
         expect(doc.schema.cellsOf(Entity).some((cell) => cell.id === entity.id)).toBe(true);
-        expect(doc.instance.rowsOf(entity)).toHaveLength(2);
+        expect(doc.rowsOf(entity)).toHaveLength(2);
     });
 
     test("link columns become mappings with references resolved by value", async () => {
         localStorage.clear();
         const doc = await createDemoDocument();
 
-        const planet = doc.applySheetTableCreation({
+        const planet = await doc.applySheetTableCreation({
             entityName: "Planet",
             columns: [{ name: "name", type: "String" }],
             rows: [["Mars"], ["Jupiter"]],
         });
 
-        const moon = doc.applySheetTableCreation({
+        const moon = await doc.applySheetTableCreation({
             entityName: "Moon",
             columns: [
                 { name: "name", type: "String" },
@@ -286,31 +285,37 @@ describe("sheet table creation", () => {
         expect(orbits?.label).toBe("orbits");
         expect(orbits?.to?.label).toBe("Planet");
 
-        const planetRows = doc.instance.rowsOf(planet);
-        const targets = doc.instance.rowsOf(moon).map((row) => {
-            const value = row.get(orbits!);
-            return isRow(value) ? value.id : undefined;
+        const planetRows = doc.rowsOf(planet);
+        const targets = doc.rowsOf(moon).map((row) => {
+            const value = doc.rowValue(moon, row, orbits!.id);
+            return typeof value === "object" && value
+                ? doc.rowId(planet, value as (typeof planetRows)[number])
+                : undefined;
         });
-        expect(targets).toEqual([planetRows[0]?.id, planetRows[1]?.id, undefined]);
+        expect(targets).toEqual([
+            planetRows[0] && doc.rowId(planet, planetRows[0]),
+            planetRows[1] && doc.rowId(planet, planetRows[1]),
+            undefined,
+        ]);
 
         // One undo removes the Moon table, its mapping, and its rows together.
         doc.schemaHistory.onUndo();
         expect(doc.schema.cellsOf(Mapping).some((cell) => cell.from?.id === moon.id)).toBe(false);
-        expect(doc.instance.rowsOf(moon)).toHaveLength(0);
-        expect(doc.instance.rowsOf(planet)).toHaveLength(2);
+        expect(doc.rowsOf(moon)).toHaveLength(0);
+        expect(doc.rowsOf(planet)).toHaveLength(2);
     });
 
     test("a link column whose target table is gone fails cleanly", async () => {
         localStorage.clear();
         const doc = await createDemoDocument();
 
-        expect(() =>
+        await expect(
             doc.applySheetTableCreation({
                 entityName: "Moon",
                 columns: [{ name: "orbits", type: linkTag("no-such-entity") }],
                 rows: [["Mars"]],
             }),
-        ).toThrow(/no longer exists/);
+        ).rejects.toThrow(/no longer exists/);
         // The rollback leaves no half-created entity behind.
         expect(doc.schema.cellsOf(Entity).some((cell) => cell.label === "Moon")).toBe(false);
     });
@@ -319,14 +324,14 @@ describe("sheet table creation", () => {
         localStorage.clear();
         const doc = await createDemoDocument();
 
-        const entity = doc.applySheetTableCreation({
+        const entity = await doc.applySheetTableCreation({
             entityName: "Reading",
             columns: [{ name: "value", type: "Integer" }],
             rows: [["12"], ["12.5"], ["oops"]],
         });
 
         const value = doc.schema.cellsOf(Attr).find((cell) => cell.from?.id === entity.id)!;
-        expect(doc.instance.rowsOf(entity).map((row) => row.get(value))).toEqual([
+        expect(doc.rowsOf(entity).map((row) => doc.rowValue(entity, row, value.id))).toEqual([
             12,
             undefined,
             undefined,

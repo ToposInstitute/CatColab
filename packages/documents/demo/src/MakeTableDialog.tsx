@@ -79,9 +79,9 @@ export function MakeTableDialog(props: {
         rows: props.plan.rows,
     });
 
-    const apply = () => {
+    const apply = async () => {
         try {
-            props.doc.applySheetTableCreation(creation());
+            await props.doc.applySheetTableCreation(creation());
             props.onApplied();
         } catch (error) {
             setApplyError(error instanceof Error ? error.message : String(error));

@@ -1,34 +1,26 @@
-import { Attr, AttrType, Entity, Mapping, SimpleSchema } from "catcolab-logics/simple-schema";
+import { Attr, Entity, Mapping } from "catcolab-logics/simple-schema";
 import { describe, expect, test } from "vitest";
 
-import { createBinder } from "catcolab-documents";
 import { projectDataScript, queryDataScript } from "../demo/src/datascript";
+import { createDemoDocument } from "../demo/src/document";
 import { EXAMPLE_QUERY, loadExampleData } from "../demo/src/example-data";
 
-const binder = createBinder();
-
 async function createDocument() {
-    const schema = await binder.createNotebook(SimpleSchema, { title: "Schema" });
-    const instance = await binder.createInstance(schema, { title: "Instance" });
+    localStorage.clear();
+    const doc = await createDemoDocument();
     return {
-        schema,
-        instance,
-        stringType: schema.add(AttrType, { label: "String" }),
+        ...doc,
+        stringType: doc.attrTypes.String,
     };
 }
 
 describe("demo DataScript projection", () => {
     test("loads and queries the planets example", async () => {
-        const schema = await binder.createNotebook(SimpleSchema, { title: "Schema" });
-        const instance = await binder.createInstance(schema, { title: "Instance" });
-        const attrTypes = {
-            String: schema.add(AttrType, { label: "String" }),
-            Boolean: schema.add(AttrType, { label: "Boolean" }),
-            Integer: schema.add(AttrType, { label: "Integer" }),
-            Float: schema.add(AttrType, { label: "Float" }),
-        };
+        localStorage.clear();
+        const doc = await createDemoDocument();
+        const { schema, instance } = doc;
 
-        loadExampleData({ schema, instance, attrTypes });
+        await loadExampleData(doc);
 
         expect(schema.cellsOf(Entity).map((cell) => cell.label)).toEqual([
             "Planet",
@@ -37,10 +29,10 @@ describe("demo DataScript projection", () => {
             "Orbit",
             "Moon",
         ]);
-        expect(instance.rows().length).toBe(115);
-        await expect(instance.validate()).resolves.toMatchObject({ tag: "Valid" });
+        expect(doc.tables().flatMap((table) => table.rows)).toHaveLength(115);
+        await expect(instance.validate()).resolves.toMatchObject({ tag: "Ok" });
 
-        const result = queryDataScript(projectDataScript({ schema, instance }), EXAMPLE_QUERY);
+        const result = queryDataScript(projectDataScript(doc), EXAMPLE_QUERY);
         expect(new Set(result.rows.map(([planetName]) => planetName))).toEqual(
             new Set(["Kepler 16 b", "PSR B1620 26 b"]),
         );
@@ -55,8 +47,22 @@ describe("demo DataScript projection", () => {
         doc.schema.add(Attr, { label: "name", from: company, to: doc.stringType });
         doc.schema.add(Mapping, { label: "employer", from: person, to: company });
 
-        const acme = doc.instance.add(company, { name: "Acme" });
-        doc.instance.add(person, { name: "Fred", employer: acme });
+        await doc.refreshTables();
+        const acme = doc.addRow(company);
+        doc.setRowValue(
+            company,
+            acme,
+            doc.schema.cellsOf(Attr).find((c) => c.from?.id === company.id)!,
+            "Acme",
+        );
+        const fred = doc.addRow(person);
+        doc.setRowValue(
+            person,
+            fred,
+            doc.schema.cellsOf(Attr).find((c) => c.from?.id === person.id)!,
+            "Fred",
+        );
+        doc.setRowValue(person, fred, doc.schema.cellsOf(Mapping)[0]!, acme);
 
         const result = queryDataScript(
             projectDataScript(doc),
@@ -84,9 +90,10 @@ describe("demo DataScript projection", () => {
             from: person,
             to: doc.stringType,
         });
-        const row = doc.instance.add(person, {});
-        row.set(alias1, "Fred");
-        row.set(alias2, "Freddy");
+        await doc.refreshTables();
+        const row = doc.addRow(person);
+        doc.setRowValue(person, row, alias1, "Fred");
+        doc.setRowValue(person, row, alias2, "Freddy");
 
         const duplicateProjection = projectDataScript(doc);
         const duplicateAttributes = duplicateProjection.attributes.map(
@@ -115,10 +122,11 @@ describe("demo DataScript projection", () => {
         const person = doc.schema.add(Entity, { label: "Person" });
         const company = doc.schema.add(Entity, { label: "Company" });
         const employer = doc.schema.add(Mapping, { label: "employer", from: person, to: company });
-        const acme = doc.instance.add(company, {});
-        const fred = doc.instance.add(person, {});
-        fred.set(employer, acme);
-        const acmeId = acme.id;
+        await doc.refreshTables();
+        const acme = doc.addRow(company);
+        const fred = doc.addRow(person);
+        doc.setRowValue(person, fred, employer, acme);
+        const acmeId = doc.rowId(company, acme)!;
         acme.delete();
 
         const result = queryDataScript(

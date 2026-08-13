@@ -1,9 +1,9 @@
 import { destructure } from "@solid-primitives/destructure";
-import { createEffect, createSignal, For, Match, Show, Switch } from "solid-js";
+import { createEffect, createSignal, For, type JSX, Match, Show, Switch } from "solid-js";
 
 import "./fixed_table_editor.css";
 
-type ContentType = "string" | "boolean" | "enum";
+type ContentType = "string" | "boolean" | "enum" | "action";
 
 type BaseColumnSchema = {
     /** Type of content displayed in the column. */
@@ -11,6 +11,9 @@ type BaseColumnSchema = {
 
     /** Name of column. */
     name?: string;
+
+    /** Class applied to the column's name in the table head. */
+    nameClass?: string;
 
     /** Is the column a header? */
     header?: boolean;
@@ -77,11 +80,18 @@ export type EnumColumnSchema<Row> = BaseColumnSchema & {
     setContent?: (row: Row, content: string | null) => void;
 };
 
+/** Schema for a column that renders a row action. */
+export type ActionColumnSchema<Row> = BaseColumnSchema & {
+    contentType: "action";
+    content: (row: Row) => JSX.Element;
+};
+
 /** Schema for a column in a table editor. */
 export type ColumnSchema<Row> =
     | TextColumnSchema<Row>
     | BooleanColumnSchema<Row>
-    | EnumColumnSchema<Row>;
+    | EnumColumnSchema<Row>
+    | ActionColumnSchema<Row>;
 
 /** Create schema for a column with numerical (floating point) data. */
 export const createNumericalColumn = <Row,>(args: {
@@ -135,7 +145,13 @@ export function FixedTableEditor<Row>(props: {
         <table class="fixed-table-editor">
             <thead>
                 <tr>
-                    <For each={props.schema}>{(col) => <th scope="col">{col.name}</th>}</For>
+                    <For each={props.schema}>
+                        {(col) => (
+                            <th scope="col" class={col.nameClass}>
+                                {col.name}
+                            </th>
+                        )}
+                    </For>
                 </tr>
             </thead>
             <tbody>
@@ -177,6 +193,9 @@ function Cell<Row>(props: { row: Row; schema: ColumnSchema<Row> }) {
             </Match>
             <Match when={props.schema.contentType === "enum" && props.schema}>
                 {(schema) => <EnumCellEditor row={props.row} schema={schema()} />}
+            </Match>
+            <Match when={props.schema.contentType === "action" && props.schema}>
+                {(schema) => schema().content(props.row)}
             </Match>
         </Switch>
     );

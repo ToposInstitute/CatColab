@@ -24,7 +24,7 @@ import invariant from "tiny-invariant";
 import { serializeAutomergeDocument } from "catcolab-document-types";
 import { IconButton } from "catcolab-ui-components";
 import type { Document } from "catlog-wasm";
-import { documentTypeLabel, useApi } from "../api";
+import { useApi } from "../api";
 import type { LiveDoc } from "../api/document";
 import { createModel } from "../model/document";
 import { TheoryLibraryContext } from "../theory";
@@ -184,7 +184,7 @@ export function DuplicateMenuItem(props: { liveDoc: LiveDoc }) {
     return (
         <MenuItem onSelect={onDuplicate}>
             <Copy />
-            <MenuItemLabel>{`Duplicate ${documentTypeLabel(props.liveDoc.doc.type)}`}</MenuItemLabel>
+            <MenuItemLabel>{`Duplicate ${props.liveDoc.doc.type}`}</MenuItemLabel>
         </MenuItem>
     );
 }
@@ -214,7 +214,7 @@ export function ExportJSONMenuItem(props: { liveDoc: LiveDoc }) {
     return (
         <MenuItem onSelect={onExportJSON}>
             <Export />
-            <MenuItemLabel>{`Export ${documentTypeLabel(props.liveDoc.doc.type)}`}</MenuItemLabel>
+            <MenuItemLabel>{`Export ${props.liveDoc.doc.type}`}</MenuItemLabel>
         </MenuItem>
     );
 }
@@ -231,7 +231,7 @@ export function CopyJSONMenuItem(props: { liveDoc: LiveDoc }) {
     return (
         <MenuItem onSelect={onCopyJSON}>
             <CopyToClipboard />
-            <MenuItemLabel>{`Copy ${documentTypeLabel(props.liveDoc.doc.type)} to clipboard`}</MenuItemLabel>
+            <MenuItemLabel>{`Copy ${props.liveDoc.doc.type} to clipboard`}</MenuItemLabel>
         </MenuItem>
     );
 }
@@ -308,7 +308,7 @@ function DocumentsMenuItem() {
 export function DeleteMenuItem(props: {
     refId: string;
     name: string | null;
-    typeName: Document["type"];
+    typeName: string;
     canDelete: boolean;
     onDeleted?: () => void;
 }) {
@@ -319,7 +319,7 @@ export function DeleteMenuItem(props: {
         const success = await actions.showDeleteDialog({
             refId: props.refId,
             name: props.name,
-            typeName: documentTypeLabel(props.typeName),
+            typeName: props.typeName,
         });
         if (success) {
             props.onDeleted?.();
@@ -329,7 +329,7 @@ export function DeleteMenuItem(props: {
     return (
         <MenuItem disabled={!props.canDelete} onSelect={handleDelete}>
             <X />
-            <MenuItemLabel>{`Delete ${documentTypeLabel(props.typeName)}`}</MenuItemLabel>
+            <MenuItemLabel>{`Delete ${props.typeName}`}</MenuItemLabel>
         </MenuItem>
     );
 }
@@ -337,7 +337,7 @@ export function DeleteMenuItem(props: {
 /** Menu item to restore a deleted document. */
 export function RestoreMenuItem(props: {
     refId: string;
-    typeName: Document["type"];
+    typeName: string;
     onRestored?: () => void;
 }) {
     const api = useApi();
@@ -359,7 +359,7 @@ export function RestoreMenuItem(props: {
     return (
         <MenuItem onSelect={handleRestore}>
             <RotateCcw />
-            <MenuItemLabel>{`Restore deleted ${documentTypeLabel(props.typeName)}`}</MenuItemLabel>
+            <MenuItemLabel>{`Restore deleted ${props.typeName}`}</MenuItemLabel>
         </MenuItem>
     );
 }

@@ -740,8 +740,8 @@ export type Shape = {
     readonly theory?: string;
     /**
      * Configuration for models that support diagrams and tabular instances.
-     * Its `tableObjects` must already be listed in {@link Shape.objects}.
-     * Requires a `theory` and, to be validatable, a `getCoreTheory`.
+     * Its `tableObjects` must already be listed in {@link Shape.objects}, and
+     * the shape must declare both a `theory` and `getCoreTheory`.
      *
      * Left unset by default: not every theory admits diagrams. In the core,
      * diagrams are only implemented for *discrete* double theories, so a shape
@@ -1262,23 +1262,27 @@ export type NotebookCell<T = AnyShape> = T extends IndividualDef
  * morphism declares its endpoints when built with {@link defineMorphism}.
  * `theory`/`getCoreTheory` are optional: include them for a creatable shape, omit
  * them for a sub-shape contract. Set `supportsInstances.tableObjects` (requires
- * a `theory`) to derive a `.Diagram` shape for drawing diagrams and an
+ * both) to derive a `.Diagram` shape for drawing diagrams and an
  * `.Instance` shape carrying the row-bearing definitions as `tableObjects`.
  */
-type ValidateTableObjects<TSpec extends Shape> = TSpec extends {
+type ValidateInstanceSupport<TSpec extends Shape> = TSpec extends {
     readonly supportsInstances: {
         readonly tableObjects: readonly (infer TableObject)[];
     };
 }
-    ? TSpec extends { readonly objects: readonly (infer Object)[] }
+    ? TSpec extends {
+          readonly theory: string;
+          readonly getCoreTheory: CoreTheoryLoader;
+          readonly objects: readonly (infer Object)[];
+      }
         ? Exclude<TableObject, Object> extends never
             ? object
             : { readonly __tableObjectsMustBeDeclaredInObjects: never }
-        : { readonly __tableObjectsRequireObjects: never }
+        : { readonly __instanceSupportRequiresTheoryCoreTheoryAndObjects: never }
     : object;
 
 export function defineShape<const TSpec extends Shape>(
-    spec: TSpec & ValidateTableObjects<TSpec>,
+    spec: TSpec & ValidateInstanceSupport<TSpec>,
 ): TSpec &
     ("modelAnalyses" extends keyof TSpec
         ? { readonly Analysis: AnalysisShape<NonNullable<TSpec["modelAnalyses"]>> }
@@ -1306,10 +1310,10 @@ export function defineShape<const TSpec extends Shape>(
         } satisfies AnalysisShape<NonNullable<TSpec["modelAnalyses"]>>;
     }
     if (spec.supportsInstances) {
-        if (spec.theory === undefined) {
+        if (spec.theory === undefined || getCoreTheory === undefined) {
             throw new Error(
-                "A shape with `supportsInstances` must declare a `theory`: its " +
-                    "diagrams and instances carry the model's theory.",
+                "A shape with `supportsInstances` must declare a `theory` and " +
+                    "`getCoreTheory`.",
             );
         }
         const objects = spec.objects ?? [];
@@ -1343,7 +1347,7 @@ export function defineShape<const TSpec extends Shape>(
             ...spec,
             theory: spec.theory,
             tableObjects: spec.supportsInstances.tableObjects,
-            ...(getCoreTheory ? { getCoreTheory } : {}),
+            getCoreTheory,
         } as InstanceShape;
     }
     return derived as ReturnType<typeof defineShape<TSpec>>;

@@ -5,7 +5,7 @@ import GripVertical from "lucide-solid/icons/grip-vertical";
 import Minus from "lucide-solid/icons/minus";
 import { createEffect, createSignal, For, on, onCleanup, Show } from "solid-js";
 
-import { isRow, type MorphismCell, type ObjectCell, type Row } from "catcolab-documents";
+import { type MorphismCell, type ObjectCell, type TableRow } from "catcolab-documents";
 import { ATTR_TYPE_NAMES, type AttrTypeName, type DemoDocument } from "./document";
 import { editHeaderInline } from "./header-edit";
 import { type Column, rowLabel, schemaShapeSignature } from "./instance-model";
@@ -184,14 +184,14 @@ export function InstanceTable(props: {
     // changes, so handlers bound to the stable container look the live
     // columns up here rather than capturing a stale build's list.
     let currentGridColumns: GridColumn[] = [];
-    let rowIds: string[] = [];
+    let rowIds: Array<string | undefined> = [];
 
     /** This entity's instance row with the given id, if it still exists. */
-    const rowById = (id: string | undefined): Row | undefined =>
+    const rowById = (id: string | undefined): TableRow | undefined =>
         id
             ? doc()
-                  .instance.rowsOf(props.entity)
-                  .find((r) => r.id === id)
+                  .rowsOf(props.entity)
+                  .find((row) => doc().rowId(props.entity, row) === id)
             : undefined;
 
     /** The schema morphism cell (Attr or Mapping) a column stands for. */
@@ -205,24 +205,28 @@ export function InstanceTable(props: {
     };
 
     /** The grid cell value shown for one row/column. */
-    const cellValue = (row: Row, column: Column): jspreadsheet.CellValue => {
+    const cellValue = (row: TableRow, column: Column): jspreadsheet.CellValue => {
         // Look up by the column's morphism UUID, not its name: two morphisms can
         // share a name, so a name-keyed lookup would read the wrong column.
-        const value = row.get({ id: column.morphismId });
+        const value = doc().rowValue(props.entity, row, column.morphismId);
         if (value === undefined) {
             return "";
         }
         if (column.kind === "attr") {
-            return isRow(value) ? "" : value;
+            return value as jspreadsheet.CellValue;
         }
         // A mapping: the value is the target Row. If that row is no longer a row
         // of the mapping's current codomain, it is invalid (e.g. the codomain
         // was changed out from under it).
-        if (!isRow(value)) {
-            return "";
+        const target = value as TableRow;
+        const targetId = doc().rowId(column.codomain, target);
+        if (!targetId) {
+            return INVALID;
         }
-        const codomainRows = doc().instance.rowsOf(column.codomain);
-        return codomainRows.some((r) => r.id === value.id) ? value.id : INVALID;
+        const codomainRows = doc().rowsOf(column.codomain);
+        return codomainRows.some((row) => doc().rowId(column.codomain, row) === targetId)
+            ? targetId
+            : INVALID;
     };
 
     /**
@@ -290,7 +294,7 @@ export function InstanceTable(props: {
                     width: 180,
                 };
             }
-            const codomainRows = doc().instance.rowsOf(column.codomain);
+            const codomainRows = doc().rowsOf(column.codomain);
             const renderMapping = (
                 cell: HTMLTableCellElement,
                 value: jspreadsheet.CellValue | undefined,
@@ -312,7 +316,9 @@ export function InstanceTable(props: {
                 button.className = styles.foreignKeyButton ?? "";
                 button.dataset.foreignKeyNavigate = "";
                 button.innerHTML = chevronSvg("right");
-                const target = codomainRows.find((row) => row.id === String(value));
+                const target = codomainRows.find(
+                    (row) => doc().rowId(column.codomain, row) === String(value),
+                );
                 const label = target
                     ? rowLabel(doc(), column.codomain, target)
                     : column.codomain.label || "referenced row";
@@ -332,22 +338,22 @@ export function InstanceTable(props: {
                 title: column.title,
                 width: 220,
                 autocomplete: true,
-                source: codomainRows.map((r) => ({
-                    id: r.id,
-                    name: rowLabel(doc(), column.codomain, r),
-                })),
+                source: codomainRows.flatMap((row) => {
+                    const id = doc().rowId(column.codomain, row);
+                    return id ? [{ id, name: rowLabel(doc(), column.codomain, row) }] : [];
+                }),
                 render: renderMapping,
             };
         });
     };
 
-    const rows = () => (doc().trackInstance(), doc().instance.rowsOf(props.entity));
+    const rows = () => (doc().trackInstance(), doc().rowsOf(props.entity));
     const hasRows = () => rows().length > 0;
 
     /** Build the 2-D data array (and refresh `rowIds`) from the instance. */
     const buildData = (columns: GridColumn[]): jspreadsheet.CellValue[][] => {
         const entityRows = rows();
-        rowIds = entityRows.map((r) => r.id);
+        rowIds = entityRows.map((row) => doc().rowId(props.entity, row));
         if (columns.length === 0) {
             // One empty cell per row, matching the single hint column above.
             return entityRows.map(() => [""]);
@@ -375,12 +381,17 @@ export function InstanceTable(props: {
         const morphism = morphismCellFor(column);
         if (column.kind === "attr") {
             if (value === "") {
-                row.set(morphism, undefined);
+                doc().setRowValue(props.entity, row, morphism, undefined);
                 return;
             }
             switch (column.attrType) {
                 case "Boolean":
-                    row.set(morphism, value === true || value === "true");
+                    doc().setRowValue(
+                        props.entity,
+                        row,
+                        morphism,
+                        value === true || value === "true",
+                    );
                     break;
                 case "Integer": {
                     const number = Number(value);
@@ -389,26 +400,26 @@ export function InstanceTable(props: {
                         number >= -2_147_483_648 &&
                         number <= 2_147_483_647
                     ) {
-                        row.set(morphism, number);
+                        doc().setRowValue(props.entity, row, morphism, number);
                     }
                     break;
                 }
                 case "Float": {
                     const number = Number(value);
                     if (Number.isFinite(number) && Number.isFinite(Math.fround(number))) {
-                        row.set(morphism, number);
+                        doc().setRowValue(props.entity, row, morphism, number);
                     }
                     break;
                 }
                 case "String":
-                    row.set(morphism, String(value));
+                    doc().setRowValue(props.entity, row, morphism, String(value));
                     break;
             }
         } else {
             const target = doc()
-                .instance.rowsOf(column.codomain)
-                .find((r) => r.id === String(value));
-            row.set(morphism, target);
+                .rowsOf(column.codomain)
+                .find((candidate) => doc().rowId(column.codomain, candidate) === String(value));
+            doc().setRowValue(props.entity, row, morphism, target);
         }
     };
 
@@ -841,20 +852,20 @@ export function InstanceTable(props: {
                 // Rows are valid even for a column-less entity: they are simply
                 // empty records with no attribute/mapping values yet.
                 for (const insertedRow of [...inserted].toSorted((a, b) => a.row - b.row)) {
-                    const row = doc().instance.add(props.entity, {});
-                    rowIds.splice(insertedRow.row, 0, row.id);
+                    const row = doc().addRow(props.entity);
+                    rowIds.splice(insertedRow.row, 0, doc().rowId(props.entity, row));
                 }
             },
             onsort: (_ws, _column, _direction, newOrder) => {
                 const previous = [...rowIds];
-                rowIds = newOrder.flatMap((index) => {
-                    const id = previous[index];
-                    return id ? [id] : [];
-                });
+                rowIds = newOrder.map((index) => previous[index]);
             },
             ondeleterow: (_ws, removed) => {
                 for (const y of [...removed].toSorted((a, b) => b - a)) {
-                    rowById(rowIds[y])?.delete();
+                    const row = rowById(rowIds[y]);
+                    if (row) {
+                        row.delete();
+                    }
                     rowIds.splice(y, 1);
                 }
             },
@@ -886,8 +897,8 @@ export function InstanceTable(props: {
                     .join(",");
                 const hiddenSig = props.hiddenColumns.join(",");
                 const rowSig = doc()
-                    .instance.rowsOf(props.entity)
-                    .map((row) => row.id)
+                    .rowsOf(props.entity)
+                    .map((row) => doc().rowId(props.entity, row) ?? "")
                     .join(",");
                 // Include the global shape signature so codomain-row relabels in
                 // other tables (used as this table's FK sources) refresh too.
@@ -1017,7 +1028,7 @@ export function InstanceTable(props: {
                 <button
                     class={styles.addRow}
                     type="button"
-                    onClick={() => doc().instance.add(props.entity, {})}
+                    onClick={() => doc().addRow(props.entity)}
                 >
                     + Row
                 </button>

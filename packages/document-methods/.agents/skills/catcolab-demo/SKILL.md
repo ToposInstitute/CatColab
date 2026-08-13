@@ -165,7 +165,7 @@ instance.rows(); // all rows
 instance.rowsOf(person); // rows of one entity
 
 // Validate against the schema (async).
-const result = await instance.validate(); // { tag: "Valid" | "Invalid" | "Illformed", ... }
+const result = await instance.validate();
 ```
 
 ### Row API (a `Row` from `add` / `rows()`)

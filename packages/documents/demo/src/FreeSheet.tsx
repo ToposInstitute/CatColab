@@ -2,7 +2,7 @@ import { Attr, Entity, Mapping } from "catcolab-logics/simple-schema";
 import jspreadsheet from "jspreadsheet-ce";
 import { createEffect, createMemo, createSignal, on, onCleanup, onMount, Show } from "solid-js";
 
-import { isRow, type NotebookCell } from "catcolab-documents";
+import type { NotebookCell } from "catcolab-documents";
 import { ATTR_TYPE_NAMES, type AttrTypeName, type DemoDocument } from "./document";
 import { editHeaderInline } from "./header-edit";
 import { tableSpecs, type TableSpec } from "./instance-model";
@@ -262,11 +262,10 @@ export function FreeSheet(props: { doc: DemoDocument }) {
         if (!spec || !firstAttr) {
             return [];
         }
-        const values = doc()
-            .instance.rowsOf(spec.entity)
+        const values = spec.rows
             .flatMap((row) => {
-                const value = row.get({ id: firstAttr.morphismId });
-                return value === undefined || isRow(value) ? [] : [String(value)];
+                const value = doc().rowValue(spec.entity, row, firstAttr.morphismId);
+                return value === undefined ? [] : [String(value)];
             })
             .filter((value) => value !== "");
         return [...new Set(values)];

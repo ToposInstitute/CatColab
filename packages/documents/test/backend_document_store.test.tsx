@@ -132,15 +132,20 @@ type StoreHandle = {
 
 function createBackendStore(backend: FakeBackend, owner?: Owner) {
     const repo = backend.repo;
+    const handleByDocument = new WeakMap<object, StoreHandle>();
 
     // Build a handle from a `DocHandle`, projecting it once. The projection is
     // owned by `owner` (if given) so it stays reactive outside `render`.
-    const makeHandle = (docHandle: DocHandle<Document>): StoreHandle => ({
-        docHandle,
-        docView: owner
-            ? runWithOwner(owner, () => makeDocumentProjection(docHandle))!
-            : makeDocumentProjection(docHandle),
-    });
+    const makeHandle = (docHandle: DocHandle<Document>): StoreHandle => {
+        const handle = {
+            docHandle,
+            docView: owner
+                ? runWithOwner(owner, () => makeDocumentProjection(docHandle))!
+                : makeDocumentProjection(docHandle),
+        };
+        handleByDocument.set(handle.docView, handle);
+        return handle;
+    };
 
     // handle document id <-> backend ref id, and ref id -> minted handle so a
     // ref resolves to one stable handle (and one projection) per store.
@@ -249,7 +254,9 @@ function createBackendStore(backend: FakeBackend, owner?: Owner) {
         },
     };
 
-    return store;
+    return Object.assign(store, {
+        getHandleForDocument: (document: object) => handleByDocument.get(document),
+    });
 }
 
 describe("backend-backed Solid + Automerge DocumentStore", () => {
@@ -425,7 +432,7 @@ describe("backend-backed Solid + Automerge DocumentStore", () => {
             // document, so loading it with the model shape `SimpleOlog` fails.
             const schema = await backendBinder.createNotebook(SimpleOlog, { title: "Schema" });
             const instance = await backendBinder.createInstance(schema, { title: "Instance" });
-            const ref = store.getDocumentRef(instance.handle);
+            const ref = store.getDocumentRef(store.getHandleForDocument(instance.document)!);
 
             const loaded = await backendBinder.loadNotebookFromRef(SimpleOlog, ref);
             expect(loaded.tag).toBe("Err");
@@ -456,18 +463,20 @@ describe("backend-backed Solid + Automerge DocumentStore", () => {
 
             const loadedInstance = await otherBinder.loadInstanceFromRef(
                 loadedSchema.content,
-                store.getDocumentRef(instance.handle),
+                store.getDocumentRef(store.getHandleForDocument(instance.document)!),
             );
             expect(loadedInstance.tag).toBe("Ok");
             if (loadedInstance.tag !== "Ok") {
                 throw new Error("expected instance to load");
             }
 
-            loadedInstance.content.add(loadedSchema.content.cellsOf(Type)[0]!);
-            expect(instance.rows()).toHaveLength(1);
-            expect(otherStore.getDocumentRef(loadedInstance.content.handle)).toEqual(
-                store.getDocumentRef(instance.handle),
-            );
+            loadedInstance.content.tables[0]?.addRow();
+            expect(instance.tables[0]?.rows).toHaveLength(1);
+            expect(
+                otherStore.getDocumentRef(
+                    otherStore.getHandleForDocument(loadedInstance.content.document)!,
+                ),
+            ).toEqual(store.getDocumentRef(store.getHandleForDocument(instance.document)!));
             dispose();
         });
     });
@@ -489,18 +498,18 @@ describe("backend-backed Solid + Automerge DocumentStore", () => {
 
             const wrongSchema = await binder.loadInstanceFromRef(
                 otherSchema,
-                store.getDocumentRef(instance.handle),
+                store.getDocumentRef(store.getHandleForDocument(instance.document)!),
             );
             expect(wrongSchema.tag).toBe("Err");
 
-            store.changeDocument(instance.handle, (document) => {
+            store.changeDocument(store.getHandleForDocument(instance.document)!, (document) => {
                 if (document.type === "instance") {
                     document.instanceOf._server = "other.catcolab.org";
                 }
             });
             const wrongServer = await binder.loadInstanceFromRef(
                 schema,
-                store.getDocumentRef(instance.handle),
+                store.getDocumentRef(store.getHandleForDocument(instance.document)!),
             );
             expect(wrongServer.tag).toBe("Err");
             dispose();

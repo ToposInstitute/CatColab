@@ -1,6 +1,6 @@
 import { createMemo, createSignal, Match, onCleanup, Show, Switch } from "solid-js";
 
-import type { DiagramValidationResult } from "catcolab-documents";
+import type { InstanceValidationResult } from "catcolab-documents";
 import type { DemoDocument } from "./document";
 import { FreeSheet } from "./FreeSheet";
 import { HistorySidebar } from "./HistorySidebar";
@@ -116,11 +116,14 @@ function ValidationBadge(props: { doc: DemoDocument }) {
     // The observer follows the instance's own rows *and* the schema's whole
     // model tree through the elaboration cache, so no manual subscription to
     // the schema is needed, and equivalent results are never re-delivered.
-    const [validation, setValidation] = createSignal<DiagramValidationResult>();
+    const [validation, setValidation] = createSignal<InstanceValidationResult>();
     const unsubscribe = props.doc.instance.onValidate(setValidation);
     onCleanup(unsubscribe);
 
-    const displayTag = () => validation()?.tag ?? "Checking";
+    const displayTag = () => {
+        const tag = validation()?.tag;
+        return tag === "Ok" ? "Valid" : tag === "Err" ? "Invalid" : "Checking";
+    };
 
     return (
         <span class={styles.badge} data-tag={displayTag()}>

@@ -1,7 +1,7 @@
 import { Attr, AttrType, Entity, SimpleSchema } from "catcolab-logics/simple-schema";
 import { describe, expect, test } from "vitest";
 
-import { createBinder } from "catcolab-documents";
+import { createBinder, type ObjectCell, type TableRow } from "catcolab-documents";
 import {
     classifyFloatToIntegerValue,
     I32_MAX,
@@ -97,12 +97,20 @@ describe("Float-to-Integer migration planning", () => {
         const float = schema.add(AttrType, { label: "Float" });
         const reading = schema.add(Attr, { label: "reading", from: entity, to: float });
         const instance = await binder.createInstance(schema, { title: "Instance" });
-        const whole = instance.add(entity, { reading: 3 });
-        const fractional = instance.add(entity, { reading: 3.8 });
-        const empty = instance.add(entity, {});
-        const storedFractionalValue = fractional.get(reading);
+        const table = instance.tables.find((candidate) => candidate.id === entity.id)!;
+        table.addRow();
+        const fractional = table.addRow();
+        table.addRow();
+        const ids = instance.document.tables[entity.id]!.row_order;
+        const values = [3, Math.fround(3.8), undefined];
+        const adapter = {
+            rowsOf: () => table.rows,
+            rowId: (_entity: ObjectCell, row: TableRow) => ids[row.index],
+            rowValue: (_entity: ObjectCell, row: TableRow) => values[row.index],
+        };
+        const storedFractionalValue = values[fractional.index];
 
-        const plan = planFloatToIntegerMigration({ instance }, reading, "truncate");
+        const plan = planFloatToIntegerMigration(adapter, reading, "truncate");
 
         expect(
             plan.rows.map(({ rowId, classification, input, output }) => ({
@@ -112,18 +120,18 @@ describe("Float-to-Integer migration planning", () => {
                 output,
             })),
         ).toEqual([
-            { rowId: whole.id, classification: "unchanged", input: 3, output: 3 },
+            { rowId: ids[0], classification: "unchanged", input: 3, output: 3 },
             {
-                rowId: fractional.id,
+                rowId: ids[1],
                 classification: "converted",
                 input: storedFractionalValue,
                 output: 3,
             },
-            { rowId: empty.id, classification: "unchanged", input: undefined, output: undefined },
+            { rowId: ids[2], classification: "unchanged", input: undefined, output: undefined },
         ]);
         expect(plan.summary).toMatchObject({ total: 3, unchanged: 2, converted: 1 });
         expect(plan.canApply).toBe(true);
-        expect(fractional.get(reading)).toBe(storedFractionalValue);
+        expect(values[fractional.index]).toBe(storedFractionalValue);
     });
 });
 
@@ -131,16 +139,18 @@ describe("Float-to-Integer migration application", () => {
     test("applies schema and value changes and pairs undo and redo", async () => {
         localStorage.clear();
         const doc = await createDemoDocument();
-        loadExampleData(doc);
+        await loadExampleData(doc);
         await Promise.resolve();
 
         const temperature = doc.schema.cellsOf(Attr).find((cell) => cell.label === "temperature");
         if (!temperature) {
             throw new Error("Planets fixture has no temperature attribute.");
         }
-        const earth = doc.instance
+        const earth = doc
             .rowsOf(temperature.from)
-            .find((row) => row.get(temperature) === Math.fround(14.9));
+            .find(
+                (row) => doc.rowValue(temperature.from!, row, temperature.id) === Math.fround(14.9),
+            );
         if (!earth) {
             throw new Error("Planets fixture has no Earth temperature row.");
         }
@@ -148,33 +158,37 @@ describe("Float-to-Integer migration application", () => {
         doc.applyFloatToIntegerMigration(temperature, "round");
 
         expect(temperature.to.label).toBe("Integer");
-        expect(earth.get(temperature)).toBe(15);
+        expect(doc.rowValue(temperature.from!, earth, temperature.id)).toBe(15);
 
         doc.schemaHistory.onUndo();
         expect(temperature.to.label).toBe("Float");
-        expect(earth.get(temperature)).toBe(Math.fround(14.9));
+        expect(doc.rowValue(temperature.from!, earth, temperature.id)).toBe(Math.fround(14.9));
 
         doc.instanceHistory.onRedo();
         expect(temperature.to.label).toBe("Integer");
-        expect(earth.get(temperature)).toBe(15);
+        expect(doc.rowValue(temperature.from!, earth, temperature.id)).toBe(15);
     });
 
     test("applies manually edited values for every row", async () => {
         localStorage.clear();
         const doc = await createDemoDocument();
-        loadExampleData(doc);
+        await loadExampleData(doc);
         await Promise.resolve();
 
         const temperature = doc.schema.cellsOf(Attr).find((cell) => cell.label === "temperature");
         if (!temperature) {
             throw new Error("Planets fixture has no temperature attribute.");
         }
-        const rows = doc.instance.rowsOf(temperature.from);
-        const values = new Map(rows.map((row, index) => [row.id, index]));
+        const rows = doc.rowsOf(temperature.from);
+        const values = new Map(
+            rows.map((row, index) => [doc.rowId(temperature.from!, row)!, index]),
+        );
 
         doc.applyFloatToIntegerMigration(temperature, "round", values);
 
-        expect(rows.map((row) => row.get(temperature))).toEqual(rows.map((_, index) => index));
+        expect(rows.map((row) => doc.rowValue(temperature.from!, row, temperature.id))).toEqual(
+            rows.map((_, index) => index),
+        );
     });
 });
 

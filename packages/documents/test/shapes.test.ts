@@ -223,6 +223,7 @@ describe("generic shapes of notebooks", () => {
         expect(() =>
             defineShape({
                 theory: "invalid-instance-shape",
+                getCoreTheory: SimpleSchema.getCoreTheory,
                 objects: [Entity],
                 supportsInstances: {
                     tableObjects: [EntityLookalike],

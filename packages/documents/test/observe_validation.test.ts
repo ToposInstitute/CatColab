@@ -10,7 +10,7 @@ import { describe, expect, test } from "vitest";
  */
 import {
     createBinder,
-    type DiagramValidationResult,
+    type InstanceValidationResult,
     Instantiation,
     type ModelValidationResult,
     RichText,
@@ -176,30 +176,33 @@ describe("onValidate", () => {
         schema.add(Attr, { label: "name", from: person, to: str });
 
         const instance = await binder.createInstance(schema, { title: "Company instance" });
-        const acme = instance.add(company, {});
-        instance.add(person, { name: "Fred", employer: acme });
+        const initialTables = instance.tables;
+        initialTables.find((table) => table.id === company.id)?.addRow();
+        initialTables.find((table) => table.id === person.id)?.addRow();
 
-        const results: DiagramValidationResult[] = [];
+        const results: InstanceValidationResult[] = [];
         const unsubscribe = instance.onValidate((result) => results.push(result));
         await until(() => results.length === 1);
-        expect(results[0]?.tag).toBe("Valid");
+        const first = results[0];
+        if (first?.tag !== "Ok") {
+            throw new Error("Expected validation to succeed");
+        }
+        expect(first.content.instance.tables.map((table) => table.label)).toEqual([
+            "Person",
+            "Company",
+        ]);
 
         // A schema edit re-validates the instance: the observer follows the
         // schema through the cache's dependency tree, with no subscription to
         // the schema notebook at the call site.
         schema.add(Entity, { label: "Department" });
         await until(() => results.length === 2);
-        expect(results[1]?.tag).toBe("Valid");
+        expect(results[1]?.tag).toBe("Ok");
 
         // A row edit delivers too — same tag, but new content.
-        instance.add(person, { name: "Barney", employer: acme });
+        initialTables.find((table) => table.id === person.id)?.addRow();
         await until(() => results.length === 3);
-        expect(results[2]?.tag).toBe("Valid");
-
-        // A rename of the instance is a no-op.
-        instance.update({ title: "Renamed instance" });
-        await flush();
-        expect(results.length).toBe(3);
+        expect(results[2]?.tag).toBe("Ok");
 
         unsubscribe();
     });

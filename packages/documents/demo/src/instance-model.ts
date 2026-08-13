@@ -1,13 +1,12 @@
 import { Entity } from "catcolab-logics/simple-schema";
 
-import type { ObjectCell, Row } from "catcolab-documents";
+import type { ObjectCell, TableRow } from "catcolab-documents";
 import {
     attrCells,
     ATTR_TYPE_NAMES,
     type AttrTypeName,
     type DemoDocument,
     mappingCells,
-    rowsOf,
 } from "./document";
 
 /**
@@ -36,7 +35,7 @@ export type Column =
 export type TableSpec = {
     entity: ObjectCell;
     columns: Column[];
-    rows: Row[];
+    rows: TableRow[];
 };
 
 /**
@@ -67,7 +66,7 @@ export function tableSpecs(doc: DemoDocument): TableSpec[] {
     return entities.map((entity) => ({
         entity,
         columns: columnsFor(doc, entity),
-        rows: rowsOf(doc, entity),
+        rows: doc.tableFor(entity)?.rows ?? [],
     }));
 }
 
@@ -97,11 +96,13 @@ export function columnsFor(doc: DemoDocument, entity: ObjectCell): Column[] {
 }
 
 /** A compact, stable display label for a row wherever instances are navigated. */
-export function rowLabel(doc: DemoDocument, entity: ObjectCell, row: Row): string {
+export function rowLabel(doc: DemoDocument, entity: ObjectCell, row: TableRow): string {
     const index = row.index + 1;
     const firstColumn = columnsFor(doc, entity)[0];
     const firstValue =
-        firstColumn?.kind === "attr" ? row.get({ id: firstColumn.morphismId }) : undefined;
+        firstColumn?.kind === "attr"
+            ? doc.rowValue(entity, row, firstColumn.morphismId)
+            : undefined;
     const entityName = entity.label || "(unnamed entity)";
     return typeof firstValue === "string" && firstValue !== ""
         ? `${entityName} "${firstValue}"`
@@ -112,11 +113,13 @@ export function rowLabel(doc: DemoDocument, entity: ObjectCell, row: Row): strin
  * Like {@link rowLabel} but without the entity-name prefix: shows the first
  * attribute value (`X`) or falls back to `Entity 1` when it is empty.
  */
-export function rowShortLabel(doc: DemoDocument, entity: ObjectCell, row: Row): string {
+export function rowShortLabel(doc: DemoDocument, entity: ObjectCell, row: TableRow): string {
     const index = row.index + 1;
     const firstColumn = columnsFor(doc, entity)[0];
     const firstValue =
-        firstColumn?.kind === "attr" ? row.get({ id: firstColumn.morphismId }) : undefined;
+        firstColumn?.kind === "attr"
+            ? doc.rowValue(entity, row, firstColumn.morphismId)
+            : undefined;
     const entityName = entity.label || "(unnamed entity)";
     return typeof firstValue === "string" && firstValue !== ""
         ? firstValue

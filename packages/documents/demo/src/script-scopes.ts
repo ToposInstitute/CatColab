@@ -36,9 +36,11 @@ export function demoScript(doc: DemoDocument): ScriptConfig {
 //   schema.cellsOf(Entity | Attr | Mapping) — the schema cells
 //   instance.add(entity, {})                — add a row (alias: addRow)
 //   instance.rowsOf(entity) / instance.rows()
-//   await instance.tables()                 — the instance's tables
-//   table.addRow({...}) / table.rows / table.columns
+//   instance.tables                         — the instance's tables
+//   table.addRow({...}) / table.rows / table.headers
+//   row.update({ label: value })            — update values by column label
 //   row.set(morphism, value)                — set a mapping/attribute
+//   row.delete()                             — delete the row
 //   row.get(morphism) / row.cells / row.index
 //
 // Example: build a tiny schema, then an instance of it.

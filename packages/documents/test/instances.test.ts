@@ -1,69 +1,80 @@
 import { Attr, AttrType, Entity, Mapping, SimpleSchema } from "catcolab-logics/simple-schema";
 import { describe, expect, test } from "vitest";
 
-// RFC-0006 "Tabular instances": an instance API that mirrors the notebook API,
-// with `add` keyed by schema entities and a `rowsOf` that mirrors `cellsOf`.
-// Unlike cells, rows keep a separate `values` field to keep them in their own
-// namespace.
-import { createBinder } from "catcolab-documents";
+import { createBinder, type InstanceTable, type TableRow } from "catcolab-documents";
+
+const tableFor = (tables: InstanceTable[], id: string): InstanceTable => {
+    const table = tables.find((candidate) => candidate.id === id);
+    if (!table) {
+        throw new Error(`Expected table ${id}`);
+    }
+    return table;
+};
+
+const stringCell = (table: InstanceTable, row: TableRow, id: string): string | null | undefined => {
+    const cell = row.cells[table.headers.findIndex((header) => header.id === id)];
+    return cell?.tag === "String" ? cell.content : undefined;
+};
 
 describe("tabular instances", () => {
-    test("an instance of a schema has a similar add method and rowsOf", async () => {
+    test("table handles add and enumerate rows", async () => {
         const binder = createBinder();
-
         const schema = await binder.createNotebook(SimpleSchema, { title: "Company schema" });
         const person = schema.add(Entity, { label: "Person" });
         const company = schema.add(Entity, { label: "Company" });
         const str = schema.add(AttrType, { label: "String" });
-
-        schema.add(Mapping, { label: "employer", from: person, to: company });
-        schema.add(Attr, { label: "name", from: person, to: str });
-
+        const employer = schema.add(Mapping, { label: "employer", from: person, to: company });
+        const name = schema.add(Attr, { label: "name", from: person, to: str });
         const instance = await binder.createInstance(schema, { title: "Company instance" });
-        const acme = instance.add(company, {});
-        instance.add(person, { name: "Alice", employer: acme });
-        instance.add(person, { name: "Bob", employer: acme });
+        const tables = instance.tables;
+        const people = tableFor(tables, person.id);
+        const acme = tableFor(tables, company.id).addRow();
 
-        const names: unknown[] = [];
-        for (const row of instance.rowsOf(person)) {
-            names.push(row.values["name"]);
+        for (const label of ["Alice", "Bob"]) {
+            const row = people.addRow();
+            row.set(name, label);
+            row.set(employer, acme);
         }
-        expect(names).toEqual(["Alice", "Bob"]);
+
+        expect(people.rows.map((row) => stringCell(people, row, name.id))).toEqual([
+            "Alice",
+            "Bob",
+        ]);
     });
 
-    test("logic shapes can be defined as notebooks of SimpleSchema", async () => {
+    test("schema-defined logic produces one table per entity type", async () => {
         const binder = createBinder();
+        const schema = await binder.createNotebook(SimpleSchema, { title: "Causal loop" });
+        const string = schema.add(AttrType, { label: "String" });
+        const variable = schema.add(Entity, { label: "Variable" });
+        const name = schema.add(Attr, { label: "name", from: variable, to: string });
+        const positive = schema.add(Entity, { label: "PositiveLink" });
+        const positiveFrom = schema.add(Mapping, { label: "from", from: positive, to: variable });
+        const positiveTo = schema.add(Mapping, { label: "to", from: positive, to: variable });
+        const negative = schema.add(Entity, { label: "NegativeLink" });
+        const negativeFrom = schema.add(Mapping, { label: "from", from: negative, to: variable });
+        const negativeTo = schema.add(Mapping, { label: "to", from: negative, to: variable });
+        const instance = await binder.createInstance(schema, { title: "Predator-prey" });
+        const tables = instance.tables;
+        const variables = tableFor(tables, variable.id);
+        const foxes = variables.addRow();
+        foxes.set(name, "Foxes");
+        const rabbits = variables.addRow();
+        rabbits.set(name, "Rabbits");
 
-        const CausalLoop = await binder.createNotebook(SimpleSchema, { title: "Causal loop" });
+        const positiveRow = tableFor(tables, positive.id).addRow();
+        positiveRow.set(positiveFrom, rabbits);
+        positiveRow.set(positiveTo, foxes);
+        const negativeRow = tableFor(tables, negative.id).addRow();
+        negativeRow.set(negativeFrom, foxes);
+        negativeRow.set(negativeTo, rabbits);
 
-        const String = CausalLoop.add(AttrType, { label: "String" });
-
-        const Variable = CausalLoop.add(Entity, { label: "Variable" });
-        CausalLoop.add(Attr, { label: "name", from: Variable, to: String });
-
-        const PositiveLink = CausalLoop.add(Entity, { label: "PositiveLink" });
-        CausalLoop.add(Mapping, { label: "from", from: PositiveLink, to: Variable });
-        CausalLoop.add(Mapping, { label: "to", from: PositiveLink, to: Variable });
-
-        const NegativeLink = CausalLoop.add(Entity, { label: "NegativeLink" });
-        CausalLoop.add(Mapping, { label: "from", from: NegativeLink, to: Variable });
-        CausalLoop.add(Mapping, { label: "to", from: NegativeLink, to: Variable });
-
-        // Instances of `CausalLoop` are akin to notebooks of the actual
-        // `CausalLoop` logic.
-        const predatorPrey = await binder.createInstance(CausalLoop, { title: "Predator-prey" });
-
-        const foxes = predatorPrey.add(Variable, { name: "Foxes" });
-        const rabbits = predatorPrey.add(Variable, { name: "Rabbits" });
-
-        predatorPrey.add(PositiveLink, { from: rabbits, to: foxes });
-        predatorPrey.add(NegativeLink, { from: foxes, to: rabbits });
-
-        expect(predatorPrey.rowsOf(Variable).map((row) => row.values["name"])).toEqual([
+        expect(variables.rows.map((row) => stringCell(variables, row, name.id))).toEqual([
             "Foxes",
             "Rabbits",
         ]);
-        expect(predatorPrey.rowsOf(PositiveLink).length).toBe(1);
-        expect(predatorPrey.rowsOf(NegativeLink).length).toBe(1);
+        expect(tableFor(tables, positive.id).rows).toHaveLength(1);
+        expect(tableFor(tables, negative.id).rows).toHaveLength(1);
+        expect((await instance.validate()).tag).toBe("Ok");
     });
 });

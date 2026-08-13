@@ -1,6 +1,6 @@
 import { Attr } from "catcolab-logics/simple-schema";
 
-import type { NotebookCell, ObjectCell, Row } from "catcolab-documents";
+import type { NotebookCell, ObjectCell, TableRow } from "catcolab-documents";
 
 export const I32_MIN = -2_147_483_648;
 export const I32_MAX = 2_147_483_647;
@@ -42,7 +42,7 @@ export type FloatToIntegerValuesPlan = {
 };
 
 export type FloatToIntegerRowPlan = FloatToIntegerValuePlan & {
-    row: Row;
+    row: TableRow;
     rowId: string;
 };
 
@@ -120,19 +120,26 @@ export function planFloatToIntegerValues(
 
 /** Read an attribute's rows and attach the pure value plan to each source row. */
 export function planFloatToIntegerMigration(
-    doc: { instance: { rowsOf: (entity: ObjectCell) => Row[] } },
+    doc: {
+        rowsOf: (entity: ObjectCell) => TableRow[];
+        rowId: (entity: ObjectCell, row: TableRow) => string | undefined;
+        rowValue: (entity: ObjectCell, row: TableRow, morphismId: string) => unknown;
+    },
     attribute: NotebookCell<typeof Attr>,
     rule: FloatToIntegerRule,
 ): FloatToIntegerMigrationPlan {
-    const sourceRows = attribute.from ? doc.instance.rowsOf(attribute.from) : [];
+    const sourceRows = attribute.from ? doc.rowsOf(attribute.from) : [];
     const valuesPlan = planFloatToIntegerValues(
-        sourceRows.map((row) => row.get(attribute)),
+        sourceRows.map((row) => doc.rowValue(attribute.from!, row, attribute.id)),
         rule,
     );
-    const rows = sourceRows.map(
-        (row, index): FloatToIntegerRowPlan =>
-            Object.assign({ row, rowId: row.id }, valuesPlan.values[index]!),
-    );
+    const rows = sourceRows.map((row, index): FloatToIntegerRowPlan => {
+        const rowId = doc.rowId(attribute.from!, row);
+        if (!rowId) {
+            throw new Error("Migration row is no longer in the instance.");
+        }
+        return Object.assign({ row, rowId }, valuesPlan.values[index]!);
+    });
     return {
         rule,
         attribute,

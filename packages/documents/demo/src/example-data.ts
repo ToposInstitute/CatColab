@@ -1,6 +1,6 @@
-import { Attr, AttrType, Entity, Mapping, SimpleSchema } from "catcolab-logics/simple-schema";
+import { Attr, AttrType, Entity, Mapping } from "catcolab-logics/simple-schema";
 
-import type { Instance, Notebook, Row } from "catcolab-documents";
+import type { TableRow } from "catcolab-documents";
 import type { DemoDocument } from "./document";
 
 export const EXAMPLE_QUERY = `;; Query for planet-star "Orbit" relations where one planet orbits multiple stars.
@@ -457,7 +457,7 @@ const moons = [
     ["Triton", 1353.4, "neptune"],
 ] as const;
 
-function requiredRow(rows: ReadonlyMap<string, Row>, key: string): Row {
+function requiredRow(rows: ReadonlyMap<string, TableRow>, key: string): TableRow {
     const row = rows.get(key);
     if (!row) {
         throw new Error(`Example data references missing row "${key}".`);
@@ -466,15 +466,18 @@ function requiredRow(rows: ReadonlyMap<string, Row>, key: string): Row {
 }
 
 /** Replace the current demo document with the planets relational example. */
-export function loadExampleData<Handle>(doc: {
-    schema: Notebook<typeof SimpleSchema, Handle>;
-    instance: Instance<(typeof SimpleSchema)["Instance"], Handle>;
-    attrTypes: DemoDocument["attrTypes"];
-}) {
-    const { schema, instance, attrTypes } = doc;
+export async function loadExampleData(
+    doc: Pick<
+        DemoDocument,
+        "schema" | "tables" | "refreshTables" | "addRow" | "setRowValue" | "attrTypes"
+    >,
+) {
+    const { schema, tables, refreshTables, addRow, setRowValue, attrTypes } = doc;
 
-    for (const row of instance.rows()) {
-        row.delete();
+    for (const table of tables()) {
+        for (const row of table.rows) {
+            row.delete();
+        }
     }
     const attrTypeIds = new Set(schema.cellsOf(AttrType).map((cell) => cell.id));
     for (const cell of schema.cells()) {
@@ -484,79 +487,127 @@ export function loadExampleData<Handle>(doc: {
     }
 
     const planet = schema.add(Entity, { label: "Planet" });
-    schema.add(Attr, { label: "name", from: planet, to: attrTypes.String });
-    schema.add(Attr, { label: "id", from: planet, to: attrTypes.String });
-    schema.add(Attr, { label: "temperature", from: planet, to: attrTypes.Float });
-    schema.add(Attr, { label: "distance-from-earth", from: planet, to: attrTypes.Float });
-    schema.add(Attr, { label: "distance-from-sun", from: planet, to: attrTypes.Float });
-    schema.add(Attr, { label: "orbit-time", from: planet, to: attrTypes.Float });
-    schema.add(Attr, { label: "radius", from: planet, to: attrTypes.Float });
-    schema.add(Attr, { label: "mass", from: planet, to: attrTypes.Float });
-    schema.add(Attr, { label: "blurb", from: planet, to: attrTypes.String });
+    const planetName = schema.add(Attr, { label: "name", from: planet, to: attrTypes.String });
+    const planetId = schema.add(Attr, { label: "id", from: planet, to: attrTypes.String });
+    const temperature = schema.add(Attr, {
+        label: "temperature",
+        from: planet,
+        to: attrTypes.Float,
+    });
+    const distanceFromEarth = schema.add(Attr, {
+        label: "distance-from-earth",
+        from: planet,
+        to: attrTypes.Float,
+    });
+    const distanceFromSun = schema.add(Attr, {
+        label: "distance-from-sun",
+        from: planet,
+        to: attrTypes.Float,
+    });
+    const orbitTime = schema.add(Attr, {
+        label: "orbit-time",
+        from: planet,
+        to: attrTypes.Float,
+    });
+    const radius = schema.add(Attr, { label: "radius", from: planet, to: attrTypes.Float });
+    const mass = schema.add(Attr, { label: "mass", from: planet, to: attrTypes.Float });
+    const blurb = schema.add(Attr, { label: "blurb", from: planet, to: attrTypes.String });
+    await refreshTables();
 
-    const planetRows = new Map<string, Row>(
+    const planetRows = new Map<string, TableRow>(
         planets.map((values) => [
             values.id,
-            instance.add(planet, {
-                name: values.name,
-                id: values.id,
-                temperature: values.temperature,
-                "distance-from-earth": values.distanceFromEarth,
-                "distance-from-sun": values.distanceFromSun,
-                "orbit-time": values.orbitTime,
-                radius: values.radius,
-                mass: values.mass,
-                blurb: values.blurb,
-            }),
+            (() => {
+                const row = addRow(planet);
+                setRowValue(planet, row, planetName, values.name);
+                setRowValue(planet, row, planetId, values.id);
+                setRowValue(planet, row, temperature, values.temperature);
+                setRowValue(planet, row, distanceFromEarth, values.distanceFromEarth);
+                setRowValue(planet, row, distanceFromSun, values.distanceFromSun);
+                setRowValue(planet, row, orbitTime, values.orbitTime);
+                setRowValue(planet, row, radius, values.radius);
+                setRowValue(planet, row, mass, values.mass);
+                setRowValue(planet, row, blurb, values.blurb);
+                return row;
+            })(),
         ]),
     );
 
     const spectralClass = schema.add(Entity, { label: "Spectral class" });
-    schema.add(Attr, { label: "name", from: spectralClass, to: attrTypes.String });
-    schema.add(Attr, { label: "description", from: spectralClass, to: attrTypes.String });
-    const classRows = new Map<string, Row>(
+    const className = schema.add(Attr, {
+        label: "name",
+        from: spectralClass,
+        to: attrTypes.String,
+    });
+    const classDescription = schema.add(Attr, {
+        label: "description",
+        from: spectralClass,
+        to: attrTypes.String,
+    });
+    await refreshTables();
+    const classRows = new Map<string, TableRow>(
         spectralClasses.map(([key, name, description]) => [
             key,
-            instance.add(spectralClass, { name, description }),
+            (() => {
+                const row = addRow(spectralClass);
+                setRowValue(spectralClass, row, className, name);
+                setRowValue(spectralClass, row, classDescription, description);
+                return row;
+            })(),
         ]),
     );
 
     const star = schema.add(Entity, { label: "Star" });
-    schema.add(Attr, { label: "name", from: star, to: attrTypes.String });
-    schema.add(Mapping, { label: "spectral-class", from: star, to: spectralClass });
-    const starRows = new Map<string, Row>(
+    const starName = schema.add(Attr, { label: "name", from: star, to: attrTypes.String });
+    const starClass = schema.add(Mapping, {
+        label: "spectral-class",
+        from: star,
+        to: spectralClass,
+    });
+    await refreshTables();
+    const starRows = new Map<string, TableRow>(
         stars.map(([key, name, classKey]) => [
             key,
-            instance.add(star, {
-                name,
-                "spectral-class": requiredRow(classRows, classKey),
-            }),
+            (() => {
+                const row = addRow(star);
+                setRowValue(star, row, starName, name);
+                setRowValue(star, row, starClass, requiredRow(classRows, classKey));
+                return row;
+            })(),
         ]),
     );
 
     const orbit = schema.add(Entity, { label: "Orbit" });
-    schema.add(Mapping, { label: "planet", from: orbit, to: planet });
-    schema.add(Mapping, { label: "star", from: orbit, to: star });
-    schema.add(Attr, { label: "host-role", from: orbit, to: attrTypes.String });
+    const orbitPlanet = schema.add(Mapping, { label: "planet", from: orbit, to: planet });
+    const orbitStar = schema.add(Mapping, { label: "star", from: orbit, to: star });
+    const hostRole = schema.add(Attr, {
+        label: "host-role",
+        from: orbit,
+        to: attrTypes.String,
+    });
+    await refreshTables();
     for (const [planetId, starKeys] of Object.entries(hosts)) {
         for (const [index, starKey] of starKeys.entries()) {
-            instance.add(orbit, {
-                planet: requiredRow(planetRows, planetId),
-                star: requiredRow(starRows, starKey),
-                "host-role": index === 0 ? "primary" : "secondary",
-            });
+            const row = addRow(orbit);
+            setRowValue(orbit, row, orbitPlanet, requiredRow(planetRows, planetId));
+            setRowValue(orbit, row, orbitStar, requiredRow(starRows, starKey));
+            setRowValue(orbit, row, hostRole, index === 0 ? "primary" : "secondary");
         }
     }
 
     const moon = schema.add(Entity, { label: "Moon" });
-    schema.add(Attr, { label: "name", from: moon, to: attrTypes.String });
-    schema.add(Attr, { label: "mean-radius-km", from: moon, to: attrTypes.Float });
-    schema.add(Mapping, { label: "orbits", from: moon, to: planet });
+    const moonName = schema.add(Attr, { label: "name", from: moon, to: attrTypes.String });
+    const moonRadius = schema.add(Attr, {
+        label: "mean-radius-km",
+        from: moon,
+        to: attrTypes.Float,
+    });
+    const moonPlanet = schema.add(Mapping, { label: "orbits", from: moon, to: planet });
+    await refreshTables();
     for (const [name, radius, planetId] of moons) {
-        instance.add(moon, {
-            name,
-            "mean-radius-km": radius,
-            orbits: requiredRow(planetRows, planetId),
-        });
+        const row = addRow(moon);
+        setRowValue(moon, row, moonName, name);
+        setRowValue(moon, row, moonRadius, radius);
+        setRowValue(moon, row, moonPlanet, requiredRow(planetRows, planetId));
     }
 }
