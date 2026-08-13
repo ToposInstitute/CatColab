@@ -13,6 +13,14 @@ import type {
     Shape,
 } from "../shape";
 import { getModelJudgment, type ModelDocument } from "./document";
+
+/** Runtime names for the discriminants on notebook cell handles. */
+export const CellKind = {
+    RichText: "rich-text" satisfies RichTextCell["kind"],
+    Object: "object" satisfies ObjectCell<ObjectType>["kind"],
+    Morphism: "morphism" satisfies MorphismCell<Shape, MorphismType>["kind"],
+} as const;
+
 export interface ObjectCell<O extends ObjectType> {
     readonly kind: "object";
     readonly id: string;

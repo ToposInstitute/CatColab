@@ -55,6 +55,7 @@ export function defineShape<const S extends Shape>(shape: S): S {
 export type RichTextType = typeof RichText;
 export type ObjectTypesOf<S extends Shape> = NonNullable<S["objects"]>[number];
 export type MorphismTypesOf<S extends Shape> = NonNullable<S["morphisms"]>[number];
+export type AnyCellType = RichTextType | ObjectType | MorphismType;
 export type CellTypeOf<S extends Shape> = RichTextType | ObjectTypesOf<S> | MorphismTypesOf<S>;
 
 type MatchingObjectTypesOf<O, EndpointObType> = O extends ObjectType

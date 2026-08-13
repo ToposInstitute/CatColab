@@ -4,6 +4,7 @@ import type { DocumentStore } from "../document-store";
 import type { NotebookDocument } from "../notebook-document";
 import { getRichTextCell, type RichTextCell } from "../rich-text";
 import type {
+    AnyCellType,
     CellTypeOf,
     CodomainObjectTypesOf,
     DomainObjectTypesOf,
@@ -24,6 +25,7 @@ import {
     type ObjectCell,
 } from "./cell";
 import type { ModelDocument } from "./document";
+import { morphismTypesEqual, objectTypesEqual } from "./equality";
 
 /**
  * The value given to [`Notebook.add`].
@@ -51,6 +53,112 @@ type AddedCellOf<S extends Shape, T extends CellTypeOf<S>> = T extends RichTextT
         ? MorphismCell<S, T>
         : never;
 
+function isCellType(value: AnyCellType | Shape): value is AnyCellType {
+    return "kind" in value;
+}
+
+function shapeSupportsCell(shape: Shape, type: AnyCellType): boolean {
+    switch (type.kind) {
+        case "rich-text":
+            return true;
+        case "object":
+            if (shape.objects === undefined) {
+                return false;
+            }
+            for (const candidate of shape.objects) {
+                if (objectTypesEqual(candidate.obType, type.obType)) {
+                    return true;
+                }
+            }
+            return false;
+        case "morphism":
+            if (shape.morphisms === undefined) {
+                return false;
+            }
+            for (const candidate of shape.morphisms) {
+                if (morphismTypesEqual(candidate.morType, type.morType)) {
+                    return true;
+                }
+            }
+            return false;
+    }
+}
+
+function shapeSupportsShape(shape: Shape, required: Shape): boolean {
+    if (required.objects !== undefined) {
+        for (const type of required.objects) {
+            if (!shapeSupportsCell(shape, type)) {
+                return false;
+            }
+        }
+    }
+
+    if (required.morphisms !== undefined) {
+        for (const type of required.morphisms) {
+            if (!shapeSupportsCell(shape, type)) {
+                return false;
+            }
+        }
+    }
+
+    if (required.informal !== undefined) {
+        for (const type of required.informal) {
+            if (!shapeSupportsCell(shape, type)) {
+                return false;
+            }
+        }
+    }
+
+    return true;
+}
+
+function cellMatchesFilter<S extends Shape>(cell: CellOf<S>, filter: AnyCellType | Shape): boolean {
+    if (isCellType(filter)) {
+        switch (filter.kind) {
+            case "rich-text":
+                return cell.kind === "rich-text";
+            case "object":
+                if (cell.kind !== "object") {
+                    return false;
+                }
+                return objectTypesEqual(cell.type.obType, filter.obType);
+            case "morphism":
+                if (cell.kind !== "morphism") {
+                    return false;
+                }
+                return morphismTypesEqual(cell.type.morType, filter.morType);
+        }
+    }
+
+    switch (cell.kind) {
+        case "rich-text":
+            if (filter.informal === undefined) {
+                return false;
+            }
+            return filter.informal.length > 0;
+        case "object":
+            if (filter.objects === undefined) {
+                return false;
+            }
+            for (const type of filter.objects) {
+                if (objectTypesEqual(cell.type.obType, type.obType)) {
+                    return true;
+                }
+            }
+            return false;
+        case "morphism":
+            if (filter.morphisms === undefined) {
+                return false;
+            }
+            for (const type of filter.morphisms) {
+                if (morphismTypesEqual(cell.type.morType, type.morType)) {
+                    return true;
+                }
+            }
+            return false;
+    }
+}
+
 export interface Notebook<S extends Shape, D extends NotebookDocument = NotebookDocument> {
     readonly shape: S;
     readonly document: Readonly<D>;
@@ -58,6 +166,8 @@ export interface Notebook<S extends Shape, D extends NotebookDocument = Notebook
 
     add<T extends CellTypeOf<S>>(type: T, values: CellValuesOf<S, T>): AddedCellOf<S, T>;
     cells(): readonly CellOf<S>[];
+    cellsOf(typeOrShape: AnyCellType | Shape): readonly CellOf<S>[];
+    supports(typeOrShape: AnyCellType | Shape): boolean;
     update(patch: Partial<{ title: string }>): void;
     dump(): D;
     onChange(callback: () => void): () => void;
@@ -127,6 +237,15 @@ export function modelNotebookFromStore<Handle, S extends Shape>(
             return document.notebook.cellOrder.map((cellId) =>
                 getModelCell(shape, store, handle, cellId),
             );
+        },
+        cellsOf(filter: AnyCellType | Shape) {
+            return this.cells().filter((cell) => cellMatchesFilter(cell, filter));
+        },
+        supports(filter) {
+            if (isCellType(filter)) {
+                return shapeSupportsCell(shape, filter);
+            }
+            return shapeSupportsShape(shape, filter);
         },
         update(patch) {
             if (patch.title !== undefined) {
