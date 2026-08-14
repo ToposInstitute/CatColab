@@ -323,6 +323,10 @@ pub struct DblModel {
     #[wasm_bindgen(skip)]
     pub ty: Option<(tt::stx::TyS, tt::val::TyV)>,
 
+    /// Errors found while elaborating the model's notebook.
+    #[wasm_bindgen(skip)]
+    pub elaboration_errors: Vec<InvalidDblModel>,
+
     /// The namespace for the objects.
     #[wasm_bindgen(skip)]
     pub ob_namespace: Namespace,
@@ -343,6 +347,7 @@ impl DblModel {
         Self {
             model,
             ty: None,
+            elaboration_errors: Vec::new(),
             ob_namespace: Namespace::new_for_uuid(),
             mor_namespace: Namespace::new_for_uuid(),
         }
@@ -353,6 +358,7 @@ impl DblModel {
         Self {
             model,
             ty: self.ty.clone(),
+            elaboration_errors: self.elaboration_errors.clone(),
             ob_namespace: self.ob_namespace.clone(),
             mor_namespace: self.mor_namespace.clone(),
         }
@@ -656,7 +662,16 @@ impl DblModel {
         let result = all_the_same!(match &self.model {
             DblModelBox::[Discrete, DiscreteTab, ModalUnital, ModalNonUnital](model) => model.validate()
         });
-        ModelValidationResult(result.map_err(|errs| errs.into()).into())
+        let mut errors = self.elaboration_errors.clone();
+        if let Err(model_errors) = result {
+            errors.extend(model_errors);
+        }
+        let result = if errors.is_empty() {
+            Ok(())
+        } else {
+            Err(errors)
+        };
+        ModelValidationResult(result.into())
     }
 
     /// Extracts a composition pattern (UWD) from the model.
@@ -748,11 +763,13 @@ pub fn elaborate_model(
         let ref_id = ustr(&ref_id);
         let mut elab = ElaboratorNext::new(theory.clone(), &instantiated.toplevel, ref_id);
         let (ty_s, ty_v) = elab.notebook(notebook.0.formal_content());
+        let elaboration_errors = elab.errors().to_vec();
         let (model, namespace) =
             tt::modelgen::Model::from_ty(&instantiated.toplevel, &theory.definition, &ty_v);
         Ok(DblModel {
             model: model.into(),
             ty: Some((ty_s, ty_v)),
+            elaboration_errors,
             ob_namespace: namespace.clone(),
             mor_namespace: namespace.clone(),
         })
