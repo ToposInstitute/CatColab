@@ -7,5 +7,11 @@
         "jsxImportSource": "solid-js",
         "lib": ["ES2023", "DOM", "DOM.Iterable"]
     },
-    "include": ["vite.config.ts", "vitest.db-dump.config.ts", "test/**/*.ts", "test/**/*.tsx"]
+    "include": [
+        "vite.config.ts",
+        "vitest.db-dump.config.ts",
+        "test/creating-and-editing.test.ts",
+        "test/creating-and-editing.test-d.ts",
+        "test/definitions.test.ts"
+    ]
 }

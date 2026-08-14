@@ -8,15 +8,15 @@ importers:
 
   .:
     dependencies:
+      catcolab-document-methods:
+        specifier: link:../document-methods
+        version: link:../document-methods
       catcolab-document-types:
         specifier: link:../document-types/pkg
         version: link:../document-types/pkg
       catlog-wasm:
         specifier: link:../catlog-wasm/dist/pkg-browser
         version: link:../catlog-wasm/dist/pkg-browser
-      uuid:
-        specifier: ^13.0.0
-        version: 13.0.2
     devDependencies:
       '@automerge/automerge':
         specifier: ^3.3.1
@@ -45,11 +45,8 @@ importers:
       '@types/uuid':
         specifier: ^10.0.0
         version: 10.0.0
-      catcolab-documents:
-        specifier: workspace:*
-        version: 'link:'
       catcolab-logics:
-        specifier: workspace:*
+        specifier: link:../logics
         version: link:../logics
       fast-check:
         specifier: ^4.9.0
@@ -72,6 +69,9 @@ importers:
       typescript:
         specifier: ^6.0.3
         version: 6.0.3
+      uuid:
+        specifier: ^13.0.0
+        version: 13.0.2
       vite:
         specifier: ^7.2.2
         version: 7.3.6(@types/node@24.13.3)
