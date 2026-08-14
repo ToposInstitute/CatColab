@@ -1,4 +1,4 @@
-export { createBinder, createBinderWithStore } from "./binder";
+export { createBinder } from "./binder";
 export { CellKind } from "./model/cell";
 export type { Binder } from "./binder";
 export type { DocumentStore, DocumentRef } from "./document-store";
