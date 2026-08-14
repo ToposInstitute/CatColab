@@ -1,7 +1,9 @@
 import { Model, Nb } from "catcolab-document-methods";
 import type { ModelJudgment } from "catcolab-document-types";
+import type { DblModel, DblTheory } from "catlog-wasm";
 import type { DocumentStore } from "../document-store";
 import type { NotebookDocument } from "../notebook-document";
+import type { Result } from "../result";
 import { getRichTextCell, type RichTextCell } from "../rich-text";
 import type {
     AnyCellType,
@@ -26,6 +28,7 @@ import {
 } from "./cell";
 import type { ModelDocument } from "./document";
 import { morphismTypesEqual, objectTypesEqual } from "./equality";
+import { validateModelDocument } from "./validation";
 
 /**
  * The value given to [`Notebook.add`].
@@ -171,6 +174,8 @@ export interface Notebook<S extends Shape, D extends NotebookDocument = Notebook
     update(patch: Partial<{ title: string }>): void;
     dump(): D;
     onChange(callback: () => void): () => void;
+    validate(): Promise<Result<DblModel>>;
+    onValidate(callback: (result: Result<DblModel>) => void): () => void;
 }
 
 export function modelNotebookFromStore<Handle, S extends Shape>(
@@ -178,12 +183,84 @@ export function modelNotebookFromStore<Handle, S extends Shape>(
     store: DocumentStore<Handle>,
     handle: Handle,
 ): Notebook<S, ModelDocument> {
+    const validationCallbacks = new Set<(result: Result<DblModel>) => void>();
+    let cachedValidation: Result<DblModel> | undefined;
+    let coreTheory: Promise<DblTheory> | undefined;
+    let validationGeneration = 0;
+
+    function validationResultsEqual(left: Result<DblModel>, right: Result<DblModel>): boolean {
+        if (left.tag !== right.tag) {
+            return false;
+        }
+        if (left.tag === "Ok") {
+            return true;
+        }
+        return (
+            right.tag === "Err" && JSON.stringify(left.content) === JSON.stringify(right.content)
+        );
+    }
+
+    async function didValidityChange(): Promise<Result<DblModel>> {
+        const generation = ++validationGeneration;
+        let result: Result<DblModel>;
+        if (!shape.getCoreTheory) {
+            let shapeName = "unnamed";
+            if (shape.theory) {
+                shapeName = shape.theory;
+            }
+            result = {
+                tag: "Err",
+                content: [{ message: `Shape \`${shapeName}\` has no core theory` }],
+            };
+        } else {
+            try {
+                if (!coreTheory) {
+                    coreTheory = shape.getCoreTheory();
+                }
+                const theory = await coreTheory;
+                const document = store.copyValue(
+                    handle,
+                    store.getDocumentView(handle),
+                ) as ModelDocument;
+                result = await validateModelDocument(
+                    document,
+                    theory,
+                    store.getDocumentRef(handle).id,
+                );
+            } catch (error) {
+                result = {
+                    tag: "Err",
+                    content: [{ message: `Failed to load core theory: ${String(error)}` }],
+                };
+            }
+        }
+
+        if (generation === validationGeneration) {
+            const changed =
+                cachedValidation === undefined || !validationResultsEqual(cachedValidation, result);
+            cachedValidation = result;
+            if (changed) {
+                for (const callback of Array.from(validationCallbacks)) {
+                    callback(result);
+                }
+            }
+        }
+        return result;
+    }
+
+    function onFormalChange(): void {
+        void didValidityChange();
+    }
+
     function appendCell(
         cell: ReturnType<typeof Nb.newRichTextCell> | Nb.FormalCell<ModelJudgment>,
-    ) {
+    ): void {
         store.changeDocument(handle, (document) => {
             Nb.appendCell((document as ModelDocument).notebook, cell);
         });
+        if (cell.tag === "formal") {
+            onFormalChange();
+        }
     }
 
     return {
@@ -213,6 +290,7 @@ export function modelNotebookFromStore<Handle, S extends Shape>(
                     handle,
                     cell.id,
                     type as ObjectTypesOf<S>,
+                    onFormalChange,
                 ) as AddedCellOf<S, T>;
             }
 
@@ -230,12 +308,13 @@ export function modelNotebookFromStore<Handle, S extends Shape>(
                 handle,
                 cell.id,
                 type as MorphismTypesOf<S>,
+                onFormalChange,
             ) as AddedCellOf<S, T>;
         },
         cells() {
             const document = store.getDocumentView(handle) as Readonly<ModelDocument>;
             return document.notebook.cellOrder.map((cellId) =>
-                getModelCell(shape, store, handle, cellId),
+                getModelCell(shape, store, handle, cellId, onFormalChange),
             );
         },
         cellsOf(filter: AnyCellType | Shape) {
@@ -260,6 +339,25 @@ export function modelNotebookFromStore<Handle, S extends Shape>(
         },
         onChange(callback) {
             return store.subscribe(handle, callback);
+        },
+        validate() {
+            return didValidityChange();
+        },
+        onValidate(callback) {
+            validationCallbacks.add(callback);
+            const current = cachedValidation;
+            if (current) {
+                queueMicrotask(() => {
+                    if (validationCallbacks.has(callback)) {
+                        callback(current);
+                    }
+                });
+            } else {
+                void didValidityChange();
+            }
+            return () => {
+                validationCallbacks.delete(callback);
+            };
         },
     };
 }

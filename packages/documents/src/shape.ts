@@ -1,4 +1,5 @@
 import type { Modality, MorType, ObOp, ObType } from "catcolab-document-types";
+import type { DblTheory } from "catlog-wasm";
 import { morphismTypesEqual, objectTypesEqual } from "./model/equality";
 
 export interface ObjectType<O extends ObType = ObType> {
@@ -15,9 +16,13 @@ export const RichText = { kind: "rich-text" } as const;
 
 export interface Shape {
     readonly theory?: string;
+    readonly getCoreTheory?: () => Promise<DblTheory>;
     readonly objects?: readonly ObjectType[];
     readonly morphisms?: readonly MorphismType[];
     readonly informal?: readonly RichTextType[];
+    readonly supportsInstances?: {
+        readonly tableObjects: readonly ObjectType[];
+    };
 }
 
 export type MorphismEndpoint =
@@ -49,6 +54,18 @@ export function defineMorphism<const M, const E extends MorphismEndpoints>(
 }
 
 export function defineShape<const S extends Shape>(shape: S): S {
+    if (shape.supportsInstances) {
+        if (!shape.theory || !shape.getCoreTheory) {
+            throw new Error("An instance-capable shape must define a theory and its core theory");
+        }
+        if (
+            shape.supportsInstances.tableObjects.some(
+                (tableObject) => !shape.objects?.includes(tableObject),
+            )
+        ) {
+            throw new Error("Instance table objects must be declared in the shape's objects");
+        }
+    }
     return shape;
 }
 
