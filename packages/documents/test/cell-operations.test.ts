@@ -67,13 +67,14 @@ describe.skip("re-ordering cells", () => {
     });
 });
 
-describe.skip("deleting cells", () => {
+describe("deleting cells", () => {
     test("deleting a cell removes it from the notebook's order and contents", async () => {
-        const { b, names } = await threeObjectNotebook();
+        const { notebook, b, names } = await threeObjectNotebook();
 
         expect(names()).toBe("A, B, C");
         b.delete();
         expect(names()).toBe("A, C");
+        expect(notebook.document.notebook.cellContents[b.id]).toBeUndefined();
     });
 
     test("rich-text cells can be deleted in the same way", async () => {

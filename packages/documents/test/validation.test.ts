@@ -17,7 +17,7 @@ async function wellFormedOlog() {
     return notebook;
 }
 
-describe.skip("validate", () => {
+describe("validate", () => {
     test("a well-formed notebook validates to an Ok carrying the model", async () => {
         const notebook = await wellFormedOlog();
 
@@ -38,7 +38,7 @@ describe.skip("validate", () => {
     });
 });
 
-describe.skip("onValidate", () => {
+describe("onValidate", () => {
     test("always calls the callback at least once with the current validation", async () => {
         const notebook = await wellFormedOlog();
 
@@ -66,19 +66,18 @@ describe.skip("onValidate", () => {
         }
         const initialCount = results.length;
 
-        notebook.add(Type, { label: "C" });
+        const source = notebook.cellsOf(Type)[0];
+        if (!source) {
+            throw new Error("Expected a source object");
+        }
+        source.delete();
+
         while (results.length === initialCount) {
             await new Promise((resolve) => setTimeout(resolve));
         }
-
         unsubscribe();
 
-        const latest = results[results.length - 1];
-        expect(latest?.tag).toBe("Ok");
-        if (latest?.tag !== "Ok") {
-            return;
-        }
-        expect(latest.content.obGenerators().length).toBe(3);
+        expect(results[results.length - 1]?.tag).toBe("Err");
     });
 });
 

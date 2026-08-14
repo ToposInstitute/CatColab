@@ -11,7 +11,14 @@ export const Attr = defineMorphism(
 
 export const SimpleSchema = defineShape({
     theory: "simple-schema",
+    getCoreTheory: async () => {
+        const { ThSchema } = await import("catlog-wasm");
+        return new ThSchema().theory();
+    },
     objects: [Entity, AttrType],
     morphisms: [Mapping, Attr],
     informal: [RichText],
+    supportsInstances: {
+        tableObjects: [Entity],
+    },
 });

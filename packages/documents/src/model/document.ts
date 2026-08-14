@@ -1,10 +1,16 @@
-import { Nb, type ModelDocument } from "catcolab-document-methods";
+import type { ModelDocument } from "catcolab-document-methods";
 import type { ModelJudgment } from "catcolab-document-types";
 
 export type { ModelDocument } from "catcolab-document-methods";
 
-export function getModelJudgment(document: Readonly<ModelDocument>, cellId: string): ModelJudgment {
-    const cell = Nb.getCellById(document.notebook, cellId);
+export function tryGetModelJudgment(
+    document: Readonly<ModelDocument>,
+    cellId: string,
+): ModelJudgment | undefined {
+    const cell = document.notebook.cellContents[cellId];
+    if (!cell) {
+        return undefined;
+    }
     if (cell.tag !== "formal") {
         throw new Error(`Cell ${cellId} is not formal.`);
     }

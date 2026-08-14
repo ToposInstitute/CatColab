@@ -32,6 +32,20 @@ describe("the simple-schema logic", () => {
         expect(name.type.morType).toEqual({ tag: "Basic", content: "Attr" });
     });
 
+    test("declares how schemas are validated and instantiated", async () => {
+        expect(SimpleSchema.supportsInstances.tableObjects).toEqual([Entity]);
+
+        const theory = await SimpleSchema.getCoreTheory();
+        try {
+            expect(theory.hasObType(Entity.obType)).toBe(true);
+            expect(theory.hasObType(AttrType.obType)).toBe(true);
+            expect(theory.hasMorType(Mapping.morType)).toBe(true);
+            expect(theory.hasMorType(Attr.morType)).toBe(true);
+        } finally {
+            theory.free();
+        }
+    }, 15_000);
+
     test.skip("notebooks validate against the core theory of schemas", async () => {
         const binder = createBinder();
         const notebook = await binder.createNotebook(SimpleSchema, { title: "Example schema" });
