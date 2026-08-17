@@ -31,6 +31,7 @@ export type InlineListItemOptions = Pick<
     | "exitLeft"
     | "exitRight"
     | "interceptKeyDown"
+    | "onComplete"
 > & {
     /** Called when the displayed text of the item input changes.
 
@@ -201,6 +202,9 @@ export function InlineListEditor<T>(originalProps: InlineListEditorProps<T>) {
                 focus.setActiveChild(i + 1);
             }
         },
+        // Completing an item always leaves a trailing placeholder after it,
+        // so there is always a next item to move to.
+        onComplete: () => focus.setActiveChild(i + 1),
         interceptKeyDown: (evt) => {
             if (evt.key === props.insertKey) {
                 insertNewItem(i + 1);
