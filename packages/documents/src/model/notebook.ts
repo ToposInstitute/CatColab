@@ -183,10 +183,7 @@ export function modelNotebookFromStore<Handle, S extends Shape>(
     store: DocumentStore<Handle>,
     handle: Handle,
 ): Notebook<S, ModelDocument> {
-    const validationCallbacks = new Set<(result: Result<DblModel>) => void>();
-    let cachedValidation: Result<DblModel> | undefined;
     let coreTheory: Promise<DblTheory> | undefined;
-    let validationGeneration = 0;
 
     function validationResultsEqual(left: Result<DblModel>, right: Result<DblModel>): boolean {
         if (left.tag !== right.tag) {
@@ -200,8 +197,7 @@ export function modelNotebookFromStore<Handle, S extends Shape>(
         );
     }
 
-    async function didValidityChange(): Promise<Result<DblModel>> {
-        const generation = ++validationGeneration;
+    async function validateCurrentDocument(): Promise<Result<DblModel>> {
         let result: Result<DblModel>;
         if (!shape.getCoreTheory) {
             let shapeName = "unnamed";
@@ -235,21 +231,7 @@ export function modelNotebookFromStore<Handle, S extends Shape>(
             }
         }
 
-        if (generation === validationGeneration) {
-            const changed =
-                cachedValidation === undefined || !validationResultsEqual(cachedValidation, result);
-            cachedValidation = result;
-            if (changed) {
-                for (const callback of Array.from(validationCallbacks)) {
-                    callback(result);
-                }
-            }
-        }
         return result;
-    }
-
-    function onFormalChange(): void {
-        void didValidityChange();
     }
 
     function appendCell(
@@ -258,9 +240,6 @@ export function modelNotebookFromStore<Handle, S extends Shape>(
         store.changeDocument(handle, (document) => {
             Nb.appendCell((document as ModelDocument).notebook, cell);
         });
-        if (cell.tag === "formal") {
-            onFormalChange();
-        }
     }
 
     return {
@@ -290,7 +269,6 @@ export function modelNotebookFromStore<Handle, S extends Shape>(
                     handle,
                     cell.id,
                     type as ObjectTypesOf<S>,
-                    onFormalChange,
                 ) as AddedCellOf<S, T>;
             }
 
@@ -308,13 +286,12 @@ export function modelNotebookFromStore<Handle, S extends Shape>(
                 handle,
                 cell.id,
                 type as MorphismTypesOf<S>,
-                onFormalChange,
             ) as AddedCellOf<S, T>;
         },
         cells() {
             const document = store.getDocumentView(handle) as Readonly<ModelDocument>;
             return document.notebook.cellOrder.map((cellId) =>
-                getModelCell(shape, store, handle, cellId, onFormalChange),
+                getModelCell(shape, store, handle, cellId),
             );
         },
         cellsOf(filter: AnyCellType | Shape) {
@@ -341,22 +318,32 @@ export function modelNotebookFromStore<Handle, S extends Shape>(
             return store.subscribe(handle, callback);
         },
         validate() {
-            return didValidityChange();
+            return validateCurrentDocument();
         },
         onValidate(callback) {
-            validationCallbacks.add(callback);
-            const current = cachedValidation;
-            if (current) {
-                queueMicrotask(() => {
-                    if (validationCallbacks.has(callback)) {
-                        callback(current);
-                    }
-                });
-            } else {
-                void didValidityChange();
+            let active = true;
+            let previous: Result<DblModel> | undefined;
+
+            async function validateAndNotify(): Promise<void> {
+                const result = await validateCurrentDocument();
+                if (!active) {
+                    return;
+                }
+                if (previous && validationResultsEqual(previous, result)) {
+                    return;
+                }
+                previous = result;
+                callback(result);
             }
+
+            const unsubscribe = store.subscribe(handle, () => {
+                void validateAndNotify();
+            });
+            void validateAndNotify();
+
             return () => {
-                validationCallbacks.delete(callback);
+                active = false;
+                unsubscribe();
             };
         },
     };
