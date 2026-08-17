@@ -17,8 +17,7 @@ import {
     type Notebook,
     type ObjectCell,
     type TableRow,
-    type TableCell,
-    isCellValid,
+    type FieldValue,
 } from "catcolab-documents";
 import {
     type FloatToIntegerMigrationPlan,
@@ -221,12 +220,12 @@ export type DemoDocument = {
     storageProblem: () => string | undefined;
 };
 
-/** Decode the public table cell representation into the demo's editor vocabulary. */
-const cellValue = (cell: TableCell | undefined): unknown => {
-    if (!cell || !isCellValid(cell)) {
+/** Decode the public field representation into the demo's editor vocabulary. */
+const cellValue = (cell: FieldValue | undefined): unknown => {
+    if (!cell || cell.tag === "Null") {
         return undefined;
     }
-    return cell.tag === "Null" ? undefined : cell.content;
+    return cell.tag === "RowRef" ? cell.content.id : cell.content.value;
 };
 
 /** The localStorage key under which the demo's schema + instance are persisted. */
@@ -347,9 +346,7 @@ export async function createDemoDocument(): Promise<DemoDocument> {
     if (!instanceHandle) {
         throw new Error("Instance is not attached to the demo store.");
     }
-    const [instanceTables, setInstanceTables] = createSignal<InstanceTable[]>(
-        instance.tables,
-    );
+    const [instanceTables, setInstanceTables] = createSignal<InstanceTable[]>(instance.tables);
     const instanceSnapshot = () => solidStore.copyValue(instanceHandle, instance.document);
     const tableFor = (entity: { readonly id: string }) =>
         instanceTables().find((table) => table.id === entity.id);
@@ -365,7 +362,7 @@ export async function createDemoDocument(): Promise<DemoDocument> {
         const table = tableFor(entity);
         return cellValue(
             table
-                ? row.cells[table.headers.findIndex((header) => header.id === morphismId)]
+                ? row.fields[table.headers.findIndex((header) => header.id === morphismId)]
                 : undefined,
         );
     };

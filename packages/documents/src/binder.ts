@@ -1229,9 +1229,7 @@ const modelHasMorphism = (model: DblModel, id: string): boolean => {
  * literal (an attribute's value). Use to pattern match a value read back from
  * {@link TableRow.get} without casting.
  */
-export function isRow(
-    value: LiteralValue | TableRow | undefined,
-): value is TableRow;
+export function isRow(value: LiteralValue | TableRow | undefined): value is TableRow;
 export function isRow(value: unknown): value is { readonly id: string };
 export function isRow(value: unknown): boolean {
     return (
@@ -1527,11 +1525,7 @@ function attachInstanceNotebook<
     };
 
     /** Set (or clear) a row's value for one schema morphism, replacing any prior value. */
-    const setValue = (
-        rowId: string,
-        morphismId: string,
-        value: LiteralValue | TableRow,
-    ): void => {
+    const setValue = (rowId: string, morphismId: string, value: LiteralValue | TableRow): void => {
         if (findRow(doc, rowId) === undefined) {
             throw new Error(`No instance row with id "${rowId}".`);
         }
@@ -1565,79 +1559,34 @@ function attachInstanceNotebook<
     /**
      * A row's cells, one per live header of its entity and in the same order
      * as the owning table's {@link InstanceTable.headers}. Each stored {@link
-     * FieldValue} is classified against its header's current type — an unset
-     * column is `Null`, a fitting value a {@link TableCellValue}, a
-     * value the schema no longer accepts an {@link InvalidTableCellValue}. Cells
-     * are live views, so an invalid cell heals itself on re-read when the
-     * schema or the linked row is restored. When the header's codomain does
-     * not resolve (type unknown), values are decoded by their stored shape
-     * alone — validation owns the dangling schema morphism. Data under a
-     * column that is no longer a live schema morphism is retained in the
-     * document but not listed.
+     * FieldValue} retains its stored tag and row UUID, with its path included
+     * in `content`. Validation reports values whose current schema type no
+     * longer accepts them. Data under a column that is no longer a live schema
+     * morphism is retained in the document but not listed.
      */
     const fieldsOf = (rowId: string, entityId: string): FieldValue[] => {
         const fields = findRow(doc, rowId)?.row.fields;
         return headersOf(entityId).map((header) => {
-            const path: FieldPath = ["tables", entityId, "rows", rowId, "fields", header.id];
+            const path: FieldPath = [entityId, "rows", rowId, "fields", header.id];
             const value = fields?.[header.id];
-            const type = header.type;
             if (value === undefined || value === "Null") {
-                return { tag: "Null", path };
+                return { tag: "Null", content: { path } };
             }
             if ("RowRef" in value) {
-                // A deleted target row wins over a mistyped header: all we
-                // know of the value then is its stored uuid.
-                const target = findRow(doc, value.RowRef);
-                if (!target) {
-                    return { tag: "DanglingRowRef", path, content: value.RowRef };
-                }
-                const mistyped = type.tag !== "RowRef" || target.table.id !== type.content.id;
-                return {
-                    tag: mistyped ? "MistypedRowRef" : "RowRef",
-                    path,
-                    content: rowHandle(value.RowRef),
-                };
+                return { tag: "RowRef", content: { path, id: value.RowRef } };
             }
             // Rebuild the literal as a plain value rather than exposing the
             // store's (possibly proxied) one.
             if ("Bool" in value) {
-                if (type.tag === "RowRef") {
-                    return {
-                        tag: "MistypedLiteral",
-                        path,
-                        content: { tag: "Bool", content: value.Bool },
-                    };
-                }
-                return { tag: "Bool", path, content: value.Bool };
+                return { tag: "Bool", content: { path, value: value.Bool } };
             }
             if ("Int" in value) {
-                if (type.tag === "RowRef") {
-                    return {
-                        tag: "MistypedLiteral",
-                        path,
-                        content: { tag: "Int", content: value.Int },
-                    };
-                }
-                return { tag: "Int", path, content: value.Int };
+                return { tag: "Int", content: { path, value: value.Int } };
             }
             if ("Float" in value) {
-                if (type.tag === "RowRef") {
-                    return {
-                        tag: "MistypedLiteral",
-                        path,
-                        content: { tag: "Float", content: value.Float },
-                    };
-                }
-                return { tag: "Float", path, content: value.Float };
+                return { tag: "Float", content: { path, value: value.Float } };
             }
-            if (type.tag === "RowRef") {
-                return {
-                    tag: "MistypedLiteral",
-                    path,
-                    content: { tag: "String", content: value.String },
-                };
-            }
-            return { tag: "String", path, content: value.String };
+            return { tag: "String", content: { path, value: value.String } };
         });
     };
 
@@ -1664,13 +1613,6 @@ function attachInstanceNotebook<
             }
             return fieldsOf(id, objectId);
         },
-        get cells() {
-            const objectId = objectIdOfRow(id);
-            if (objectId === undefined) {
-                throw new Error(`Row "${id}" is not in the instance.`);
-            }
-            return fieldsOf(id, objectId);
-        },
     });
 
     const fieldIssues = (): TableFieldIssue[] =>
@@ -1678,36 +1620,49 @@ function attachInstanceNotebook<
             table.rows.flatMap((row) =>
                 row.fields.flatMap<TableFieldIssue>((field, index) => {
                     const header = table.headers[index];
-                    if (!header || isCellValid(field)) {
+                    if (!header) {
                         return [];
                     }
                     const expected =
                         header.type.tag === "RowRef"
-                            ? (tableHandle(header.type.content.id).label || header.type.content.id)
+                            ? tableHandle(header.type.content.id).label || header.type.content.id
                             : header.type.tag;
-                    if (field.tag === "DanglingRowRef") {
-                        return [{
-                            message: `\`${header.label || header.id}\` refers to a row that no longer exists`,
-                            path: field.path,
-                            issueType: field.tag,
-                        }];
+                    if (field.tag === "RowRef" && !findRow(doc, field.content.id)) {
+                        return [
+                            {
+                                message: `\`${header.label || header.id}\` refers to a row that no longer exists`,
+                                path: field.content.path,
+                                issueType: "DanglingRowRef",
+                            },
+                        ];
                     }
-                    if (field.tag === "MistypedRowRef") {
+                    if (
+                        field.tag === "RowRef" &&
+                        (header.type.tag !== "RowRef" ||
+                            findRow(doc, field.content.id)?.table.id !== header.type.content.id)
+                    ) {
                         const found = findRow(doc, field.content.id);
                         const actual = found
                             ? tableHandle(found.table.id).label || found.table.id
                             : "unknown";
-                        return [{
-                            message: `\`${header.label || header.id}\` must be a row of table "${expected}" (was a row of table "${actual}")`,
-                            path: field.path,
-                            issueType: field.tag,
-                        }];
+                        return [
+                            {
+                                message: `\`${header.label || header.id}\` must be a row of table "${expected}" (was a row of table "${actual}")`,
+                                path: field.content.path,
+                                issueType: "MistypedRowRef",
+                            },
+                        ];
                     }
-                    return [{
-                        message: `\`${header.label || header.id}\` must be a row of table "${expected}" (was a ${field.content.tag} literal)`,
-                        path: field.path,
-                        issueType: field.tag,
-                    }];
+                    if (field.tag === "RowRef" || header.type.tag !== "RowRef") {
+                        return [];
+                    }
+                    return [
+                        {
+                            message: `\`${header.label || header.id}\` must be a row of table "${expected}" (was a ${field.tag} literal)`,
+                            path: field.content.path,
+                            issueType: "MistypedLiteral",
+                        },
+                    ];
                 }),
             ),
         );
@@ -1721,7 +1676,7 @@ function attachInstanceNotebook<
      * row (a mapping) or a freshly synthesized value object carrying the literal
      * (an attribute). A literal stored under a mapping — mistyped after a schema
      * change — gets an unresolvable codomain instead, so validation flags it
-     * (see {@link InvalidTableCellValue}).
+     * (reported through {@link TableFieldIssue}).
      *
      * Tables over a deleted schema object, and values over a deleted schema
      * morphism, are skipped: retained data, but not part of the current
@@ -1846,14 +1801,17 @@ function attachInstanceNotebook<
         get tables() {
             return tablesForCurrentModel();
         },
-        get(path: InstancePath): Result<InstanceTable | TableRow | FieldValue> {
-            const [root, tableId, rows, rowId, fields, fieldId] = path;
-            if (root !== "tables" || !tableId) {
+        get(path: Path): Result<InstanceTable | TableRow | FieldValue> {
+            const [tableId, rows, rowId, fields, fieldId] = path;
+            if (!tableId) {
                 return { tag: "Err", content: [{ message: "Invalid instance path.", path }] };
             }
             const table = tablesForCurrentModel().find((candidate) => candidate.id === tableId);
             if (!table) {
-                return { tag: "Err", content: [{ message: `No table with id "${tableId}".`, path }] };
+                return {
+                    tag: "Err",
+                    content: [{ message: `No table with id "${tableId}".`, path }],
+                };
             }
             if (rows === undefined) {
                 return { tag: "Ok", content: table };
@@ -1901,11 +1859,12 @@ function attachInstanceNotebook<
         model
             .obGenerators()
             .map((id) => model.obPresentation(id))
-            .filter((generator) =>
-                objectPresentation(generator.id) !== undefined &&
-                shape.tableObjects.some((definition) =>
-                    sameTypeValue(definition, defineObject(generator.obType)),
-                ),
+            .filter(
+                (generator) =>
+                    objectPresentation(generator.id) !== undefined &&
+                    shape.tableObjects.some((definition) =>
+                        sameTypeValue(definition, defineObject(generator.obType)),
+                    ),
             )
             .map((generator) => tableHandle(generator.id));
 
@@ -3207,21 +3166,11 @@ interface NotebookMethods<TShape extends AnyShape = AnyShape, Handle = any> {
 
 type TableRowHandle = TableRow;
 
-/** Path to a table, row, or field in the underlying instance document. */
-export type InstancePath =
-    | readonly ["tables", string]
-    | readonly ["tables", string, "rows", string]
-    | FieldPath;
+/** Path to a table, row, or field, addressed from its table UUID. */
+export type Path = readonly [string, ...string[]];
 
 /** Path to a field in the underlying instance document. */
-export type FieldPath = readonly [
-    "tables",
-    string,
-    "rows",
-    string,
-    "fields",
-    string,
-];
+export type FieldPath = readonly [string, "rows", string, "fields", string];
 
 /**
  * A header of an {@link InstanceTable}: one schema morphism (mapping or
@@ -3244,68 +3193,35 @@ export interface TableHeader {
         | { readonly tag: "RowRef"; readonly content: { readonly id: string } };
 }
 
-/**
- * A cell of an {@link Instance} table row: either a {@link TableCellValue},
- * whose stored value fits its header's current schema, or an {@link
- * InvalidTableCellValue}, whose stored value no longer does (the schema changed, or
- * a linked row was deleted). The shape mirrors the stored Rust `FieldValue`
- * (see `document-types/src/v2/instance.rs`), except that stored `RowRef` uuids are resolved
- * against the current schema and instance. Designed to be pattern matched
- * (e.g. with `ts-pattern`); validity is checked with {@link isCellValid} or by
- * matching the tags.
- */
-export type TableCell = FieldValue;
-
 /** A path-addressed field value exposed by a table row. */
-export type FieldValue = TableCellValue | InvalidTableCellValue;
+export type FieldValue =
+    | { readonly tag: "Null"; readonly content: { readonly path: FieldPath } }
+    | {
+          readonly tag: "Bool";
+          readonly content: { readonly path: FieldPath; readonly value: boolean };
+      }
+    | {
+          readonly tag: "Int";
+          readonly content: { readonly path: FieldPath; readonly value: number };
+      }
+    | {
+          readonly tag: "Float";
+          readonly content: { readonly path: FieldPath; readonly value: number };
+      }
+    | {
+          readonly tag: "String";
+          readonly content: { readonly path: FieldPath; readonly value: string };
+      }
+    | {
+          readonly tag: "RowRef";
+          readonly content: { readonly path: FieldPath; readonly id: string };
+      };
 
 /** A literal value that can be written to an instance attribute. */
 export type LiteralValue = string | number | boolean | null;
 
 /** A literal cell's stored value tag. */
 export type LiteralType = "Bool" | "Int" | "Float" | "String";
-
-/**
- * A cell whose stored value fits its header's current schema: a literal under
- * an attribute, or a live row of the header's target table under a mapping.
- */
-export type TableCellValue =
-    | { readonly tag: "Null"; readonly path: FieldPath }
-    | { readonly tag: "Bool"; readonly path: FieldPath; readonly content: boolean }
-    | { readonly tag: "Int"; readonly path: FieldPath; readonly content: number }
-    | { readonly tag: "Float"; readonly path: FieldPath; readonly content: number }
-    | { readonly tag: "String"; readonly path: FieldPath; readonly content: string }
-    | { readonly tag: "RowRef"; readonly path: FieldPath; readonly content: TableRow };
-
-/**
- * A cell whose stored value no longer fits its header's current schema. The
- * value is retained in the document — validation reports it, and the editor
- * owns offering the fix — and the cell heals itself on re-read if the schema
- * or the linked row is restored:
- *
- * - `DanglingRowRef`: the linked target row was deleted; carries the stored
- *   uuid. Takes precedence over `MistypedRowRef` when both would apply.
- * - `MistypedRowRef`: the linked row is live, but the header no longer accepts
- *   it — the header is now an attribute, or a mapping into a different table.
- * - `MistypedLiteral`: a literal stored under a header that is now a mapping.
- */
-export type InvalidTableCellValue =
-    | { readonly tag: "DanglingRowRef"; readonly path: FieldPath; readonly content: string }
-    | { readonly tag: "MistypedRowRef"; readonly path: FieldPath; readonly content: TableRow }
-    | {
-          readonly tag: "MistypedLiteral";
-          readonly path: FieldPath;
-          readonly content: {
-              readonly tag: LiteralType;
-              readonly content: LiteralValue;
-          };
-      };
-
-/** Whether a {@link TableCell}'s stored value fits its header's current schema. */
-export const isCellValid = (cell: TableCell): cell is TableCellValue =>
-    cell.tag !== "DanglingRowRef" &&
-    cell.tag !== "MistypedRowRef" &&
-    cell.tag !== "MistypedLiteral";
 
 /**
  * A table of an {@link Instance}: the rows instantiating one schema entity,
@@ -3349,7 +3265,7 @@ export type InstanceValidationResult = Result<InstanceValidationSuccess, Instanc
 
 /**
  * A row of an {@link Instance}: one record of a schema entity. Rows are never
- * named. Its position and cells are live views of the instance document.
+ * named. Its position and fields are live views of the instance document.
  */
 export interface TableRow {
     /** The row UUID. */
@@ -3357,22 +3273,17 @@ export interface TableRow {
     /**
      * The row's 0-based position in its table's row order (matching {@link
      * InstanceTable.rows}); `-1` only for a stale handle kept across the
-     * row's deletion. A row reached through {@link TableRow.cells} is always
-     * live — a deleted mapping target surfaces as a `DanglingRowRef` cell,
-     * never as a handle with a negative index.
+     * row's deletion.
      */
     readonly index: number;
     /**
-     * The row's cells, one {@link TableCell} per live header of its entity,
+     * The row's fields, one {@link FieldValue} per live header of its entity,
      * positionally aligned with the owning table's {@link
      * InstanceTable.headers}: an unset header is `Null`, an attribute is
-     * its tagged literal, and a mapping holds the linked target {@link TableRow}. A
-     * stored value the current schema no longer accepts is an {@link
-     * InvalidTableCellValue} instead.
+     * its tagged literal, and a mapping holds the linked target row UUID.
+     * Validation reports stored values the current schema no longer accepts.
      */
     readonly fields: FieldValue[];
-    /** @deprecated Use {@link TableRow.fields}. */
-    readonly cells: FieldValue[];
     /** Set or clear values by column label. */
     update(args: Record<string, LiteralValue | TableRow>): void;
     /** Delete this row, leaving references to it dangling. */
@@ -3395,7 +3306,7 @@ export interface TableRow {
  * {@link InstanceDocument} storing an array of *tables* — one table per
  * schema entity, keyed by the schema's generator UUIDs. Obtained from {@link
  * Binder.createInstance}. Tables provide the editor surface for adding rows and
- * reading or writing their cells.
+ * reading or writing their fields.
  */
 export type Instance<
     _TShape extends InstanceShape = InstanceShape,
@@ -3424,7 +3335,7 @@ export type Instance<
      */
     readonly tables: InstanceTable[];
     /** Resolve a table, row, or field by its underlying document path. */
-    get(path: InstancePath): Result<InstanceTable | TableRow | FieldValue>;
+    get(path: Path): Result<InstanceTable | TableRow | FieldValue>;
     /** Validate the instance and resolve its schema model and tables. */
     validate(): Promise<InstanceValidationResult>;
     /**

@@ -12,8 +12,8 @@ const tableFor = (tables: InstanceTable[], id: string): InstanceTable => {
 };
 
 const stringCell = (table: InstanceTable, row: TableRow, id: string): string | null | undefined => {
-    const cell = row.cells[table.headers.findIndex((header) => header.id === id)];
-    return cell?.tag === "String" ? cell.content : undefined;
+    const cell = row.fields[table.headers.findIndex((header) => header.id === id)];
+    return cell?.tag === "String" ? cell.content.value : undefined;
 };
 
 describe("tabular instances", () => {

@@ -13,8 +13,8 @@ const tableFor = (tables: InstanceTable[], id: string): InstanceTable => {
     return table;
 };
 
-const cellFor = (table: InstanceTable, row: TableRow, id: string) =>
-    row.cells[table.headers.findIndex((header) => header.id === id)];
+const fieldFor = (table: InstanceTable, row: TableRow, id: string) =>
+    row.fields[table.headers.findIndex((header) => header.id === id)];
 
 describe("instances", () => {
     test("tables list schema entities and provide live row handles", async () => {
@@ -50,21 +50,21 @@ describe("instances", () => {
         expect(companyTable.rows).toHaveLength(1);
         expect(fred.index).toBe(0);
         expect(acme.index).toBe(0);
-        expect(cellFor(personTable, fred, employer.id)).toMatchObject({
+        expect(fieldFor(personTable, fred, employer.id)).toMatchObject({
             tag: "RowRef",
-            content: { index: 0 },
+            content: { id: acme.id },
         });
-        expect(cellFor(personTable, fred, name.id)).toMatchObject({
+        expect(fieldFor(personTable, fred, name.id)).toMatchObject({
             tag: "String",
-            content: "Fred",
+            content: { value: "Fred" },
         });
 
         fred.set(name, "Frederick");
         fred.set(employer, null);
-        expect(cellFor(personTable, fred, employer.id)).toMatchObject({ tag: "Null" });
-        expect(cellFor(personTable, fred, name.id)).toMatchObject({
+        expect(fieldFor(personTable, fred, employer.id)).toMatchObject({ tag: "Null" });
+        expect(fieldFor(personTable, fred, name.id)).toMatchObject({
             tag: "String",
-            content: "Frederick",
+            content: { value: "Frederick" },
         });
     });
 
@@ -96,23 +96,16 @@ describe("instances", () => {
 
         expect(table.entityId).toBe(person.id);
         expect(row.id).toBeTypeOf("string");
-        expect(field?.path).toEqual([
-            "tables",
-            person.id,
-            "rows",
-            row.id,
-            "fields",
-            name.id,
-        ]);
-        expect(instance.get(["tables", person.id])).toMatchObject({
+        expect(field?.content.path).toEqual([person.id, "rows", row.id, "fields", name.id]);
+        expect(instance.get([person.id])).toMatchObject({
             tag: "Ok",
             content: { id: person.id },
         });
-        expect(instance.get(["tables", person.id, "rows", row.id])).toMatchObject({
+        expect(instance.get([person.id, "rows", row.id])).toMatchObject({
             tag: "Ok",
             content: { id: row.id },
         });
-        expect(instance.get(field!.path)).toEqual({ tag: "Ok", content: field });
+        expect(instance.get(field!.content.path)).toEqual({ tag: "Ok", content: field });
     });
 
     test("tables hide a deleted entity but retain its stored rows", async () => {
@@ -160,7 +153,7 @@ describe("instances", () => {
 
         expect(importedTable.label).toBe("Import.External");
         expect(importedTable.headers.map((header) => header.label)).toEqual(["Import.name"]);
-        expect(row.fields).toMatchObject([{ tag: "String", content: "Remote" }]);
+        expect(row.fields).toMatchObject([{ tag: "String", content: { value: "Remote" } }]);
         expect((await instance.validate()).tag).toBe("Ok");
     });
 
@@ -177,9 +170,9 @@ describe("instances", () => {
         const reloadedTable = tableFor(reloaded.tables, person.id);
 
         expect(reloadedTable.rows).toHaveLength(1);
-        expect(cellFor(reloadedTable, reloadedTable.rows[0]!, name.id)).toMatchObject({
+        expect(fieldFor(reloadedTable, reloadedTable.rows[0]!, name.id)).toMatchObject({
             tag: "String",
-            content: "Fred",
+            content: { value: "Fred" },
         });
         expect((await reloaded.validate()).tag).toBe("Ok");
     });
@@ -195,7 +188,7 @@ describe("instances", () => {
         const row = table.addRow();
         row.set(name, "Fred");
 
-        expect(row.fields).toMatchObject([{ tag: "String", content: "Fred" }]);
+        expect(row.fields).toMatchObject([{ tag: "String", content: { value: "Fred" } }]);
         schema
             .cellsOf(Attr)
             .find((cell) => cell.id === attrId)
@@ -203,7 +196,7 @@ describe("instances", () => {
 
         const refreshedTable = tableFor(instance.tables, person.id);
         expect(refreshedTable.headers).toEqual([]);
-        expect(refreshedTable.rows[0]?.cells).toEqual([]);
+        expect(refreshedTable.rows[0]?.fields).toEqual([]);
         const storedRow = Object.values(instance.document.tables[person.id]?.rows ?? {})[0];
         expect(storedRow?.fields[attrId]).toEqual({ String: "Fred" });
     });

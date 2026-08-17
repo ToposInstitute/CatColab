@@ -82,8 +82,7 @@ model.judgmentsOf(Place);
 
 ## Using judgments with an instance
 
-An elaborated object judgment can be passed directly to the instance API. No
-cast back to a notebook cell is needed.
+An elaborated object judgment identifies the corresponding table by UUID.
 
 <!-- verifier:prepend-to-following -->
 
@@ -94,10 +93,15 @@ if (validatedPerson.tag === "Err") {
     throw new Error(validatedPerson.content.map((issue) => issue.message).join("; "));
 }
 
-instance.add(validatedPerson.content, { name: "Alice" });
+const personTable = instance.tables.find((table) => table.id === validatedPerson.content.id);
+if (!personTable) {
+    throw new Error("Person table is missing");
+}
+personTable.addRow({ name: "Alice" });
 
-console.log("person rows:", instance.rowsOf(validatedPerson.content).length);
-console.log("name:", instance.rowsOf(validatedPerson.content)[0]?.values["name"]);
+console.log("person rows:", personTable.rows.length);
+const nameField = personTable.rows[0]?.fields.find((field) => field.tag === "String");
+console.log("name:", nameField?.tag === "String" ? nameField.content.value : "");
 ```
 
 ```
@@ -108,7 +112,7 @@ name: Alice
 ## Imported judgments
 
 Validated models include judgments from instantiated models. They remain
-queryable and can be used directly as tables and columns in an instance.
+queryable and identify their corresponding instance tables.
 
 <!-- verifier:reset -->
 
@@ -139,16 +143,20 @@ if (!importedEntity) {
 }
 
 const instance = await binder.createInstance(root, { title: "Root data" });
-const row = instance.add(importedEntity, { name: "Remote" });
+const importedTable = instance.tables.find((table) => table.id === importedEntity.id);
+if (!importedTable) {
+    throw new Error("Imported table is missing");
+}
+const row = importedTable.addRow({ "Import.name": "Remote" });
 const instanceValidation = await instance.validate();
 
-console.log("rows:", instance.rowsOf(importedEntity).length);
-console.log("name:", row.values["Import.name"]);
-console.log("valid:", instanceValidation.tag);
+console.log("rows:", importedTable.rows.length);
+console.log("name:", row.fields[0]?.tag === "String" ? row.fields[0].content.value : "");
+console.log("valid:", instanceValidation.tag === "Ok");
 ```
 
 ```
 rows: 1
 name: Remote
-valid: Valid
+valid: true
 ```

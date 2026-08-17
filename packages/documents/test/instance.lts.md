@@ -28,7 +28,7 @@ const name = schema.add(Attr, { label: "name", from: person, to: str });
 ## Tables
 
 An instance is created from the schema itself — it takes its shape and its
-reference to the schema from that notebook, so we pass only a name. `tables()`
+reference to the schema from that notebook, so we pass only a name. `tables`
 lists the instance as a database: one table per row-bearing schema entity, in
 schema order — imported entities included, and an entity with no rows yet gets
 an empty table. The elaborated schema is resolved internally, so no prior
@@ -46,7 +46,7 @@ row, an attribute a literal, and `null` clears the column.
 ```ts
 const instance = await binder.createInstance(schema, { title: "Company instance" });
 
-const tables = await instance.tables();
+const tables = instance.tables;
 const personTable = tables.find((table) => table.label === "Person");
 const companyTable = tables.find((table) => table.label === "Company");
 if (!personTable || !companyTable) {
@@ -68,7 +68,9 @@ console.log("tables:", tables.map((table) => table.label).join(", "));
 for (const header of personTable.headers) {
     const targetId = header.type.tag === "RowRef" ? header.type.content.id : undefined;
     const targetTable = tables.find((table) => table.id === targetId);
-    console.log(`${header.label} (${header.type.tag})${targetTable ? ` -> ${targetTable.label}` : ""}`);
+    console.log(
+        `${header.label} (${header.type.tag})${targetTable ? ` -> ${targetTable.label}` : ""}`,
+    );
 }
 console.log("person rows:", personTable.rows.length);
 
@@ -87,70 +89,47 @@ after addRow: 2
 after delete: 1
 ```
 
-## Cells
+## Fields
 
 Rows know their position: `row.index` is the row's 0-based position in its
-table's row order. A row's `cells` list one `TableCell` per header,
-positionally aligned with the table's `headers`, each tagged for pattern
-matching — with `ts-pattern`, or plain narrowing as here. An unset header is
-`{ tag: "Null" }`; an attribute is its tagged literal
-(`{ tag: "String", content: … }`, `{ tag: "Int", … }`, …), and a mapping holds
-the linked target row under `{ tag: "RowRef" }`.
+table's row order. A row's `fields` list one `FieldValue` per header,
+positionally aligned with the table's `headers`. Each value contains its UUID
+path, while a literal has a `value` and a mapping has the linked row's `id`.
 
 ```ts
-import type { TableCell } from "catcolab-documents";
+import type { FieldValue } from "catcolab-documents";
 
-const cellText = (cell: TableCell): string => {
-    switch (cell.tag) {
+const fieldText = (field: FieldValue): string => {
+    switch (field.tag) {
         case "Null":
             return "(unset)";
         case "RowRef":
-            return `#${cell.content.index + 1}`;
-        case "DanglingRowRef":
-        case "MistypedRowRef":
-        case "MistypedLiteral":
-            return "(invalid)";
+            return "(row)";
         default:
-            return String(cell.content);
+            return String(field.content.value);
     }
 };
 
-const fredCells = () => fred.cells.map(cellText).join(", ");
+const fredFields = () => fred.fields.map(fieldText).join(", ");
 console.log("index:", fred.index);
-console.log("cells:", fredCells());
+console.log("fields:", fredFields());
 
 fred.update({ name: "Frederick" });
-console.log("after set:", fredCells());
+console.log("after set:", fredFields());
 
 fred.set(name, null);
-console.log("after clear:", fredCells());
+console.log("after clear:", fredFields());
 ```
 
 ```
 index: 0
-cells: #1, Fred
-after set: #1, Frederick
-after clear: #1, (unset)
+fields: (row), Fred
+after set: (row), Frederick
+after clear: (row), (unset)
 ```
 
-A cell is either _valid_ — its stored value fits its header's current schema —
-or _invalid_: the linked target row was deleted (`DanglingRowRef`, carrying
-the stored uuid), the header no longer accepts the linked row
-(`MistypedRowRef`: the header is now an attribute, or a mapping into a
-different table), or a literal sits under a header that is now a mapping
-(`MistypedLiteral`). Invalid values are retained in the document and reported
-by validation, and since cells are live views they heal on re-read when the
-schema or the linked row is restored. `isCellValid` narrows the union.
-
-```ts
-import { isCellValid } from "catcolab-documents";
-
-console.log("all valid:", fred.cells.every(isCellValid));
-```
-
-```
-all valid: true
-```
+Invalid values are retained in the document and reported by `validate()` as
+field issues. Each issue's `path` identifies the affected field.
 
 Finally, the instance validates against its schema.
 

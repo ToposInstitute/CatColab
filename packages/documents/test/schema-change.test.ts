@@ -4,7 +4,6 @@ import { describe, expect, test } from "vitest";
 import type { Document, ModelJudgment, MorType } from "catcolab-document-types";
 import {
     createBinder,
-    isCellValid,
     plainStore,
     type InstanceTable,
     type ModelDocument,
@@ -21,8 +20,8 @@ const tableFor = (tables: InstanceTable[], id: string): InstanceTable => {
     return table;
 };
 
-const cellFor = (table: InstanceTable, row: TableRow, id: string) =>
-    row.cells[table.headers.findIndex((header) => header.id === id)];
+const fieldFor = (table: InstanceTable, row: TableRow, id: string) =>
+    row.fields[table.headers.findIndex((header) => header.id === id)];
 
 /** The stored morphism judgment of a schema notebook document. */
 const morphismDecl = (document: ModelDocument, id: string): ModelJudgment & { tag: "morphism" } => {
@@ -76,7 +75,7 @@ describe("schema changes under stored instance data", () => {
         str.delete();
 
         expect(table.headers).toEqual([]);
-        expect(row.cells).toEqual([]);
+        expect(row.fields).toEqual([]);
         const storedRow = Object.values(instance.document.tables[person.id]?.rows ?? {})[0];
         expect(storedRow?.fields[name.id]).toEqual({ String: "Fred" });
 
@@ -87,7 +86,7 @@ describe("schema changes under stored instance data", () => {
         });
 
         expect(table.headers.map((header) => header.id)).toEqual([name.id]);
-        expect(row.fields).toMatchObject([{ tag: "String", content: "Fred" }]);
+        expect(row.fields).toMatchObject([{ tag: "String", content: { value: "Fred" } }]);
     });
 
     test("a mapping retargeted to another entity mistypes existing links", async () => {
@@ -112,13 +111,15 @@ describe("schema changes under stored instance data", () => {
             throw new Error("Expected validation to fail");
         }
         expect(result.content.issues).toContainEqual({
-            message: '`employer` must be a row of table "Department" (was a row of table "Company")',
-            path: ["tables", person.id, "rows", fred.id, "fields", employer.id],
+            message:
+                '`employer` must be a row of table "Department" (was a row of table "Company")',
+            path: [person.id, "rows", fred.id, "fields", employer.id],
             issueType: "MistypedRowRef",
         });
-        const cell = cellFor(personTable, fred, employer.id);
-        expect(cell).toMatchObject({ tag: "MistypedRowRef", content: { index: 0 } });
-        expect(cell && isCellValid(cell)).toBe(false);
+        expect(fieldFor(personTable, fred, employer.id)).toMatchObject({
+            tag: "RowRef",
+            content: { id: acme.id },
+        });
     });
 
     test("a row link under a header turned attribute is mistyped", async () => {
@@ -139,9 +140,9 @@ describe("schema changes under stored instance data", () => {
 
         const result = await instance.validate();
         expect(result.tag).toBe("Err");
-        expect(cellFor(personTable, fred, employer.id)).toMatchObject({
-            tag: "MistypedRowRef",
-            content: { index: 0 },
+        expect(fieldFor(personTable, fred, employer.id)).toMatchObject({
+            tag: "RowRef",
+            content: { id: acme.id },
         });
     });
 
@@ -164,9 +165,9 @@ describe("schema changes under stored instance data", () => {
 
         const result = await instance.validate();
         expect(result.tag).toBe("Err");
-        expect(cellFor(personTable, fred, nickname.id)).toMatchObject({
-            tag: "MistypedLiteral",
-            content: { tag: "String", content: "Fred" },
+        expect(fieldFor(personTable, fred, nickname.id)).toMatchObject({
+            tag: "String",
+            content: { value: "Fred" },
         });
     });
 
@@ -193,9 +194,9 @@ describe("schema changes under stored instance data", () => {
         storedCompany.row_order.splice(0, 1);
 
         expect((await instance.validate()).tag).toBe("Err");
-        expect(cellFor(personTable, fred, employer.id)).toMatchObject({
-            tag: "DanglingRowRef",
-            content: acmeId,
+        expect(fieldFor(personTable, fred, employer.id)).toMatchObject({
+            tag: "RowRef",
+            content: { id: acmeId },
         });
     });
 });
