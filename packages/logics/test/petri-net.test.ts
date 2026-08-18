@@ -62,7 +62,7 @@ describe("The petri-net logic", () => {
         const product = notebook.add(Place, { label: "Product" });
         const catalyst = notebook.add(Place, { label: "Catalyst" });
 
-        const reaction = notebook.add(Transition, {
+        const _reaction = notebook.add(Transition, {
             label: "Reaction",
             from: [reactant, catalyst],
             to: [product, catalyst]
