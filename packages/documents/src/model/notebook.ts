@@ -185,18 +185,6 @@ export function modelNotebookFromStore<Handle, S extends Shape>(
 ): Notebook<S, ModelDocument> {
     let coreTheory: Promise<DblTheory> | undefined;
 
-    function validationResultsEqual(left: Result<DblModel>, right: Result<DblModel>): boolean {
-        if (left.tag !== right.tag) {
-            return false;
-        }
-        if (left.tag === "Ok") {
-            return true;
-        }
-        return (
-            right.tag === "Err" && JSON.stringify(left.content) === JSON.stringify(right.content)
-        );
-    }
-
     async function validateCurrentDocument(): Promise<Result<DblModel>> {
         let result: Result<DblModel>;
         if (!shape.getCoreTheory) {
@@ -322,17 +310,12 @@ export function modelNotebookFromStore<Handle, S extends Shape>(
         },
         onValidate(callback) {
             let active = true;
-            let previous: Result<DblModel> | undefined;
 
             async function validateAndNotify(): Promise<void> {
                 const result = await validateCurrentDocument();
                 if (!active) {
                     return;
                 }
-                if (previous && validationResultsEqual(previous, result)) {
-                    return;
-                }
-                previous = result;
                 callback(result);
             }
 
