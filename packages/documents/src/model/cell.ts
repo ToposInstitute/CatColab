@@ -1,6 +1,7 @@
 import { Nb } from "catcolab-document-methods";
 import type { Ob } from "catcolab-document-types";
 import type { DocumentStore } from "../document-store";
+import { deleteNotebookCell } from "../notebook-document";
 import { getRichTextCell, type RichTextCell } from "../rich-text";
 import { findMorphismType, findObjectType } from "../shape";
 import type {
@@ -12,7 +13,7 @@ import type {
     ObjectTypesOf,
     Shape,
 } from "../shape";
-import { getModelJudgment, type ModelDocument } from "./document";
+import { tryGetModelJudgment, type ModelDocument } from "./document";
 
 /** Runtime names for the discriminants on notebook cell handles. */
 export const CellKind = {
@@ -25,18 +26,19 @@ export interface ObjectCell<O extends ObjectType> {
     readonly kind: "object";
     readonly id: string;
     readonly type: O;
-    readonly label: string;
+    readonly label: string | undefined;
 
     update(patch: Partial<{ label: string | null }>): void;
+    delete(): void;
 }
 
 export interface MorphismCell<S extends Shape, M extends MorphismType> {
     readonly kind: "morphism";
     readonly id: string;
     readonly type: M;
-    readonly label: string;
-    readonly from: ObjectCell<DomainObjectTypesOf<S, M>> | null;
-    readonly to: ObjectCell<CodomainObjectTypesOf<S, M>> | null;
+    readonly label: string | undefined;
+    readonly from: ObjectCell<DomainObjectTypesOf<S, M>> | null | undefined;
+    readonly to: ObjectCell<CodomainObjectTypesOf<S, M>> | null | undefined;
 
     update(
         patch: Partial<{
@@ -45,6 +47,7 @@ export interface MorphismCell<S extends Shape, M extends MorphismType> {
             to: ObjectCell<CodomainObjectTypesOf<S, M>> | null;
         }>,
     ): void;
+    delete(): void;
 }
 
 export type CellOf<S extends Shape> =
@@ -64,7 +67,10 @@ export function getObjectCell<Handle, O extends ObjectType>(
         type,
         get label() {
             const document = store.getDocumentView(handle) as Readonly<ModelDocument>;
-            const judgment = getModelJudgment(document, cellId);
+            const judgment = tryGetModelJudgment(document, cellId);
+            if (!judgment) {
+                return undefined;
+            }
             if (judgment.tag !== "object") {
                 throw new Error(`Cell ${cellId} is not an object.`);
             }
@@ -74,13 +80,24 @@ export function getObjectCell<Handle, O extends ObjectType>(
             if (patch.label === undefined) {
                 return;
             }
-            store.changeDocument(handle, (document) => {
-                const judgment = getModelJudgment(document as ModelDocument, cellId);
+            const document = store.getDocumentView(handle) as Readonly<ModelDocument>;
+            if (!tryGetModelJudgment(document, cellId)) {
+                return;
+            }
+
+            store.changeDocument(handle, (storedDocument) => {
+                const judgment = tryGetModelJudgment(storedDocument as ModelDocument, cellId);
+                if (!judgment) {
+                    return;
+                }
                 if (judgment.tag !== "object") {
                     throw new Error(`Cell ${cellId} is not an object.`);
                 }
                 judgment.name = patch.label ?? "";
             });
+        },
+        delete() {
+            deleteNotebookCell(store, handle, cellId);
         },
     };
 }
@@ -117,7 +134,10 @@ export function obFromObjectCell(
     if (!endpoint) {
         return null;
     }
-    const judgment = getModelJudgment(document, endpoint.id);
+    const judgment = tryGetModelJudgment(document, endpoint.id);
+    if (!judgment) {
+        throw new Error(`Cell ${endpoint.id} does not exist.`);
+    }
     if (judgment.tag !== "object") {
         throw new Error(`Cell ${endpoint.id} is not an object.`);
     }
@@ -137,7 +157,10 @@ export function getMorphismCell<Handle, S extends Shape, M extends MorphismTypes
         type,
         get label() {
             const document = store.getDocumentView(handle) as Readonly<ModelDocument>;
-            const judgment = getModelJudgment(document, cellId);
+            const judgment = tryGetModelJudgment(document, cellId);
+            if (!judgment) {
+                return undefined;
+            }
             if (judgment.tag !== "morphism") {
                 throw new Error(`Cell ${cellId} is not a morphism.`);
             }
@@ -145,7 +168,10 @@ export function getMorphismCell<Handle, S extends Shape, M extends MorphismTypes
         },
         get from() {
             const document = store.getDocumentView(handle) as Readonly<ModelDocument>;
-            const judgment = getModelJudgment(document, cellId);
+            const judgment = tryGetModelJudgment(document, cellId);
+            if (!judgment) {
+                return undefined;
+            }
             if (judgment.tag !== "morphism") {
                 throw new Error(`Cell ${cellId} is not a morphism.`);
             }
@@ -155,7 +181,10 @@ export function getMorphismCell<Handle, S extends Shape, M extends MorphismTypes
         },
         get to() {
             const document = store.getDocumentView(handle) as Readonly<ModelDocument>;
-            const judgment = getModelJudgment(document, cellId);
+            const judgment = tryGetModelJudgment(document, cellId);
+            if (!judgment) {
+                return undefined;
+            }
             if (judgment.tag !== "morphism") {
                 throw new Error(`Cell ${cellId} is not a morphism.`);
             }
@@ -164,9 +193,17 @@ export function getMorphismCell<Handle, S extends Shape, M extends MorphismTypes
             > | null;
         },
         update(patch) {
-            store.changeDocument(handle, (document) => {
-                const modelDocument = document as ModelDocument;
-                const judgment = getModelJudgment(modelDocument, cellId);
+            const document = store.getDocumentView(handle) as Readonly<ModelDocument>;
+            if (!tryGetModelJudgment(document, cellId)) {
+                return;
+            }
+
+            store.changeDocument(handle, (storedDocument) => {
+                const modelDocument = storedDocument as ModelDocument;
+                const judgment = tryGetModelJudgment(modelDocument, cellId);
+                if (!judgment) {
+                    return;
+                }
                 if (judgment.tag !== "morphism") {
                     throw new Error(`Cell ${cellId} is not a morphism.`);
                 }
@@ -188,6 +225,9 @@ export function getMorphismCell<Handle, S extends Shape, M extends MorphismTypes
                     judgment.cod = cod;
                 }
             });
+        },
+        delete() {
+            deleteNotebookCell(store, handle, cellId);
         },
     };
 }

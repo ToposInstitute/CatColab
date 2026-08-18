@@ -1,4 +1,5 @@
 import { Aspect, SimpleOlog, Type } from "catcolab-logics/simple-olog";
+import { Entity as SchemaEntity, SimpleSchema } from "catcolab-logics/simple-schema";
 import { describe, expect, expectTypeOf, test } from "vitest";
 
 import { defineMorphism, defineObject, defineShape } from "catcolab-documents";
@@ -55,9 +56,31 @@ describe("defining notebook shapes", () => {
         expect(OnlyType).toEqual({ objects: [Type] });
         expect(SimpleOlog).toEqual({
             theory: "simple-olog",
+            getCoreTheory: expect.any(Function),
             objects: [Type],
             morphisms: [Aspect],
+            supportsInstances: { tableObjects: [Type] },
         });
         expectTypeOf(SimpleOlog.theory).toEqualTypeOf<"simple-olog">();
+    });
+
+    test("instance-capable shapes select table objects declared by the shape", () => {
+        expect(SimpleSchema.supportsInstances.tableObjects).toEqual([SchemaEntity]);
+
+        expect(() =>
+            defineShape({
+                objects: [SchemaEntity],
+                supportsInstances: { tableObjects: [SchemaEntity] },
+            }),
+        ).toThrowError("An instance-capable shape must define a theory and its core theory");
+
+        expect(() =>
+            defineShape({
+                theory: "invalid-instance-shape",
+                getCoreTheory: SimpleSchema.getCoreTheory,
+                objects: [Type],
+                supportsInstances: { tableObjects: [SchemaEntity] },
+            }),
+        ).toThrowError("Instance table objects must be declared in the shape's objects");
     });
 });

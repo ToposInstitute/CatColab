@@ -1,7 +1,9 @@
 import { Model, Nb } from "catcolab-document-methods";
 import type { ModelJudgment } from "catcolab-document-types";
+import type { DblModel, DblTheory } from "catlog-wasm";
 import type { DocumentStore } from "../document-store";
 import type { NotebookDocument } from "../notebook-document";
+import type { Result } from "../result";
 import { getRichTextCell, type RichTextCell } from "../rich-text";
 import type {
     AnyCellType,
@@ -26,6 +28,7 @@ import {
 } from "./cell";
 import type { ModelDocument } from "./document";
 import { morphismTypesEqual, objectTypesEqual } from "./equality";
+import { validateModelDocument } from "./validation";
 
 /**
  * The value given to [`Notebook.add`].
@@ -171,6 +174,8 @@ export interface Notebook<S extends Shape, D extends NotebookDocument = Notebook
     update(patch: Partial<{ title: string }>): void;
     dump(): D;
     onChange(callback: () => void): () => void;
+    validate(): Promise<Result<DblModel>>;
+    onValidate(callback: (result: Result<DblModel>) => void): () => void;
 }
 
 export function modelNotebookFromStore<Handle, S extends Shape>(
@@ -178,9 +183,48 @@ export function modelNotebookFromStore<Handle, S extends Shape>(
     store: DocumentStore<Handle>,
     handle: Handle,
 ): Notebook<S, ModelDocument> {
+    let coreTheory: Promise<DblTheory> | undefined;
+
+    async function validateCurrentDocument(): Promise<Result<DblModel>> {
+        let result: Result<DblModel>;
+        if (!shape.getCoreTheory) {
+            let shapeName = "unnamed";
+            if (shape.theory) {
+                shapeName = shape.theory;
+            }
+            result = {
+                tag: "Err",
+                content: [{ message: `Shape \`${shapeName}\` has no core theory` }],
+            };
+        } else {
+            try {
+                if (!coreTheory) {
+                    coreTheory = shape.getCoreTheory();
+                }
+                const theory = await coreTheory;
+                const document = store.copyValue(
+                    handle,
+                    store.getDocumentView(handle),
+                ) as ModelDocument;
+                result = await validateModelDocument(
+                    document,
+                    theory,
+                    store.getDocumentRef(handle).id,
+                );
+            } catch (error) {
+                result = {
+                    tag: "Err",
+                    content: [{ message: `Failed to load core theory: ${String(error)}` }],
+                };
+            }
+        }
+
+        return result;
+    }
+
     function appendCell(
         cell: ReturnType<typeof Nb.newRichTextCell> | Nb.FormalCell<ModelJudgment>,
-    ) {
+    ): void {
         store.changeDocument(handle, (document) => {
             Nb.appendCell((document as ModelDocument).notebook, cell);
         });
@@ -260,6 +304,30 @@ export function modelNotebookFromStore<Handle, S extends Shape>(
         },
         onChange(callback) {
             return store.subscribe(handle, callback);
+        },
+        validate() {
+            return validateCurrentDocument();
+        },
+        onValidate(callback) {
+            let active = true;
+
+            async function validateAndNotify(): Promise<void> {
+                const result = await validateCurrentDocument();
+                if (!active) {
+                    return;
+                }
+                callback(result);
+            }
+
+            const unsubscribe = store.subscribe(handle, () => {
+                void validateAndNotify();
+            });
+            void validateAndNotify();
+
+            return () => {
+                active = false;
+                unsubscribe();
+            };
         },
     };
 }

@@ -14,5 +14,7 @@
         "noUnusedParameters": true,
         "noFallthroughCasesInSwitch": true
     },
-    "include": ["src/**/*.ts"]
+    // The logics do not exist yet (TDD): this package is currently a test
+    // suite for the future `catcolab-logics` source in `src/`.
+    "files": []
 }

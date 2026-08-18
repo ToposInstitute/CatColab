@@ -222,6 +222,7 @@ mod tests {
         let model = DblModel {
             model: inner.into(),
             ty: None,
+            elaboration_errors: Vec::new(),
             ob_namespace,
             mor_namespace: Namespace::new_for_uuid(),
         };
