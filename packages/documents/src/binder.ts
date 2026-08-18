@@ -47,6 +47,7 @@ import {
     newObjectDecl,
 } from "./model-document";
 import { duplicateCell, newFormalCell, newRichTextCell, type RichTextContent } from "./notebook";
+import type { NotebookDocument } from "./notebook-document";
 import { createValidationObserver } from "./observe";
 import {
     type AnalysisCell,
@@ -68,6 +69,7 @@ import {
     type DiagramCell,
     type DiagramShape,
     type DiagramValidationResult,
+    defineMorphism,
     defineObject,
     type DomOf,
     encodeEndpoint,
@@ -296,7 +298,7 @@ function wrapMorphismJudgment(
     };
     const judgment: MorphismJudgment = {
         id: generator.id,
-        type: (def ?? { tag: "morphism", morType: generator.morType }) as MorphismDef,
+        type: (def ?? defineMorphism(generator.morType)) as MorphismDef,
         label: generator.label?.join(".") ?? "",
         get from() {
             return resolveEndpoint(generator.dom);
@@ -467,15 +469,13 @@ const stripObTypeFromMeta = (meta: MorEndpointMeta | undefined): MorEndpointMeta
     return Object.keys(rest).length > 0 ? rest : undefined;
 };
 
-const stripEndpointObType = (def: MorphismDef): MorphismDef => ({
-    ...def,
-    domain: stripObTypeFromMeta(def.domain),
-    codomain: stripObTypeFromMeta(def.codomain),
-});
-
 /** Structural equality of two morphism defs ignoring endpoint `obType`. */
 const sameMorphismType = (a: MorphismDef, b: MorphismDef): boolean =>
-    sameTypeValue(stripEndpointObType(a), stripEndpointObType(b));
+    sameTypeValue(a.morType, b.morType) &&
+    sameTypeValue(stripObTypeFromMeta(a.domain), stripObTypeFromMeta(b.domain)) &&
+    sameTypeValue(stripObTypeFromMeta(a.codomain), stripObTypeFromMeta(b.codomain));
+
+const sameObjectType = (a: ObjectDef, b: ObjectDef): boolean => sameTypeValue(a.obType, b.obType);
 
 /**
  * The rich-text updater shared by every notebook flavor's rich-text cell
@@ -507,7 +507,7 @@ function attachAnalysisNotebook<TShape extends AnalysisShape, Handle>(
     store: DocumentStore<Handle>,
     handle: Handle,
     shape: TShape,
-): Notebook<TShape, Handle> {
+): Notebook<TShape, NotebookDocument, Handle> {
     const doc = store.getDocumentView(handle) as AnalysisDocument;
     const change = (fn: (doc: AnalysisDocument) => void) =>
         store.changeDocument(handle, fn as (doc: Document) => void);
@@ -741,7 +741,7 @@ function attachAnalysisNotebook<TShape extends AnalysisShape, Handle>(
         },
     };
 
-    const notebook = impl as unknown as Notebook<TShape, Handle>;
+    const notebook = impl as unknown as Notebook<TShape, NotebookDocument, Handle>;
 
     if ((store as DocumentStore<unknown>) === plainStore) {
         plainDocumentId(handle as Document);
@@ -765,7 +765,7 @@ function attachDiagramNotebook<TShape extends DiagramShape, Handle>(
     handle: Handle,
     shape: TShape,
     modelHandle: Handle,
-): Notebook<TShape, Handle> {
+): Notebook<TShape, NotebookDocument, Handle> {
     const doc = store.getDocumentView(handle) as DiagramDocument;
     const change = (fn: (doc: DiagramDocument) => void) =>
         store.changeDocument(handle, fn as (doc: Document) => void);
@@ -1117,7 +1117,7 @@ function attachDiagramNotebook<TShape extends DiagramShape, Handle>(
                             shape.Aspect ??
                                 ({
                                     tag: "aspect",
-                                    morphism: { tag: "morphism", morType: judgment.morType },
+                                    morphism: defineMorphism(judgment.morType),
                                     morType: judgment.morType,
                                 } satisfies AspectDef),
                         );
@@ -1195,7 +1195,7 @@ function attachDiagramNotebook<TShape extends DiagramShape, Handle>(
         return { result: { tag: "Invalid", diagram, errors: result.content }, model };
     };
 
-    const notebook = impl as unknown as Notebook<TShape, Handle>;
+    const notebook = impl as unknown as Notebook<TShape, NotebookDocument, Handle>;
 
     if (isPlainStore) {
         plainDocumentId(handle as Document);
@@ -1389,7 +1389,7 @@ function attachInstanceNotebook<
             return undefined;
         }
         return shape.tableObjects.some((definition) =>
-            sameTypeValue(definition, defineObject(obType)),
+            sameObjectType(definition, defineObject(obType)),
         )
             ? { tag: "RowRef", content: { id: codId } }
             : { tag: "String" };
@@ -1737,7 +1737,7 @@ function attachInstanceNotebook<
                     if (
                         codObject &&
                         shape.tableObjects.some((definition) =>
-                            sameTypeValue(definition, defineObject(codObject.obType)),
+                            sameObjectType(definition, defineObject(codObject.obType)),
                         )
                     ) {
                         // A literal under a mapping is mistyped (the schema
@@ -1874,7 +1874,7 @@ function attachInstanceNotebook<
                 (generator) =>
                     objectPresentation(generator.id) !== undefined &&
                     shape.tableObjects.some((definition) =>
-                        sameTypeValue(definition, defineObject(generator.obType)),
+                        sameObjectType(definition, defineObject(generator.obType)),
                     ),
             )
             .map((generator) => tableHandle(generator.id));
@@ -2005,10 +2005,11 @@ function attachNotebook<TShape extends AnyShape, Handle>(
     // sole construction path, `createNotebook` with `in`, always has it), unused
     // for model and analysis shapes.
     modelHandle?: Handle,
-): Notebook<TShape, Handle> {
+): Notebook<TShape, NotebookDocument, Handle> {
     if (isAnalysisShape(shape)) {
         return withShape(attachAnalysisNotebook(store, handle, shape), shape) as Notebook<
             TShape,
+            NotebookDocument,
             Handle
         >;
     }
@@ -2019,7 +2020,7 @@ function attachNotebook<TShape extends AnyShape, Handle>(
         return withShape(
             attachDiagramNotebook(store, handle, shape, modelHandle),
             shape,
-        ) as Notebook<TShape, Handle>;
+        ) as Notebook<TShape, NotebookDocument, Handle>;
     }
     const doc = store.getDocumentView(handle) as ModelDocument;
     const change = (fn: (doc: ModelDocument) => void) =>
@@ -2297,6 +2298,7 @@ function attachNotebook<TShape extends AnyShape, Handle>(
             return apply ? { apply, modality: endpointListModality(ob) ?? undefined } : undefined;
         };
         return {
+            kind: "morphism",
             tag: "morphism",
             morType: judgment.morType,
             domain: endpointMeta(judgment.dom),
@@ -2478,7 +2480,7 @@ function attachNotebook<TShape extends AnyShape, Handle>(
         (shape.morphisms ?? []).some((t) => sameMorphismType(t, def));
 
     const isShapeObject = (def: ObjectDef): boolean =>
-        (shape.objects ?? []).some((t) => sameTypeValue(t, def));
+        (shape.objects ?? []).some((t) => sameObjectType(t, def));
 
     const addObjectCell = (def: ObjectDef, label: string): ObjectCell => {
         const judgment = newObjectDecl(def.obType);
@@ -2776,7 +2778,10 @@ function attachNotebook<TShape extends AnyShape, Handle>(
                 }
                 if (cell.kind === CellKind.Object) {
                     const type = (cell as { type?: unknown }).type;
-                    return objectDefs.some((def) => sameTypeValue(type, def));
+                    return (
+                        type !== undefined &&
+                        objectDefs.some((def) => sameObjectType(type as ObjectDef, def))
+                    );
                 }
                 if (cell.kind === CellKind.Morphism) {
                     const type = (cell as { type?: MorphismDef }).type;
@@ -2863,7 +2868,11 @@ function attachNotebook<TShape extends AnyShape, Handle>(
         },
     };
 
-    const notebook = withShape(impl, shape) as unknown as Notebook<TShape, Handle>;
+    const notebook = withShape(impl, shape) as unknown as Notebook<
+        TShape,
+        NotebookDocument,
+        Handle
+    >;
 
     if (isPlainStore) {
         // Ensure the document is reachable by id for the plain store's resolver.
@@ -2883,8 +2892,14 @@ function attachNotebook<TShape extends AnyShape, Handle>(
  * so a fully-interactive component can be written against a sub-shape (e.g.
  * `Notebook<typeof PlacesShape>`) and handed a notebook of the full theory.
  */
-// oxlint-disable-next-line typescript/no-explicit-any
-export type Notebook<TShape extends AnyShape = AnyShape, Handle = any> = Update<{
+type LegacyNotebookHandle = { readonly docView: Document };
+
+export type Notebook<
+    TShape extends AnyShape = AnyShape,
+    Backing extends NotebookDocument | LegacyNotebookHandle = NotebookDocument,
+    // oxlint-disable-next-line typescript/no-explicit-any
+    Handle = Backing extends LegacyNotebookHandle ? Backing : any,
+> = Update<{
     title: string;
 }> &
     NotebookMethods<TShape, Handle> &
@@ -2989,7 +3004,7 @@ interface NotebookMethods<TShape extends AnyShape = AnyShape, Handle = any> {
      * (e.g. the plain store, or an Automerge-backed store cloning into a draft
      * repo); throws otherwise.
      */
-    beginTransaction(): Transaction<Notebook<TShape, Handle>>;
+    beginTransaction(): Transaction<Notebook<TShape, NotebookDocument, Handle>>;
     /**
      * Undo a committed transaction's effects, as a new change to the document
      * (see {@link DocumentStore.revertCommit}): with a CRDT store, edits made
@@ -3501,7 +3516,7 @@ type CoreTheoryMethods<TShape extends AnyShape, Handle> =
                */
               migrateTo<TTarget extends CreatableShape>(
                   targetShape: TTarget,
-              ): Promise<Result<Notebook<TTarget, Handle>>>;
+              ): Promise<Result<Notebook<TTarget, NotebookDocument, Handle>>>;
           }
         : object;
 
@@ -3511,7 +3526,11 @@ type SupportsInstancesShape = CreatableShape & {
     readonly Instance: InstanceShape;
 };
 
-type SupportsInstancesNotebook<S extends SupportsInstancesShape, Handle> = Notebook<S, Handle> &
+type SupportsInstancesNotebook<S extends SupportsInstancesShape, Handle> = Notebook<
+    S,
+    NotebookDocument,
+    Handle
+> &
     ValidatableNotebook<Handle, S>;
 
 /**
@@ -3529,7 +3548,7 @@ export interface Binder<Handle> {
     createNotebook<S extends AnalysisShape>(
         shape: S,
         data: { title: string; of: ValidatableNotebook<Handle> },
-    ): Promise<Notebook<S, Handle>>;
+    ): Promise<Notebook<S, NotebookDocument, Handle>>;
     /**
      * Build a diagram notebook from fresh data. The `in` model must be
      * validatable (its shape must declare a `getCoreTheory`), so the diagram can be
@@ -3539,7 +3558,7 @@ export interface Binder<Handle> {
     createNotebook<S extends DiagramShape>(
         shape: S,
         data: { title: string; in: ValidatableNotebook<Handle> },
-    ): Promise<Notebook<S, Handle>>;
+    ): Promise<Notebook<S, NotebookDocument, Handle>>;
     /**
      * Build an *instance* notebook of a schema. `schema` is the schema notebook
      * itself (its shape must be a creatable, `.Instance`-deriving shape); the
@@ -3588,7 +3607,7 @@ export interface Binder<Handle> {
     createNotebook<TShape extends CreatableShape>(
         shape: TShape,
         data: { title: string },
-    ): Promise<Notebook<TShape, Handle>>;
+    ): Promise<Notebook<TShape, NotebookDocument, Handle>>;
     /**
      * Build a notebook around an existing plain document by initializing store
      * storage from it. Returns a {@link Result}: an `Ok` carrying the
@@ -3598,7 +3617,7 @@ export interface Binder<Handle> {
     loadNotebook<TShape extends CreatableShape>(
         shape: TShape,
         document: ModelDocument,
-    ): Promise<Result<Notebook<TShape, Handle>>>;
+    ): Promise<Result<Notebook<TShape, NotebookDocument, Handle>>>;
     /**
      * Build a notebook around an existing document identified by a
      * {@link DocumentRef}, resolving it through {@link DocumentStore.getHandle} —
@@ -3615,7 +3634,7 @@ export interface Binder<Handle> {
     loadNotebookFromRef<TShape extends CreatableShape>(
         shape: TShape,
         ref: DocumentRef,
-    ): Promise<Result<Notebook<TShape, Handle>>>;
+    ): Promise<Result<Notebook<TShape, NotebookDocument, Handle>>>;
 }
 
 /** Bind a store once, yielding the notebook entry points. */
@@ -3813,7 +3832,7 @@ export function createBinder<Handle>(
         async loadNotebook<TShape extends CreatableShape>(
             shape: TShape,
             document: ModelDocument,
-        ): Promise<Result<Notebook<TShape, Handle>>> {
+        ): Promise<Result<Notebook<TShape, NotebookDocument, Handle>>> {
             if (document.theory !== shape.theory) {
                 return {
                     tag: "Err",
@@ -3835,7 +3854,7 @@ export function createBinder<Handle>(
         async loadNotebookFromRef<TShape extends CreatableShape>(
             shape: TShape,
             ref: DocumentRef,
-        ): Promise<Result<Notebook<TShape, Handle>>> {
+        ): Promise<Result<Notebook<TShape, NotebookDocument, Handle>>> {
             const resolved = await store.getHandle(ref);
             if (resolved.tag === "Err") {
                 return resolved;

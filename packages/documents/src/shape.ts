@@ -16,6 +16,7 @@ import type {
 } from "catlog-wasm";
 import type { Notebook } from "./binder";
 import type { RichTextContent } from "./notebook";
+import type { NotebookDocument } from "./notebook-document";
 import type { RichTextRef } from "./store";
 import type { Result } from "./validation";
 
@@ -148,6 +149,8 @@ export type Reorder = {
  * told apart by their wrapper rather than by any structural heuristic.
  */
 export type ObjectDef<O extends ObType = ObType> = {
+    readonly kind: "object";
+    /** @internal Compatibility discriminant for stored-definition consumers. */
     readonly tag: "object";
     readonly obType: O;
 };
@@ -156,7 +159,9 @@ export type ObjectDef<O extends ObType = ObType> = {
  * `const` and pass it both to a shape's `objects` list and to {@link
  * Notebook.add}. */
 export function defineObject<const O extends ObType>(obType: O): ObjectDef<O> {
-    return { tag: "object", obType };
+    const definition = { kind: "object" as const, obType };
+    Object.defineProperty(definition, "tag", { value: "object" });
+    return definition as ObjectDef<O>;
 }
 
 /**
@@ -288,9 +293,13 @@ export type MorEndpointMeta = {
  * object types are carried in the phantom {@link Endpoints} brand.
  */
 export type MorphismDef<M extends MorType = MorType> = {
+    readonly kind: "morphism";
+    /** @internal Compatibility discriminant for stored-definition consumers. */
     readonly tag: "morphism";
     readonly morType: M;
+    /** @internal Normalized endpoint metadata. */
     readonly domain?: MorEndpointMeta | undefined;
+    /** @internal Normalized endpoint metadata. */
     readonly codomain?: MorEndpointMeta | undefined;
 };
 
@@ -328,6 +337,9 @@ type MorTypeOf<Def extends MorphismDef> = Def extends MorphismDef<infer M> ? M :
 export function defineMorphism<const M extends MorType & { tag: "Hom" }>(
     morType: M,
 ): MorphismDef<M> & ModalityBrand<null>;
+export function defineMorphism<const M extends MorType>(
+    morType: M,
+): MorphismDef<M> & ModalityBrand<null>;
 export function defineMorphism<
     const M extends MorType & { tag: "Hom" },
     const DomMod extends ListModality,
@@ -338,7 +350,13 @@ export function defineMorphism<
         domain: { apply: ObOp; modality: DomMod };
         codomain: { apply: ObOp; modality: CodMod };
     },
-): MorphismDef<M> & ModalityBrand<DomMod | CodMod>;
+): MorphismDef<M> &
+    ModalityBrand<DomMod | CodMod> & {
+        readonly endpoints: {
+            readonly domain: { readonly apply: ObOp; readonly modality: DomMod };
+            readonly codomain: { readonly apply: ObOp; readonly modality: CodMod };
+        };
+    };
 export function defineMorphism<
     const M extends MorType,
     const D extends ObType,
@@ -346,7 +364,11 @@ export function defineMorphism<
 >(
     morType: M,
     options: { domain: D; codomain: C },
-): MorphismDef<M> & Endpoints<D, C> & ModalityBrand<null>;
+): MorphismDef<M> &
+    Endpoints<D, C> &
+    ModalityBrand<null> & {
+        readonly endpoints: { readonly domain: D; readonly codomain: C };
+    };
 export function defineMorphism(
     morType: MorType,
     options?: {
@@ -380,12 +402,21 @@ export function defineMorphism(
         return obType ? { obType } : undefined;
     };
 
-    return {
-        tag: "morphism",
+    const definition = {
+        kind: "morphism" as const,
         morType,
-        domain: toMeta(options?.domain),
-        codomain: toMeta(options?.codomain),
     };
+    if (options?.domain !== undefined && options.codomain !== undefined) {
+        Object.assign(definition, {
+            endpoints: { domain: options.domain, codomain: options.codomain },
+        });
+    }
+    Object.defineProperties(definition, {
+        tag: { value: "morphism" },
+        domain: { value: toMeta(options?.domain) },
+        codomain: { value: toMeta(options?.codomain) },
+    });
+    return definition as MorphismDef;
 }
 
 /**
@@ -599,12 +630,12 @@ export type ValidatableNotebook<
     // oxlint-disable-next-line typescript/no-explicit-any
     Handle = any,
     TShape extends AnyShape = AnyShape,
-> = Notebook<TShape, Handle> & {
+> = Notebook<TShape, NotebookDocument, Handle> & {
     validate(): Promise<ModelValidationResult<TShape>>;
     onValidate(callback: (result: ModelValidationResult<TShape>) => void): () => void;
     migrateTo<TTarget extends CreatableShape>(
         targetShape: TTarget,
-    ): Promise<Result<Notebook<TTarget, Handle>>>;
+    ): Promise<Result<Notebook<TTarget, NotebookDocument, Handle>>>;
 };
 
 // oxlint-disable-next-line typescript/no-explicit-any
@@ -1311,17 +1342,14 @@ export function defineShape<const TSpec extends Shape>(
     }
     if (spec.supportsInstances) {
         if (spec.theory === undefined || getCoreTheory === undefined) {
-            throw new Error(
-                "A shape with `supportsInstances` must declare a `theory` and " +
-                    "`getCoreTheory`.",
-            );
+            throw new Error("An instance-capable shape must define a theory and its core theory");
         }
         const objects = spec.objects ?? [];
         for (const tableObject of spec.supportsInstances.tableObjects) {
             if (!objects.includes(tableObject)) {
                 throw new Error(
-                    "Every `supportsInstances.tableObjects` definition must also be " +
-                        "declared in the shape's `objects` list.",
+                    "Instance table objects must be declared in the shape's objects; " +
+                        "each table object must be declared in the shape's `objects` list",
                 );
             }
         }
@@ -1349,6 +1377,20 @@ export function defineShape<const TSpec extends Shape>(
             tableObjects: spec.supportsInstances.tableObjects,
             getCoreTheory,
         } as InstanceShape;
+    }
+    for (const key of [
+        "supportsEquations",
+        "modelAnalyses",
+        "informal",
+        "inclusions",
+        "migrations",
+        "Analysis",
+        "Diagram",
+        "Instance",
+    ] as const) {
+        if (key in derived) {
+            Object.defineProperty(derived, key, { enumerable: false });
+        }
     }
     return derived as ReturnType<typeof defineShape<TSpec>>;
 }

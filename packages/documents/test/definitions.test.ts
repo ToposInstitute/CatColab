@@ -68,6 +68,7 @@ describe("defining notebook shapes", () => {
         expect(SimpleSchema.supportsInstances.tableObjects).toEqual([SchemaEntity]);
 
         expect(() =>
+            // @ts-expect-error Instance support requires a theory and core theory.
             defineShape({
                 objects: [SchemaEntity],
                 supportsInstances: { tableObjects: [SchemaEntity] },
@@ -75,6 +76,7 @@ describe("defining notebook shapes", () => {
         ).toThrowError("An instance-capable shape must define a theory and its core theory");
 
         expect(() =>
+            // @ts-expect-error Instance table objects must be declared by the shape.
             defineShape({
                 theory: "invalid-instance-shape",
                 getCoreTheory: SimpleSchema.getCoreTheory,
