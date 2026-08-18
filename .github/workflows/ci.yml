@@ -128,7 +128,7 @@ jobs:
 
       - name: Typescript logic package tests
         run: |
-          pnpm --filter catcolab-logics exec vitest run test/simple-olog.test.ts
+          pnpm --filter catcolab-logics test
 
   build_nixos_system:
     name: build NixOS system
