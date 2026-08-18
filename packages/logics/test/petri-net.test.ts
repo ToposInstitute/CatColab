@@ -41,7 +41,7 @@ describe("The petri-net logic", () => {
         expect(note.content).toBe("Some rich-text content.");
     });
 
-    test.skip("The shape declares a theory for validation", async () => {
+    test("The shape declares a theory for validation", async () => {
         const theory = await PetriNet.getCoreTheory();
         try {
             expect(theory.hasObType(Place.obType)).toBe(true);
