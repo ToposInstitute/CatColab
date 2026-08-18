@@ -41,6 +41,16 @@ describe("The petri-net logic", () => {
         expect(note.content).toBe("Some rich-text content.");
     });
 
+    test.skip("The shape declares a theory for validation", async () => {
+        const theory = await PetriNet.getCoreTheory();
+        try {
+            expect(theory.hasObType(Place.obType)).toBe(true);
+            expect(theory.hasMorType(Transition.morType)).toBe(true);
+        } finally {
+            theory.free();
+        }
+    }, 15_000);
+
     test.skip("Notebooks validate in the core theory of Petri nets", async () => {
         const binder = createBinder();
         const notebook = await binder.createNotebook(PetriNet, { title: "Petri net for catalysis" });

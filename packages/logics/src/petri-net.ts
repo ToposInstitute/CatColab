@@ -12,6 +12,10 @@ export const Transition = defineMorphism(
 
 export const PetriNet = defineShape({
     theory: "petri-net",
+    getCoreTheory: async () => {
+        const { ThSymMonoidalCategory } = await import("catlog-wasm");
+        return new ThSymMonoidalCategory().theory();
+    },
     objects: [Place],
     morphisms: [Transition],
     informal: [RichText],
