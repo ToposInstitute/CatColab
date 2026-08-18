@@ -10,6 +10,7 @@ import {
 
 import { createDemoDocument, type DemoDocument } from "./document";
 import { EXAMPLE_QUERY, loadExampleData } from "./example-data";
+import { FileSidebar } from "./FileSidebar";
 import { InstanceEditor } from "./InstanceEditor";
 import { DEFAULT_QUERY, QUERY_STORAGE_KEY, QuerySidebar } from "./QuerySidebar";
 import { SchemaEditor } from "./SchemaEditor";
@@ -23,9 +24,10 @@ import styles from "./App.module.css";
 export type ActivePanel = "schema" | "instance";
 
 /**
- * The instances demo: a schema editor on the left and a live, editable
- * spreadsheet instance of that schema on the right, with a single script pane
- * (toggled from the top bar) docked along the bottom that can edit both sides.
+ * The instances demo: a mockup file sidebar on the far left, then a schema
+ * editor and a live, editable spreadsheet instance of that schema, with a
+ * single script pane (toggled from the top bar) docked along the bottom that
+ * can edit both sides.
  */
 export function App() {
     const [doc] = createResource(createDemoDocument);
@@ -277,43 +279,52 @@ function Loaded(props: {
                     </wired-dialog>
                 )}
             </Show>
-            <div
-                ref={splitEl}
-                class={styles.split}
-                style={{
-                    "grid-template-columns": `minmax(0, ${splitFraction()}fr) 0 minmax(0, ${
-                        1 - splitFraction()
-                    }fr)`,
-                }}
-            >
-                <SchemaEditor
-                    doc={props.doc}
-                    active={() => props.activePanel() === "schema"}
-                    onActivate={() => props.setActivePanel("schema")}
-                />
-                <div
-                    class={styles.splitDivider}
-                    role="separator"
-                    aria-orientation="vertical"
-                    aria-label="Resize schema and instance panels"
-                    onPointerDown={startSplitDrag}
-                />
-                <InstanceEditor
-                    doc={props.doc}
-                    active={() => props.activePanel() === "instance"}
-                    onActivate={() => props.setActivePanel("instance")}
-                />
+            <div class={styles.layout}>
+                <FileSidebar />
+                <div class={styles.content}>
+                    <div
+                        ref={splitEl}
+                        class={styles.split}
+                        style={{
+                            "grid-template-columns": `minmax(0, ${splitFraction()}fr) 0 minmax(0, ${
+                                1 - splitFraction()
+                            }fr)`,
+                        }}
+                    >
+                        <SchemaEditor
+                            doc={props.doc}
+                            active={() => props.activePanel() === "schema"}
+                            onActivate={() => props.setActivePanel("schema")}
+                        />
+                        <div
+                            class={styles.splitDivider}
+                            role="separator"
+                            aria-orientation="vertical"
+                            aria-label="Resize schema and instance panels"
+                            onPointerDown={startSplitDrag}
+                        />
+                        <InstanceEditor
+                            doc={props.doc}
+                            active={() => props.activePanel() === "instance"}
+                            onActivate={() => props.setActivePanel("instance")}
+                        />
+                    </div>
+                    <Show when={props.scriptOpen()}>
+                        <ScriptSidebar
+                            scope={script().scope}
+                            source={source()}
+                            onSourceChange={setScript}
+                        />
+                    </Show>
+                    <Show when={props.queryOpen()}>
+                        <QuerySidebar
+                            doc={props.doc}
+                            source={querySource()}
+                            onSourceChange={setQuery}
+                        />
+                    </Show>
+                </div>
             </div>
-            <Show when={props.scriptOpen()}>
-                <ScriptSidebar
-                    scope={script().scope}
-                    source={source()}
-                    onSourceChange={setScript}
-                />
-            </Show>
-            <Show when={props.queryOpen()}>
-                <QuerySidebar doc={props.doc} source={querySource()} onSourceChange={setQuery} />
-            </Show>
             <wired-card class={styles.floatingControls} elevation="3">
                 <wired-button onClick={loadExample} elevation="2">
                     Load example data

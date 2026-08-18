@@ -125,6 +125,25 @@
     color: var(--red-ink);
 }
 
+/* The row that pairs the mockup file sidebar with the editing area, like the
+   frontend's `.layout` but nested inside the column-flex `.app` so the loading
+   state is unaffected. */
+.layout {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+}
+
+/* Everything to the right of the sidebar: the schema/instance split on top and
+   the toggleable script/query panes docked along the bottom. */
+.content {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 0;
+    min-height: 0;
+}
+
 @media (max-width: 720px) {
     /* Stack the panels vertically on narrow screens; the inline column split is
        overridden here, and the divider is hidden since it only resizes columns. */

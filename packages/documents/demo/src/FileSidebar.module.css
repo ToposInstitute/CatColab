@@ -1,0 +1,65 @@
+/* The mockup file sidebar, mirroring the frontend's `.sidebar` shell: a fixed
+   240px column on the left with the document tree, restyled with the demo's
+   paper/pencil palette. The right edge is a `SketchSeparator` wave (positioned
+   against this box), not a border. */
+.sidebar {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    width: 240px;
+    flex-shrink: 0;
+    min-height: 0;
+    background: var(--color-gray-50);
+    color: var(--ink);
+}
+
+/* Decorative stand-in for the frontend's app-menu header row. */
+.header {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 32px;
+    margin: 6px 8px;
+    border-radius: 6px;
+    color: var(--muted);
+}
+
+.tree {
+    overflow-y: auto;
+    min-height: 0;
+}
+
+/* One document row, after the frontend's `.related-document`. */
+.file {
+    display: flex;
+    align-items: center;
+    height: 30px;
+    padding: 5px 8px;
+    border-left: 3px solid transparent;
+    transition: background 20ms;
+}
+
+.file svg {
+    flex-shrink: 0;
+}
+
+.file.active {
+    background: var(--color-gray-150);
+    border-left-color: var(--teal-ink);
+}
+
+.fileName {
+    flex: 1;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    padding-left: 5px;
+    font-size: 0.9rem;
+}
+
+@media (max-width: 720px) {
+    /* The mockup only takes up space, so on narrow screens it gives it back. */
+    .sidebar {
+        display: none;
+    }
+}
