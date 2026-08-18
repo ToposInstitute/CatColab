@@ -43,6 +43,23 @@
     flex-shrink: 0;
 }
 
+/* The live table rows: real buttons (reset to look like the other rows) that
+   expand and raise their table's grid. Only these get click affordances. */
+.clickable {
+    width: 100%;
+    border: none;
+    border-left: 3px solid transparent;
+    background: none;
+    font: inherit;
+    color: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.clickable:hover {
+    background: var(--color-hover-bg);
+}
+
 .file.active {
     background: var(--color-gray-150);
     border-left-color: var(--teal-ink);

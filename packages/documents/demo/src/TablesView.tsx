@@ -4,25 +4,22 @@ import type { AttrTypeName, DemoDocument } from "./document";
 import { tableSpecs, type TableSpec } from "./instance-model";
 import { type AddColumnChoice, InstanceTable } from "./InstanceTable";
 import {
-    emptyTableLayout,
     mergeVisibleOrder,
     moveItem,
-    parseTableLayout,
     reconcileTableLayout,
-    TABLE_LAYOUT_STORAGE_KEY,
     type TableLayout,
 } from "./table-layout";
-import { TableTab } from "./TableTab";
+import { commitTableLayout, raiseTable, savedTableLayout } from "./table-layout-store";
 
 import styles from "./TablesView.module.css";
 
 /**
- * The instance's tables with the minimized-tabs sidebar: every table keeps a
- * tab in the left rail (with its row count and expand state), and the expanded
- * tables render their grids on the right, newest raise on top. Tabs and grids
- * reorder by drag, columns collapse and reorder, and foreign keys navigate
- * across tables. The layout is persisted outside the documents (keyed by
- * entity/morphism UUIDs), shared between every view that renders the tables.
+ * The instance's expanded tables: each table selected from the file sidebar's
+ * tables list renders its grid here, newest raise on top. Grids reorder by
+ * drag, columns collapse and reorder, and foreign keys navigate across tables.
+ * The layout is persisted outside the documents (keyed by entity/morphism
+ * UUIDs) in the shared {@link savedTableLayout} store, so the sidebar list and
+ * every view that renders the tables stay in sync.
  *
  * Used by the instance panel's Tables mode as-is; the Sheet view passes the
  * optional schema-editing affordances (add/rename/retype columns) through to
@@ -45,7 +42,6 @@ export function TablesView(props: {
         return tableSpecs(doc());
     });
 
-    const [savedLayout, setSavedLayout] = createSignal(loadTableLayout());
     const [rowFocus, setRowFocus] = createSignal<{
         tableId: string;
         rowId: string;
@@ -55,7 +51,7 @@ export function TablesView(props: {
 
     const layout = createMemo(() =>
         reconcileTableLayout(
-            savedLayout(),
+            savedTableLayout(),
             specs().map((spec) => ({
                 id: spec.entity.id,
                 columnIds: spec.columns.map((column) => column.morphismId),
@@ -72,21 +68,10 @@ export function TablesView(props: {
     });
     const visibleTableIds = createMemo(() => orderedSpecs().map((spec) => spec.entity.id));
 
-    const commitLayout = (update: (current: TableLayout) => TableLayout) => {
-        const next = update(layout());
-        setSavedLayout(next);
-        try {
-            localStorage.setItem(TABLE_LAYOUT_STORAGE_KEY, JSON.stringify(next));
-        } catch (error) {
-            console.warn("Could not persist table layout", error);
-        }
-    };
-
-    const moveTable = (sourceId: string, targetId: string, placement: "before" | "after") =>
-        commitLayout((current) => ({
-            ...current,
-            tableOrder: moveItem(current.tableOrder, sourceId, targetId, placement),
-        }));
+    // Commit against the *reconciled* layout, so updates always see an entry
+    // for every live table (e.g. `current.columns[tableId]` below).
+    const commitLayout = (update: (current: TableLayout) => TableLayout) =>
+        commitTableLayout(() => update(layout()));
 
     const moveExpandedTable = (sourceId: string, targetId: string, placement: "before" | "after") =>
         commitLayout((current) => ({
@@ -102,9 +87,9 @@ export function TablesView(props: {
         });
     };
 
-    // Every table keeps its tab in the left rail; the expanded ones (those not
-    // collapsed) also render their full grid on the right, ordered by when they
-    // were last expanded, newest on top.
+    // Every table is listed in the file sidebar; the expanded ones (those not
+    // collapsed) render their full grid here, ordered by when they were last
+    // expanded, newest on top.
     const visibleSet = createMemo(() => new Set(visibleTableIds()));
     const expandedTableIds = createMemo(() => {
         const collapsed = new Set(layout().hiddenTables);
@@ -130,15 +115,6 @@ export function TablesView(props: {
                     : [tableId, ...current.expandedOrder.filter((id) => id !== tableId)],
             };
         });
-
-    // Clicking a tab always expands its table and raises its grid to the top,
-    // whether or not it was already expanded.
-    const raiseTable = (tableId: string) =>
-        commitLayout((current) => ({
-            ...current,
-            hiddenTables: current.hiddenTables.filter((id) => id !== tableId),
-            expandedOrder: [tableId, ...current.expandedOrder.filter((id) => id !== tableId)],
-        }));
 
     const focusForeignRow = (tableId: string, rowId: string) => {
         raiseTable(tableId);
@@ -228,31 +204,6 @@ export function TablesView(props: {
 
     return (
         <div class={styles.tables}>
-            <aside class={styles.tabRail} aria-label="Tables">
-                <div class={styles.tabStack}>
-                    <For each={visibleTableIds()}>
-                        {(tableId) => {
-                            const spec = () =>
-                                specs().find(
-                                    (candidate) => candidate.entity.id === tableId,
-                                ) as TableSpec;
-                            return (
-                                <SortableTab tableId={tableId} onMove={moveTable}>
-                                    {(dragHandleRef) => (
-                                        <TableTab
-                                            entity={spec().entity}
-                                            expanded={!layout().hiddenTables.includes(tableId)}
-                                            rowCount={spec().rows.length}
-                                            onSelect={() => raiseTable(tableId)}
-                                            dragHandleRef={dragHandleRef}
-                                        />
-                                    )}
-                                </SortableTab>
-                            );
-                        }}
-                    </For>
-                </div>
-            </aside>
             <div class={styles.openTables}>
                 <For each={expandedTableIds()}>{(tableId) => <TableCard tableId={tableId} />}</For>
             </div>
@@ -261,7 +212,7 @@ export function TablesView(props: {
 }
 
 const tableDragDataKey = "application/x-catcolab-table";
-// The id of the table currently being dragged, shared by both sortable regions.
+// The id of the table currently being dragged, shared by all sortable cards.
 let activeTableDrag: string | undefined;
 let activeTableDropMarker: (() => void) | undefined;
 
@@ -277,8 +228,7 @@ type MoveTable = (sourceId: string, targetId: string, placement: "before" | "aft
 /**
  * Wire drag-to-reorder onto one card: a drag handle starts the drag, and the
  * card body accepts a drop from another table. `axis` picks whether the
- * before/after split follows the pointer's X (horizontal open grids) or Y (the
- * vertical tab rail).
+ * before/after split follows the pointer's X or Y.
  */
 function useTableSortable(options: {
     root: () => HTMLElement;
@@ -409,48 +359,4 @@ function SortableTable(props: {
             {props.children((element) => (handle = element))}
         </div>
     );
-}
-
-/** One tab in the left rail, reorderable along the Y axis. */
-function SortableTab(props: {
-    tableId: string;
-    onMove: MoveTable;
-    children: (dragHandleRef: (element: HTMLButtonElement) => void) => ReturnType<typeof TableTab>;
-}) {
-    let root!: HTMLDivElement;
-    let handle!: HTMLButtonElement;
-    const [dragging, setDragging] = createSignal(false);
-    const [dropPlacement, setDropPlacement] = createSignal<"before" | "after" | null>(null);
-
-    useTableSortable({
-        root: () => root,
-        handle: () => handle,
-        tableId: () => props.tableId,
-        axis: "y",
-        onMove: props.onMove,
-        setDragging,
-        setDropPlacement,
-    });
-
-    return (
-        <div
-            ref={root}
-            class={styles.tabCard}
-            classList={{
-                [styles.dragging ?? ""]: dragging(),
-                [styles.dropBefore ?? ""]: dropPlacement() === "before",
-                [styles.dropAfter ?? ""]: dropPlacement() === "after",
-            }}
-        >
-            {props.children((element) => (handle = element))}
-        </div>
-    );
-}
-
-function loadTableLayout(): TableLayout {
-    try {
-        return parseTableLayout(localStorage.getItem(TABLE_LAYOUT_STORAGE_KEY));
-    } catch {
-        return emptyTableLayout();
-    }
 }

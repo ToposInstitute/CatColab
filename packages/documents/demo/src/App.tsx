@@ -280,7 +280,7 @@ function Loaded(props: {
                 )}
             </Show>
             <div class={styles.layout}>
-                <FileSidebar />
+                <FileSidebar doc={props.doc} />
                 <div class={styles.content}>
                     <div
                         ref={splitEl}
