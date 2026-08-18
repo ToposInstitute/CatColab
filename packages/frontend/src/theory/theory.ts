@@ -79,19 +79,9 @@ export class Theory {
     /** Whether models of the double theory are constrained to be free. */
     readonly onlyFreeModels!: boolean;
 
-    /** Metadata for equation cells in the model editor.
-
-    When defined, equation cells are supported in models of this theory and
-    these labels drive the cell-add menu and the cell label badge. Equation
-    cells build paths on demand from `morGenerators`/`morPresentation`, which
-    only work on discrete double models, so theories that opt in must have
-    discrete models.
-     */
-    readonly equationCellMeta?: EquationCellMeta;
-
     /** Human-readable name for instances of models of theory.
 
-    Defaults to "Diagram in".
+    Defaults to "Instance of".
      */
     readonly instanceOfName: string;
 
@@ -140,7 +130,6 @@ export class Theory {
         modelTypes?: ModelTypeMeta[];
         modelAnalyses?: ModelAnalysisMeta[];
         onlyFreeModels?: boolean;
-        equationCellMeta?: EquationCellMeta;
         instanceOfName?: string;
         instanceTypes?: InstanceTypeMeta[];
         diagramAnalyses?: DiagramAnalysisMeta[];
@@ -173,10 +162,9 @@ export class Theory {
         }
         this.modelAnalysisMap = uniqueIndexArray(props.modelAnalyses ?? [], (meta) => meta.id);
         this.onlyFreeModels = props.onlyFreeModels ?? false;
-        this.equationCellMeta = props.equationCellMeta;
 
         // Instances.
-        this.instanceOfName = props.instanceOfName ?? "Diagram in";
+        this.instanceOfName = props.instanceOfName ?? "Instance of";
         this.instanceTypes = props.instanceTypes ?? [];
         [this.instanceObTypeMap, this.instanceMorTypeMap] = [new ObTypeMap(), new MorTypeMap()];
         for (const meta of this.instanceTypes) {
@@ -194,11 +182,6 @@ export class Theory {
     /** List of IDs of theories to which models of this theory can be migrated. */
     get migrationTargets(): Array<string> {
         return this.inclusions.concat(this.pushforwards.map((m) => m.target));
-    }
-
-    /** Whether equation cells are supported in the model editor. */
-    get supportsEquations(): boolean {
-        return this.equationCellMeta !== undefined;
     }
 
     /** Get metadata for an object type as used in models. */
@@ -255,18 +238,6 @@ export class Theory {
         return this.diagramAnalysisMap.get(id);
     }
 }
-
-/** Metadata for equation cells in a model editor. */
-export type EquationCellMeta = {
-    /** Human-readable name shown in the cell-add menu and as the cell label. */
-    name: string;
-
-    /** Tooltip-length description for the cell-add menu. */
-    description: string;
-
-    /** Keyboard shortcut for the cell-add menu. */
-    shortcut: KbdKey[];
-};
 
 /** Frontend metadata applicable to any type in a double theory. */
 export type BaseTypeMeta = {

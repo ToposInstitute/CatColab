@@ -3,19 +3,12 @@ import { Dynamic } from "solid-js/web";
 import invariant from "tiny-invariant";
 
 import { Model, Nb } from "catcolab-document-methods";
-import type {
-    EqnDecl,
-    InstantiatedModel,
-    ModelJudgment,
-    MorDecl,
-    ObDecl,
-} from "catcolab-document-types";
+import type { InstantiatedModel, ModelJudgment, MorDecl, ObDecl } from "catcolab-document-types";
 import { type FocusHandle } from "catcolab-ui-components";
 import { type CellConstructor, type FormalCellEditorProps, NotebookEditor } from "../notebook";
 import { TheoryLibraryContext, type ModelTypeMeta, type Theory } from "../theory";
 import { LiveModelContext } from "./context";
 import type { LiveModelDoc } from "./document";
-import EquationCellEditor from "./equation_cell_editor";
 import { InstantiationCellEditor } from "./instantiation_cell_editor";
 
 /** Notebook editor for a model of a double theory.
@@ -111,19 +104,6 @@ export function ModelCellEditor(props: FormalCellEditorProps<ModelJudgment>) {
                     actions={props.actions}
                 />
             </Match>
-            <Match when={props.content.tag === "equation" && liveModel().theory()}>
-                {(theory) => (
-                    <EquationCellEditor
-                        equation={props.content as EqnDecl}
-                        modifyEquation={(f) =>
-                            props.changeContent((content) => f(content as EqnDecl))
-                        }
-                        focus={props.focus}
-                        actions={props.actions}
-                        theory={theory()}
-                    />
-                )}
-            </Match>
         </Switch>
     );
 }
@@ -140,17 +120,6 @@ function modelCellConstructors(theory: Theory): CellConstructor<ModelJudgment>[]
     });
     for (const meta of theory.modelTypes ?? []) {
         constructors.push(modelCellConstructor(meta));
-    }
-    const eqMeta = theory.equationCellMeta;
-    if (eqMeta) {
-        constructors.push({
-            name: eqMeta.name,
-            description: eqMeta.description,
-            shortcut: eqMeta.shortcut,
-            construct() {
-                return Nb.newFormalCell(Model.newEquationDecl());
-            },
-        });
     }
     return constructors;
 }
@@ -187,7 +156,7 @@ function judgmentLabel(judgment: ModelJudgment): string | undefined {
         case "instantiation":
             return theory?.name;
         case "equation":
-            return theory?.equationCellMeta?.name ?? "Equation";
+            return "Equation";
         default:
             judgment satisfies never;
     }

@@ -13,7 +13,7 @@
         "test": "vitest run",
         "test:watch": "vitest",
         "check": "tsc -p tsconfig.test.json && pnpm run lint",
-        "ci": "oxlint --deny-warnings && oxfmt --check ."
+        "ci": "tsc -p tsconfig.test.json && oxlint --deny-warnings && oxfmt --check ."
     },
     "dependencies": {
         "catcolab-analyses": "workspace:*",

@@ -49,7 +49,7 @@ export type TextInputOptions = TextInputActions & {
 
     /** Called when the input is filled out by selecting an auto-completion.
 
-    Defaults to `exitRight`, moving to the next item in a horizontal list.
+    Defaults to `exitForward`, moving to the next field.
      */
     onComplete?: () => void;
 };
@@ -87,14 +87,14 @@ type TextInputActions = {
     /** Request to exit this component and move backward.
 
     Here "backward" can mean left or up, possibly with cycling. Typically
-    triggered by pressing `Tab`.
+    triggered by pressing `Shift + Tab`.
      */
     exitBackward?: () => void;
 
     /** Request to exit this component and move forward.
 
     Here "forward" can mean right or down, possibly with cycling. Typically
-    triggered by pressing `Shift + Tab`.
+    triggered by pressing `Tab`.
      */
     exitForward?: () => void;
 
@@ -271,9 +271,9 @@ export function TextInput(allProps: TextInputProps) {
                         ref={setCompletionsRef}
                         onComplete={() => {
                             setCompletionsOpen(false);
-                            // Move to the next item once the input is filled
-                            // via a completion. Defaults to moving right.
-                            (options.onComplete ?? options.exitRight)?.();
+                            // Move to the next field once the input is filled
+                            // via a completion. Defaults to exiting forward.
+                            (options.onComplete ?? options.exitForward)?.();
                         }}
                     />
                 </Popover.Content>

@@ -6,5 +6,9 @@ export default defineConfig({
     plugins: [monorepoDedupe(), wasm()],
     test: {
         environment: "happy-dom",
+        typecheck: {
+            enabled: true,
+            tsconfig: "./tsconfig.test.json",
+        },
     },
 });
