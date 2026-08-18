@@ -73,6 +73,21 @@ export function reconcileTableLayout(
     };
 }
 
+/**
+ * Expand the given table and raise its grid to the top, whether or not it was
+ * already expanded — the action behind selecting a table in the file sidebar
+ * or following a foreign key. Must be applied to a *reconciled* layout: on a
+ * raw saved layout, {@link reconcileTableLayout} would re-hide tables it does
+ * not know from `tableOrder`, undoing the raise.
+ */
+export function raiseTableInLayout(layout: TableLayout, tableId: string): TableLayout {
+    return {
+        ...layout,
+        hiddenTables: layout.hiddenTables.filter((id) => id !== tableId),
+        expandedOrder: [tableId, ...layout.expandedOrder.filter((id) => id !== tableId)],
+    };
+}
+
 export function moveItem(
     order: readonly string[],
     sourceId: string,

@@ -6,10 +6,11 @@ import { type AddColumnChoice, InstanceTable } from "./InstanceTable";
 import {
     mergeVisibleOrder,
     moveItem,
+    raiseTableInLayout,
     reconcileTableLayout,
     type TableLayout,
 } from "./table-layout";
-import { commitTableLayout, raiseTable, savedTableLayout } from "./table-layout-store";
+import { commitTableLayout, savedTableLayout } from "./table-layout-store";
 
 import styles from "./TablesView.module.css";
 
@@ -117,7 +118,7 @@ export function TablesView(props: {
         });
 
     const focusForeignRow = (tableId: string, rowId: string) => {
-        raiseTable(tableId);
+        commitLayout((current) => raiseTableInLayout(current, tableId));
         setRowFocus({ tableId, rowId, request: ++rowFocusRequest });
     };
 

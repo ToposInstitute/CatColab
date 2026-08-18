@@ -37,27 +37,3 @@ export const commitTableLayout = (update: (current: TableLayout) => TableLayout)
         console.warn("Could not persist table layout", error);
     }
 };
-
-/**
- * Expand the given table and raise its grid to the top, whether or not it was
- * already expanded — the action behind selecting a table in the file sidebar.
- */
-export const raiseTable = (tableId: string) =>
-    commitTableLayout((current) => ({
-        ...current,
-        hiddenTables: current.hiddenTables.filter((id) => id !== tableId),
-        expandedOrder: [tableId, ...current.expandedOrder.filter((id) => id !== tableId)],
-    }));
-
-/**
- * Collapse the given table down to nothing but its sidebar entry, closing its
- * grid — the action behind deselecting an expanded table in the file sidebar.
- */
-export const collapseTable = (tableId: string) =>
-    commitTableLayout((current) => ({
-        ...current,
-        hiddenTables: current.hiddenTables.includes(tableId)
-            ? current.hiddenTables
-            : [...current.hiddenTables, tableId],
-        expandedOrder: current.expandedOrder.filter((id) => id !== tableId),
-    }));

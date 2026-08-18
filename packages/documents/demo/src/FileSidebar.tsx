@@ -7,8 +7,8 @@ import { createMemo, For } from "solid-js";
 import type { DemoDocument } from "./document";
 import { tableSpecs } from "./instance-model";
 import { SketchSeparator } from "./Rough";
-import { reconcileTableLayout } from "./table-layout";
-import { collapseTable, raiseTable, savedTableLayout } from "./table-layout-store";
+import { raiseTableInLayout, reconcileTableLayout } from "./table-layout";
+import { commitTableLayout, savedTableLayout } from "./table-layout-store";
 
 import styles from "./FileSidebar.module.css";
 
@@ -17,10 +17,9 @@ import styles from "./FileSidebar.module.css";
  * demo's "files" with type icons and tree indentation. The "Schema" and
  * "Instance" rows are inert stand-ins, but the instance's tables are listed
  * live beneath them: selecting a table expands it and raises its grid to the
- * top of the instance panel (via the shared table-layout store), and selecting
- * it again deselects it, closing the grid. This replaces the tab rail the
- * panel used to have. The list is not reorderable and the right edge is a
- * hand-drawn wave like the demo's other panel seams.
+ * top of the instance panel (via the shared table-layout store), replacing the
+ * tab rail the panel used to have. The list is not reorderable and the right
+ * edge is a hand-drawn wave like the demo's other panel seams.
  */
 export function FileSidebar(props: { doc: DemoDocument }) {
     const doc = () => props.doc;
@@ -58,6 +57,11 @@ export function FileSidebar(props: { doc: DemoDocument }) {
         return new Set(layout().expandedOrder.filter((id) => !collapsed.has(id)));
     });
 
+    // Commit against the reconciled layout (not the raw saved one), so the
+    // raise survives reconciliation; see `raiseTableInLayout`.
+    const openTable = (tableId: string) =>
+        commitTableLayout(() => raiseTableInLayout(layout(), tableId));
+
     return (
         <div class={styles.sidebar}>
             <SketchSeparator edge="right" seed={61} />
@@ -72,7 +76,10 @@ export function FileSidebar(props: { doc: DemoDocument }) {
                     <File size={16} />
                     <div class={styles.fileName}>Schema</div>
                 </div>
-                <div class={styles.file} style={{ "padding-left": `${2 * 16}px` }}>
+                <div
+                    class={`${styles.file} ${styles.active}`}
+                    style={{ "padding-left": `${2 * 16}px` }}
+                >
                     <Table2 size={16} />
                     <div class={styles.fileName}>Instance</div>
                 </div>
@@ -86,11 +93,7 @@ export function FileSidebar(props: { doc: DemoDocument }) {
                                 classList={{ [styles.active ?? ""]: expanded() }}
                                 style={{ "padding-left": `${3 * 16}px` }}
                                 aria-pressed={expanded()}
-                                onClick={() =>
-                                    expanded()
-                                        ? collapseTable(spec.entity.id)
-                                        : raiseTable(spec.entity.id)
-                                }
+                                onClick={() => openTable(spec.entity.id)}
                             >
                                 <Table size={16} />
                                 <div class={styles.fileName}>{spec.entity.label || "Unnamed"}</div>
