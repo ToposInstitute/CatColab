@@ -161,11 +161,10 @@ export function projectDataScript(doc: DataScriptDocument): DataScriptProjection
             if (!queryAttribute) {
                 continue;
             }
-            const value = doc.rowValue(entity, row, cell.id);
-            if (value === undefined) {
-                continue;
-            }
             if (kind === "mapping") {
+                // Use the stored target UUID, not `rowValue`: a reference whose
+                // target row was deleted still projects, as a dangling
+                // placeholder entity.
                 const targetRowId = doc.rowReferenceId(entity, row, cell.id);
                 if (targetRowId !== undefined) {
                     datoms.push([
@@ -174,7 +173,10 @@ export function projectDataScript(doc: DataScriptDocument): DataScriptProjection
                         rowEids.get(targetRowId) ?? danglingEid(targetRowId),
                     ]);
                 }
-            } else if (
+                continue;
+            }
+            const value = doc.rowValue(entity, row, cell.id);
+            if (
                 typeof value === "string" ||
                 typeof value === "number" ||
                 typeof value === "boolean"

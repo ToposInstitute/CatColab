@@ -1653,7 +1653,13 @@ function attachInstanceNotebook<
                             },
                         ];
                     }
-                    if (field.tag === "RowRef" || header.type.tag !== "RowRef") {
+                    // An unset column is fine under any header; a literal is
+                    // only mistyped under a mapping (RowRef) header.
+                    if (
+                        field.tag === "RowRef" ||
+                        field.tag === "Null" ||
+                        header.type.tag !== "RowRef"
+                    ) {
                         return [];
                     }
                     return [
@@ -1799,6 +1805,11 @@ function attachInstanceNotebook<
             return doc;
         },
         get tables() {
+            return tablesForCurrentModel();
+        },
+        async refreshTables(): Promise<InstanceTable[]> {
+            const coreTheory = await requireCoreTheory("refreshTables()");
+            await resolveSchemaModel(coreTheory);
             return tablesForCurrentModel();
         },
         get(path: Path): Result<InstanceTable | TableRow | FieldValue> {
@@ -3328,12 +3339,20 @@ export type Instance<
      * its data is retained in {@link Instance.document}), and reappears when
      * the entity is restored.
      *
-     * Resolves the elaborated schema internally — no prior {@link
-     * Instance.validate} is needed — through the per-store cache, so repeated
-     * calls with an unchanged schema are cheap. Rejects when the schema cannot
-     * be resolved (dangling `instanceOf`, cyclic instantiation).
+     * Reflects the elaborated schema as of the last resolution (instance
+     * creation, {@link Instance.validate}, or {@link Instance.refreshTables}).
+     * After a schema edit, call {@link Instance.refreshTables} to pick up new
+     * or removed tables.
      */
     readonly tables: InstanceTable[];
+    /**
+     * Re-resolve the elaborated schema model and return the current {@link
+     * Instance.tables}. Resolution goes through the per-store cache, so calls
+     * with an unchanged schema are cheap — no full validation is run. Rejects
+     * when the schema cannot be resolved (dangling `instanceOf`, cyclic
+     * instantiation).
+     */
+    refreshTables(): Promise<InstanceTable[]>;
     /** Resolve a table, row, or field by its underlying document path. */
     get(path: Path): Result<InstanceTable | TableRow | FieldValue>;
     /** Validate the instance and resolve its schema model and tables. */

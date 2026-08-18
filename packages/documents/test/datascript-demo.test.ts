@@ -37,7 +37,9 @@ describe("demo DataScript projection", () => {
             new Set(["Kepler 16 b", "PSR B1620 26 b"]),
         );
         expect(result.rows).toHaveLength(4);
-    }, 15_000);
+        // Debug-build wasm validation of the full planets instance is slow, and
+        // slower still when the whole suite runs in parallel.
+    }, 60_000);
 
     test("queries attributes and mapping references by friendly names", async () => {
         const doc = await createDocument();

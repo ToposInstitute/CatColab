@@ -220,12 +220,20 @@ export type DemoDocument = {
     storageProblem: () => string | undefined;
 };
 
-/** Decode the public field representation into the demo's editor vocabulary. */
-const cellValue = (cell: FieldValue | undefined): unknown => {
+/**
+ * Decode the public field representation into the demo's editor vocabulary: a
+ * literal for an attribute, the live target {@link TableRow} handle for a
+ * mapping (resolved via `resolveRow`; `undefined` when the target row no
+ * longer exists), and `undefined` for an unset column.
+ */
+const cellValue = (
+    cell: FieldValue | undefined,
+    resolveRow: (id: string) => TableRow | undefined,
+): unknown => {
     if (!cell || cell.tag === "Null") {
         return undefined;
     }
-    return cell.tag === "RowRef" ? cell.content.id : cell.content.value;
+    return cell.tag === "RowRef" ? resolveRow(cell.content.id) : cell.content.value;
 };
 
 /** The localStorage key under which the demo's schema + instance are persisted. */
@@ -351,19 +359,33 @@ export async function createDemoDocument(): Promise<DemoDocument> {
     const tableFor = (entity: { readonly id: string }) =>
         instanceTables().find((table) => table.id === entity.id);
     const refreshTables = async () => {
-        const tables = instance.tables;
+        // `instance.tables` reflects the schema only as of its last resolution,
+        // so re-resolve first. Resolution is cached per store: with an
+        // unchanged schema this is cheap.
+        const tables = await instance.refreshTables();
         setInstanceTables(tables);
         return tables;
     };
     const rowsOf = (entity: { readonly id: string }) => tableFor(entity)?.rows ?? [];
     const rowId = (entity: { readonly id: string }, row: TableRow) =>
         instance.document.tables[entity.id]?.row_order[row.index];
+    /** The live row handle for a row UUID, searched across all instance tables. */
+    const rowById = (id: string): TableRow | undefined => {
+        for (const table of instanceTables()) {
+            const row = table.rows.find((candidate) => candidate.id === id);
+            if (row) {
+                return row;
+            }
+        }
+        return undefined;
+    };
     const rowValue = (entity: { readonly id: string }, row: TableRow, morphismId: string) => {
         const table = tableFor(entity);
         return cellValue(
             table
                 ? row.fields[table.headers.findIndex((header) => header.id === morphismId)]
                 : undefined,
+            rowById,
         );
     };
     const rowReferenceId = (entity: { readonly id: string }, row: TableRow, morphismId: string) => {
@@ -450,6 +472,10 @@ export async function createDemoDocument(): Promise<DemoDocument> {
         persist();
         if (schemaChanged) {
             setSchemaVersion((v) => v + 1);
+            // A schema edit can add or remove instance tables, and the tables
+            // surface only updates once validation has re-elaborated the schema
+            // model. Refresh in the background; consumers read the signal.
+            void refreshTables().catch(() => {});
         }
         if (instanceChanged) {
             setInstanceVersion((v) => v + 1);
