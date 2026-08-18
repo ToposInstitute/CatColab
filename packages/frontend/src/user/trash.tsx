@@ -61,6 +61,7 @@ function TrashBinSearch() {
 
     return (
         <>
+            <h1>Trash</h1>
             <input
                 type="text"
                 class="search-input"
@@ -68,7 +69,6 @@ function TrashBinSearch() {
                 value={searchQuery()}
                 onInput={(e) => setSearchQuery(e.currentTarget.value)}
             />
-            <h3>Trash</h3>
             <DocumentList
                 documents={documents}
                 renderActions={(doc) => <RestoreButton doc={doc} />}

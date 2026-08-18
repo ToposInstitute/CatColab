@@ -63,6 +63,7 @@ function DocumentsSearch() {
 
     return (
         <>
+            <h1>My documents</h1>
             <input
                 type="text"
                 class="search-input"
@@ -70,7 +71,6 @@ function DocumentsSearch() {
                 value={searchQuery()}
                 onInput={(e) => setSearchQuery(e.currentTarget.value)}
             />
-            <h3>My Documents</h3>
             <DocumentList
                 documents={documents}
                 renderActions={(doc) => <DeleteButton doc={doc} />}

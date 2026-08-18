@@ -10,6 +10,8 @@ import { LoginGate } from "./login";
 import { useUserSettings } from "./user_settings";
 import { useUserState } from "./user_state_context";
 
+import "./documents.css";
+
 /** Page to configure user settings. */
 export default function UserProfilePage() {
     const appTitle = import.meta.env.VITE_APP_TITLE;
@@ -17,15 +19,13 @@ export default function UserProfilePage() {
     return (
         <>
             <Title>User Settings - {appTitle}</Title>
-            <div class="growable-container">
+            <div class="user-settings-page">
                 <BrandedToolbar />
                 <div class="page-container">
                     <LoginGate>
                         <h1>User settings</h1>
-                        <hr />
                         <h2>Public profile</h2>
                         <UserProfileForm />
-                        <hr />
                         <h2>Functionality</h2>
                         <LLMCapabilitiesSetting />
                     </LoginGate>
