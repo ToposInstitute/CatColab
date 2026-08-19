@@ -27,8 +27,6 @@ pub enum FieldValue {
 #[derive(PartialEq, Debug, Serialize, Deserialize, Tsify)]
 #[tsify(into_wasm_abi, from_wasm_abi, hashmap_as_object)]
 pub struct TableRow {
-    /// The row "number".
-    pub id: Uuid,
     /// The content of the row, given as a map from morphism `QualifiedName` to values.
     pub fields: HashMap<String, FieldValue>,
 }
@@ -37,11 +35,10 @@ pub struct TableRow {
 #[derive(PartialEq, Debug, Serialize, Deserialize, Tsify)]
 #[tsify(into_wasm_abi, from_wasm_abi, hashmap_as_object)]
 pub struct Table {
-    /// The `QualifiedName` of the entity to which this table corresponds.
-    pub id: String,
     /// The rows of the table.
     pub rows: HashMap<Uuid, TableRow>,
     /// The order of the rows of the table.
+    #[serde(rename = "rowOrder")]
     pub row_order: Vec<Uuid>,
 }
 
@@ -51,38 +48,38 @@ mod test {
     use serde_json::Value;
 
     #[test]
-    fn table_round_trips_through_json_with_string_keys() {
+    fn tables_are_keyed_by_schema_entity_id_in_json() {
         let row_id = Uuid::from_u128(1);
         let col_id = Uuid::from_u128(2);
-        let ent_id = Uuid::from_u128(3);
+        let ent_id = Uuid::from_u128(3).to_string();
 
         let mut fields = HashMap::new();
         fields.insert(col_id.to_string(), FieldValue::Int(42));
 
         let mut rows = HashMap::new();
-        rows.insert(row_id, TableRow { id: row_id, fields });
+        rows.insert(row_id, TableRow { fields });
 
-        let table = Table {
-            id: ent_id.to_string(),
-            rows,
-            row_order: vec![row_id],
-        };
+        let table = Table { rows, row_order: vec![row_id] };
 
-        let value = serde_json::to_value(&table).expect("serialize to JSON");
+        let mut tables = HashMap::new();
+        tables.insert(ent_id.clone(), table);
 
-        // Map keys must be plain strings in the resulting JSON object.
-        let rows_obj = value.get("rows").and_then(Value::as_object).expect("rows object");
+        let value = serde_json::to_value(&tables).expect("serialize to JSON");
+
+        // Schema entity and row IDs must be plain strings in JSON objects.
+        let table_obj = value.get(&ent_id).and_then(Value::as_object).expect("table object");
+        let rows_obj = table_obj.get("rows").and_then(Value::as_object).expect("rows object");
         assert!(rows_obj.contains_key(&row_id.to_string()));
 
-        let round_tripped: Table = serde_json::from_value(value).expect("deserialize from JSON");
-        assert_eq!(round_tripped, table);
+        let round_tripped: HashMap<String, Table> =
+            serde_json::from_value(value).expect("deserialize from JSON");
+        assert_eq!(round_tripped, tables);
     }
 
     #[test]
     fn multi_segment_key_round_trips() {
         let a = Uuid::from_u128(10);
         let b = Uuid::from_u128(11);
-        let ent_id = Uuid::from_u128(12);
         let row_id = Uuid::from_u128(13);
 
         // Paths of UUIDs are represented as dot-separated strings.
@@ -92,13 +89,9 @@ mod test {
         fields.insert(key.clone(), FieldValue::RowRef(row_id));
 
         let mut rows = HashMap::new();
-        rows.insert(row_id, TableRow { id: row_id, fields });
+        rows.insert(row_id, TableRow { fields });
 
-        let table = Table {
-            id: ent_id.to_string(),
-            rows,
-            row_order: vec![row_id],
-        };
+        let table = Table { rows, row_order: vec![row_id] };
 
         let value = serde_json::to_value(&table).expect("serialize to JSON");
 

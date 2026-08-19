@@ -10,7 +10,6 @@ use super::notebook::Notebook;
 
 use serde::{Deserialize, Serialize};
 use tsify::Tsify;
-use uuid::Uuid;
 
 /// This is the content of a model document. For legacy reasons, we reserve
 /// the name "ModelDocument" for `Document & { type: "model" }`.
@@ -45,7 +44,8 @@ pub struct InstanceDocumentContent {
     pub name: String,
     #[serde(rename = "instanceOf")]
     pub instance_of: Link,
-    pub tables: HashMap<Uuid, Table>,
+    /// Tables keyed by their schema entity `QualifiedName`.
+    pub tables: HashMap<String, Table>,
     pub version: String,
 }
 
