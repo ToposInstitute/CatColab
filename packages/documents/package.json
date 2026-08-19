@@ -8,12 +8,13 @@
         ".": "./src/index.ts"
     },
     "scripts": {
+        "build:doc-types": "pnpm --prefix ../document-methods run build:wasm",
         "format": "oxfmt .",
         "lint": "oxlint --fix && oxfmt .",
         "test": "vitest run",
         "test:db-dump": "vitest --config vitest.db-dump.config.ts --run",
         "test:watch": "vitest",
-        "check": "tsc -p tsconfig.test.json && pnpm run lint",
+        "check": "pnpm run build:doc-types && tsc -p tsconfig.test.json && pnpm run lint",
         "ci": "tsc -p tsconfig.test.json && oxlint --deny-warnings && oxfmt --check ."
     },
     "dependencies": {
