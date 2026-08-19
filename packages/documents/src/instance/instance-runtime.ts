@@ -16,8 +16,8 @@ import {
 import type { FieldValue, InstancePath, InstanceTable, LiteralValue, TableRow } from "./tables";
 import { validateTableFields } from "./validation";
 
-function instanceCapableShape<S extends Shape>(
-    schema: Notebook<S, ModelDocument>,
+function instanceCapableShape<Handle, S extends Shape>(
+    schema: Notebook<S, ModelDocument, Handle>,
 ): InstanceCapableShape {
     const shape = schema.shape;
     if (shape.supportsInstances === undefined) {
@@ -31,11 +31,12 @@ function instanceCapableShape<S extends Shape>(
 `operation` is expected to report its own failures as a `Result`; this does not
 catch exceptions, so an operation that throws lets that exception propagate. */
 async function withValidatedSchema<
+    Handle,
     S extends Shape,
     T,
     E extends ReadonlyArray<Issue> = ReadonlyArray<Issue>,
 >(
-    schema: Notebook<S, ModelDocument>,
+    schema: Notebook<S, ModelDocument, Handle>,
     operation: (schemaModel: DblModel) => Result<T, E>,
 ): Promise<Result<T, E>> {
     const schemaResult = await schema.validate();
@@ -52,24 +53,27 @@ async function withValidatedSchema<
 }
 
 export function createTablesMethod<Handle, S extends Shape>(
-    schema: Notebook<S, ModelDocument>,
+    schema: Notebook<S, ModelDocument, Handle>,
     store: DocumentStore<Handle>,
     handle: Handle,
 ): () => Promise<Result<ReadonlyArray<InstanceTable>>> {
     return () =>
-        withValidatedSchema(schema, (schemaModel) => ({
-            tag: "Ok",
-            content: instanceTablesFromModel(
-                instanceCapableShape(schema),
-                store,
-                handle,
-                schemaModel,
-            ),
-        }));
+        withValidatedSchema(
+            schema,
+            (schemaModel): Result<ReadonlyArray<InstanceTable>> => ({
+                tag: "Ok",
+                content: instanceTablesFromModel(
+                    instanceCapableShape(schema),
+                    store,
+                    handle,
+                    schemaModel,
+                ),
+            }),
+        );
 }
 
 export function createGetMethod<Handle, S extends Shape>(
-    schema: Notebook<S, ModelDocument>,
+    schema: Notebook<S, ModelDocument, Handle>,
     store: DocumentStore<Handle>,
     handle: Handle,
 ): (path: InstancePath) => Promise<Result<InstanceTable | TableRow | FieldValue>> {
@@ -86,7 +90,7 @@ export function createGetMethod<Handle, S extends Shape>(
 }
 
 export function createAddRowsMethod<Handle, S extends Shape>(
-    schema: Notebook<S, ModelDocument>,
+    schema: Notebook<S, ModelDocument, Handle>,
     store: DocumentStore<Handle>,
     handle: Handle,
 ): (
@@ -126,7 +130,7 @@ export function createAddRowMethod(
 }
 
 export function createUpdateRowsMethod<Handle, S extends Shape>(
-    schema: Notebook<S, ModelDocument>,
+    schema: Notebook<S, ModelDocument, Handle>,
     store: DocumentStore<Handle>,
     handle: Handle,
 ): (
@@ -157,7 +161,7 @@ export function createUpdateRowMethod(
 }
 
 export function createSetMethod<Handle, S extends Shape>(
-    schema: Notebook<S, ModelDocument>,
+    schema: Notebook<S, ModelDocument, Handle>,
     store: DocumentStore<Handle>,
     handle: Handle,
 ): (
@@ -182,7 +186,7 @@ export function createSetMethod<Handle, S extends Shape>(
 /** Build a validator that combines schema validation with instance-content
 validation. */
 export function createSchemaResultValidator<Handle, S extends Shape>(
-    schema: Notebook<S, ModelDocument>,
+    schema: Notebook<S, ModelDocument, Handle>,
     store: DocumentStore<Handle>,
     handle: Handle,
 ): (schemaResult: Result<DblModel>) => Result<undefined, ReadonlyArray<Issue | TableFieldIssue>> {

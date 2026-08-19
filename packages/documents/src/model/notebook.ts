@@ -162,10 +162,15 @@ function cellMatchesFilter<S extends Shape>(cell: CellOf<S>, filter: AnyCellType
     }
 }
 
-export interface Notebook<S extends Shape, D extends NotebookDocument = NotebookDocument> {
+export interface Notebook<
+    S extends Shape,
+    D extends NotebookDocument = NotebookDocument,
+    H = unknown,
+> {
     readonly shape: S;
     readonly document: Readonly<D>;
     readonly title: string;
+    readonly handle: H;
 
     add<T extends CellTypeOf<S>>(type: T, values: CellValuesOf<S, T>): AddedCellOf<S, T>;
     cells(): readonly CellOf<S>[];
@@ -182,7 +187,7 @@ export function modelNotebookFromStore<Handle, S extends Shape>(
     shape: S,
     store: DocumentStore<Handle>,
     handle: Handle,
-): Notebook<S, ModelDocument> {
+): Notebook<S, ModelDocument, Handle> {
     let coreTheory: Promise<DblTheory> | undefined;
 
     async function validateCurrentDocument(): Promise<Result<DblModel>> {
@@ -232,6 +237,7 @@ export function modelNotebookFromStore<Handle, S extends Shape>(
 
     return {
         shape,
+        handle,
         get document() {
             return store.getDocumentView(handle) as Readonly<ModelDocument>;
         },
