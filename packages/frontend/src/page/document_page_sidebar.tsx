@@ -250,10 +250,9 @@ function DocumentsTreeLeaf(props: {
     });
 
     const handleClick = async () => {
-        // If clicking on primary or secondary doc, navigate to just that doc
+        // The document is already open in a pane.
         if (clickedRefId() === primaryRefId() || clickedRefId() === secondaryRefId()) {
-            props.primaryPaneFocus.setFocused(true);
-            navigate(`/${createLinkPart(props.doc)}`);
+            return;
         } else {
             // Otherwise, open it as a side panel or put on the left if it is a parent doc
             const clickedDoc = props.doc;
