@@ -3,24 +3,6 @@
     --doc-row-height: 45px;
 }
 
-/* General style and typography */
-
-h1 {
-    margin: 0.5em 0;
-    font-size: 2em;
-}
-
-h2 {
-    font-size: 1.65em;
-    margin: 1.25em 0 0.5em 0;
-    border-bottom: 1px solid black;
-}
-
-h3 {
-    font-size: 1.3em;
-    margin: 1em 0 0.5em 0;
-}
-
 /* Outer container fills available space */
 .ref-grid-outer {
     width: 100%;

@@ -15,6 +15,7 @@ import { useUserSettings } from "./user_settings";
 import { useUserState } from "./user_state_context";
 
 import "./documents.css";
+import "./menu_pages.css";
 
 export default function TrashBin() {
     const appTitle = import.meta.env.VITE_APP_TITLE;
@@ -22,7 +23,7 @@ export default function TrashBin() {
     return (
         <>
             <Title>Trash - {appTitle}</Title>
-            <div class="documents-page trash-bin-page">
+            <div class="documents-page trash-bin-page menu-page">
                 <BrandedToolbar />
                 <div class="page-container">
                     <LoginGate>
