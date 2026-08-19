@@ -1,6 +1,7 @@
 import { Place, Transition, PetriNet } from "catcolab-logics/petri-net";
-import { createBinder, RichText } from "catcolab-documents";
 import { describe, expect, test } from "vitest";
+
+import { createBinder, RichText } from "catcolab-documents";
 
 describe("The petri-net logic", () => {
     test("The shape can be used to create a notebook", async () => {
@@ -11,8 +12,10 @@ describe("The petri-net logic", () => {
 
     test.skip("Places are basic objects and transitions are hom morphisms", async () => {
         const binder = createBinder();
-        const notebook = await binder.createNotebook(PetriNet, { title: "Petri net for catalysis" });
-        
+        const notebook = await binder.createNotebook(PetriNet, {
+            title: "Petri net for catalysis",
+        });
+
         expect(Place.obType).toEqual({ tag: "Basic", content: "Object" });
         expect(Transition.morType).toEqual({ tag: "Hom", content: Place.obType });
 
@@ -23,13 +26,13 @@ describe("The petri-net logic", () => {
         const reaction = notebook.add(Transition, {
             label: "Reaction",
             from: [reactant, catalyst],
-            to: [product, catalyst]
+            to: [product, catalyst],
         });
 
         expect(reactant.type.obType.content).toBe("Object");
         expect(product.type.obType.content).toBe("Object");
         expect(catalyst.type.obType.content).toBe("Object");
-        
+
         expect(reaction.type.morType.tag).toBe("Hom");
     });
 
@@ -53,8 +56,10 @@ describe("The petri-net logic", () => {
 
     test.skip("Notebooks validate in the core theory of Petri nets", async () => {
         const binder = createBinder();
-        const notebook = await binder.createNotebook(PetriNet, { title: "Petri net for catalysis" });
-        
+        const notebook = await binder.createNotebook(PetriNet, {
+            title: "Petri net for catalysis",
+        });
+
         expect(Place.obType).toEqual({ tag: "Basic", content: "Object" });
         expect(Transition.morType).toEqual({ tag: "Hom", content: Place.obType });
 
@@ -65,7 +70,7 @@ describe("The petri-net logic", () => {
         const _reaction = notebook.add(Transition, {
             label: "Reaction",
             from: [reactant, catalyst],
-            to: [product, catalyst]
+            to: [product, catalyst],
         });
 
         const result = await notebook.validate();
