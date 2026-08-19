@@ -4,6 +4,18 @@ export type { Binder } from "./binder";
 export type { DocumentStore, DocumentRef } from "./document-store";
 export type { Issue, PathSegment, Result } from "./result";
 export { createInMemoryStore } from "./document-store";
+export { atomicTypeOfAttributeType } from "./instance/validation";
+export type { FieldPath, TableFieldIssue } from "./instance/errors";
+export type { Instance, InstanceDocument } from "./instance/instance";
+export type {
+    FieldValue,
+    InstancePath,
+    InstanceTable,
+    LiteralType,
+    LiteralValue,
+    TableHeader,
+    TableRow,
+} from "./instance/tables";
 export type { CellOf as NotebookCell, MorphismCell, ObjectCell } from "./model/cell";
 export type { ModelDocument } from "./model/document";
 export type { Notebook } from "./model/notebook";
