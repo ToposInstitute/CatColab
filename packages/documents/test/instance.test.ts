@@ -1,9 +1,24 @@
 import { Attr, AttrType, Entity, Mapping, SimpleSchema } from "catcolab-logics/simple-schema";
 import { describe, expect, test } from "vitest";
 
-import { createBinder, Instantiation, type InstanceTable, type TableRow } from "catcolab-documents";
+import {
+    createBinder,
+    Instantiation,
+    type Instance,
+    type InstanceDocumentHandle,
+    type InstanceTable,
+    type TableRow,
+} from "catcolab-documents";
 
 const binder = createBinder();
+
+const validateInstance = async (handle: InstanceDocumentHandle): Promise<Instance> => {
+    const result = await handle.validate();
+    if (result.tag !== "Ok") {
+        throw new Error("Expected instance validation to succeed");
+    }
+    return result.content.instance;
+};
 
 const tableFor = (tables: InstanceTable[], id: string): InstanceTable => {
     const table = tables.find((candidate) => candidate.id === id);
@@ -29,7 +44,8 @@ describe("instances", () => {
         });
         const name = schema.add(Attr, { label: "name", from: person, to: str });
 
-        const instance = await binder.createInstance(schema, { title: "Company instance" });
+        const instanceHandle = await binder.createInstance(schema, { title: "Company instance" });
+        const instance = await validateInstance(instanceHandle);
         const tables = instance.tables;
         const personTable = tableFor(tables, person.id);
         const companyTable = tableFor(tables, company.id);
@@ -71,10 +87,11 @@ describe("instances", () => {
     test("validate returns the schema model and tables", async () => {
         const schema = await binder.createNotebook(SimpleSchema, { title: "Schema" });
         const person = schema.add(Entity, { label: "Person" });
-        const instance = await binder.createInstance(schema, { title: "Data" });
+        const instanceHandle = await binder.createInstance(schema, { title: "Data" });
+        const instance = await validateInstance(instanceHandle);
 
         tableFor(instance.tables, person.id).addRow();
-        const result = await instance.validate();
+        const result = await instanceHandle.validate();
 
         if (result.tag !== "Ok") {
             throw new Error("Expected validation to succeed");
@@ -89,12 +106,12 @@ describe("instances", () => {
         const person = schema.add(Entity, { label: "Person" });
         const str = schema.add(AttrType, { label: "String" });
         const name = schema.add(Attr, { label: "name", from: person, to: str });
-        const instance = await binder.createInstance(schema, { title: "Data" });
+        const instanceHandle = await binder.createInstance(schema, { title: "Data" });
+        const instance = await validateInstance(instanceHandle);
         const table = tableFor(instance.tables, person.id);
         const row = table.addRow({ name: "Fred" });
         const field = row.fields[0];
 
-        expect(table.entityId).toBe(person.id);
         expect(row.id).toBeTypeOf("string");
         expect(field?.content.path).toEqual([person.id, "rows", row.id, "fields", name.id]);
         expect(instance.get([person.id])).toMatchObject({
@@ -112,7 +129,8 @@ describe("instances", () => {
         const schema = await binder.createNotebook(SimpleSchema, { title: "Shrinking schema" });
         const person = schema.add(Entity, { label: "Person" });
         const personId = person.id;
-        const instance = await binder.createInstance(schema, { title: "Data" });
+        const instanceHandle = await binder.createInstance(schema, { title: "Data" });
+        const instance = await validateInstance(instanceHandle);
 
         tableFor(instance.tables, personId).addRow();
         schema
@@ -121,7 +139,7 @@ describe("instances", () => {
             ?.delete();
 
         expect(instance.tables).toEqual([]);
-        expect(Object.keys(instance.document.tables[personId]?.rows ?? {})).toHaveLength(1);
+        expect(Object.keys(instanceHandle.document.tables[personId]?.rows ?? {})).toHaveLength(1);
     });
 
     test("validated and imported schema objects resolve to tables", async () => {
@@ -146,7 +164,8 @@ describe("instances", () => {
             throw new Error("Expected imported judgments");
         }
 
-        const instance = await binder.createInstance(schema, { title: "Root data" });
+        const instanceHandle = await binder.createInstance(schema, { title: "Root data" });
+        const instance = await validateInstance(instanceHandle);
         const importedTable = tableFor(instance.tables, importedEntity.id);
         const row = importedTable.addRow();
         row.set(importedAttr, "Remote");
@@ -154,7 +173,7 @@ describe("instances", () => {
         expect(importedTable.label).toBe("Import.External");
         expect(importedTable.headers.map((header) => header.label)).toEqual(["Import.name"]);
         expect(row.fields).toMatchObject([{ tag: "String", content: { value: "Remote" } }]);
-        expect((await instance.validate()).tag).toBe("Ok");
+        expect((await instanceHandle.validate()).tag).toBe("Ok");
     });
 
     test("loadInstance restores table rows and values", async () => {
@@ -162,11 +181,16 @@ describe("instances", () => {
         const person = schema.add(Entity, { label: "Person" });
         const str = schema.add(AttrType, { label: "String" });
         const name = schema.add(Attr, { label: "name", from: person, to: str });
-        const instance = await binder.createInstance(schema, { title: "Company instance" });
+        const instanceHandle = await binder.createInstance(schema, { title: "Company instance" });
+        const instance = await validateInstance(instanceHandle);
         const row = tableFor(instance.tables, person.id).addRow();
         row.set(name, "Fred");
 
-        const reloaded = await binder.loadInstance(schema, structuredClone(instance.document));
+        const reloadedHandle = await binder.loadInstance(
+            schema,
+            structuredClone(instanceHandle.document),
+        );
+        const reloaded = await validateInstance(reloadedHandle);
         const reloadedTable = tableFor(reloaded.tables, person.id);
 
         expect(reloadedTable.rows).toHaveLength(1);
@@ -174,7 +198,7 @@ describe("instances", () => {
             tag: "String",
             content: { value: "Fred" },
         });
-        expect((await reloaded.validate()).tag).toBe("Ok");
+        expect((await reloadedHandle.validate()).tag).toBe("Ok");
     });
 
     test("deleting a schema morphism hides its column but retains stored data", async () => {
@@ -183,7 +207,8 @@ describe("instances", () => {
         const str = schema.add(AttrType, { label: "String" });
         const name = schema.add(Attr, { label: "name", from: person, to: str });
         const attrId = name.id;
-        const instance = await binder.createInstance(schema, { title: "Company instance" });
+        const instanceHandle = await binder.createInstance(schema, { title: "Company instance" });
+        const instance = await validateInstance(instanceHandle);
         const table = tableFor(instance.tables, person.id);
         const row = table.addRow();
         row.set(name, "Fred");
@@ -197,7 +222,7 @@ describe("instances", () => {
         const refreshedTable = tableFor(instance.tables, person.id);
         expect(refreshedTable.headers).toEqual([]);
         expect(refreshedTable.rows[0]?.fields).toEqual([]);
-        const storedRow = Object.values(instance.document.tables[person.id]?.rows ?? {})[0];
+        const storedRow = Object.values(instanceHandle.document.tables[person.id]?.rows ?? {})[0];
         expect(storedRow?.fields[attrId]).toEqual({ String: "Fred" });
     });
 });

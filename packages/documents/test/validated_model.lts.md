@@ -87,7 +87,12 @@ An elaborated object judgment identifies the corresponding table by UUID.
 <!-- verifier:prepend-to-following -->
 
 ```ts
-const instance = await binder.createInstance(schema, { title: "Company data" });
+const instanceDoc = await binder.createInstance(schema, { title: "Company data" });
+const instanceValidation = await instanceDoc.validate();
+if (instanceValidation.tag !== "Ok") {
+    throw new Error("Instance failed to validate");
+}
+const instance = instanceValidation.content.instance;
 const validatedPerson = model.get(Entity, person.id);
 if (validatedPerson.tag === "Err") {
     throw new Error(validatedPerson.content.map((issue) => issue.message).join("; "));
@@ -142,13 +147,18 @@ if (!importedEntity) {
     throw new Error("Imported entity is missing");
 }
 
-const instance = await binder.createInstance(root, { title: "Root data" });
+const instanceDoc = await binder.createInstance(root, { title: "Root data" });
+const initialInstanceValidation = await instanceDoc.validate();
+if (initialInstanceValidation.tag !== "Ok") {
+    throw new Error("Instance failed to validate");
+}
+const instance = initialInstanceValidation.content.instance;
 const importedTable = instance.tables.find((table) => table.id === importedEntity.id);
 if (!importedTable) {
     throw new Error("Imported table is missing");
 }
 const row = importedTable.addRow({ "Import.name": "Remote" });
-const instanceValidation = await instance.validate();
+const instanceValidation = await instanceDoc.validate();
 
 console.log("rows:", importedTable.rows.length);
 console.log("name:", row.fields[0]?.tag === "String" ? row.fields[0].content.value : "");

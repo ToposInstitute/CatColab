@@ -81,7 +81,6 @@ import {
     type HasDiagram,
     type IndividualCell,
     type IndividualDef,
-    type InstanceShape,
     type InstantiationArgs,
     type InstantiationCell,
     type InstantiationSpecialization,
@@ -144,8 +143,8 @@ import {
 /**
  * Internal marker under which every attached notebook records the {@link Shape}
  * it was created from. {@link Binder.createInstance} reads it back off a schema
- * notebook to obtain that notebook's derived `.Instance` shape without the caller
- * having to pass the shape again. It is a symbol so it never collides with a
+ * notebook to obtain its instance support without the caller having to pass the
+ * shape again. It is a symbol so it never collides with a
  * document field. The same value is also exposed through the non-enumerable
  * public `shape` property for generic consumers.
  */
@@ -169,8 +168,8 @@ const withShape = <N extends object>(notebook: N, shape: AnyShape): N => {
 };
 
 /** Read back the originating shape stamped by {@link withShape}, if present. */
-const shapeOf = (notebook: object): AnyShape | undefined =>
-    (notebook as { [shapeMarker]?: AnyShape })[shapeMarker];
+const shapeOf = <S extends AnyShape = AnyShape>(notebook: object): S | undefined =>
+    (notebook as { [shapeMarker]?: S })[shapeMarker];
 
 /**
  * A notebook transaction, opened with `beginTransaction()`: the same surface as
@@ -1277,17 +1276,13 @@ const findRow = (
  * tables are elaborated on the fly into the {@link DiagramJudgment}s a
  * diagram-in-model would carry, then validated in the schema model.
  */
-function attachInstanceNotebook<
-    TShape extends InstanceShape,
-    Handle,
-    TModelShape extends AnyShape = AnyShape,
->(
+function attachInstanceNotebook<S extends SupportsInstancesShape, Handle>(
     store: DocumentStore<Handle>,
     handle: Handle,
-    shape: TShape,
-    model: ValidatableNotebook<Handle, TModelShape>,
+    shape: S,
+    model: SupportsInstancesNotebook<S, Handle>,
     initialModel?: DblModel,
-): Instance<TShape, Handle, TModelShape> {
+): InstanceDocumentHandle<S, Handle> {
     const doc = store.getDocumentView(handle) as InstanceDocument;
     const change = (fn: (doc: InstanceDocument) => void) =>
         store.changeDocument(handle, fn as (doc: Document) => void);
@@ -1388,7 +1383,7 @@ function attachInstanceNotebook<
         if (obType === undefined) {
             return undefined;
         }
-        return shape.tableObjects.some((definition) =>
+        return shape.supportsInstances.tableObjects.some((definition) =>
             sameObjectType(definition, defineObject(obType)),
         )
             ? { tag: "RowRef", content: { id: codId } }
@@ -1436,7 +1431,6 @@ function attachInstanceNotebook<
     /** Build a table handle over the table instantiating one schema entity. */
     const tableHandle = (entityId: string): InstanceTable => ({
         id: entityId,
-        entityId,
         get label() {
             return objectPresentation(entityId)?.label?.join(".") ?? "";
         },
@@ -1735,7 +1729,7 @@ function attachInstanceNotebook<
                             : undefined;
                     if (
                         codObject &&
-                        shape.tableObjects.some((definition) =>
+                        shape.supportsInstances.tableObjects.some((definition) =>
                             sameObjectType(definition, defineObject(codObject.obType)),
                         )
                     ) {
@@ -1795,20 +1789,11 @@ function attachInstanceNotebook<
         });
     };
 
-    const instance = {
-        modelNotebook: model,
+    const instance: Instance<S> = {
         get title() {
             return doc.name;
         },
-        get document() {
-            return doc;
-        },
         get tables() {
-            return tablesForCurrentModel();
-        },
-        async refreshTables(): Promise<InstanceTable[]> {
-            const coreTheory = await requireCoreTheory("refreshTables()");
-            await resolveSchemaModel(coreTheory);
             return tablesForCurrentModel();
         },
         get(path: Path): Result<InstanceTable | TableRow | FieldValue> {
@@ -1845,10 +1830,24 @@ function attachInstanceNotebook<
                 ? { tag: "Ok", content: field }
                 : { tag: "Err", content: [{ message: `No field with id "${fieldId}".`, path }] };
         },
-        async validate(): Promise<InstanceValidationResult> {
+    };
+
+    const documentHandle: InstanceDocumentHandle<S, Handle> = {
+        modelNotebook: model,
+        get title() {
+            return doc.name;
+        },
+        handle,
+        get document() {
+            return doc;
+        },
+        dump() {
+            return store.copyValue(handle, doc);
+        },
+        async validate(): Promise<InstanceValidationResult<S>> {
             return validationResult(await runValidation());
         },
-        onValidate(callback: (result: InstanceValidationResult) => void): () => void {
+        onValidate(callback: (result: InstanceValidationResult<S>) => void): () => void {
             return createValidationObserver<DiagramValidationSnapshot>({
                 validate: async () => ({
                     ...(await runValidation()),
@@ -1872,7 +1871,7 @@ function attachInstanceNotebook<
             .filter(
                 (generator) =>
                     objectPresentation(generator.id) !== undefined &&
-                    shape.tableObjects.some((definition) =>
+                    shape.supportsInstances.tableObjects.some((definition) =>
                         sameObjectType(definition, defineObject(generator.obType)),
                     ),
             )
@@ -1884,19 +1883,19 @@ function attachInstanceNotebook<
     const validationResult = (snapshot: {
         result: DiagramValidationResult;
         model: DblModel | undefined;
-    }): InstanceValidationResult => {
+    }): InstanceValidationResult<S> => {
         const issues = snapshot.model ? fieldIssues() : [];
         if (snapshot.result.tag === "Valid" && snapshot.model && issues.length === 0) {
             return {
                 tag: "Ok",
-                content: { instance: instance as Instance },
+                content: { instance },
             };
         }
         if (snapshot.result.tag === "Invalid" || issues.length > 0) {
             return {
                 tag: "Err",
                 content: {
-                    instance: snapshot.model ? (instance as Instance) : null,
+                    instance: snapshot.model ? instance : null,
                     issues: [
                         ...issues,
                         ...(snapshot.result.tag === "Invalid"
@@ -1917,7 +1916,7 @@ function attachInstanceNotebook<
                                 : "Instance validation did not resolve a schema model",
                     },
                 ],
-                instance: snapshot.model ? (instance as Instance) : null,
+                instance: snapshot.model ? instance : null,
             },
         };
     };
@@ -1949,7 +1948,7 @@ function attachInstanceNotebook<
 
     /**
      * One validation run, also reporting the schema model it validated in (when
-     * resolution succeeded): {@link Instance.onValidate} compares that model's
+     * resolution succeeded): {@link InstanceDocumentHandle.onValidate} compares that model's
      * identity across runs, which the {@link DiagramValidationResult} alone
      * cannot provide.
      */
@@ -1993,7 +1992,7 @@ function attachInstanceNotebook<
         plainDocumentId(handle as Document);
     }
 
-    return instance as unknown as Instance<TShape, Handle, TModelShape>;
+    return documentHandle;
 }
 
 function attachNotebook<TShape extends AnyShape, Handle>(
@@ -3256,10 +3255,8 @@ export type LiteralType = "Bool" | "Int" | "Float" | "String";
  * through the table directly.
  */
 export interface InstanceTable {
-    /** The table UUID. Currently identical to the entity UUID in the stored representation. */
+    /** The schema entity's generator UUID, which also identifies this table. */
     readonly id: string;
-    /** The schema entity's generator UUID this table instantiates. */
-    readonly entityId: string;
     /** The schema entity's display label; `""` when unlabeled. */
     readonly label: string;
     /** The table's rows, in stored order, as live {@link TableRow} handles. */
@@ -3270,12 +3267,16 @@ export interface InstanceTable {
     addRow(args?: Record<string, LiteralValue | TableRow>): TableRow;
 }
 
-export interface InstanceValidationSuccess {
-    readonly instance: Instance;
+export interface InstanceValidationSuccess<
+    S extends SupportsInstancesShape = SupportsInstancesShape,
+> {
+    readonly instance: Instance<S>;
 }
 
-export interface InstanceValidationFailure {
-    readonly instance: Instance | null;
+export interface InstanceValidationFailure<
+    S extends SupportsInstancesShape = SupportsInstancesShape,
+> {
+    readonly instance: Instance<S> | null;
     readonly issues: ReadonlyArray<Issue | TableFieldIssue>;
 }
 
@@ -3286,7 +3287,8 @@ export interface TableFieldIssue extends Issue {
 }
 
 /** Instance validation with best-effort schema data on failure. */
-export type InstanceValidationResult = Result<InstanceValidationSuccess, InstanceValidationFailure>;
+export type InstanceValidationResult<S extends SupportsInstancesShape = SupportsInstancesShape> =
+    Result<InstanceValidationSuccess<S>, InstanceValidationFailure<S>>;
 
 /**
  * A row of an {@link Instance}: one record of a schema entity. Rows are never
@@ -3327,50 +3329,53 @@ export interface TableRow {
 }
 
 /**
- * An *instance* notebook: a database that instantiates a schema, backed by an
- * {@link InstanceDocument} storing a map of *tables* — one table per
- * schema entity, keyed by the schema's generator UUIDs. Obtained from {@link
- * Binder.createInstance}. Tables provide the editor surface for adding rows and
- * reading or writing their fields.
+ * The validated editing and query surface for a database that instantiates a
+ * schema. It is obtained from a successful {@link InstanceDocumentHandle.validate}
+ * result (and best-effort on failures after the schema model resolves). Tables
+ * provide the editor surface for adding rows and reading or writing their fields.
  */
-export type Instance<
-    _TShape extends InstanceShape = InstanceShape,
-    // oxlint-disable-next-line typescript/no-explicit-any
-    _Handle = any,
-    _TModelShape extends AnyShape = AnyShape,
-> = {
-    /** The validatable model notebook this instance is of. */
-    readonly modelNotebook: ValidatableNotebook<_Handle, _TModelShape>;
+export type Instance<_S extends SupportsInstancesShape = SupportsInstancesShape> = {
     /** The instance document title. */
     readonly title: string;
-    /** The underlying instance document. */
-    readonly document: InstanceDocument;
     /**
      * List the instance's tables: one {@link InstanceTable} per live
-     * row-bearing schema entity (per the shape's `tableObjects`), in schema
+     * row-bearing schema entity (per the schema shape's
+     * `supportsInstances.tableObjects`), in schema
      * order, imported entities included — an entity with no rows yet gets an
-     * empty table. A table whose schema entity was deleted is hidden (though
-     * its data is retained in {@link Instance.document}), and reappears when
-     * the entity is restored.
+     * empty table. A table whose schema entity was deleted is hidden, and
+     * reappears when the entity is restored.
      *
-     * Reflects the elaborated schema as of the last resolution (instance
-     * creation, {@link Instance.validate}, or {@link Instance.refreshTables}).
-     * After a schema edit, call {@link Instance.refreshTables} to pick up new
-     * or removed tables.
+     * Reflects the elaborated schema as of the validation that returned this
+     * instance.
      */
     readonly tables: InstanceTable[];
-    /**
-     * Re-resolve the elaborated schema model and return the current {@link
-     * Instance.tables}. Resolution goes through the per-store cache, so calls
-     * with an unchanged schema are cheap — no full validation is run. Rejects
-     * when the schema cannot be resolved (dangling `instanceOf`, cyclic
-     * instantiation).
-     */
-    refreshTables(): Promise<InstanceTable[]>;
     /** Resolve a table, row, or field by its underlying document path. */
     get(path: Path): Result<InstanceTable | TableRow | FieldValue>;
+};
+
+/**
+ * A document-level handle for an unvalidated tabular instance. It exposes the
+ * backing document and schema metadata needed for persistence and validation,
+ * but table editing and queries are available only through the validated
+ * {@link Instance} returned by {@link InstanceDocumentHandle.validate}.
+ */
+export type InstanceDocumentHandle<
+    S extends SupportsInstancesShape = SupportsInstancesShape,
+    // oxlint-disable-next-line typescript/no-explicit-any
+    Handle = any,
+> = {
+    /** The validatable schema notebook this instance is of. */
+    readonly modelNotebook: SupportsInstancesNotebook<S, Handle>;
+    /** The instance document title. */
+    readonly title: string;
+    /** The store handle this instance document is bound to. */
+    readonly handle: Handle;
+    /** The reactive/raw underlying instance document supplied by the store. */
+    readonly document: InstanceDocument;
+    /** Make a detached plain-JS snapshot of the instance document. */
+    dump(): InstanceDocument;
     /** Validate the instance and resolve its schema model and tables. */
-    validate(): Promise<InstanceValidationResult>;
+    validate(): Promise<InstanceValidationResult<S>>;
     /**
      * Observe this instance's validation reactively; see
      * {@link Notebook.onValidate}. Re-validation triggers on changes to the
@@ -3378,7 +3383,7 @@ export type Instance<
      * tree — no manual subscription to the schema is needed. Returns an
      * unsubscribe function.
      */
-    onValidate(callback: (result: InstanceValidationResult) => void): () => void;
+    onValidate(callback: (result: InstanceValidationResult<S>) => void): () => void;
 };
 
 /** A diagram shape's individual-def list, defaulted to empty for indexing. */
@@ -3522,15 +3527,24 @@ type CoreTheoryMethods<TShape extends AnyShape, Handle> =
 /** A model shape that supports data instances. */
 type SupportsInstancesShape = CreatableShape & {
     readonly getCoreTheory: CoreTheoryLoader;
-    readonly Instance: InstanceShape;
+    readonly supportsInstances: {
+        readonly tableObjects: readonly ObjectDef[];
+    };
+    readonly objects: readonly ObjectDef[];
 };
+
+type DeclaresInstanceTableObjects<S extends SupportsInstancesShape> =
+    Exclude<S["supportsInstances"]["tableObjects"][number], S["objects"][number]> extends never
+        ? object
+        : { readonly __tableObjectsMustBeDeclaredInObjects: never };
 
 type SupportsInstancesNotebook<S extends SupportsInstancesShape, Handle> = Notebook<
     S,
     NotebookDocument,
     Handle
 > &
-    ValidatableNotebook<Handle, S>;
+    ValidatableNotebook<Handle, S> &
+    DeclaresInstanceTableObjects<S>;
 
 /**
  * Entry points for notebooks over a fixed store. Obtain one with
@@ -3559,19 +3573,17 @@ export interface Binder<Handle> {
         data: { title: string; in: ValidatableNotebook<Handle> },
     ): Promise<Notebook<S, NotebookDocument, Handle>>;
     /**
-     * Build an *instance* notebook of a schema. `schema` is the schema notebook
-     * itself (its shape must be a creatable, `.Instance`-deriving shape); the
-     * instance's derived instance shape and `instance-in` link are taken from it,
-     * so the caller passes only the schema and a name. The result is an {@link
-     * Instance} whose ergonomic `add` takes schema object cells directly. See
-     * {@link Instance}.
+     * Build an instance document of a schema. The schema shape must declare a
+     * theory, core theory, objects, and `supportsInstances.tableObjects`. The
+     * result is an {@link InstanceDocumentHandle}; validate it to obtain the
+     * table editing/query {@link Instance}.
      */
     createInstance<S extends SupportsInstancesShape>(
         schema: SupportsInstancesNotebook<S, Handle>,
         data: { title: string },
-    ): Promise<Instance<S["Instance"], Handle, S>>;
+    ): Promise<InstanceDocumentHandle<S, Handle>>;
     /**
-     * Rebuild an *instance* notebook from a previously {@link Instance.dump}ed
+     * Rebuild an instance document from a previously {@link InstanceDocumentHandle.dump}ed
      * {@link InstanceDocument}, re-attaching it over a live `schema` notebook.
      * The dumped document's `instanceOf` link is rewritten to reference
      * `schema`'s current handle, so the instance resolves against and validates
@@ -3585,7 +3597,7 @@ export interface Binder<Handle> {
     loadInstance<S extends SupportsInstancesShape>(
         schema: SupportsInstancesNotebook<S, Handle>,
         document: InstanceDocument,
-    ): Promise<Instance<S["Instance"], Handle, S>>;
+    ): Promise<InstanceDocumentHandle<S, Handle>>;
     /**
      * Attach an instance notebook to an existing document identified by a
      * {@link DocumentRef}. The reference is resolved through the store without
@@ -3594,7 +3606,7 @@ export interface Binder<Handle> {
     loadInstanceFromRef<S extends SupportsInstancesShape>(
         schema: SupportsInstancesNotebook<S, Handle>,
         ref: DocumentRef,
-    ): Promise<Result<Instance<S["Instance"], Handle, S>>>;
+    ): Promise<Result<InstanceDocumentHandle<S, Handle>>>;
     /**
      * Build a notebook from fresh data. The document seed is constructed
      * internally from `data.title` and the shape's `theory`.
@@ -3690,15 +3702,11 @@ export function createBinder<Handle>(
             schema: SupportsInstancesNotebook<S, Handle>,
             data: { title: string },
         ) {
-            // The instance shape is the schema's own derived `.Instance`,
-            // recovered from the shape stamped on the schema notebook at creation.
-            const schemaShape = shapeOf(schema);
-            const instanceShape = (schemaShape as { Instance?: InstanceShape } | undefined)
-                ?.Instance;
-            if (!instanceShape) {
+            const schemaShape = shapeOf<S>(schema);
+            if (!schemaShape?.supportsInstances) {
                 throw new Error(
-                    "createInstance requires a schema notebook created from a creatable, " +
-                        "`.Instance`-deriving shape.",
+                    "createInstance requires a schema notebook whose shape declares " +
+                        "`supportsInstances`.",
                 );
             }
             const ref = store.getDocumentRef(schema.handle);
@@ -3707,28 +3715,23 @@ export function createBinder<Handle>(
                 name: data.title,
             });
             const validation = await schema.validate();
-            return withShape(
-                attachInstanceNotebook(
-                    store,
-                    await store.createHandle(seed),
-                    instanceShape,
-                    schema,
-                    validation.tag === "Ok" ? validation.content : undefined,
-                ),
-                instanceShape,
+            return attachInstanceNotebook(
+                store,
+                await store.createHandle(seed),
+                schemaShape,
+                schema,
+                validation.tag === "Ok" ? validation.content : undefined,
             );
         },
         async loadInstance<S extends SupportsInstancesShape>(
             schema: SupportsInstancesNotebook<S, Handle>,
             document: InstanceDocument,
         ) {
-            const schemaShape = shapeOf(schema);
-            const instanceShape = (schemaShape as { Instance?: InstanceShape } | undefined)
-                ?.Instance;
-            if (!instanceShape) {
+            const schemaShape = shapeOf<S>(schema);
+            if (!schemaShape?.supportsInstances) {
                 throw new Error(
-                    "loadInstance requires a schema notebook created from a creatable, " +
-                        "`.Instance`-deriving shape.",
+                    "loadInstance requires a schema notebook whose shape declares " +
+                        "`supportsInstances`.",
                 );
             }
             const ref = store.getDocumentRef(schema.handle);
@@ -3751,28 +3754,23 @@ export function createBinder<Handle>(
                       name: document.name,
                   });
             const validation = await schema.validate();
-            return withShape(
-                attachInstanceNotebook(
-                    store,
-                    await store.createHandle(seed),
-                    instanceShape,
-                    schema,
-                    validation.tag === "Ok" ? validation.content : undefined,
-                ),
-                instanceShape,
+            return attachInstanceNotebook(
+                store,
+                await store.createHandle(seed),
+                schemaShape,
+                schema,
+                validation.tag === "Ok" ? validation.content : undefined,
             );
         },
         async loadInstanceFromRef<S extends SupportsInstancesShape>(
             schema: SupportsInstancesNotebook<S, Handle>,
             ref: DocumentRef,
         ) {
-            const schemaShape = shapeOf(schema);
-            const instanceShape = (schemaShape as { Instance?: InstanceShape } | undefined)
-                ?.Instance;
-            if (!instanceShape) {
+            const schemaShape = shapeOf<S>(schema);
+            if (!schemaShape?.supportsInstances) {
                 throw new Error(
-                    "loadInstanceFromRef requires a schema notebook created from a creatable, " +
-                        "`.Instance`-deriving shape.",
+                    "loadInstanceFromRef requires a schema notebook whose shape declares " +
+                        "`supportsInstances`.",
                 );
             }
 
@@ -3816,15 +3814,12 @@ export function createBinder<Handle>(
             const validation = await schema.validate();
             return {
                 tag: "Ok",
-                content: withShape(
-                    attachInstanceNotebook(
-                        store,
-                        handle,
-                        instanceShape,
-                        schema,
-                        validation.tag === "Ok" ? validation.content : undefined,
-                    ),
-                    instanceShape,
+                content: attachInstanceNotebook(
+                    store,
+                    handle,
+                    schemaShape,
+                    schema,
+                    validation.tag === "Ok" ? validation.content : undefined,
                 ),
             };
         },

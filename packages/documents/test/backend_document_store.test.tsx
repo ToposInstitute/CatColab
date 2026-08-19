@@ -432,7 +432,7 @@ describe("backend-backed Solid + Automerge DocumentStore", () => {
             // document, so loading it with the model shape `SimpleOlog` fails.
             const schema = await backendBinder.createNotebook(SimpleOlog, { title: "Schema" });
             const instance = await backendBinder.createInstance(schema, { title: "Instance" });
-            const ref = store.getDocumentRef(store.getHandleForDocument(instance.document)!);
+            const ref = store.getDocumentRef(instance.handle);
 
             const loaded = await backendBinder.loadNotebookFromRef(SimpleOlog, ref);
             expect(loaded.tag).toBe("Err");
@@ -449,6 +449,10 @@ describe("backend-backed Solid + Automerge DocumentStore", () => {
             const schema = await binder.createNotebook(SimpleOlog, { title: "Schema" });
             schema.add(Type, { label: "Person" });
             const instance = await binder.createInstance(schema, { title: "Data" });
+            const validated = await instance.validate();
+            if (!validated.content.instance) {
+                throw new Error("expected instance schema to resolve");
+            }
 
             const otherStore = createBackendStore(backend, owner);
             const otherBinder = createBinder(otherStore);
@@ -463,20 +467,22 @@ describe("backend-backed Solid + Automerge DocumentStore", () => {
 
             const loadedInstance = await otherBinder.loadInstanceFromRef(
                 loadedSchema.content,
-                store.getDocumentRef(store.getHandleForDocument(instance.document)!),
+                store.getDocumentRef(instance.handle),
             );
             expect(loadedInstance.tag).toBe("Ok");
             if (loadedInstance.tag !== "Ok") {
                 throw new Error("expected instance to load");
             }
 
-            loadedInstance.content.tables[0]?.addRow();
-            expect(instance.tables[0]?.rows).toHaveLength(1);
-            expect(
-                otherStore.getDocumentRef(
-                    otherStore.getHandleForDocument(loadedInstance.content.document)!,
-                ),
-            ).toEqual(store.getDocumentRef(store.getHandleForDocument(instance.document)!));
+            const loadedValidation = await loadedInstance.content.validate();
+            if (!loadedValidation.content.instance) {
+                throw new Error("expected loaded instance schema to resolve");
+            }
+            loadedValidation.content.instance.tables[0]?.addRow();
+            expect(validated.content.instance.tables[0]?.rows).toHaveLength(1);
+            expect(otherStore.getDocumentRef(loadedInstance.content.handle)).toEqual(
+                store.getDocumentRef(instance.handle),
+            );
             dispose();
         });
     });
@@ -498,18 +504,18 @@ describe("backend-backed Solid + Automerge DocumentStore", () => {
 
             const wrongSchema = await binder.loadInstanceFromRef(
                 otherSchema,
-                store.getDocumentRef(store.getHandleForDocument(instance.document)!),
+                store.getDocumentRef(instance.handle),
             );
             expect(wrongSchema.tag).toBe("Err");
 
-            store.changeDocument(store.getHandleForDocument(instance.document)!, (document) => {
+            store.changeDocument(instance.handle, (document) => {
                 if (document.type === "instance") {
                     document.instanceOf._server = "other.catcolab.org";
                 }
             });
             const wrongServer = await binder.loadInstanceFromRef(
                 schema,
-                store.getDocumentRef(store.getHandleForDocument(instance.document)!),
+                store.getDocumentRef(instance.handle),
             );
             expect(wrongServer.tag).toBe("Err");
             dispose();

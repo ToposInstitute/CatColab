@@ -18,7 +18,7 @@ describe("demo DataScript projection", () => {
     test("loads and queries the planets example", async () => {
         localStorage.clear();
         const doc = await createDemoDocument();
-        const { schema, instance } = doc;
+        const { schema, instance: instanceDocument } = doc;
 
         await loadExampleData(doc);
 
@@ -30,7 +30,7 @@ describe("demo DataScript projection", () => {
             "Moon",
         ]);
         expect(doc.tables().flatMap((table) => table.rows)).toHaveLength(115);
-        await expect(instance.validate()).resolves.toMatchObject({ tag: "Ok" });
+        await expect(instanceDocument.validate()).resolves.toMatchObject({ tag: "Ok" });
 
         const result = queryDataScript(projectDataScript(doc), EXAMPLE_QUERY);
         expect(new Set(result.rows.map(([planetName]) => planetName))).toEqual(

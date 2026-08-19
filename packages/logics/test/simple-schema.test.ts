@@ -59,7 +59,7 @@ describe("the simple-schema logic", () => {
         expect(note.content).toBe("A note.");
     });
 
-    test("supportsInstances generates diagram and instance shapes", async () => {
+    test("supportsInstances generates a diagram shape and configures tables", async () => {
         const binder = createBinder();
         const model = await binder.createNotebook(SimpleSchema, { title: "Example schema" });
 
@@ -72,9 +72,7 @@ describe("the simple-schema logic", () => {
 
         const x = diagram.add(SimpleSchema.Diagram.Individual, { label: "x", over: person });
         expect(x.over?.label).toBe("Person");
-        expect(SimpleSchema.Instance).not.toBe(SimpleSchema.Diagram);
-        expect(SimpleSchema.Instance.objects).toBe(SimpleSchema.objects);
-        expect(SimpleSchema.Instance.tableObjects).toEqual([Entity]);
+        expect(SimpleSchema.supportsInstances?.tableObjects).toEqual([Entity]);
     });
 
     test("schemas migrate to simple-olog", async () => {

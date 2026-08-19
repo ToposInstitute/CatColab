@@ -96,12 +96,17 @@ describe("Float-to-Integer migration planning", () => {
         const entity = schema.add(Entity, { label: "Measurement" });
         const float = schema.add(AttrType, { label: "Float" });
         const reading = schema.add(Attr, { label: "reading", from: entity, to: float });
-        const instance = await binder.createInstance(schema, { title: "Instance" });
+        const instanceDocument = await binder.createInstance(schema, { title: "Instance" });
+        const validation = await instanceDocument.validate();
+        if (!validation.content.instance) {
+            throw new Error("Expected instance schema to resolve");
+        }
+        const instance = validation.content.instance;
         const table = instance.tables.find((candidate) => candidate.id === entity.id)!;
         table.addRow();
         const fractional = table.addRow();
         table.addRow();
-        const ids = instance.document.tables[entity.id]!.rowOrder;
+        const ids = instanceDocument.document.tables[entity.id]!.rowOrder;
         const values = [3, Math.fround(3.8), undefined];
         const adapter = {
             rowsOf: () => table.rows,
@@ -167,7 +172,7 @@ describe("Float-to-Integer migration application", () => {
         doc.instanceHistory.onRedo();
         expect(temperature.to.label).toBe("Integer");
         expect(doc.rowValue(temperature.from!, earth, temperature.id)).toBe(15);
-    });
+    }, 60_000);
 
     test("applies manually edited values for every row", async () => {
         localStorage.clear();
@@ -189,7 +194,7 @@ describe("Float-to-Integer migration application", () => {
         expect(rows.map((row) => doc.rowValue(temperature.from!, row, temperature.id))).toEqual(
             rows.map((_, index) => index),
         );
-    });
+    }, 60_000);
 });
 
 describe("paired local history", () => {

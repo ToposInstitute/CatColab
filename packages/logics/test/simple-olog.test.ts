@@ -62,7 +62,7 @@ describe("the simple-olog logic", () => {
         expect(notebook.cellsOf(PathEquation).length).toBe(1);
     });
 
-    test("supportsInstances generates diagram and instance shapes", async () => {
+    test("supportsInstances generates a diagram shape and configures tables", async () => {
         const binder = createBinder();
         const model = await binder.createNotebook(SimpleOlog, { title: "An Olog" });
 
@@ -81,9 +81,7 @@ describe("the simple-olog logic", () => {
 
         expect(x.over?.label).toBe("A");
         expect(f.over?.label).toBe("has");
-        expect(SimpleOlog.Instance).not.toBe(SimpleOlog.Diagram);
-        expect(SimpleOlog.Instance.objects).toBe(SimpleOlog.objects);
-        expect(SimpleOlog.Instance.tableObjects).toEqual([Type]);
+        expect(SimpleOlog.supportsInstances?.tableObjects).toEqual([Type]);
     });
 
     test("ologs migrate to simple-schema", async () => {

@@ -16,6 +16,7 @@ export {
     type Binder,
     type TableHeader,
     type Instance,
+    type InstanceDocumentHandle,
     type InstanceTable,
     type InstanceValidationResult,
     type TableRow,
@@ -84,6 +85,4 @@ export {
     type DiagramShape,
     type DiagramShapeOf,
     type DiagramValidationResult,
-    type InstanceShape,
-    type InstanceShapeOf,
 } from "./shape";

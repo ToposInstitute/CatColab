@@ -1,7 +1,21 @@
 import { Attr, AttrType, Entity, Mapping, SimpleSchema } from "catcolab-logics/simple-schema";
 import { describe, expect, test } from "vitest";
 
-import { createBinder, type InstanceTable, type TableRow } from "catcolab-documents";
+import {
+    createBinder,
+    type Instance,
+    type InstanceDocumentHandle,
+    type InstanceTable,
+    type TableRow,
+} from "catcolab-documents";
+
+const validateInstance = async (handle: InstanceDocumentHandle): Promise<Instance> => {
+    const result = await handle.validate();
+    if (result.tag !== "Ok") {
+        throw new Error("Expected instance validation to succeed");
+    }
+    return result.content.instance;
+};
 
 const tableFor = (tables: InstanceTable[], id: string): InstanceTable => {
     const table = tables.find((candidate) => candidate.id === id);
@@ -25,7 +39,8 @@ describe("tabular instances", () => {
         const str = schema.add(AttrType, { label: "String" });
         const employer = schema.add(Mapping, { label: "employer", from: person, to: company });
         const name = schema.add(Attr, { label: "name", from: person, to: str });
-        const instance = await binder.createInstance(schema, { title: "Company instance" });
+        const instanceHandle = await binder.createInstance(schema, { title: "Company instance" });
+        const instance = await validateInstance(instanceHandle);
         const tables = instance.tables;
         const people = tableFor(tables, person.id);
         const acme = tableFor(tables, company.id).addRow();
@@ -54,7 +69,8 @@ describe("tabular instances", () => {
         const negative = schema.add(Entity, { label: "NegativeLink" });
         const negativeFrom = schema.add(Mapping, { label: "from", from: negative, to: variable });
         const negativeTo = schema.add(Mapping, { label: "to", from: negative, to: variable });
-        const instance = await binder.createInstance(schema, { title: "Predator-prey" });
+        const instanceHandle = await binder.createInstance(schema, { title: "Predator-prey" });
+        const instance = await validateInstance(instanceHandle);
         const tables = instance.tables;
         const variables = tableFor(tables, variable.id);
         const foxes = variables.addRow();
@@ -75,6 +91,6 @@ describe("tabular instances", () => {
         ]);
         expect(tableFor(tables, positive.id).rows).toHaveLength(1);
         expect(tableFor(tables, negative.id).rows).toHaveLength(1);
-        expect((await instance.validate()).tag).toBe("Ok");
+        expect((await instanceHandle.validate()).tag).toBe("Ok");
     });
 });

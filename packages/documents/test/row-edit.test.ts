@@ -1,9 +1,23 @@
 import { Attr, AttrType, Entity, Mapping, SimpleSchema } from "catcolab-logics/simple-schema";
 import { describe, expect, test } from "vitest";
 
-import { createBinder, type InstanceTable, type TableRow } from "catcolab-documents";
+import {
+    createBinder,
+    type Instance,
+    type InstanceDocumentHandle,
+    type InstanceTable,
+    type TableRow,
+} from "catcolab-documents";
 
 const binder = createBinder();
+
+const validateInstance = async (handle: InstanceDocumentHandle): Promise<Instance> => {
+    const result = await handle.validate();
+    if (result.tag !== "Ok") {
+        throw new Error("Expected instance validation to succeed");
+    }
+    return result.content.instance;
+};
 
 const tableFor = (tables: InstanceTable[], id: string): InstanceTable => {
     const table = tables.find((candidate) => candidate.id === id);
@@ -24,7 +38,8 @@ describe("instance row editing", () => {
         const str = schema.add(AttrType, { label: "String" });
         const employer = schema.add(Mapping, { label: "employer", from: person, to: company });
         const name = schema.add(Attr, { label: "name", from: person, to: str });
-        const instance = await binder.createInstance(schema, { title: "I" });
+        const instanceHandle = await binder.createInstance(schema, { title: "I" });
+        const instance = await validateInstance(instanceHandle);
         const tables = instance.tables;
         const personTable = tableFor(tables, person.id);
         const acme = tableFor(tables, company.id).addRow();
@@ -48,7 +63,8 @@ describe("instance row editing", () => {
         const str = schema.add(AttrType, { label: "String" });
         const employer = schema.add(Mapping, { label: "employer", from: person, to: company });
         const name = schema.add(Attr, { label: "name", from: person, to: str });
-        const instance = await binder.createInstance(schema, { title: "I" });
+        const instanceHandle = await binder.createInstance(schema, { title: "I" });
+        const instance = await validateInstance(instanceHandle);
         const tables = instance.tables;
         const personTable = tableFor(tables, person.id);
         const acme = tableFor(tables, company.id).addRow();
@@ -73,7 +89,7 @@ describe("instance row editing", () => {
 
         fred.set(name, null);
         expect(fieldFor(personTable, fred, name.id)).toMatchObject({ tag: "Null" });
-        expect((await instance.validate()).tag).toBe("Ok");
+        expect((await instanceHandle.validate()).tag).toBe("Ok");
     });
 
     test("morphisms sharing a label remain independent by UUID", async () => {
@@ -82,7 +98,8 @@ describe("instance row editing", () => {
         const str = schema.add(AttrType, { label: "String" });
         const alias1 = schema.add(Attr, { label: "alias", from: person, to: str });
         const alias2 = schema.add(Attr, { label: "alias", from: person, to: str });
-        const instance = await binder.createInstance(schema, { title: "I" });
+        const instanceHandle = await binder.createInstance(schema, { title: "I" });
+        const instance = await validateInstance(instanceHandle);
         const table = tableFor(instance.tables, person.id);
         const fred = table.addRow();
 
@@ -112,7 +129,8 @@ describe("instance row editing", () => {
         const str = schema.add(AttrType, { label: "String" });
         const employer = schema.add(Mapping, { label: "employer", from: person, to: company });
         const name = schema.add(Attr, { label: "name", from: person, to: str });
-        const instance = await binder.createInstance(schema, { title: "I" });
+        const instanceHandle = await binder.createInstance(schema, { title: "I" });
+        const instance = await validateInstance(instanceHandle);
         const tables = instance.tables;
         const personTable = tableFor(tables, person.id);
         const acme = tableFor(tables, company.id).addRow();
@@ -137,7 +155,8 @@ describe("instance row editing", () => {
         const person = schema.add(Entity, { label: "Person" });
         const company = schema.add(Entity, { label: "Company" });
         const employer = schema.add(Mapping, { label: "employer", from: person, to: company });
-        const instance = await binder.createInstance(schema, { title: "I" });
+        const instanceHandle = await binder.createInstance(schema, { title: "I" });
+        const instance = await validateInstance(instanceHandle);
         const tables = instance.tables;
         const companyTable = tableFor(tables, company.id);
         const personTable = tableFor(tables, person.id);
@@ -156,16 +175,17 @@ describe("instance row editing", () => {
         const person = schema.add(Entity, { label: "Person" });
         const company = schema.add(Entity, { label: "Company" });
         const employer = schema.add(Mapping, { label: "employer", from: person, to: company });
-        const instance = await binder.createInstance(schema, { title: "I" });
+        const instanceHandle = await binder.createInstance(schema, { title: "I" });
+        const instance = await validateInstance(instanceHandle);
         const tables = instance.tables;
         const companyTable = tableFor(tables, company.id);
         const personTable = tableFor(tables, person.id);
         const acme = companyTable.addRow();
         const fred = personTable.addRow();
         fred.set(employer, acme);
-        expect((await instance.validate()).tag).toBe("Ok");
+        expect((await instanceHandle.validate()).tag).toBe("Ok");
 
-        const storedCompany = instance.document.tables[company.id];
+        const storedCompany = instanceHandle.document.tables[company.id];
         const acmeId = storedCompany?.rowOrder[0];
         if (!storedCompany || !acmeId) {
             throw new Error("Expected stored company row");
@@ -178,7 +198,7 @@ describe("instance row editing", () => {
             content: { id: acmeId },
         });
 
-        const result = await instance.validate();
+        const result = await instanceHandle.validate();
         if (result.tag !== "Err") {
             throw new Error("Expected validation to fail");
         }

@@ -777,7 +777,7 @@ export type Shape = {
      * Left unset by default: not every theory admits diagrams. In the core,
      * diagrams are only implemented for *discrete* double theories, so a shape
      * over a modal theory (e.g. the symmetric-monoidal theory behind Petri nets)
-     * must omit this property and gets no `.Diagram` or `.Instance`.
+     * must omit this property and gets no `.Diagram` or instance support.
      */
     readonly supportsInstances?: SupportsInstances;
     /**
@@ -1293,8 +1293,8 @@ export type NotebookCell<T = AnyShape> = T extends IndividualDef
  * morphism declares its endpoints when built with {@link defineMorphism}.
  * `theory`/`getCoreTheory` are optional: include them for a creatable shape, omit
  * them for a sub-shape contract. Set `supportsInstances.tableObjects` (requires
- * both) to derive a `.Diagram` shape for drawing diagrams and an
- * `.Instance` shape carrying the row-bearing definitions as `tableObjects`.
+ * both) to derive a `.Diagram` shape for drawing diagrams and to allow its
+ * notebooks to be used as schemas for tabular instances.
  */
 type ValidateInstanceSupport<TSpec extends Shape> = TSpec extends {
     readonly supportsInstances: {
@@ -1321,14 +1321,12 @@ export function defineShape<const TSpec extends Shape>(
     (TSpec extends { supportsInstances: SupportsInstances }
         ? {
               readonly Diagram: DiagramShapeOf<TSpec>;
-              readonly Instance: InstanceShapeOf<TSpec>;
           }
         : object) {
     const getCoreTheory = spec.getCoreTheory ? lazyCoreTheory(spec.getCoreTheory) : undefined;
     const derived: Shape & {
         Analysis?: AnalysisShape;
         Diagram?: DiagramShape;
-        Instance?: InstanceShape;
     } = {
         ...spec,
         ...(getCoreTheory ? { getCoreTheory } : {}),
@@ -1371,12 +1369,6 @@ export function defineShape<const TSpec extends Shape>(
             ...(Aspect ? { Aspect } : {}),
             ...(getCoreTheory ? { diagramInCoreTheory: getCoreTheory } : {}),
         };
-        derived.Instance = {
-            ...spec,
-            theory: spec.theory,
-            tableObjects: spec.supportsInstances.tableObjects,
-            getCoreTheory,
-        } as InstanceShape;
     }
     for (const key of [
         "supportsEquations",
@@ -1386,7 +1378,6 @@ export function defineShape<const TSpec extends Shape>(
         "migrations",
         "Analysis",
         "Diagram",
-        "Instance",
     ] as const) {
         if (key in derived) {
             Object.defineProperty(derived, key, { enumerable: false });
@@ -1430,26 +1421,6 @@ export type DiagramShape = Shape & {
 /** Whether a shape value declares individuals, i.e. is a diagram shape. */
 export const isDiagramShape = (shape: AnyShape): shape is DiagramShape =>
     Array.isArray((shape as { individuals?: unknown }).individuals);
-
-/**
- * The tabular-instance shape derived by {@link defineShape} from a model shape
- * that declares `supportsInstances`, exposed as `shape.Instance`. It retains
- * the model's object and morphism definitions and adds the configured
- * row-bearing `tableObjects` subset.
- */
-export type InstanceShapeOf<TSpec extends Shape & { supportsInstances: SupportsInstances }> =
-    TSpec &
-        InstanceShape & {
-            readonly theory: NonNullable<TSpec["theory"]>;
-            readonly tableObjects: TSpec["supportsInstances"]["tableObjects"];
-        };
-
-/** A shape for tabular instances of a schema. */
-export type InstanceShape = Shape & {
-    readonly theory: string;
-    readonly supportsInstances: SupportsInstances;
-    readonly tableObjects: readonly ObjectDef[];
-};
 
 /** An elaborated diagram together with its validation status against its model. */
 export type DiagramValidationResult =

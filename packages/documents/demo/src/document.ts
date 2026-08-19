@@ -12,6 +12,7 @@ import {
     type DocumentStore,
     type InstanceDocument,
     type Instance,
+    type InstanceDocumentHandle,
     type InstanceTable,
     type ModelDocument,
     type Notebook,
@@ -176,7 +177,10 @@ export function resolveLinkTarget(
 
 export type DemoDocument = {
     schema: Notebook<typeof SimpleSchema, SolidStoreHandle>;
-    instance: Instance<(typeof SimpleSchema)["Instance"], SolidStoreHandle>;
+    /** Raw instance document handle for validation and persistence. */
+    instance: InstanceDocumentHandle<typeof SimpleSchema, SolidStoreHandle>;
+    /** The most recently validated instance used for table editing. */
+    validatedInstance: () => Instance<typeof SimpleSchema>;
     /** Best-effort tables supplied by instance validation. */
     tables: () => InstanceTable[];
     refreshTables: () => Promise<InstanceTable[]>;
@@ -321,7 +325,7 @@ export async function createDemoDocument(): Promise<DemoDocument> {
     }
 
     let schema: Notebook<typeof SimpleSchema>;
-    let instance: Instance;
+    let instance: InstanceDocumentHandle<typeof SimpleSchema, SolidStoreHandle>;
     let attrTypes: Record<AttrTypeName, NotebookCell<typeof AttrType>>;
     let restoredPersistedState = false;
     if (persisted) {
@@ -350,21 +354,29 @@ export async function createDemoDocument(): Promise<DemoDocument> {
 
     const [schemaVersion, setSchemaVersion] = createSignal(0);
     const [instanceVersion, setInstanceVersion] = createSignal(0);
-    const instanceHandle = handleByDocument.get(instance.document as object);
-    if (!instanceHandle) {
-        throw new Error("Instance is not attached to the demo store.");
+    const initialValidation = await instance.validate();
+    if (!initialValidation.content.instance) {
+        throw new Error("Could not resolve the demo instance schema.");
     }
-    const [instanceTables, setInstanceTables] = createSignal<InstanceTable[]>(instance.tables);
-    const instanceSnapshot = () => solidStore.copyValue(instanceHandle, instance.document);
+    const [validatedInstance, setValidatedInstance] = createSignal(
+        initialValidation.content.instance,
+    );
+    const [instanceTables, setInstanceTables] = createSignal<InstanceTable[]>(
+        initialValidation.content.instance.tables,
+    );
+    const instanceHandle = instance.handle;
+    const instanceSnapshot = () => instance.dump();
     const tableFor = (entity: { readonly id: string }) =>
         instanceTables().find((table) => table.id === entity.id);
     const refreshTables = async () => {
-        // `instance.tables` reflects the schema only as of its last resolution,
-        // so re-resolve first. Resolution is cached per store: with an
-        // unchanged schema this is cheap.
-        const tables = await instance.refreshTables();
-        setInstanceTables(tables);
-        return tables;
+        const validation = await instance.validate();
+        const current = validation.content.instance;
+        if (!current) {
+            throw new Error("Could not resolve the demo instance schema.");
+        }
+        setValidatedInstance(current);
+        setInstanceTables(current.tables);
+        return current.tables;
     };
     const rowsOf = (entity: { readonly id: string }) => tableFor(entity)?.rows ?? [];
     const rowId = (entity: { readonly id: string }, row: TableRow) =>
@@ -744,6 +756,7 @@ export async function createDemoDocument(): Promise<DemoDocument> {
     return {
         schema,
         instance,
+        validatedInstance,
         tables: instanceTables,
         refreshTables,
         tableFor,

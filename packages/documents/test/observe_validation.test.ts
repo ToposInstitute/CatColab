@@ -176,7 +176,11 @@ describe("onValidate", () => {
         schema.add(Attr, { label: "name", from: person, to: str });
 
         const instance = await binder.createInstance(schema, { title: "Company instance" });
-        const initialTables = instance.tables;
+        const initialValidation = await instance.validate();
+        if (!initialValidation.content.instance) {
+            throw new Error("Expected instance schema to resolve");
+        }
+        const initialTables = initialValidation.content.instance.tables;
         initialTables.find((table) => table.id === company.id)?.addRow();
         initialTables.find((table) => table.id === person.id)?.addRow();
 

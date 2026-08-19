@@ -44,7 +44,12 @@ row, an attribute a literal, and `null` clears the column.
 <!-- verifier:prepend-to-following -->
 
 ```ts
-const instance = await binder.createInstance(schema, { title: "Company instance" });
+const instanceDoc = await binder.createInstance(schema, { title: "Company instance" });
+const initialValidation = await instanceDoc.validate();
+if (initialValidation.tag !== "Ok") {
+    throw new Error("Instance failed to validate");
+}
+const instance = initialValidation.content.instance;
 
 const tables = instance.tables;
 const personTable = tables.find((table) => table.label === "Person");
@@ -128,13 +133,13 @@ after set: (row), Frederick
 after clear: (row), (unset)
 ```
 
-Invalid values are retained in the document and reported by `validate()` as
+Invalid values are retained in the document and reported by the document's `validate()` as
 field issues. Each issue's `path` identifies the affected field.
 
 Finally, the instance validates against its schema.
 
 ```ts
-const result = await instance.validate();
+const result = await instanceDoc.validate();
 console.log("valid:", result.tag);
 ```
 

@@ -5,12 +5,22 @@ import type { Document, ModelJudgment, MorType } from "catcolab-document-types";
 import {
     createBinder,
     plainStore,
+    type Instance,
+    type InstanceDocumentHandle,
     type InstanceTable,
     type ModelDocument,
     type TableRow,
 } from "catcolab-documents";
 
 const binder = createBinder();
+
+const validateInstance = async (handle: InstanceDocumentHandle): Promise<Instance> => {
+    const result = await handle.validate();
+    if (result.tag !== "Ok") {
+        throw new Error("Expected instance validation to succeed");
+    }
+    return result.content.instance;
+};
 
 const tableFor = (tables: InstanceTable[], id: string): InstanceTable => {
     const table = tables.find((candidate) => candidate.id === id);
@@ -58,7 +68,8 @@ describe("schema changes under stored instance data", () => {
         const person = schema.add(Entity, { label: "Person" });
         const str = schema.add(AttrType, { label: "String" });
         const name = schema.add(Attr, { label: "name", from: person, to: str });
-        const instance = await binder.createInstance(schema, { title: "I" });
+        const instanceHandle = await binder.createInstance(schema, { title: "I" });
+        const instance = await validateInstance(instanceHandle);
         const table = tableFor(instance.tables, person.id);
         const row = table.addRow({ name: "Fred" });
         const schemaDocument = schema.document as ModelDocument;
@@ -76,7 +87,7 @@ describe("schema changes under stored instance data", () => {
 
         expect(table.headers).toEqual([]);
         expect(row.fields).toEqual([]);
-        const storedRow = Object.values(instance.document.tables[person.id]?.rows ?? {})[0];
+        const storedRow = Object.values(instanceHandle.document.tables[person.id]?.rows ?? {})[0];
         expect(storedRow?.fields[name.id]).toEqual({ String: "Fred" });
 
         plainStore.changeDocument(schema.handle, (document) => {
@@ -95,17 +106,18 @@ describe("schema changes under stored instance data", () => {
         const company = schema.add(Entity, { label: "Company" });
         const department = schema.add(Entity, { label: "Department" });
         const employer = schema.add(Mapping, { label: "employer", from: person, to: company });
-        const instance = await binder.createInstance(schema, { title: "I" });
+        const instanceHandle = await binder.createInstance(schema, { title: "I" });
+        const instance = await validateInstance(instanceHandle);
         const tables = instance.tables;
         const personTable = tableFor(tables, person.id);
         const acme = tableFor(tables, company.id).addRow();
         const fred = personTable.addRow();
         fred.set(employer, acme);
-        expect((await instance.validate()).tag).toBe("Ok");
+        expect((await instanceHandle.validate()).tag).toBe("Ok");
 
         employer.update({ to: department });
 
-        const result = await instance.validate();
+        const result = await instanceHandle.validate();
         expect(result.tag).toBe("Err");
         if (result.tag !== "Err") {
             throw new Error("Expected validation to fail");
@@ -128,17 +140,18 @@ describe("schema changes under stored instance data", () => {
         const company = schema.add(Entity, { label: "Company" });
         const str = schema.add(AttrType, { label: "String" });
         const employer = schema.add(Mapping, { label: "employer", from: person, to: company });
-        const instance = await binder.createInstance(schema, { title: "I" });
+        const instanceHandle = await binder.createInstance(schema, { title: "I" });
+        const instance = await validateInstance(instanceHandle);
         const tables = instance.tables;
         const personTable = tableFor(tables, person.id);
         const acme = tableFor(tables, company.id).addRow();
         const fred = personTable.addRow();
         fred.set(employer, acme);
-        expect((await instance.validate()).tag).toBe("Ok");
+        expect((await instanceHandle.validate()).tag).toBe("Ok");
 
         rewriteMorphism(schema, employer.id, Attr.morType, str.id);
 
-        const result = await instance.validate();
+        const result = await instanceHandle.validate();
         expect(result.tag).toBe("Err");
         expect(fieldFor(personTable, fred, employer.id)).toMatchObject({
             tag: "RowRef",
@@ -152,18 +165,19 @@ describe("schema changes under stored instance data", () => {
         const company = schema.add(Entity, { label: "Company" });
         const str = schema.add(AttrType, { label: "String" });
         const nickname = schema.add(Attr, { label: "nickname", from: person, to: str });
-        const instance = await binder.createInstance(schema, { title: "I" });
+        const instanceHandle = await binder.createInstance(schema, { title: "I" });
+        const instance = await validateInstance(instanceHandle);
         const tables = instance.tables;
         const personTable = tableFor(tables, person.id);
         const fred = personTable.addRow();
         fred.set(nickname, "Fred");
-        expect((await instance.validate()).tag).toBe("Ok");
+        expect((await instanceHandle.validate()).tag).toBe("Ok");
 
         // The stored literal no longer fits under a mapping and validation
         // must not fabricate a phantom row for it.
         rewriteMorphism(schema, nickname.id, Mapping.morType, company.id);
 
-        const result = await instance.validate();
+        const result = await instanceHandle.validate();
         expect(result.tag).toBe("Err");
         expect(fieldFor(personTable, fred, nickname.id)).toMatchObject({
             tag: "String",
@@ -177,7 +191,8 @@ describe("schema changes under stored instance data", () => {
         const company = schema.add(Entity, { label: "Company" });
         const str = schema.add(AttrType, { label: "String" });
         const employer = schema.add(Mapping, { label: "employer", from: person, to: company });
-        const instance = await binder.createInstance(schema, { title: "I" });
+        const instanceHandle = await binder.createInstance(schema, { title: "I" });
+        const instance = await validateInstance(instanceHandle);
         const tables = instance.tables;
         const personTable = tableFor(tables, person.id);
         const acme = tableFor(tables, company.id).addRow();
@@ -185,7 +200,7 @@ describe("schema changes under stored instance data", () => {
         fred.set(employer, acme);
 
         rewriteMorphism(schema, employer.id, Attr.morType, str.id);
-        const storedCompany = instance.document.tables[company.id];
+        const storedCompany = instanceHandle.document.tables[company.id];
         const acmeId = storedCompany?.rowOrder[0];
         if (!storedCompany || !acmeId) {
             throw new Error("Expected stored company row");
@@ -193,7 +208,7 @@ describe("schema changes under stored instance data", () => {
         delete storedCompany.rows[acmeId];
         storedCompany.rowOrder.splice(0, 1);
 
-        expect((await instance.validate()).tag).toBe("Err");
+        expect((await instanceHandle.validate()).tag).toBe("Err");
         expect(fieldFor(personTable, fred, employer.id)).toMatchObject({
             tag: "RowRef",
             content: { id: acmeId },
