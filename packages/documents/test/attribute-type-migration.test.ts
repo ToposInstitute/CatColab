@@ -101,7 +101,7 @@ describe("Float-to-Integer migration planning", () => {
         table.addRow();
         const fractional = table.addRow();
         table.addRow();
-        const ids = instance.document.tables[entity.id]!.row_order;
+        const ids = instance.document.tables[entity.id]!.rowOrder;
         const values = [3, Math.fround(3.8), undefined];
         const adapter = {
             rowsOf: () => table.rows,

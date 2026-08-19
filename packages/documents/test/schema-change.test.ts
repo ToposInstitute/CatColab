@@ -186,12 +186,12 @@ describe("schema changes under stored instance data", () => {
 
         rewriteMorphism(schema, employer.id, Attr.morType, str.id);
         const storedCompany = instance.document.tables[company.id];
-        const acmeId = storedCompany?.row_order[0];
+        const acmeId = storedCompany?.rowOrder[0];
         if (!storedCompany || !acmeId) {
             throw new Error("Expected stored company row");
         }
         delete storedCompany.rows[acmeId];
-        storedCompany.row_order.splice(0, 1);
+        storedCompany.rowOrder.splice(0, 1);
 
         expect((await instance.validate()).tag).toBe("Err");
         expect(fieldFor(personTable, fred, employer.id)).toMatchObject({

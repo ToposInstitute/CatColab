@@ -166,12 +166,12 @@ describe("instance row editing", () => {
         expect((await instance.validate()).tag).toBe("Ok");
 
         const storedCompany = instance.document.tables[company.id];
-        const acmeId = storedCompany?.row_order[0];
+        const acmeId = storedCompany?.rowOrder[0];
         if (!storedCompany || !acmeId) {
             throw new Error("Expected stored company row");
         }
         delete storedCompany.rows[acmeId];
-        storedCompany.row_order.splice(0, 1);
+        storedCompany.rowOrder.splice(0, 1);
 
         expect(fieldFor(personTable, fred, employer.id)).toMatchObject({
             tag: "RowRef",

@@ -3,16 +3,16 @@ import { currentVersion } from "catcolab-document-types";
 
 /**
  * An *instance* document: a database of a schema, stored in the v2 document
- * shape as an array of {@link Table}s — one per schema entity — each holding
+ * shape as a map of {@link Table}s — one per schema entity — each holding
  * the `TableRow`s instantiating that entity.
  *
  * The storage is deliberately keyed by the schema's *generator UUIDs* rather
  * than by any elaborated identity. A schema is a model whose object and morphism
  * generators each carry a stable UUID; those UUIDs can never be confused with
- * one another. A table names the schema entity it instantiates by UUID
- * ({@link Table.id}), and a row's `fields` maps schema morphism UUIDs (its
- * columns) to {@link FieldValue}s — a literal for an attribute, or the UUID of
- * another table row (`RowRef`) for a mapping.
+ * one another. The `tables` map names the schema entity a table instantiates by
+ * UUID, and a row's `fields` maps schema morphism UUIDs (its columns) to
+ * {@link FieldValue}s — a literal for an attribute, or the UUID of another
+ * table row (`RowRef`) for a mapping.
  *
  * This is what lets the interface hide, but not lose, data when the schema
  * changes. When a morphism is deleted from the schema, the interface simply
@@ -37,11 +37,10 @@ export const newInstanceDocument = (args: {
     version: currentVersion(),
 });
 
-/** Create an empty table instantiating one schema entity, keyed by its entity UUID path. */
-export const newTable = (entity: string): Table => ({
-    id: entity,
+/** Create an empty table to store under its schema entity UUID. */
+export const newTable = (): Table => ({
     rows: {},
-    row_order: [],
+    rowOrder: [],
 });
 
 /** Encode a literal as a stored {@link FieldValue}. */

@@ -368,7 +368,7 @@ export async function createDemoDocument(): Promise<DemoDocument> {
     };
     const rowsOf = (entity: { readonly id: string }) => tableFor(entity)?.rows ?? [];
     const rowId = (entity: { readonly id: string }, row: TableRow) =>
-        instance.document.tables[entity.id]?.row_order[row.index];
+        instance.document.tables[entity.id]?.rowOrder[row.index];
     /** The live row handle for a row UUID, searched across all instance tables. */
     const rowById = (id: string): TableRow | undefined => {
         for (const table of instanceTables()) {

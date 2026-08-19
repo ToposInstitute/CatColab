@@ -1246,11 +1246,11 @@ const tableFor = (d: InstanceDocument, objectId: string): Table | undefined => d
 const findRow = (
     d: InstanceDocument,
     rowId: string,
-): { table: Table; row: StoredTableRow } | undefined => {
-    for (const table of Object.values(d.tables)) {
+): { entityId: string; table: Table; row: StoredTableRow } | undefined => {
+    for (const [entityId, table] of Object.entries(d.tables)) {
         const row = table.rows[rowId];
         if (row) {
-            return { table, row };
+            return { entityId, table, row };
         }
     }
     return undefined;
@@ -1258,7 +1258,7 @@ const findRow = (
 
 /**
  * Attach an *instance* notebook: a table-editor surface over an
- * {@link InstanceDocument}, which stores its data as an array of *tables* — one
+ * {@link InstanceDocument}, which stores its data as a map of *tables* — one
  * per schema entity, keyed throughout by the schema's generator UUIDs (see
  * {@link InstanceDocument}).
  *
@@ -1444,7 +1444,7 @@ function attachInstanceNotebook<
             return insertRow(entityId, args);
         },
         get rows() {
-            return tableFor(doc, entityId)?.row_order.map((rowId) => rowHandle(rowId)) ?? [];
+            return tableFor(doc, entityId)?.rowOrder.map((rowId) => rowHandle(rowId)) ?? [];
         },
         get headers() {
             return headersOf(entityId);
@@ -1456,7 +1456,7 @@ function attachInstanceNotebook<
         schemaMorphisms().find((m) => m.id === id);
 
     /** The schema object id a row is a record of, if the row exists. */
-    const objectIdOfRow = (rowId: string): string | undefined => findRow(doc, rowId)?.table.id;
+    const objectIdOfRow = (rowId: string): string | undefined => findRow(doc, rowId)?.entityId;
 
     /** Encode a row or literal as a stored field value. */
     const encodeRowValue = (value: Exclude<LiteralValue, null> | TableRow): StoredFieldValue =>
@@ -1471,14 +1471,14 @@ function attachInstanceNotebook<
         change((d) => {
             let table = tableFor(d, entityId);
             if (!table) {
-                d.tables[entityId] = newTable(entityId);
+                d.tables[entityId] = newTable();
                 // Re-read the table off the draft: an Automerge store *copies*
                 // the assigned object into the document, so mutating the original
                 // would be lost.
                 table = tableFor(d, entityId) as Table;
             }
-            table.rows[rowId] = { id: rowId, fields: {} };
-            table.row_order.push(rowId);
+            table.rows[rowId] = { fields: {} };
+            table.rowOrder.push(rowId);
         });
         const row = rowHandle(rowId);
         row.update(args ?? {});
@@ -1510,16 +1510,16 @@ function attachInstanceNotebook<
         if (!found) {
             throw new Error(`No instance row with id "${rowId}".`);
         }
-        const entityId = found.table.id;
+        const entityId = found.entityId;
         change((d) => {
             const table = tableFor(d, entityId);
             if (!table) {
                 return;
             }
             delete table.rows[rowId];
-            const index = table.row_order.indexOf(rowId);
+            const index = table.rowOrder.indexOf(rowId);
             if (index >= 0) {
-                table.row_order.splice(index, 1);
+                table.rowOrder.splice(index, 1);
             }
         });
     };
@@ -1594,7 +1594,7 @@ function attachInstanceNotebook<
     const rowHandle = (id: string): TableRowHandle => ({
         id,
         get index() {
-            return findRow(doc, id)?.table.row_order.indexOf(id) ?? -1;
+            return findRow(doc, id)?.table.rowOrder.indexOf(id) ?? -1;
         },
         update(args: Record<string, LiteralValue | TableRow>) {
             updateRow(id, args);
@@ -1639,11 +1639,11 @@ function attachInstanceNotebook<
                     if (
                         field.tag === "RowRef" &&
                         (header.type.tag !== "RowRef" ||
-                            findRow(doc, field.content.id)?.table.id !== header.type.content.id)
+                            findRow(doc, field.content.id)?.entityId !== header.type.content.id)
                     ) {
                         const found = findRow(doc, field.content.id);
                         const actual = found
-                            ? tableHandle(found.table.id).label || found.table.id
+                            ? tableHandle(found.entityId).label || found.entityId
                             : "unknown";
                         return [
                             {
@@ -1692,27 +1692,26 @@ function attachInstanceNotebook<
         const judgments: DiagramJudgment[] = [];
         // Only tables over a live schema object contribute; note their rows so a
         // value whose row was skipped is skipped too.
-        const liveRows: Array<{ row: StoredTableRow; objectId: string }> = [];
-        for (const table of Object.values(doc.tables)) {
-            const objectId = table.id;
+        const liveRows: Array<{ rowId: string; row: StoredTableRow }> = [];
+        for (const [objectId, table] of Object.entries(doc.tables)) {
             if (!modelHasObject(schemaModel, objectId)) {
                 // The schema object is gone: keep the data, but it has no meaning
                 // in the current schema, so it contributes nothing to validate.
                 continue;
             }
             const objectJudgment = schemaModel.obPresentation(objectId);
-            for (const row of Object.values(table.rows)) {
-                liveRows.push({ row, objectId });
+            for (const [rowId, row] of Object.entries(table.rows)) {
+                liveRows.push({ rowId, row });
                 judgments.push({
                     tag: "object",
-                    id: row.id,
+                    id: rowId,
                     name: "",
                     obType: objectJudgment.obType,
                     over: { tag: "Basic", content: objectId },
                 });
             }
         }
-        for (const { row } of liveRows) {
+        for (const { rowId, row } of liveRows) {
             for (const [morphismId, value] of Object.entries(row.fields)) {
                 if (!modelHasMorphism(schemaModel, morphismId)) {
                     continue;
@@ -1776,7 +1775,7 @@ function attachInstanceNotebook<
                     name: "",
                     morType: morphism.morType,
                     over: { tag: "Basic", content: morphism.id },
-                    dom: { tag: "Basic", content: row.id },
+                    dom: { tag: "Basic", content: rowId },
                     cod,
                 });
             }
@@ -3329,7 +3328,7 @@ export interface TableRow {
 
 /**
  * An *instance* notebook: a database that instantiates a schema, backed by an
- * {@link InstanceDocument} storing an array of *tables* — one table per
+ * {@link InstanceDocument} storing a map of *tables* — one table per
  * schema entity, keyed by the schema's generator UUIDs. Obtained from {@link
  * Binder.createInstance}. Tables provide the editor surface for adding rows and
  * reading or writing their fields.
