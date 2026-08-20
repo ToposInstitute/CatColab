@@ -1,3 +1,4 @@
+import { deepEqual } from "fast-equals";
 import { createEffect, createMemo, createSignal, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 import { P, match } from "ts-pattern";
@@ -251,7 +252,7 @@ function obsEqual(a: Ob | null, b: Ob | null): boolean {
     if (a === null || b === null) {
         return a === b;
     }
-    return JSON.stringify(a) === JSON.stringify(b);
+    return deepEqual(a, b);
 }
 
 /** Convert the stored morphism into the editable list shape. */
