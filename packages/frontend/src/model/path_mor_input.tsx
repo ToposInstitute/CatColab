@@ -9,9 +9,11 @@ import {
     type InlineInputOptions,
 } from "catcolab-ui-components";
 import type { Mor, Uuid } from "catlog-wasm";
+import { UNNAMED } from "../components";
 import { LiveModelContext } from "./context";
 
 import "../components/id_input.css";
+import styles from "../components/id_input.module.css";
 
 /** Text wrapping the object name of an identity morphism, e.g. `id(X)`. */
 const ID_PREFIX = "id(";
@@ -57,23 +59,30 @@ export function PathMorInput(
 
     const model = () => liveModel().elaboratedModel();
 
-    // Display text for a morphism: a basic generator's name, or `id(<object>)`
-    // for an identity morphism.
-    const morToText = (mor: Mor | null): string => {
+    // Display label for a morphism: a basic generator's name, or `id(<object>)`
+    // for an identity morphism. Unnamed generators fall back to a placeholder
+    // label, flagged so it can be styled as de-emphasized.
+    const morLabel = (mor: Mor | null): { text: string; isUnnamed: boolean } => {
         if (mor === null) {
-            return "";
+            return { text: "", isUnnamed: false };
         }
         const obId = identityOb(mor);
         if (obId !== null) {
-            const name = model()?.obGeneratorLabel(obId)?.join(".") || "?";
-            return `${ID_PREFIX}${name}${ID_SUFFIX}`;
+            const name = model()?.obGeneratorLabel(obId)?.join(".");
+            return {
+                text: `${ID_PREFIX}${name || UNNAMED}${ID_SUFFIX}`,
+                isUnnamed: !name,
+            };
         }
         const id = basicMor(mor);
         if (id !== null) {
-            return model()?.morGeneratorLabel(id)?.join(".") ?? "";
+            const name = model()?.morGeneratorLabel(id)?.join(".");
+            return { text: name || UNNAMED, isUnnamed: !name };
         }
-        return "";
+        return { text: "", isUnnamed: false };
     };
+
+    const morToText = (mor: Mor | null): string => morLabel(mor).text;
 
     // Resolve display text to a morphism, or `null` if it doesn't name one.
     const textToMor = (text: string): Mor | null => {
@@ -123,14 +132,20 @@ export function PathMorInput(
         if (props.morCompletions === undefined && props.obCompletions === undefined) {
             return undefined;
         }
-        const mors = (props.morCompletions ?? []).map((id): Completion => {
-            const mor: Mor = { tag: "Basic", content: id };
-            return { name: morToText(mor), onComplete: () => setCompletion(mor) };
-        });
-        const identities = (props.obCompletions ?? []).map((obId): Completion => {
-            const mor = identityMor(obId);
-            return { name: morToText(mor), onComplete: () => setCompletion(mor) };
-        });
+        const completion = (mor: Mor): Completion => {
+            const label = morLabel(mor);
+            return {
+                name: label.text,
+                nameClass: label.isUnnamed ? styles.unnamed : undefined,
+                onComplete: () => setCompletion(mor),
+            };
+        };
+        const mors = (props.morCompletions ?? []).map(
+            (id): Completion => completion({ tag: "Basic", content: id }),
+        );
+        const identities = (props.obCompletions ?? []).map(
+            (obId): Completion => completion(identityMor(obId)),
+        );
         return [...mors, ...identities];
     };
 
@@ -146,8 +161,12 @@ export function PathMorInput(
         return null;
     };
 
+    // Grey out the displayed text when it is the placeholder label for an
+    // unnamed generator (but not while the user is typing something else).
+    const showsUnnamed = () => isComplete() && morLabel(props.mor).isUnnamed;
+
     return (
-        <div class="id-input">
+        <div class="id-input" classList={{ [styles.unnamed]: showsUnnamed() }}>
             <InlineInput
                 text={text()}
                 setText={handleNewText}
