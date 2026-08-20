@@ -230,18 +230,18 @@ function basicOb(id: Uuid): Ob {
 
 /** Domain of a morphism in the model, or `null` if it cannot be computed. */
 function morDom(model: DblModel, mor: Mor): Ob | null {
-    try {
+    if (model.hasMor(mor)) {
         return model.dom(mor);
-    } catch {
+    } else {
         return null;
     }
 }
 
 /** Codomain of a morphism in the model, or `null` if it cannot be computed. */
 function morCod(model: DblModel, mor: Mor): Ob | null {
-    try {
+    if (model.hasMor(mor)) {
         return model.cod(mor);
-    } catch {
+    } else {
         return null;
     }
 }
