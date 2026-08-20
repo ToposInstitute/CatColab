@@ -1,7 +1,7 @@
 import type { Component } from "solid-js";
 
 import type { FocusHandle } from "catcolab-ui-components";
-import type { MorDecl, ObDecl } from "catlog-wasm";
+import type { EqnDecl, MorDecl, ObDecl } from "catlog-wasm";
 import type { CellActions } from "../notebook";
 import type { Theory } from "../theory";
 import type { MorTypeMap, ObTypeMap } from "../theory/types";
@@ -29,6 +29,15 @@ export type ObjectEditorProps = {
 export type MorphismEditorProps = {
     morphism: MorDecl;
     modifyMorphism: (f: (decl: MorDecl) => void) => void;
+    focus: FocusHandle;
+    actions: CellActions;
+    theory: Theory;
+};
+
+/** Props for an equation cell editor component in a model. */
+export type EquationEditorProps = {
+    equation: EqnDecl;
+    modifyEquation: (f: (decl: EqnDecl) => void) => void;
     focus: FocusHandle;
     actions: CellActions;
     theory: Theory;
