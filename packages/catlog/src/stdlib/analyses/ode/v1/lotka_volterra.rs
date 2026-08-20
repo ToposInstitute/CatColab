@@ -32,9 +32,12 @@ impl ODESemantics for LotkaVolterraSemantics {
     type ModelType = DiscreteDblModel;
     type ParameterType = LotkaVolterraParameter;
     type AnalysisType = LotkaVolterraAnalysis;
-    type EquationsConfigType = ();
     type ParameterData = LotkaVolterraParameterData;
 }
+
+// ┌------------------┐
+// | 1. ParameterType |
+// └------------------┘
 
 /// Parameters in the Lotka-Volterra equations come in two flavours, corresponding to
 /// either variables or links.
@@ -76,6 +79,10 @@ impl ToLatexWithMap for LotkaVolterraParameter {
 
 impl ODEParameterType for LotkaVolterraParameter {}
 
+// ┌-----------------┐
+// | 2. AnalysisType |
+// └-----------------┘
+
 /// This Lotka-Volterra ODE analysis is intended for application to CLDs.
 pub struct LotkaVolterraAnalysis {
     /// Object type for variables.
@@ -101,7 +108,6 @@ impl
     ODESemanticsAnalysis<
         <LotkaVolterraSemantics as ODESemantics>::ModelType,
         <LotkaVolterraSemantics as ODESemantics>::ParameterType,
-        <LotkaVolterraSemantics as ODESemantics>::EquationsConfigType,
     > for LotkaVolterraAnalysis
 {
     /// Creates a Lotka-Volterra system with symbolic rate coefficients.
@@ -113,7 +119,6 @@ impl
     fn build_system_builder(
         &self,
         model: &DiscreteDblModel,
-        _equations_config: (),
     ) -> PolynomialODESystemBuilder<LotkaVolterraParameter> {
         let mut builder = PolynomialODESystemBuilder::new();
 
@@ -174,6 +179,10 @@ impl
     }
 }
 
+// ┌------------------┐
+// | 3. ParameterData |
+// └------------------┘
+
 /// Data defining a Lotka-Volterra ODE problem for a model.
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde-wasm", derive(Tsify))]
@@ -212,6 +221,10 @@ impl ODESemanticsScalarExtension<<LotkaVolterraSemantics as ODESemantics>::Param
         sys.normalize()
     }
 }
+
+// ┌-------┐
+// | TESTS |
+// └-------┘
 
 #[cfg(test)]
 mod test {
@@ -268,7 +281,6 @@ mod test {
         let th = Rc::new(th_signed_category());
         let model = negative_feedback(th);
         let data: ODESemanticsProblemData<LotkaVolterraSemantics> = ODESemanticsProblemData {
-            equations_config: (),
             initial_values: [(name("x"), 1.0), (name("y"), 1.0)].into_iter().collect(),
             duration: 10.0,
             parameter_data: LotkaVolterraParameterData {

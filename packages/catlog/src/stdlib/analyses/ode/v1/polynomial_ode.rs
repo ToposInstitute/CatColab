@@ -41,9 +41,12 @@ impl ODESemantics for PolynomialODESemantics {
     type ModelType = ModalDblModel<NonUnital>;
     type ParameterType = PolynomialODEParameter;
     type AnalysisType = PolynomialODEAnalysis;
-    type EquationsConfigType = ();
     type ParameterData = PolynomialODEParameterData;
 }
+
+// ┌------------------┐
+// | 1. ParameterType |
+// └------------------┘
 
 /// Parameters come precisely from contributions.
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone)]
@@ -70,6 +73,10 @@ impl ToLatexWithMap for PolynomialODEParameter {
 }
 
 impl ODEParameterType for PolynomialODEParameter {}
+
+// ┌-----------------┐
+// | 2. AnalysisType |
+// └-----------------┘
 
 /// Polynomial ODE analysis.
 ///
@@ -103,13 +110,11 @@ impl
     ODESemanticsAnalysis<
         <PolynomialODESemantics as ODESemantics>::ModelType,
         <PolynomialODESemantics as ODESemantics>::ParameterType,
-        <PolynomialODESemantics as ODESemantics>::EquationsConfigType,
     > for PolynomialODEAnalysis
 {
     fn build_system_builder(
         &self,
         model: &ModalDblModel<NonUnital>,
-        _equations_config: (),
     ) -> PolynomialODESystemBuilder<PolynomialODEParameter> {
         PolynomialODESystemBuilder::identity(model.clone())
     }
@@ -210,6 +215,10 @@ impl PolynomialODEAnalysis {
     }
 }
 
+// ┌------------------┐
+// | 3. ParameterData |
+// └------------------┘
+
 /// Data defining an unbalanced mass-action ODE problem for a model.
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde-wasm", derive(Tsify))]
@@ -245,6 +254,10 @@ impl ODESemanticsScalarExtension<<PolynomialODESemantics as ODESemantics>::Param
     }
 }
 
+// ┌-------┐
+// | TESTS |
+// └-------┘
+
 #[cfg(test)]
 mod tests {
     use expect_test::expect;
@@ -277,7 +290,6 @@ mod tests {
         let th = Rc::new(th_polynomial_ode_system());
         let model = unsigned_lotka_volterra_dynamics(th);
         let data: ODESemanticsProblemData<PolynomialODESemantics> = ODESemanticsProblemData {
-            equations_config: (),
             initial_values: [(name("a"), 1.0), (name("b"), 1.0), (name("c"), 1.0)]
                 .into_iter()
                 .collect(),
