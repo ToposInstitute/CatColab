@@ -22,25 +22,18 @@
     "dependencies": {
         "@automerge/automerge": "^3.4.1",
         "@automerge/automerge-repo": "^2.5.6",
-        "@automerge/automerge-repo-react-hooks": "^2.5.6",
-        "@patchwork/context": "github:inkandswitch/context",
         "catcolab-document-methods": "link:../document-methods",
         "catlog-wasm": "link:../catlog-wasm/dist/pkg-browser",
-        "react": "^18.3.1",
-        "react-dom": "^18.3.1",
-        "solid-js": "^1.9.7",
-        "uuid": "^11.0.3"
+        "solid-js": "^1.9.7"
     },
     "devDependencies": {
         "@catcolab-dev-tools/oxlint-plugin-catcolab": "link:../../tools/oxlint-plugin-catcolab",
         "@catcolab-dev-tools/vite-plugin-monorepo-dedupe": "link:../../tools/vite-plugin-monorepo-dedupe",
-        "@types/react": "^18.3.3",
-        "@types/uuid": "^10.0.0",
-        "@vitejs/plugin-react": "^4.3.1",
+        "@inkandswitch/patchwork-bootloader": "^0.6.2",
         "autoprefixer": "^10.4.20",
         "eslint-plugin-solid": "^0.14.5",
         "nodemon": "^3.1.9",
-        "pushwork": "^1.1.8",
+        "pushwork": "^2.2.3",
         "typescript": "^6.0.3",
         "vite": "^5.3.4",
         "vite-plugin-css-injected-by-js": "^3.5.2",
