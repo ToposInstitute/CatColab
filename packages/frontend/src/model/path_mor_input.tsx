@@ -8,7 +8,7 @@ import {
     type InlineInputErrorStatus,
     type InlineInputOptions,
 } from "catcolab-ui-components";
-import type { LabelSegment, Mor, QualifiedLabel, Uuid } from "catlog-wasm";
+import type { Mor, Uuid } from "catlog-wasm";
 import { LiveModelContext } from "./context";
 
 import "../components/id_input.css";
@@ -65,12 +65,12 @@ export function PathMorInput(
         }
         const obId = identityOb(mor);
         if (obId !== null) {
-            const name = labelText(model()?.obGeneratorLabel(obId)) || "?";
+            const name = model()?.obGeneratorLabel(obId)?.join(".") || "?";
             return `${ID_PREFIX}${name}${ID_SUFFIX}`;
         }
         const id = basicMor(mor);
         if (id !== null) {
-            return labelText(model()?.morGeneratorLabel(id));
+            return model()?.morGeneratorLabel(id)?.join(".") ?? "";
         }
         return "";
     };
@@ -79,10 +79,10 @@ export function PathMorInput(
     const textToMor = (text: string): Mor | null => {
         const obName = parseIdentityName(text);
         if (obName !== null) {
-            const lookup = model()?.obGeneratorWithLabel([parseSegment(obName)]);
+            const lookup = model()?.obGeneratorWithLabel([obName]);
             return lookup && lookup.tag !== "None" ? identityMor(lookup.content) : null;
         }
-        const lookup = model()?.morGeneratorWithLabel([parseSegment(text.trim())]);
+        const lookup = model()?.morGeneratorWithLabel([text.trim()]);
         return lookup && lookup.tag !== "None" ? { tag: "Basic", content: lookup.content } : null;
     };
 
@@ -157,16 +157,6 @@ export function PathMorInput(
             />
         </div>
     );
-}
-
-/** Render a qualified label as dotted display text. */
-function labelText(label: QualifiedLabel | undefined): string {
-    return label && label.length > 0 ? label.join(".") : "";
-}
-
-/** Parse a single label segment, treating all-digit text as an anonymous index. */
-function parseSegment(text: string): LabelSegment {
-    return /^\d+$/.test(text) ? Number.parseInt(text, 10) : text;
 }
 
 /** Extract the object generator of an identity morphism, if any. */
