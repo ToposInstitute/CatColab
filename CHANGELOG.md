@@ -13,11 +13,14 @@ include notable new features.
 
 ### Added
 
+- Specifying path equations (equational axioms) in ologs and schemas
+  ([#1061](https://github.com/ToposInstitute/CatColab/pull/1061),
+  [#1247](https://github.com/ToposInstitute/CatColab/pull/1247))
 - Finding motifs---positive, negative, and indeterminate loops---in causal loop
   diagrams with indeterminate polarities
   ([#1354](https://github.com/ToposInstitute/CatColab/pull/1354))
-- Fixing a random seed in the stochastic mass-action analysis for Petri nets and
-  stock-flow diagrams
+- Option to fix a random seed in the stochastic mass-action analysis for Petri
+  nets and stock-flow diagrams
   ([#1343](https://github.com/ToposInstitute/CatColab/pull/1343))
 
 ### Fixed
