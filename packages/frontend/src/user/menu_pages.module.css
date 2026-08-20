@@ -1,0 +1,16 @@
+/* Styling for pages accessed from the main (hamburger) menu: My documents, Trash, Settings. */
+
+.menuPage {
+    h1 {
+        margin: 0.5em 0;
+    }
+
+    h2 {
+        margin: 1.25em 0 0.5em 0;
+        border-bottom: 1px solid black;
+    }
+
+    h3 {
+        margin: 1em 0 0.5em 0;
+    }
+}
