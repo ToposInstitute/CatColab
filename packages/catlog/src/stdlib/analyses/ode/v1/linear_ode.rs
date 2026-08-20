@@ -32,9 +32,12 @@ impl ODESemantics for LinearODESemantics {
     type ModelType = DiscreteDblModel;
     type ParameterType = LinearODEParameter;
     type AnalysisType = LinearODEAnalysis;
-    type EquationsConfigType = ();
     type ParameterData = LinearODEParameterData;
 }
+
+// ┌------------------┐
+// | 1. ParameterType |
+// └------------------┘
 
 /// Parameters in the linear equations correspond only to morphisms.
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone)]
@@ -66,6 +69,10 @@ impl ToLatexWithMap for LinearODEParameter {
 
 impl ODEParameterType for LinearODEParameter {}
 
+// ┌-----------------┐
+// | 2. AnalysisType |
+// └-----------------┘
+
 /// Linear ODE analysis for causal loop diagrams (CLDs).
 pub struct LinearODEAnalysis {
     /// Object type for variables.
@@ -91,7 +98,6 @@ impl
     ODESemanticsAnalysis<
         <LinearODESemantics as ODESemantics>::ModelType,
         <LinearODESemantics as ODESemantics>::ParameterType,
-        <LinearODESemantics as ODESemantics>::EquationsConfigType,
     > for LinearODEAnalysis
 {
     /// Creates a linear system with symbolic rate coefficients.
@@ -100,7 +106,6 @@ impl
     fn build_system_builder(
         &self,
         model: &DiscreteDblModel,
-        _equations_config: (),
     ) -> PolynomialODESystemBuilder<LinearODEParameter> {
         let mut builder = PolynomialODESystemBuilder::new();
 
@@ -149,6 +154,10 @@ impl
     }
 }
 
+// ┌------------------┐
+// | 3. ParameterData |
+// └------------------┘
+
 /// Data input by the user to fill in the parameters numerically.
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde-wasm", derive(Tsify))]
@@ -179,6 +188,10 @@ impl ODESemanticsScalarExtension<<LinearODESemantics as ODESemantics>::Parameter
         sys.normalize()
     }
 }
+
+// ┌-------┐
+// | TESTS |
+// └-------┘
 
 #[cfg(test)]
 mod test {
@@ -235,7 +248,6 @@ mod test {
         let th = Rc::new(th_signed_category());
         let model = negative_feedback(th);
         let data: ODESemanticsProblemData<LinearODESemantics> = ODESemanticsProblemData {
-            equations_config: (),
             initial_values: [(name("x"), 1.0), (name("y"), 1.0)].into_iter().collect(),
             duration: 10.0,
             parameter_data: LinearODEParameterData {

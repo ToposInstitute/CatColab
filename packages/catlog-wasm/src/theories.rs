@@ -345,9 +345,13 @@ impl ThCategoryLinks {
         &self,
         model: &DblModel,
         data: analyses::ode::ODESemanticsProblemData<StockFlowMassActionSemantics>,
+        // TODO: need to have something here (in wasm) that replaces "MassConservationType"
+        //       also something like
+        //          GeneralMassActionProblemData =
+        //          MassActionProblemData | PPMassActionProblemData | PTMassActionProblemData
     ) -> Result<ODEResultWithEquations, String> {
         let system = analyses::ode::StockFlowMassActionAnalysis::default()
-            .build_configured_system(model.discrete_tab()?, data.equations_config.clone());
+            .build_system(model.discrete_tab()?);
         ode_semantics_simulation::<analyses::ode::StockFlowMassActionSemantics>(model, data, system)
     }
 
@@ -356,10 +360,11 @@ impl ThCategoryLinks {
     pub fn mass_action_equations(
         &self,
         model: &DblModel,
-        data: analyses::ode::MassActionEquationsConfig,
+        // TODO: need to have something here (in wasm) that replaces "MassConservationType"
+        // data: analyses::ode::MassActionEquationsConfig,
     ) -> Result<LatexEquations, String> {
         let system = analyses::ode::StockFlowMassActionAnalysis::default()
-            .build_configured_system(model.discrete_tab()?, data);
+            .build_system(model.discrete_tab()?);
         ode_semantics_equations::<analyses::ode::StockFlowMassActionSemantics>(model, system)
     }
 }
@@ -405,19 +410,15 @@ impl ThSymMonoidalCategory {
         data: analyses::ode::ODESemanticsProblemData<PetriNetMassActionSemantics>,
     ) -> Result<ODEResultWithEquations, String> {
         let system = analyses::ode::PetriNetMassActionAnalysis::default()
-            .build_configured_system(model.modal_unital()?, data.equations_config.clone());
+            .build_system(model.modal_unital()?);
         ode_semantics_simulation::<analyses::ode::PetriNetMassActionSemantics>(model, data, system)
     }
 
     /// Returns the symbolic mass-action equations in LaTeX format.
     #[wasm_bindgen(js_name = "massActionEquations")]
-    pub fn mass_action_equations(
-        &self,
-        model: &DblModel,
-        data: analyses::ode::MassActionEquationsConfig,
-    ) -> Result<LatexEquations, String> {
+    pub fn mass_action_equations(&self, model: &DblModel) -> Result<LatexEquations, String> {
         let system = analyses::ode::PetriNetMassActionAnalysis::default()
-            .build_configured_system(model.modal_unital()?, data);
+            .build_system(model.modal_unital()?);
         ode_semantics_equations::<analyses::ode::PetriNetMassActionSemantics>(model, system)
     }
 

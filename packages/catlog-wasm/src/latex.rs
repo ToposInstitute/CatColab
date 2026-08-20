@@ -45,8 +45,9 @@ pub(crate) fn latex_names(model: &DblModel) -> impl Fn(&QualifiedName) -> String
 mod tests {
     use catlog::latex::{Latex, LatexEquation, LatexEquations};
     use catlog::stdlib::analyses::ode::{
-        self, LinearODEAnalysis, LotkaVolterraAnalysis, MassActionEquationsConfig,
-        PetriNetMassActionAnalysis, StockFlowMassActionAnalysis, ode_semantics::*,
+        LinearODEAnalysis, LotkaVolterraAnalysis, PetriNetMassActionAnalysis,
+        PetriNetUnbalancedMassActionAnalysis, PetriNetVeryUnbalancedMassActionAnalysis,
+        StockFlowMassActionAnalysis, StockFlowUnbalancedMassActionAnalysis, ode_semantics::*,
     };
 
     use super::*;
@@ -133,15 +134,8 @@ mod tests {
     fn stock_flow_unbalanced_mass_action_latex_equations() {
         let model = backward_link("xxx", "yyy", "fff");
         let tab_model = model.discrete_tab().unwrap();
-        let equations = StockFlowMassActionAnalysis::default()
-            .build_configured_system(
-                tab_model,
-                MassActionEquationsConfig {
-                    mass_conservation: ode::MassConservationType::Unbalanced(
-                        ode::RateGranularity::PerTransition,
-                    ),
-                },
-            )
+        let equations = StockFlowUnbalancedMassActionAnalysis::default()
+            .build_system(tab_model)
             .to_latex_equations_with_map(|param| latex_names(&model)(param));
 
         let expected = LatexEquations(vec![
@@ -196,15 +190,8 @@ mod tests {
         // The Petri net with places "liquid", "solid", and "c", and one (unnamed) transition [liquid, c] -> [solid, c].
         let model = catalytic_petri_net("liquid", "solid", "c", "");
         let modal_model = model.modal_unital().unwrap();
-        let equations = PetriNetMassActionAnalysis::default()
-            .build_configured_system(
-                modal_model,
-                MassActionEquationsConfig {
-                    mass_conservation: ode::MassConservationType::Unbalanced(
-                        ode::RateGranularity::PerTransition,
-                    ),
-                },
-            )
+        let equations = PetriNetUnbalancedMassActionAnalysis::default()
+            .build_system(modal_model)
             .to_latex_equations_with_map(|param| latex_names(&model)(param));
 
         let expected = LatexEquations(vec![
@@ -218,7 +205,7 @@ mod tests {
             },
             LatexEquation {
                 lhs: Latex("\\frac{\\mathrm{d}}{\\mathrm{d}t} c".to_string()),
-                rhs: Latex("(\\rho_{[\\text{liquid}, c] \\to [\\text{solid}, c]} - \\kappa_{[\\text{liquid}, c] \\to [\\text{solid}, c]}) \\cdot \\text{liquid} \\cdot c".to_string()),
+                rhs: Latex("(-\\kappa_{[\\text{liquid}, c] \\to [\\text{solid}, c]} + \\rho_{[\\text{liquid}, c] \\to [\\text{solid}, c]}) \\cdot \\text{liquid} \\cdot c".to_string()),
             },
         ]);
         assert_eq!(equations, expected);
@@ -229,15 +216,8 @@ mod tests {
         // The Petri net with places "liquid", "solid", and "c", and one (unnamed) transition [liquid, c] -> [solid, c].
         let model = catalytic_petri_net("liquid", "solid", "c", "");
         let modal_model = model.modal_unital().unwrap();
-        let equations = PetriNetMassActionAnalysis::default()
-            .build_configured_system(
-                modal_model,
-                MassActionEquationsConfig {
-                    mass_conservation: ode::MassConservationType::Unbalanced(
-                        ode::RateGranularity::PerPlace,
-                    ),
-                },
-            )
+        let equations = PetriNetVeryUnbalancedMassActionAnalysis::default()
+            .build_system(modal_model)
             .to_latex_equations_with_map(|param| latex_names(&model)(param));
 
         // TODO: write down the expected equations
@@ -252,7 +232,7 @@ mod tests {
             },
             LatexEquation {
                 lhs: Latex("\\frac{\\mathrm{d}}{\\mathrm{d}t} c".to_string()),
-                rhs: Latex("(\\rho_{[\\text{liquid}, c] \\to [\\text{solid}, c]}^{c} - \\kappa_{[\\text{liquid}, c] \\to [\\text{solid}, c]}^{c}) \\cdot \\text{liquid} \\cdot c".to_string()),
+                rhs: Latex("(-\\kappa_{[\\text{liquid}, c] \\to [\\text{solid}, c]}^{c} + \\rho_{[\\text{liquid}, c] \\to [\\text{solid}, c]}^{c}) \\cdot \\text{liquid} \\cdot c".to_string()),
             },
         ]);
         assert_eq!(equations, expected);
@@ -262,15 +242,8 @@ mod tests {
     fn unnamed_mor_uses_dom_cod_in_equations() {
         let model = backward_link("xxx", "yyy", "");
         let tab_model = model.discrete_tab().unwrap();
-        let equations = StockFlowMassActionAnalysis::default()
-            .build_configured_system(
-                tab_model,
-                MassActionEquationsConfig {
-                    mass_conservation: ode::MassConservationType::Unbalanced(
-                        ode::RateGranularity::PerTransition,
-                    ),
-                },
-            )
+        let equations = StockFlowUnbalancedMassActionAnalysis::default()
+            .build_system(tab_model)
             .to_latex_equations_with_map(|param| latex_names(&model)(param));
 
         let expected = LatexEquations(vec![
