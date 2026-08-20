@@ -57,20 +57,20 @@ pub trait ODESemantics {
     /// identified with one another, or to be rendered differently in debug/LaTeX output. For an
     /// instructive example, see `MassActionParameter` in `ode::mass_action`.
     type ParameterType: ODEParameterType;
+    /// The additional configuration data (if any) necessary for generating the system of equations.
+    /// For an example, see `mass_action::MassActionEquationsConfig`.
+    type EquationsConfigType: ODESemanticsEquationsConfig;
     /// The data describing the things that the ODE semantics "cares about". See the documentation
     /// for `ODESemanticsAnalysis` for more details.
-    type AnalysisType: ODESemanticsAnalysis<Self::ModelType, Self::ParameterType>;
-    /// The data necessary for displaying the system of equations, to be provided at run-time by the
-    /// front-end.
-    type EquationsDataType: ODESemanticsEquationsData;
+    type AnalysisType: ODESemanticsAnalysis<Self::ModelType, Self::ParameterType, Self::EquationsConfigType>;
     /// The data necessary for simulating the system of equations, to be provided at run-time by the
     /// front-end. For example, which values appear in the front-end analysis widget, and to which
     /// which parameters within the algebraic equations they correspond.
     type ParameterData: ODESemanticsScalarExtension<Self::ParameterType>;
 }
 
-/// The models for which we support ODE semantics need to be sufficiently nice, though
-/// these bounds are not particularly restrictive.
+/// The models for which we support ODE semantics need to be sufficiently nice, though these bounds
+/// should not prove particularly restrictive in practice.
 pub trait DblModelForODESemantics:
     FgCategory + DblModel + MutDblModel<ObGen = QualifiedName, MorGen = QualifiedName> + Clone
 {
@@ -177,26 +177,57 @@ impl<P: ODEParameterType> PolynomialODESystemBuilder<P> {
     }
 }
 
+/// For some ODE semantics, it might be the case there extra information can be given to determine
+/// the equations. For example, a boolean describing whether or not mass should be conserved, or
+/// something more complicated. This is generally data that will be exposed to the frontend in the
+/// corresponding analysis widget. For an example, see `mass_action::MassActionEquationsConfig`.
+///
+/// Note this this is slightly annoying, and will lead to most ODE semantics requiring us to define
+/// `EquationsConfigType = ()` and passing `_equations_config: ()` into `build_system_builder`.
+/// It seems likely that we should eventually either (a) break up mass-action semantics into three
+/// separate semantics, or (b) have `AdmitsEquationsConfig` as a further separate trait.
+pub trait ODESemanticsEquationsConfig: Default {}
+impl ODESemanticsEquationsConfig for () {}
+
 /// This trait is where we define the actual ODE semantics, in the implementation of
-/// `build_system_builder()`; `build_system()` will almost certainly always use the default
+/// `build_system_builder()`, whereas `build_system()` will almost certainly always use the default
 /// implementation given below.
 ///
 /// Note that the type that implements this trait is also where you are expected to state everything
 /// that your semantics "cares about". For example, the default minimum is to give the values of
-/// `ObType` and `MorType` that you want to distinguish between and iterate over. It can also hold
-/// any extra data upon which your semantics can depend (see e.g.
-/// `ode::mass_action::PetriNetMassActionAnalysis`, which contains the data of some
-/// `MassConservationType`, whose value is fundamental in constructing the semantics). However,
-/// this is left to the user: the type checker will *not* enforce any of these extras.
-pub trait ODESemanticsAnalysis<T: DblModelForODESemantics, P: ODEParameterType>: Default {
+/// `ObType` and `MorType` that you want to distinguish between and iterate over. However,
+/// this is left to the user: the type checker will *not* enforce anything helpful here. We
+/// recommend looking at any existing implementations to get a better understanding.
+pub trait ODESemanticsAnalysis<
+    T: DblModelForODESemantics,
+    P: ODEParameterType,
+    E: ODESemanticsEquationsConfig,
+>: Default
+{
     /// The implementation of this function is what contains the actual data of the ODE semantics,
     /// in the form of a `PolynomialODESystemBuilder`.
-    fn build_system_builder(&self, model: &T) -> PolynomialODESystemBuilder<P>;
+    fn build_system_builder(&self, model: &T, equations_config: E)
+    -> PolynomialODESystemBuilder<P>;
 
     /// We simply feed the `PolynomialODESystemBuilder` constructed by the above function into
-    /// `PolynomialODEAnalysis::build_system_custom_parameters`.
+    /// `PolynomialODEAnalysis::build_system_custom_parameters` with the *default* values of the
+    /// `ODESemanticsEquationsConfig` type.
     fn build_system(&self, model: &T) -> PolynomialSystem<QualifiedName, Parameter<P>, i8> {
-        let builder = self.build_system_builder(model);
+        self.build_configured_system(model, E::default())
+    }
+
+    /// We simply feed the `PolynomialODESystemBuilder` constructed by the above function into
+    /// `PolynomialODEAnalysis::build_system_custom_parameters` with *custom* values of the
+    /// `ODESemanticsEquationsConfig` type.
+    ///
+    /// Note that, if the `ODESemanticsEquationsConfig` in question is trivial, then this function
+    /// should essentially never be used, since `build_system` then always does the same.
+    fn build_configured_system(
+        &self,
+        model: &T,
+        equations_config: E,
+    ) -> PolynomialSystem<QualifiedName, Parameter<P>, i8> {
+        let builder = self.build_system_builder(model, equations_config);
         PolynomialODEAnalysis::default().build_system_custom_parameters(
             &builder.clone().model(),
             builder.associated_parameters(),
@@ -231,13 +262,6 @@ pub enum ContributionSign {
     Negative,
 }
 
-/// For some ODE semantics, it might be the case there extra information can be given to determine
-/// the equations. For example, a boolean describing whether or not mass should be conserved, or
-/// something more complicated. This is generally data that will be exposed to the frontend in the
-/// corresponding analysis. For an example, see `mass_action::MassActionEquationsData`.
-pub trait ODESemanticsEquationsData {}
-impl ODESemanticsEquationsData for () {}
-
 /// How to convert the formal parameters of type `ODEParameterType` into floats using data from
 /// `ODESemanticsProblemData.parameter_data`.
 pub trait ODESemanticsScalarExtension<P: ODEParameterType> {
@@ -252,7 +276,7 @@ pub trait ODESemanticsScalarExtension<P: ODEParameterType> {
 /// solved by an ODE solver and presented to the front-end. At minimum, such data must contain
 /// initial values for variables and the intended duration of simulation, as well as the method for
 /// converting the parameters (which are of type `ODEParameterType`) into floats. Note that it must
-/// also contain `ODESemanticsEquationsData`, since we need to know how to build the equations
+/// also contain `ODESemanticsEquationsConfig`, since we need to know how to build the equations
 /// before we are able to solve them numerically.
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde-wasm", derive(Tsify))]
@@ -265,8 +289,8 @@ where
     T: ODESemantics,
 {
     /// Further data needed to specify the ODE equations.
-    #[cfg_attr(feature = "serde", serde(rename = "equationsData"))]
-    pub equations_data: T::EquationsDataType,
+    #[cfg_attr(feature = "serde", serde(rename = "equationsConfig"))]
+    pub equations_config: T::EquationsConfigType,
     /// Map from object IDs to initial values (nonnegative reals).
     #[cfg_attr(feature = "serde", serde(rename = "initialValues"))]
     pub initial_values: HashMap<QualifiedName, f32>,
@@ -278,7 +302,7 @@ where
 }
 
 impl<T: ODESemantics> ODESemanticsProblemData<T> {
-    /// TODO: docs
+    /// TODO: docs.
     pub fn extend_scalars(
         &self,
         system: PolynomialSystem<QualifiedName, Parameter<T::ParameterType>, i8>,

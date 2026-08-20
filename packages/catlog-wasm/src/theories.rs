@@ -10,7 +10,8 @@ use catlog::dbl::theory::{self as theory, NonUnital, Unital};
 use catlog::latex::LatexEquations;
 use catlog::one::Path;
 use catlog::stdlib::analyses::ode::{
-    LinearODESemantics, LotkaVolterraSemantics, ODESemanticsAnalysis,
+    LinearODESemantics, LotkaVolterraSemantics, ODESemanticsAnalysis, PetriNetMassActionSemantics,
+    PolynomialODESemantics, StockFlowMassActionSemantics,
 };
 use catlog::stdlib::{analyses, models, theories, theory_morphisms};
 use catlog::zero::name;
@@ -343,13 +344,10 @@ impl ThCategoryLinks {
     pub fn mass_action(
         &self,
         model: &DblModel,
-        data: analyses::ode::MassActionProblemData,
+        data: analyses::ode::ODESemanticsProblemData<StockFlowMassActionSemantics>,
     ) -> Result<ODEResultWithEquations, String> {
-        let system = analyses::ode::StockFlowMassActionAnalysis {
-            mass_conservation_type: data.equations_data.mass_conservation_type,
-            ..analyses::ode::StockFlowMassActionAnalysis::default()
-        }
-        .build_system(model.discrete_tab()?);
+        let system = analyses::ode::StockFlowMassActionAnalysis::default()
+            .build_configured_system(model.discrete_tab()?, data.equations_config.clone());
         ode_semantics_simulation::<analyses::ode::StockFlowMassActionSemantics>(model, data, system)
     }
 
@@ -358,13 +356,10 @@ impl ThCategoryLinks {
     pub fn mass_action_equations(
         &self,
         model: &DblModel,
-        data: analyses::ode::MassActionEquationsData,
+        data: analyses::ode::MassActionEquationsConfig,
     ) -> Result<LatexEquations, String> {
-        let system = analyses::ode::StockFlowMassActionAnalysis {
-            mass_conservation_type: data.mass_conservation_type,
-            ..analyses::ode::StockFlowMassActionAnalysis::default()
-        }
-        .build_system(model.discrete_tab()?);
+        let system = analyses::ode::StockFlowMassActionAnalysis::default()
+            .build_configured_system(model.discrete_tab()?, data);
         ode_semantics_equations::<analyses::ode::StockFlowMassActionSemantics>(model, system)
     }
 }
@@ -407,13 +402,10 @@ impl ThSymMonoidalCategory {
     pub fn mass_action(
         &self,
         model: &DblModel,
-        data: analyses::ode::MassActionProblemData,
+        data: analyses::ode::ODESemanticsProblemData<PetriNetMassActionSemantics>,
     ) -> Result<ODEResultWithEquations, String> {
-        let system = analyses::ode::PetriNetMassActionAnalysis {
-            mass_conservation_type: data.equations_data.mass_conservation_type,
-            ..analyses::ode::PetriNetMassActionAnalysis::default()
-        }
-        .build_system(model.modal_unital()?);
+        let system = analyses::ode::PetriNetMassActionAnalysis::default()
+            .build_configured_system(model.modal_unital()?, data.equations_config.clone());
         ode_semantics_simulation::<analyses::ode::PetriNetMassActionSemantics>(model, data, system)
     }
 
@@ -422,13 +414,10 @@ impl ThSymMonoidalCategory {
     pub fn mass_action_equations(
         &self,
         model: &DblModel,
-        data: analyses::ode::MassActionEquationsData,
+        data: analyses::ode::MassActionEquationsConfig,
     ) -> Result<LatexEquations, String> {
-        let system = analyses::ode::PetriNetMassActionAnalysis {
-            mass_conservation_type: data.mass_conservation_type,
-            ..analyses::ode::PetriNetMassActionAnalysis::default()
-        }
-        .build_system(model.modal_unital()?);
+        let system = analyses::ode::PetriNetMassActionAnalysis::default()
+            .build_configured_system(model.modal_unital()?, data);
         ode_semantics_equations::<analyses::ode::PetriNetMassActionSemantics>(model, system)
     }
 
@@ -479,7 +468,7 @@ impl ThPolynomialODE {
     pub fn polynomial_ode_simulation(
         &self,
         model: &DblModel,
-        data: analyses::ode::PolynomialODEProblemData,
+        data: analyses::ode::ODESemanticsProblemData<PolynomialODESemantics>,
     ) -> Result<ODEResultWithEquations, String> {
         let system =
             analyses::ode::PolynomialODEAnalysis::default().build_system(model.modal_nonunital()?);
@@ -516,7 +505,7 @@ impl ThSignedPolynomialODE {
     pub fn polynomial_ode_simulation(
         &self,
         model: &DblModel,
-        data: analyses::ode::PolynomialODEProblemData,
+        data: analyses::ode::ODESemanticsProblemData<PolynomialODESemantics>,
     ) -> Result<ODEResultWithEquations, String> {
         let system =
             analyses::ode::PolynomialODEAnalysis::default().build_system(model.modal_nonunital()?);

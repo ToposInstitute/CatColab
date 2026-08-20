@@ -28,6 +28,7 @@ import "./simulation.css";
 
 /** Analyze a model using mass-action dynamics. */
 export default function MassAction(
+    // TODO: switch to GeneralMassActionProblemData = MassActionProblemData | PPMassActionProblemData | PTMassActionProblemData
     props: ModelAnalysisProps<MassActionProblemData> & {
         ratesHaveGranularity: boolean;
         simulate: MassActionSimulator;
