@@ -12,9 +12,9 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "serde-wasm")]
 use tsify::Tsify;
 
-use super::Parameter;
 use crate::latex::{Latex, ToLatexWithMap};
 use crate::simulate::ode::PolynomialSystem;
+use crate::stdlib::analyses::ode::Parameter;
 use crate::stdlib::analyses::ode::ode_semantics::*;
 use crate::stdlib::analyses::petri::transition_interface;
 use crate::stdlib::analyses::stock_flow::flow_interface;
@@ -27,6 +27,11 @@ use crate::{
     zero::name_seg,
 };
 
+// Because Petri nets and stock-flow diagrams are different types of models (unital modal and
+// discrete tabulator, respectively), we need a different structs for each one, since to implement
+// `ODESemantics` we need to specify a `ModelType`. In particular, they will need different
+// implementations of `ODESemanticsAnalysis::build_system_builder`.
+
 /// Mass-action semantics for Petri nets.
 pub struct PetriNetMassActionSemantics;
 /// Mass-action semantics for stock-flow diagrams.
@@ -36,7 +41,7 @@ impl ODESemantics for PetriNetMassActionSemantics {
     type ModelType = ModalDblModel<Unital>;
     type ParameterType = MassActionParameter;
     type AnalysisType = PetriNetMassActionAnalysis;
-    type EquationsDataType = MassActionEquationsData;
+    type EquationsConfigType = MassActionEquationsConfig;
     type ParameterData = MassActionParameterData;
 }
 
@@ -44,7 +49,7 @@ impl ODESemantics for StockFlowMassActionSemantics {
     type ModelType = DiscreteTabModel;
     type ParameterType = MassActionParameter;
     type AnalysisType = StockFlowMassActionAnalysis;
-    type EquationsDataType = MassActionEquationsData;
+    type EquationsConfigType = MassActionEquationsConfig;
     type ParameterData = MassActionParameterData;
 }
 
@@ -189,6 +194,27 @@ impl ToLatexWithMap for MassActionParameter {
 
 impl ODEParameterType for MassActionParameter {}
 
+/// Data defining mass-action ODE equations for a model.
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde-wasm", derive(Tsify))]
+#[cfg_attr(feature = "serde-wasm", tsify(into_wasm_abi, from_wasm_abi))]
+#[derive(Clone)]
+pub struct MassActionEquationsConfig {
+    /// Whether or not mass is conserved.
+    #[cfg_attr(feature = "serde", serde(rename = "massConservationType"))]
+    pub mass_conservation: MassConservationType,
+}
+
+impl Default for MassActionEquationsConfig {
+    fn default() -> Self {
+        Self {
+            mass_conservation: MassConservationType::Balanced,
+        }
+    }
+}
+
+impl ODESemanticsEquationsConfig for MassActionEquationsConfig {}
+
 /// Mass-action ODE analysis for Petri nets.
 ///
 /// This struct implements the object part of the functorial semantics for reaction
@@ -198,8 +224,6 @@ pub struct PetriNetMassActionAnalysis {
     pub place_ob_type: ModalObType,
     /// Morphism type for transitions.
     pub transition_mor_type: ModalMorType,
-    /// Mass-conservation type.
-    pub mass_conservation_type: MassConservationType,
 }
 
 impl Default for PetriNetMassActionAnalysis {
@@ -208,7 +232,6 @@ impl Default for PetriNetMassActionAnalysis {
         Self {
             place_ob_type: ob_type.clone(),
             transition_mor_type: ModalMorType::Zero(ob_type),
-            mass_conservation_type: MassConservationType::Balanced,
         }
     }
 }
@@ -217,11 +240,13 @@ impl
     ODESemanticsAnalysis<
         <PetriNetMassActionSemantics as ODESemantics>::ModelType,
         <PetriNetMassActionSemantics as ODESemantics>::ParameterType,
+        <PetriNetMassActionSemantics as ODESemantics>::EquationsConfigType,
     > for PetriNetMassActionAnalysis
 {
     fn build_system_builder(
         &self,
         model: &ModalDblModel<Unital>,
+        equations_config: MassActionEquationsConfig,
     ) -> PolynomialODESystemBuilder<MassActionParameter> {
         let mut builder = PolynomialODESystemBuilder::new();
 
@@ -247,11 +272,11 @@ impl
                 //   T : [x_1, ..., x_n] -> [y_1, ..., y_n]
                 // becomes the contributions
                 //   \dot{y_i} += Parameter_! \cdot x_1...x_n
-                // where Parameter_! depends on `mass_conservation_type`:
+                // where Parameter_! depends on `mass_conservation`:
                 //   Balanced                  => Parameter_T
                 //   Unbalanced::PerTransition => Parameter_T^inflow
                 //   Unbalanced::PerPlace      => Parameter_{T,y_i}^inflow
-                let parameter = match self.mass_conservation_type {
+                let parameter = match equations_config.mass_conservation {
                     MassConservationType::Balanced => {
                         MassActionParameter::Balanced { flow: transition.clone() }
                     }
@@ -285,11 +310,11 @@ impl
                 //   T : [x_1, ..., x_n] -> [y_1, ..., y_n]
                 // becomes the contributions
                 //   \dot{x_i} -= Parameter_! \cdot x_1...x_n
-                // where Parameter_! depends on `mass_conservation_type`:
-                //   Balanced             => Parameter_T
+                // where Parameter_! depends on `mass_conservation`:
+                //   Balanced                   => Parameter_T
                 //   Unbalanced::PerTransition  => Parameter_T^outflow
-                //   Unbalanced::PerPlace => Parameter_{T,x_i}^outflow
-                let parameter = match self.mass_conservation_type {
+                //   Unbalanced::PerPlace       => Parameter_{T,x_i}^outflow
+                let parameter = match equations_config.mass_conservation {
                     MassConservationType::Balanced => {
                         MassActionParameter::Balanced { flow: transition.clone() }
                     }
@@ -332,8 +357,6 @@ pub struct StockFlowMassActionAnalysis {
     pub pos_link_mor_type: TabMorType,
     /// Morphism type for negative links from stocks to flows.
     pub neg_link_mor_type: TabMorType,
-    /// Mass-conservation type.
-    pub mass_conservation_type: MassConservationType,
 }
 
 impl Default for StockFlowMassActionAnalysis {
@@ -344,7 +367,6 @@ impl Default for StockFlowMassActionAnalysis {
             flow_mor_type: TabMorType::Hom(Box::new(ob_type.clone())),
             pos_link_mor_type: TabMorType::Basic(name("Link")),
             neg_link_mor_type: TabMorType::Basic(name("NegativeLink")),
-            mass_conservation_type: MassConservationType::Balanced,
         }
     }
 }
@@ -353,11 +375,13 @@ impl
     ODESemanticsAnalysis<
         <StockFlowMassActionSemantics as ODESemantics>::ModelType,
         <StockFlowMassActionSemantics as ODESemantics>::ParameterType,
+        <StockFlowMassActionSemantics as ODESemantics>::EquationsConfigType,
     > for StockFlowMassActionAnalysis
 {
     fn build_system_builder(
         &self,
         model: &DiscreteTabModel,
+        equations_config: MassActionEquationsConfig,
     ) -> PolynomialODESystemBuilder<MassActionParameter> {
         let mut builder = PolynomialODESystemBuilder::new();
 
@@ -382,14 +406,14 @@ impl
             // becomes the contributions
             //   \dot{b} += Parameter_! \cdot a x_1.. x_n
             //   \dot{a} -= Parameter_? \cdot a x_1.. x_n
-            // where Parameter_! and Parameter_? depend on `mass_conservation_type`:
-            //   Balanced            => Parameter_! = Parameter_F
-            //                          Parameter_? = Parameter_F
+            // where Parameter_! and Parameter_? depend on `mass_conservation`:
+            //   Balanced                  => Parameter_! = Parameter_F
+            //                                Parameter_? = Parameter_F
             //   Unbalanced::PerTransition => Parameter_! = Parameter_F^inflow
-            //                          Parameter_? = Parameter_F^outflow
+            //                                Parameter_? = Parameter_F^outflow
 
             let output_id = output.cons(name_seg("ToOutput")).cons(flow.only().unwrap());
-            let output_parameter = match self.mass_conservation_type {
+            let output_parameter = match equations_config.mass_conservation {
                 MassConservationType::Balanced => {
                     MassActionParameter::Balanced { flow: flow.clone() }
                 }
@@ -407,7 +431,7 @@ impl
             );
 
             let input_id = input.cons(name_seg("ToInput")).cons(flow.only().unwrap());
-            let input_parameter = match self.mass_conservation_type {
+            let input_parameter = match equations_config.mass_conservation {
                 MassConservationType::Balanced => {
                     MassActionParameter::Balanced { flow: flow.clone() }
                 }
@@ -429,27 +453,6 @@ impl
     }
 }
 
-/// Data defining mass-action ODE equations for a model.
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "serde-wasm", derive(Tsify))]
-#[cfg_attr(feature = "serde-wasm", tsify(into_wasm_abi, from_wasm_abi))]
-#[derive(Clone)]
-pub struct MassActionEquationsData {
-    /// Whether or not mass is conserved.
-    #[cfg_attr(feature = "serde", serde(rename = "massConservationType"))]
-    pub mass_conservation_type: MassConservationType,
-}
-
-impl Default for MassActionEquationsData {
-    fn default() -> Self {
-        Self {
-            mass_conservation_type: MassConservationType::Balanced,
-        }
-    }
-}
-
-impl ODESemanticsEquationsData for MassActionEquationsData {}
-
 /// Data input by the user to fill in the parameters numerically.
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde-wasm", derive(Tsify))]
@@ -458,31 +461,30 @@ impl ODESemanticsEquationsData for MassActionEquationsData {}
     tsify(into_wasm_abi, from_wasm_abi, hashmap_as_object)
 )]
 pub struct MassActionParameterData {
-    /// Map from morphism IDs to consumption rate coefficients (nonnegative reals),
+    /// Map from morphism IDs to consumption rate coefficients (non-negative reals),
     /// for the balanced per transition case.
-    /// N.B. This is renamed to "rates" in catlog-wasm for backwards compatibility.
-    #[cfg_attr(feature = "serde", serde(rename = "rates"))]
-    transition_rates: HashMap<QualifiedName, f32>,
+    #[cfg_attr(feature = "serde", serde(rename = "transitionRates"))]
+    pub(crate) transition_rates: HashMap<QualifiedName, f32>,
 
-    /// Map from morphism IDs to consumption rate coefficients (nonnegative reals),
+    /// Map from morphism IDs to consumption rate coefficients (non-negative reals),
     /// for the unbalanced per transition case.
     #[cfg_attr(feature = "serde", serde(rename = "transitionConsumptionRates"))]
-    transition_consumption_rates: HashMap<QualifiedName, f32>,
+    pub(crate) transition_consumption_rates: HashMap<QualifiedName, f32>,
 
-    /// Map from morphism IDs to production rate coefficients (nonnegative reals),
+    /// Map from morphism IDs to production rate coefficients (non-negative reals),
     /// for the unbalanced per transition case.
     #[cfg_attr(feature = "serde", serde(rename = "transitionProductionRates"))]
-    transition_production_rates: HashMap<QualifiedName, f32>,
+    pub(crate) transition_production_rates: HashMap<QualifiedName, f32>,
 
     /// Map from morphism IDs to (map from input objects to consumption rate coefficients),
-    /// for the unbalanced per place case (nonnegative reals).
+    /// for the unbalanced per place case (non-negative reals).
     #[cfg_attr(feature = "serde", serde(rename = "placeConsumptionRates"))]
-    place_consumption_rates: HashMap<QualifiedName, HashMap<QualifiedName, f32>>,
+    pub(crate) place_consumption_rates: HashMap<QualifiedName, HashMap<QualifiedName, f32>>,
 
     /// Map from morphism IDs to (map from output objects to production rate coefficients),
-    /// for the unbalanced per place case (nonnegative reals).
+    /// for the unbalanced per place case (non-negative reals).
     #[cfg_attr(feature = "serde", serde(rename = "placeProductionRates"))]
-    place_production_rates: HashMap<QualifiedName, HashMap<QualifiedName, f32>>,
+    pub(crate) place_production_rates: HashMap<QualifiedName, HashMap<QualifiedName, f32>>,
 }
 
 impl ODESemanticsScalarExtension<MassActionParameter> for MassActionParameterData {
@@ -546,9 +548,10 @@ mod tests {
     use std::rc::Rc;
 
     use super::*;
+    use crate::stdlib::analyses::ode::{MassConservationType, RateGranularity};
     use crate::{
         latex::{LatexEquation, LatexEquations},
-        stdlib::{analyses, models::*, theories::*},
+        stdlib::{models::*, theories::*},
     };
 
     // Symbolic tests.
@@ -571,13 +574,12 @@ mod tests {
     fn unbalanced_stock_flow() {
         let th = Rc::new(th_category_links());
         let model = backward_link(th);
-        let sys = StockFlowMassActionAnalysis {
-            mass_conservation_type: analyses::ode::MassConservationType::Unbalanced(
-                analyses::ode::RateGranularity::PerTransition,
-            ),
-            ..StockFlowMassActionAnalysis::default()
-        }
-        .build_system(&model);
+        let sys = StockFlowMassActionAnalysis::default().build_configured_system(
+            &model,
+            MassActionEquationsConfig {
+                mass_conservation: MassConservationType::Unbalanced(RateGranularity::PerTransition),
+            },
+        );
         let expected = expect!([r#"
             dx = -Outgoing(f) x y
             dy = Incoming(f) x y
@@ -604,13 +606,12 @@ mod tests {
     fn unbalanced_petri_per_transition() {
         let th = Rc::new(th_sym_monoidal_category());
         let model = catalyzed_reaction(th);
-        let sys = PetriNetMassActionAnalysis {
-            mass_conservation_type: analyses::ode::MassConservationType::Unbalanced(
-                analyses::ode::RateGranularity::PerTransition,
-            ),
-            ..PetriNetMassActionAnalysis::default()
-        }
-        .build_system(&model);
+        let sys = PetriNetMassActionAnalysis::default().build_configured_system(
+            &model,
+            MassActionEquationsConfig {
+                mass_conservation: MassConservationType::Unbalanced(RateGranularity::PerTransition),
+            },
+        );
         let expected = expect!([r#"
             dx = -Outgoing(f) c x
             dy = Incoming(f) c x
@@ -623,13 +624,12 @@ mod tests {
     fn unbalanced_petri_per_place() {
         let th = Rc::new(th_sym_monoidal_category());
         let model = catalyzed_reaction(th);
-        let sys = PetriNetMassActionAnalysis {
-            mass_conservation_type: analyses::ode::MassConservationType::Unbalanced(
-                analyses::ode::RateGranularity::PerPlace,
-            ),
-            ..PetriNetMassActionAnalysis::default()
-        }
-        .build_system(&model);
+        let sys = PetriNetMassActionAnalysis::default().build_configured_system(
+            &model,
+            MassActionEquationsConfig {
+                mass_conservation: MassConservationType::Unbalanced(RateGranularity::PerPlace),
+            },
+        );
         let expected = expect!([r#"
             dx = -(x->[f]) c x
             dy = ([f]->y) c x
@@ -639,20 +639,175 @@ mod tests {
     }
 
     // Numerical tests.
-    // TODO: write some numerical tests.
+
+    // Tests for stock-flow diagrams. These all use the `backward_link` model,
+    // which has a single flow x==f==>y and a single link y->f.
+    #[test]
+    fn balanced_stock_flow_numerical() {
+        let th = Rc::new(th_category_links());
+        let model = backward_link(th);
+        let data: ODESemanticsProblemData<StockFlowMassActionSemantics> = ODESemanticsProblemData {
+            equations_config: MassActionEquationsConfig::default(),
+            initial_values: [(name("x"), 1.0), (name("y"), 1.5)].into_iter().collect(),
+            duration: 10.0,
+            parameter_data: MassActionParameterData {
+                transition_rates: [(name("f"), 2.0)].into_iter().collect(),
+                transition_consumption_rates: HashMap::new(),
+                transition_production_rates: HashMap::new(),
+                place_consumption_rates: HashMap::new(),
+                place_production_rates: HashMap::new(),
+            },
+        };
+        let sys = StockFlowMassActionAnalysis::default().build_system(&model);
+        let analysis = data.extend_scalars(sys);
+        let expected = expect!([r#"
+            dx = -2 x y
+            dy = 2 x y
+        "#]);
+        expected.assert_eq(&analysis.to_string());
+    }
+
+    #[test]
+    fn unbalanced_stock_flow_numerical() {
+        let th = Rc::new(th_category_links());
+        let model = backward_link(th);
+        let data: ODESemanticsProblemData<StockFlowMassActionSemantics> = ODESemanticsProblemData {
+            equations_config: MassActionEquationsConfig {
+                mass_conservation: MassConservationType::Unbalanced(RateGranularity::PerTransition),
+            },
+            initial_values: [(name("x"), 1.0), (name("y"), 1.5)].into_iter().collect(),
+            duration: 10.0,
+            parameter_data: MassActionParameterData {
+                transition_rates: HashMap::new(),
+                transition_consumption_rates: [(name("f"), 1.5)].into_iter().collect(),
+                transition_production_rates: [(name("f"), 2.0)].into_iter().collect(),
+                place_consumption_rates: HashMap::new(),
+                place_production_rates: HashMap::new(),
+            },
+        };
+        let sys = StockFlowMassActionAnalysis::default()
+            .build_configured_system(&model, data.equations_config.clone());
+        let analysis = data.extend_scalars(sys);
+        let expected = expect!([r#"
+            dx = -1.5 x y
+            dy = 2 x y
+        "#]);
+        expected.assert_eq(&analysis.to_string());
+    }
+
+    #[test]
+    fn balanced_petri_numerical() {
+        let th = Rc::new(th_sym_monoidal_category());
+        let model = catalyzed_reaction(th);
+        let data: ODESemanticsProblemData<PetriNetMassActionSemantics> = ODESemanticsProblemData {
+            equations_config: MassActionEquationsConfig::default(),
+            initial_values: [(name("x"), 1.0), (name("y"), 1.5), (name("c"), 2.0)]
+                .into_iter()
+                .collect(),
+            duration: 10.0,
+            parameter_data: MassActionParameterData {
+                transition_rates: [(name("f"), 1.5)].into_iter().collect(),
+                transition_consumption_rates: HashMap::new(),
+                transition_production_rates: HashMap::new(),
+                place_consumption_rates: HashMap::new(),
+                place_production_rates: HashMap::new(),
+            },
+        };
+        let sys = PetriNetMassActionAnalysis::default()
+            .build_configured_system(&model, data.equations_config.clone());
+        let analysis = data.extend_scalars(sys);
+        let expected = expect!([r#"
+            dx = -1.5 c x
+            dy = 1.5 c x
+            dc = 0
+        "#]);
+        expected.assert_eq(&analysis.to_string());
+    }
+
+    #[test]
+    fn unbalanced_petri_per_transition_numerical() {
+        let th = Rc::new(th_sym_monoidal_category());
+        let model = catalyzed_reaction(th);
+        let data: ODESemanticsProblemData<PetriNetMassActionSemantics> = ODESemanticsProblemData {
+            equations_config: MassActionEquationsConfig {
+                mass_conservation: MassConservationType::Unbalanced(RateGranularity::PerTransition),
+            },
+            initial_values: [(name("x"), 1.0), (name("y"), 1.5), (name("c"), 2.0)]
+                .into_iter()
+                .collect(),
+            duration: 10.0,
+            parameter_data: MassActionParameterData {
+                transition_rates: HashMap::new(),
+                transition_consumption_rates: [(name("f"), 3.5)].into_iter().collect(),
+                transition_production_rates: [(name("f"), 4.0)].into_iter().collect(),
+                place_consumption_rates: HashMap::new(),
+                place_production_rates: HashMap::new(),
+            },
+        };
+        let sys = PetriNetMassActionAnalysis::default()
+            .build_configured_system(&model, data.equations_config.clone());
+        let analysis = data.extend_scalars(sys);
+        let expected = expect!([r#"
+            dx = -3.5 c x
+            dy = 4 c x
+            dc = 0.5 c x
+        "#]);
+        expected.assert_eq(&analysis.to_string());
+    }
+
+    #[test]
+    fn unbalanced_petri_per_place_numerical() {
+        // TODO: finish
+        let th = Rc::new(th_sym_monoidal_category());
+        let model = catalyzed_reaction(th);
+        let data: ODESemanticsProblemData<PetriNetMassActionSemantics> = ODESemanticsProblemData {
+            equations_config: MassActionEquationsConfig {
+                mass_conservation: MassConservationType::Unbalanced(RateGranularity::PerPlace),
+            },
+            initial_values: [(name("x"), 1.0), (name("y"), 1.5), (name("c"), 2.0)]
+                .into_iter()
+                .collect(),
+            duration: 10.0,
+            parameter_data: MassActionParameterData {
+                transition_rates: HashMap::new(),
+                transition_consumption_rates: HashMap::new(),
+                transition_production_rates: HashMap::new(),
+                place_consumption_rates: [(
+                    name("f"),
+                    [(name("x"), 2.0), (name("c"), 3.0)].into_iter().collect(),
+                )]
+                .into_iter()
+                .collect(),
+                place_production_rates: [(
+                    name("f"),
+                    [(name("y"), 1.5), (name("c"), 2.5)].into_iter().collect(),
+                )]
+                .into_iter()
+                .collect(),
+            },
+        };
+        let sys = PetriNetMassActionAnalysis::default()
+            .build_configured_system(&model, data.equations_config.clone());
+        let analysis = data.extend_scalars(sys);
+        let expected = expect!([r#"
+            dx = -2 c x
+            dy = 1.5 c x
+            dc = -0.5 c x
+        "#]);
+        expected.assert_eq(&analysis.to_string());
+    }
 
     // LaTeX tests.
     #[test]
     fn to_latex() {
         let th = Rc::new(th_category_links());
         let model = backward_link(th);
-        let sys = StockFlowMassActionAnalysis {
-            mass_conservation_type: analyses::ode::MassConservationType::Unbalanced(
-                analyses::ode::RateGranularity::PerTransition,
-            ),
-            ..StockFlowMassActionAnalysis::default()
-        }
-        .build_system(&model);
+        let sys = StockFlowMassActionAnalysis::default().build_configured_system(
+            &model,
+            MassActionEquationsConfig {
+                mass_conservation: MassConservationType::Unbalanced(RateGranularity::PerTransition),
+            },
+        );
         let expected = LatexEquations(vec![
             LatexEquation {
                 lhs: Latex("\\frac{\\mathrm{d}}{\\mathrm{d}t} x".to_string()),

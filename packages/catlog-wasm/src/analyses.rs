@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use tsify::Tsify;
 
 use catlog::simulate::ode::PolynomialSystem;
-use catlog::stdlib::analyses::ode::{self, ODESemantics, Parameter};
+use catlog::stdlib::analyses::ode::{self, ODESemantics, ODESemanticsProblemData, Parameter};
 use catlog::zero::QualifiedName;
 
 use super::latex::latex_names;
@@ -31,7 +31,7 @@ pub struct ODEResultWithEquations {
 /// Simulate specific ODE semantics on a model, for use in a simulation analysis.
 pub(crate) fn ode_semantics_simulation<S: ODESemantics>(
     model: &DblModel,
-    problem_data: S::ProblemDataType,
+    problem_data: ODESemanticsProblemData<S>,
     system: PolynomialSystem<QualifiedName, Parameter<S::ParameterType>, i8>,
 ) -> Result<ODEResultWithEquations, String> {
     let sys_extended_scalars = problem_data.extend_scalars(system);
@@ -63,8 +63,9 @@ pub(crate) mod tests {
     use catlog::dbl::modal::{List, ModalMorType, ModalOb, ModalObType, ModeApp};
     use catlog::dbl::model::{ModalDblModel, MutDblModel};
     use catlog::latex::{Latex, LatexEquation, LatexEquations};
+    use catlog::stdlib::analyses::ode::MassActionEquationsConfig;
     use catlog::stdlib::{
-        analyses::ode::{self, MassConservationType, ODESemanticsAnalysis},
+        analyses::ode::{self, ODESemanticsAnalysis},
         theories,
     };
     use catlog::zero::{LabelSegment, Namespace, QualifiedName};
@@ -156,11 +157,8 @@ pub(crate) mod tests {
     #[test]
     fn stock_flow_balanced_mass_action_latex_equations() {
         let model = backward_link("xylophone", "y", "fff");
-        let system = ode::StockFlowMassActionAnalysis {
-            mass_conservation_type: MassConservationType::Balanced,
-            ..ode::StockFlowMassActionAnalysis::default()
-        }
-        .build_system(model.discrete_tab().unwrap());
+        let system =
+            ode::StockFlowMassActionAnalysis::default().build_system(model.discrete_tab().unwrap());
         let equations =
             ode_semantics_equations::<ode::StockFlowMassActionSemantics>(&model, system).unwrap();
 
@@ -180,13 +178,14 @@ pub(crate) mod tests {
     #[test]
     fn stock_flow_unbalanced_mass_action_latex_equations() {
         let model = backward_link("xylophone", "y", "fff");
-        let system = ode::StockFlowMassActionAnalysis {
-            mass_conservation_type: MassConservationType::Unbalanced(
-                ode::RateGranularity::PerTransition,
-            ),
-            ..ode::StockFlowMassActionAnalysis::default()
-        }
-        .build_system(model.discrete_tab().unwrap());
+        let system = ode::StockFlowMassActionAnalysis::default().build_configured_system(
+            model.discrete_tab().unwrap(),
+            MassActionEquationsConfig {
+                mass_conservation: ode::MassConservationType::Unbalanced(
+                    ode::RateGranularity::PerTransition,
+                ),
+            },
+        );
         let equations =
             ode_semantics_equations::<ode::StockFlowMassActionSemantics>(&model, system).unwrap();
 
@@ -207,11 +206,8 @@ pub(crate) mod tests {
     fn petri_net_balanced_mass_action_latex_equations() {
         // The Petri net with places `liquid`, `solid`, and `c`, and one (unnamed) transition `[liquid, c] -> [solid, c]`.
         let model = catalytic_petri_net("liquid", "solid", "c", "");
-        let system = ode::PetriNetMassActionAnalysis {
-            mass_conservation_type: MassConservationType::Balanced,
-            ..ode::PetriNetMassActionAnalysis::default()
-        }
-        .build_system(model.modal_unital().unwrap());
+        let system =
+            ode::PetriNetMassActionAnalysis::default().build_system(model.modal_unital().unwrap());
         let equations =
             ode_semantics_equations::<ode::PetriNetMassActionSemantics>(&model, system).unwrap();
 
@@ -243,13 +239,14 @@ pub(crate) mod tests {
         // The Petri net with places "liquid", "solid", and "c", and one transition
         // `transition : [liquid, c] -> [solid, c]`.
         let model = catalytic_petri_net("liquid", "solid", "c", "transition");
-        let system = ode::PetriNetMassActionAnalysis {
-            mass_conservation_type: MassConservationType::Unbalanced(
-                ode::RateGranularity::PerTransition,
-            ),
-            ..ode::PetriNetMassActionAnalysis::default()
-        }
-        .build_system(model.modal_unital().unwrap());
+        let system = ode::PetriNetMassActionAnalysis::default().build_configured_system(
+            model.modal_unital().unwrap(),
+            MassActionEquationsConfig {
+                mass_conservation: ode::MassConservationType::Unbalanced(
+                    ode::RateGranularity::PerTransition,
+                ),
+            },
+        );
         let equations =
             ode_semantics_equations::<ode::PetriNetMassActionSemantics>(&model, system).unwrap();
 
@@ -274,13 +271,14 @@ pub(crate) mod tests {
     fn petri_net_unbalanced_pp_mass_action_latex_equations() {
         // The Petri net with places "liquid", "solid", and "c", and one (unnamed) transition [liquid, c] -> [solid, c].
         let model = catalytic_petri_net("liquid", "solid", "c", "");
-        let system = ode::PetriNetMassActionAnalysis {
-            mass_conservation_type: MassConservationType::Unbalanced(
-                ode::RateGranularity::PerPlace,
-            ),
-            ..ode::PetriNetMassActionAnalysis::default()
-        }
-        .build_system(model.modal_unital().unwrap());
+        let system = ode::PetriNetMassActionAnalysis::default().build_configured_system(
+            model.modal_unital().unwrap(),
+            MassActionEquationsConfig {
+                mass_conservation: ode::MassConservationType::Unbalanced(
+                    ode::RateGranularity::PerPlace,
+                ),
+            },
+        );
         let equations =
             ode_semantics_equations::<ode::PetriNetMassActionSemantics>(&model, system).unwrap();
 
@@ -429,6 +427,7 @@ pub(crate) mod tests {
         DblModel {
             model: inner.into(),
             ty: None,
+            elaboration_errors: Vec::new(),
             ob_namespace,
             mor_namespace,
         }
@@ -484,6 +483,7 @@ pub(crate) mod tests {
         DblModel {
             model: inner.into(),
             ty: None,
+            elaboration_errors: Vec::new(),
             ob_namespace,
             mor_namespace,
         }
