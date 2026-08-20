@@ -15,7 +15,7 @@ import { useUserSettings } from "./user_settings";
 import { useUserState } from "./user_state_context";
 
 import "./documents.css";
-import "./menu_pages.css";
+import styles from "./menu_pages.module.css";
 
 export default function UserDocuments() {
     const appTitle = import.meta.env.VITE_APP_TITLE;
@@ -23,7 +23,7 @@ export default function UserDocuments() {
     return (
         <>
             <Title>My Documents - {appTitle}</Title>
-            <div class="documents-page menu-page">
+            <div class={`documents-page ${styles["menu-page"]}`}>
                 <BrandedToolbar />
                 <div class="page-container">
                     <LoginGate>

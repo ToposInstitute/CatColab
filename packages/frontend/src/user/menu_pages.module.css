@@ -1,18 +1,16 @@
-/* General style and typography */
+/* Styling for pages accessed from the main (hamburger) menu: My documents, Trash, Settings. */
+
 .menu-page {
     h1 {
         margin: 0.5em 0;
-        font-size: var(--h2-font-size);
     }
 
     h2 {
-        font-size: var(--h3-font-size);
         margin: 1.25em 0 0.5em 0;
         border-bottom: 1px solid black;
     }
 
     h3 {
-        font-size: var(--h4-font-size);
         margin: 1em 0 0.5em 0;
     }
 }

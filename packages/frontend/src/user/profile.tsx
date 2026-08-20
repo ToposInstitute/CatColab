@@ -10,7 +10,7 @@ import { LoginGate } from "./login";
 import { useUserSettings } from "./user_settings";
 import { useUserState } from "./user_state_context";
 
-import "./menu_pages.css";
+import styles from "./menu_pages.module.css";
 
 /** Page to configure user settings. */
 export default function UserProfilePage() {
@@ -19,7 +19,7 @@ export default function UserProfilePage() {
     return (
         <>
             <Title>User Settings - {appTitle}</Title>
-            <div class="user-settings-page menu-page">
+            <div class={`user-settings-page ${styles["menu-page"]}`}>
                 <BrandedToolbar />
                 <div class="page-container">
                     <LoginGate>
