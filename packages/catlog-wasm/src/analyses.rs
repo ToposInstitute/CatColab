@@ -63,7 +63,6 @@ pub(crate) mod tests {
     use catlog::dbl::modal::{List, ModalMorType, ModalOb, ModalObType, ModeApp};
     use catlog::dbl::model::{ModalDblModel, MutDblModel};
     use catlog::latex::{Latex, LatexEquation, LatexEquations};
-    use catlog::stdlib::analyses::ode::MassActionEquationsConfig;
     use catlog::stdlib::{
         analyses::ode::{self, ODESemanticsAnalysis},
         theories,
@@ -178,16 +177,11 @@ pub(crate) mod tests {
     #[test]
     fn stock_flow_unbalanced_mass_action_latex_equations() {
         let model = backward_link("xylophone", "y", "fff");
-        let system = ode::StockFlowMassActionAnalysis::default().build_configured_system(
-            model.discrete_tab().unwrap(),
-            MassActionEquationsConfig {
-                mass_conservation: ode::MassConservationType::Unbalanced(
-                    ode::RateGranularity::PerTransition,
-                ),
-            },
-        );
+        let system = ode::StockFlowUnbalancedMassActionAnalysis::default()
+            .build_system(model.discrete_tab().unwrap());
         let equations =
-            ode_semantics_equations::<ode::StockFlowMassActionSemantics>(&model, system).unwrap();
+            ode_semantics_equations::<ode::StockFlowUnbalancedMassActionSemantics>(&model, system)
+                .unwrap();
 
         let expected = LatexEquations(vec![
             LatexEquation {
@@ -239,16 +233,11 @@ pub(crate) mod tests {
         // The Petri net with places "liquid", "solid", and "c", and one transition
         // `transition : [liquid, c] -> [solid, c]`.
         let model = catalytic_petri_net("liquid", "solid", "c", "transition");
-        let system = ode::PetriNetMassActionAnalysis::default().build_configured_system(
-            model.modal_unital().unwrap(),
-            MassActionEquationsConfig {
-                mass_conservation: ode::MassConservationType::Unbalanced(
-                    ode::RateGranularity::PerTransition,
-                ),
-            },
-        );
+        let system = ode::PetriNetUnbalancedMassActionAnalysis::default()
+            .build_system(model.modal_unital().unwrap());
         let equations =
-            ode_semantics_equations::<ode::PetriNetMassActionSemantics>(&model, system).unwrap();
+            ode_semantics_equations::<ode::PetriNetUnbalancedMassActionSemantics>(&model, system)
+                .unwrap();
 
         let expected = LatexEquations(vec![
             LatexEquation {
@@ -261,7 +250,7 @@ pub(crate) mod tests {
             },
             LatexEquation {
                 lhs: Latex("\\frac{\\mathrm{d}}{\\mathrm{d}t} c".to_string()),
-                rhs: Latex("(\\rho_{\\text{transition}} - \\kappa_{\\text{transition}}) \\cdot \\text{liquid} \\cdot c".to_string()),
+                rhs: Latex("(-\\kappa_{\\text{transition}} + \\rho_{\\text{transition}}) \\cdot \\text{liquid} \\cdot c".to_string()),
             },
         ]);
         assert_eq!(equations, expected);
@@ -271,16 +260,12 @@ pub(crate) mod tests {
     fn petri_net_unbalanced_pp_mass_action_latex_equations() {
         // The Petri net with places "liquid", "solid", and "c", and one (unnamed) transition [liquid, c] -> [solid, c].
         let model = catalytic_petri_net("liquid", "solid", "c", "");
-        let system = ode::PetriNetMassActionAnalysis::default().build_configured_system(
-            model.modal_unital().unwrap(),
-            MassActionEquationsConfig {
-                mass_conservation: ode::MassConservationType::Unbalanced(
-                    ode::RateGranularity::PerPlace,
-                ),
-            },
-        );
-        let equations =
-            ode_semantics_equations::<ode::PetriNetMassActionSemantics>(&model, system).unwrap();
+        let system = ode::PetriNetVeryUnbalancedMassActionAnalysis::default()
+            .build_system(model.modal_unital().unwrap());
+        let equations = ode_semantics_equations::<ode::PetriNetVeryUnbalancedMassActionSemantics>(
+            &model, system,
+        )
+        .unwrap();
 
         let expected = LatexEquations(vec![
             LatexEquation {
@@ -293,7 +278,7 @@ pub(crate) mod tests {
             },
             LatexEquation {
                 lhs: Latex("\\frac{\\mathrm{d}}{\\mathrm{d}t} c".to_string()),
-                rhs: Latex("(\\rho_{[\\text{liquid}, c] \\to [\\text{solid}, c]}^{c} - \\kappa_{[\\text{liquid}, c] \\to [\\text{solid}, c]}^{c}) \\cdot \\text{liquid} \\cdot c".to_string()),
+                rhs: Latex("(-\\kappa_{[\\text{liquid}, c] \\to [\\text{solid}, c]}^{c} + \\rho_{[\\text{liquid}, c] \\to [\\text{solid}, c]}^{c}) \\cdot \\text{liquid} \\cdot c".to_string()),
             },
         ]);
         assert_eq!(equations, expected);

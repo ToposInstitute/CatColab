@@ -57,17 +57,18 @@ pub trait ODESemantics {
     /// identified with one another, or to be rendered differently in debug/LaTeX output. For an
     /// instructive example, see `MassActionParameter` in `ode::mass_action`.
     type ParameterType: ODEParameterType;
-    /// The additional configuration data (if any) necessary for generating the system of equations.
-    /// For an example, see `mass_action::MassActionEquationsConfig`.
-    type EquationsConfigType: ODESemanticsEquationsConfig;
     /// The data describing the things that the ODE semantics "cares about". See the documentation
     /// for `ODESemanticsAnalysis` for more details.
-    type AnalysisType: ODESemanticsAnalysis<Self::ModelType, Self::ParameterType, Self::EquationsConfigType>;
+    type AnalysisType: ODESemanticsAnalysis<Self::ModelType, Self::ParameterType>;
     /// The data necessary for simulating the system of equations, to be provided at run-time by the
     /// front-end. For example, which values appear in the front-end analysis widget, and to which
     /// which parameters within the algebraic equations they correspond.
     type ParameterData: ODESemanticsScalarExtension<Self::ParameterType>;
 }
+
+// ┌--------------┐
+// | 0. ModelType |
+// └--------------┘
 
 /// The models for which we support ODE semantics need to be sufficiently nice, though these bounds
 /// should not prove particularly restrictive in practice.
@@ -80,6 +81,10 @@ impl DblModelForODESemantics for DiscreteDblModel {}
 impl DblModelForODESemantics for DiscreteTabModel {}
 impl DblModelForODESemantics for ModalDblModel<Unital> {}
 impl DblModelForODESemantics for ModalDblModel<NonUnital> {}
+
+// ┌------------------┐
+// | 1. ParameterType |
+// └------------------┘
 
 /// The type of the parameters in the ODE system need to be sufficiently nice, though
 /// (again) these bounds are not particularly restrictive. The two that will need the most
@@ -96,6 +101,10 @@ impl ToLatexWithMap for QualifiedName {
 }
 
 impl ODEParameterType for QualifiedName {}
+
+// ┌---------------------------------------┐
+// | INTERLUDE. PolynomialODESystemBuilder |
+// └---------------------------------------┘
 
 /// Builder for polynomial ODE systems.
 ///
@@ -118,6 +127,33 @@ impl<P: ODEParameterType> Default for PolynomialODESystemBuilder<P> {
             associated_parameters: HashMap::new(),
         }
     }
+}
+
+/// A contribution to the ODE system consists of all the data that `ModalDblModel::add_mor()`
+/// requires to create a multimorphism.
+#[derive(Clone)]
+pub struct Contribution<P: ODEParameterType> {
+    /// The name of the multimorphism.
+    pub id: QualifiedName,
+    /// The target of the multimorphism, to be interpreted as the variable whose
+    /// first derivative is affected by the monomial.
+    pub target: QualifiedName,
+    /// The sign of a contribution.
+    pub sign: ContributionSign,
+    /// The parameter (coefficient) to be associated with this contribution.
+    pub parameter: P,
+    /// The source of the multimorphism (a list of objects), to be interpreted
+    /// as the monomial given by the product of all the list elements.
+    pub monomial: Vec<QualifiedName>,
+}
+
+/// The sign of a contribution, since we work in *signed* multicategories.
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
+pub enum ContributionSign {
+    /// Positive contribution: (d/dt)y += x.
+    Positive,
+    /// Negative contribution: (d/dt)y -= x.
+    Negative,
 }
 
 impl<P: ODEParameterType> PolynomialODESystemBuilder<P> {
@@ -177,17 +213,9 @@ impl<P: ODEParameterType> PolynomialODESystemBuilder<P> {
     }
 }
 
-/// For some ODE semantics, it might be the case there extra information can be given to determine
-/// the equations. For example, a boolean describing whether or not mass should be conserved, or
-/// something more complicated. This is generally data that will be exposed to the frontend in the
-/// corresponding analysis widget. For an example, see `mass_action::MassActionEquationsConfig`.
-///
-/// Note this this is slightly annoying, and will lead to most ODE semantics requiring us to define
-/// `EquationsConfigType = ()` and passing `_equations_config: ()` into `build_system_builder`.
-/// It seems likely that we should eventually either (a) break up mass-action semantics into three
-/// separate semantics, or (b) have `AdmitsEquationsConfig` as a further separate trait.
-pub trait ODESemanticsEquationsConfig: Default {}
-impl ODESemanticsEquationsConfig for () {}
+// ┌-----------------┐
+// | 2. AnalysisType |
+// └-----------------┘
 
 /// This trait is where we define the actual ODE semantics, in the implementation of
 /// `build_system_builder()`, whereas `build_system()` will almost certainly always use the default
@@ -198,36 +226,15 @@ impl ODESemanticsEquationsConfig for () {}
 /// `ObType` and `MorType` that you want to distinguish between and iterate over. However,
 /// this is left to the user: the type checker will *not* enforce anything helpful here. We
 /// recommend looking at any existing implementations to get a better understanding.
-pub trait ODESemanticsAnalysis<
-    T: DblModelForODESemantics,
-    P: ODEParameterType,
-    E: ODESemanticsEquationsConfig,
->: Default
-{
+pub trait ODESemanticsAnalysis<T: DblModelForODESemantics, P: ODEParameterType>: Default {
     /// The implementation of this function is what contains the actual data of the ODE semantics,
     /// in the form of a `PolynomialODESystemBuilder`.
-    fn build_system_builder(&self, model: &T, equations_config: E)
-    -> PolynomialODESystemBuilder<P>;
+    fn build_system_builder(&self, model: &T) -> PolynomialODESystemBuilder<P>;
 
     /// We simply feed the `PolynomialODESystemBuilder` constructed by the above function into
-    /// `PolynomialODEAnalysis::build_system_custom_parameters` with the *default* values of the
-    /// `ODESemanticsEquationsConfig` type.
+    /// `PolynomialODEAnalysis::build_system_custom_parameters`.
     fn build_system(&self, model: &T) -> PolynomialSystem<QualifiedName, Parameter<P>, i8> {
-        self.build_configured_system(model, E::default())
-    }
-
-    /// We simply feed the `PolynomialODESystemBuilder` constructed by the above function into
-    /// `PolynomialODEAnalysis::build_system_custom_parameters` with *custom* values of the
-    /// `ODESemanticsEquationsConfig` type.
-    ///
-    /// Note that, if the `ODESemanticsEquationsConfig` in question is trivial, then this function
-    /// should essentially never be used, since `build_system` then always does the same.
-    fn build_configured_system(
-        &self,
-        model: &T,
-        equations_config: E,
-    ) -> PolynomialSystem<QualifiedName, Parameter<P>, i8> {
-        let builder = self.build_system_builder(model, equations_config);
+        let builder = self.build_system_builder(model);
         PolynomialODEAnalysis::default().build_system_custom_parameters(
             &builder.clone().model(),
             builder.associated_parameters(),
@@ -235,37 +242,14 @@ pub trait ODESemanticsAnalysis<
     }
 }
 
-/// A contribution to the ODE system consists of all the data that `ModalDblModel::add_mor()`
-/// requires to create a multimorphism.
-#[derive(Clone)]
-pub struct Contribution<P: ODEParameterType> {
-    /// The name of the multimorphism.
-    pub id: QualifiedName,
-    /// The target of the multimorphism, to be interpreted as the variable whose
-    /// first derivative is affected by the monomial.
-    pub target: QualifiedName,
-    /// The sign of a contribution.
-    pub sign: ContributionSign,
-    /// The parameter (coefficient) to be associated with this contribution.
-    pub parameter: P,
-    /// The source of the multimorphism (a list of objects), to be interpreted
-    /// as the monomial given by the product of all the list elements.
-    pub monomial: Vec<QualifiedName>,
-}
+// ┌------------------┐
+// | 3. ParameterData |
+// └------------------┘
 
-/// The sign of a contribution, since we work in *signed* multicategories.
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
-pub enum ContributionSign {
-    /// Positive contribution: (d/dt)y += x.
-    Positive,
-    /// Negative contribution: (d/dt)y -= x.
-    Negative,
-}
-
-/// How to convert the formal parameters of type `ODEParameterType` into floats using data from
-/// `ODESemanticsProblemData.parameter_data`.
+/// This trait is required to be implemented for the `ParameterData` type, and is used to convert
+/// the formal parameters of type `ODEParameterType` to floats.
 pub trait ODESemanticsScalarExtension<P: ODEParameterType> {
-    /// TODO: documentation.
+    /// Take formal parameters and convert them into floats using problem data.
     fn extend_scalars(
         &self,
         system: PolynomialSystem<QualifiedName, Parameter<P>, i8>,
@@ -288,9 +272,6 @@ pub struct ODESemanticsProblemData<T>
 where
     T: ODESemantics,
 {
-    /// Further data needed to specify the ODE equations.
-    #[cfg_attr(feature = "serde", serde(rename = "equationsConfig"))]
-    pub equations_config: T::EquationsConfigType,
     /// Map from object IDs to initial values (nonnegative reals).
     #[cfg_attr(feature = "serde", serde(rename = "initialValues"))]
     pub initial_values: HashMap<QualifiedName, f32>,
@@ -302,7 +283,7 @@ where
 }
 
 impl<T: ODESemantics> ODESemanticsProblemData<T> {
-    /// TODO: docs.
+    /// Take formal parameters and convert them into floats using `self.parameter_data`.
     pub fn extend_scalars(
         &self,
         system: PolynomialSystem<QualifiedName, Parameter<T::ParameterType>, i8>,
