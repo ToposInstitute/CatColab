@@ -200,7 +200,7 @@ function MorListEditor(props: {
                 insertKey=";"
                 startDelimiter={""}
                 endDelimiter={""}
-                separator={() => <div class={styles.separator}>{";"}</div>}
+                separator={() => <div class={styles.separator}>{"⨟"}</div>}
                 focus={props.focus}
                 exitBackward={props.exitBackward}
                 exitForward={props.exitForward}
