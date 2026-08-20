@@ -41,7 +41,7 @@ impl ODESemantics for PolynomialODESemantics {
     type ModelType = ModalDblModel<NonUnital>;
     type ParameterType = PolynomialODEParameter;
     type AnalysisType = PolynomialODEAnalysis;
-    type EquationsDataType = ();
+    type EquationsConfigType = ();
     type ParameterData = PolynomialODEParameterData;
 }
 
@@ -103,11 +103,13 @@ impl
     ODESemanticsAnalysis<
         <PolynomialODESemantics as ODESemantics>::ModelType,
         <PolynomialODESemantics as ODESemantics>::ParameterType,
+        <PolynomialODESemantics as ODESemantics>::EquationsConfigType,
     > for PolynomialODEAnalysis
 {
     fn build_system_builder(
         &self,
         model: &ModalDblModel<NonUnital>,
+        _equations_config: (),
     ) -> PolynomialODESystemBuilder<PolynomialODEParameter> {
         PolynomialODESystemBuilder::identity(model.clone())
     }
@@ -217,7 +219,7 @@ impl PolynomialODEAnalysis {
 )]
 pub struct PolynomialODEParameterData {
     /// Map from morphism IDs to coefficients (nonnegative reals).
-    pub coefficients: HashMap<QualifiedName, f32>,
+    pub(crate) coefficients: HashMap<QualifiedName, f32>,
 }
 
 impl ODESemanticsScalarExtension<<PolynomialODESemantics as ODESemantics>::ParameterType>
@@ -251,13 +253,13 @@ mod tests {
     use super::*;
     use crate::{
         latex::{Latex, LatexEquation, LatexEquations, wrap_with_backslash_text},
-        stdlib::{models::*, theories::*},
+        stdlib::{analyses::ode::ODESemanticsProblemData, models::*, theories::*},
         tt,
     };
 
     // Symbolic tests.
     #[test]
-    fn polynomial_ode_unsigned_lotka_volterra_equations() {
+    fn unsigned_lotka_volterra_equations() {
         let th = Rc::new(th_polynomial_ode_system());
         let model = unsigned_lotka_volterra_dynamics(th);
         let sys = PolynomialODEAnalysis::default().build_system(&model);
@@ -270,7 +272,39 @@ mod tests {
     }
 
     // Numerical tests.
-    // TODO: write some numerical tests.
+    #[test]
+    fn numerical() {
+        let th = Rc::new(th_polynomial_ode_system());
+        let model = unsigned_lotka_volterra_dynamics(th);
+        let data: ODESemanticsProblemData<PolynomialODESemantics> = ODESemanticsProblemData {
+            equations_config: (),
+            initial_values: [(name("a"), 1.0), (name("b"), 1.0), (name("c"), 1.0)]
+                .into_iter()
+                .collect(),
+            duration: 10.0,
+            parameter_data: PolynomialODEParameterData {
+                coefficients: [
+                    (name("A_growth"), 1.0),
+                    (name("B_growth"), 2.0),
+                    (name("C_growth"), -2.0),
+                    (name("AB_interaction"), 1.5),
+                    (name("BA_interaction"), -2.0),
+                    (name("BC_interaction"), 3.0),
+                    (name("CB_interaction"), -3.0),
+                ]
+                .into_iter()
+                .collect(),
+            },
+        };
+        let sys = PolynomialODEAnalysis::default().build_system(&model);
+        let analysis = data.extend_scalars(sys);
+        let expected = expect!([r#"
+            dA = A - 2 A B
+            dB = 1.5 A B + 2 B - 3 B C
+            dC = 3 B C - 2 C
+        "#]);
+        expected.assert_eq(&analysis.to_string());
+    }
 
     // DoubleTT elaboration test.
     #[test]
@@ -299,7 +333,7 @@ mod tests {
 
     // LaTeX tests.
     #[test]
-    fn polynomial_ode_lotka_volterra_equations_latex() {
+    fn lotka_volterra_equations_latex() {
         let th = Rc::new(th_signed_polynomial_ode_system());
         let model = signed_lotka_volterra_dynamics(th);
         let system = PolynomialODEAnalysis::default().build_system(&model);
