@@ -19,7 +19,7 @@ export default function UserProfilePage() {
     return (
         <>
             <Title>User Settings - {appTitle}</Title>
-            <div class={`user-settings-page ${styles["menu-page"]}`}>
+            <div class={`user-settings-page ${styles.menuPage}`}>
                 <BrandedToolbar />
                 <div class="page-container">
                     <LoginGate>

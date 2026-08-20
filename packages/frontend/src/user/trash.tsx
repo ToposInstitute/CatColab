@@ -23,7 +23,7 @@ export default function TrashBin() {
     return (
         <>
             <Title>Trash - {appTitle}</Title>
-            <div class={`documents-page trash-bin-page ${styles["menu-page"]}`}>
+            <div class={`documents-page trash-bin-page ${styles.menuPage}`}>
                 <BrandedToolbar />
                 <div class="page-container">
                     <LoginGate>

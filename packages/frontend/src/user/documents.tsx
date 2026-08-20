@@ -23,7 +23,7 @@ export default function UserDocuments() {
     return (
         <>
             <Title>My Documents - {appTitle}</Title>
-            <div class={`documents-page ${styles["menu-page"]}`}>
+            <div class={`documents-page ${styles.menuPage}`}>
                 <BrandedToolbar />
                 <div class="page-container">
                     <LoginGate>
