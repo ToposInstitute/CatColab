@@ -17,10 +17,12 @@ use crate::dbl::model::{FpDblModel, MutDblModel};
 use crate::latex::{Latex, ToLatexWithMap};
 use crate::one::Path;
 use crate::simulate::ode::PolynomialSystem;
-use crate::stdlib::analyses::ode::Parameter;
 use crate::stdlib::analyses::ode::ode_semantics::{
     ContributionSign, ODEParameterType, ODESemantics, ODESemanticsAnalysis,
     ODESemanticsScalarExtension, PolynomialODESystemBuilder,
+};
+use crate::stdlib::analyses::ode::{
+    ODESemanticsGeneralProblemData, ODESemanticsProblemData, Parameter,
 };
 use crate::zero::name;
 use crate::{dbl::model::DiscreteDblModel, one::QualifiedPath, zero::QualifiedName};
@@ -165,6 +167,7 @@ impl
     feature = "serde-wasm",
     tsify(into_wasm_abi, from_wasm_abi, hashmap_as_object)
 )]
+#[derive(Clone)]
 pub struct LinearODEParameterData {
     /// Map from morphism IDs to interaction coefficients (non-negative reals).
     pub(crate) coefficients: HashMap<QualifiedName, f32>,
@@ -189,6 +192,30 @@ impl ODESemanticsScalarExtension<<LinearODESemantics as ODESemantics>::Parameter
     }
 }
 
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde-wasm", derive(Tsify))]
+#[cfg_attr(
+    feature = "serde-wasm",
+    tsify(into_wasm_abi, from_wasm_abi, hashmap_as_object)
+)]
+#[derive(Clone)]
+pub struct LinearODEProblemData {
+    #[cfg_attr(feature = "serde", serde(rename = "generalData"))]
+    pub general_data: ODESemanticsGeneralProblemData,
+    #[cfg_attr(feature = "serde", serde(rename = "parameterData"))]
+    pub parameter_data: LinearODEParameterData,
+}
+
+impl ODESemanticsProblemData<LinearODESemantics> for LinearODEProblemData {
+    type ParameterData = LinearODEParameterData;
+    fn general_data(self) -> ODESemanticsGeneralProblemData {
+        self.general_data
+    }
+    fn parameter_data(self) -> Self::ParameterData {
+        self.parameter_data
+    }
+}
+
 // ┌-------┐
 // | TESTS |
 // └-------┘
@@ -202,7 +229,7 @@ mod test {
     use crate::{
         dbl::model::MutDblModel,
         latex::{LatexEquation, LatexEquations, wrap_with_backslash_text},
-        stdlib::{analyses::ode::ODESemanticsProblemData, models::*, theories::*},
+        stdlib::{models::*, theories::*},
     };
 
     // Symbolic tests.
@@ -247,9 +274,11 @@ mod test {
     fn predator_prey_numerical() {
         let th = Rc::new(th_signed_category());
         let model = negative_feedback(th);
-        let data: ODESemanticsProblemData<LinearODESemantics> = ODESemanticsProblemData {
-            initial_values: [(name("x"), 1.0), (name("y"), 1.0)].into_iter().collect(),
-            duration: 10.0,
+        let data = LinearODEProblemData {
+            general_data: ODESemanticsGeneralProblemData {
+                initial_values: [(name("x"), 1.0), (name("y"), 1.0)].into_iter().collect(),
+                duration: 10.0,
+            },
             parameter_data: LinearODEParameterData {
                 coefficients: [(name("positive"), 3.0), (name("negative"), 2.0)]
                     .into_iter()
@@ -257,7 +286,7 @@ mod test {
             },
         };
         let sys = LinearODEAnalysis::default().build_system(&model);
-        let analysis = data.extend_scalars(sys);
+        let analysis = data.parameter_data.extend_scalars(sys);
         let expected = expect!([r#"
             dx = -2 y
             dy = 3 x

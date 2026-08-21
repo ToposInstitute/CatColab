@@ -28,8 +28,9 @@ use crate::{
     latex::{Latex, ToLatexWithMap},
     simulate::ode::PolynomialSystem,
     stdlib::analyses::ode::{
-        ODEParameterType, ODESemantics, ODESemanticsAnalysis, ODESemanticsScalarExtension,
-        Parameter, PolynomialODESystemBuilder,
+        ODEParameterType, ODESemantics, ODESemanticsAnalysis, ODESemanticsGeneralProblemData,
+        ODESemanticsProblemData, ODESemanticsScalarExtension, Parameter,
+        PolynomialODESystemBuilder,
     },
     zero::{QualifiedName, alg::Polynomial, name, rig::Monomial},
 };
@@ -226,6 +227,7 @@ impl PolynomialODEAnalysis {
     feature = "serde-wasm",
     tsify(into_wasm_abi, from_wasm_abi, hashmap_as_object)
 )]
+#[derive(Clone)]
 pub struct PolynomialODEParameterData {
     /// Map from morphism IDs to coefficients (nonnegative reals).
     pub(crate) coefficients: HashMap<QualifiedName, f32>,
@@ -254,6 +256,30 @@ impl ODESemanticsScalarExtension<<PolynomialODESemantics as ODESemantics>::Param
     }
 }
 
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde-wasm", derive(Tsify))]
+#[cfg_attr(
+    feature = "serde-wasm",
+    tsify(into_wasm_abi, from_wasm_abi, hashmap_as_object)
+)]
+#[derive(Clone)]
+pub struct PolynomialODEProblemData {
+    #[cfg_attr(feature = "serde", serde(rename = "generalData"))]
+    pub general_data: ODESemanticsGeneralProblemData,
+    #[cfg_attr(feature = "serde", serde(rename = "parameterData"))]
+    pub parameter_data: PolynomialODEParameterData,
+}
+
+impl ODESemanticsProblemData<PolynomialODESemantics> for PolynomialODEProblemData {
+    type ParameterData = PolynomialODEParameterData;
+    fn general_data(self) -> ODESemanticsGeneralProblemData {
+        self.general_data
+    }
+    fn parameter_data(self) -> Self::ParameterData {
+        self.parameter_data
+    }
+}
+
 // ┌-------┐
 // | TESTS |
 // └-------┘
@@ -266,7 +292,7 @@ mod tests {
     use super::*;
     use crate::{
         latex::{Latex, LatexEquation, LatexEquations, wrap_with_backslash_text},
-        stdlib::{analyses::ode::ODESemanticsProblemData, models::*, theories::*},
+        stdlib::{analyses::ode::ODESemanticsGeneralProblemData, models::*, theories::*},
         tt,
     };
 
@@ -289,11 +315,13 @@ mod tests {
     fn numerical() {
         let th = Rc::new(th_polynomial_ode_system());
         let model = unsigned_lotka_volterra_dynamics(th);
-        let data: ODESemanticsProblemData<PolynomialODESemantics> = ODESemanticsProblemData {
-            initial_values: [(name("a"), 1.0), (name("b"), 1.0), (name("c"), 1.0)]
-                .into_iter()
-                .collect(),
-            duration: 10.0,
+        let data = PolynomialODEProblemData {
+            general_data: ODESemanticsGeneralProblemData {
+                initial_values: [(name("a"), 1.0), (name("b"), 1.0), (name("c"), 1.0)]
+                    .into_iter()
+                    .collect(),
+                duration: 10.0,
+            },
             parameter_data: PolynomialODEParameterData {
                 coefficients: [
                     (name("A_growth"), 1.0),
@@ -309,7 +337,7 @@ mod tests {
             },
         };
         let sys = PolynomialODEAnalysis::default().build_system(&model);
-        let analysis = data.extend_scalars(sys);
+        let analysis = data.parameter_data.extend_scalars(sys);
         let expected = expect!([r#"
             dA = A - 2 A B
             dB = 1.5 A B + 2 B - 3 B C
