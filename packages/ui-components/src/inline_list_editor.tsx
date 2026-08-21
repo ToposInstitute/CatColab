@@ -237,20 +237,12 @@ export function InlineListEditor<T>(originalProps: InlineListEditorProps<T>) {
                 }
             }}
             onFocusOut={(evt) => {
-                // Lose focus only when it moves outside the list entirely. The
-                // check is deferred because the browser resets the focus to the
-                // document body when a focused input is unmounted, as happens
-                // when an item is deleted. The focus is then restored within the
-                // list, synchronously, before the deferred check runs.
+                // Lose focus only when it moves outside the list entirely.
                 const next = evt.relatedTarget as Element | null;
                 if (next && listRef.contains(next)) {
                     return;
                 }
-                queueMicrotask(() => {
-                    if (!listRef.contains(document.activeElement)) {
-                        parentFocus.setFocused(false);
-                    }
-                });
+                parentFocus.setFocused(false);
             }}
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
