@@ -225,6 +225,7 @@ impl ODESemanticsScalarExtension<<LotkaVolterraSemantics as ODESemantics>::Param
     }
 }
 
+/// Data for a numerical Lotka-Volterra system.
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde-wasm", derive(Tsify))]
 #[cfg_attr(
@@ -233,8 +234,10 @@ impl ODESemanticsScalarExtension<<LotkaVolterraSemantics as ODESemantics>::Param
 )]
 #[derive(Clone)]
 pub struct LotkaVolterraProblemData {
+    /// Data common to all ODE problems.
     #[cfg_attr(feature = "serde", serde(rename = "generalData"))]
     pub general_data: ODESemanticsGeneralProblemData,
+    /// Data specific to Lotka-Volterra problems.
     #[cfg_attr(feature = "serde", serde(rename = "parameterData"))]
     pub parameter_data: LotkaVolterraParameterData,
 }

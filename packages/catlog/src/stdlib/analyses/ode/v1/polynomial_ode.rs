@@ -256,6 +256,7 @@ impl ODESemanticsScalarExtension<<PolynomialODESemantics as ODESemantics>::Param
     }
 }
 
+/// Data for a numerical polynomial ODE system.
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde-wasm", derive(Tsify))]
 #[cfg_attr(
@@ -264,8 +265,10 @@ impl ODESemanticsScalarExtension<<PolynomialODESemantics as ODESemantics>::Param
 )]
 #[derive(Clone)]
 pub struct PolynomialODEProblemData {
+    /// Data common to all ODE problems.
     #[cfg_attr(feature = "serde", serde(rename = "generalData"))]
     pub general_data: ODESemanticsGeneralProblemData,
+    /// Data specific to polynomial ODE problems.
     #[cfg_attr(feature = "serde", serde(rename = "parameterData"))]
     pub parameter_data: PolynomialODEParameterData,
 }

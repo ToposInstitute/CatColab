@@ -3,21 +3,21 @@
 //! Inspired by schema migration, we define the data of an ODE semantics on models in a theory to
 //! consist of (in particular) a `PolynomialODESystemBuilder`, which constructs a model of the
 //! theory of multicategories (viewed as polynomial ODE systems with abstract coefficients). This
-//! is then passed to [`ode::polynomial_ode::PolynomialODEAnalysis`] which constructs from this a
-//! `PolynomialSystem`, using `build_system_custom_parameters()`.
+//! is then passed to [`ode::v1::polynomial_ode::PolynomialODEAnalysis`] which constructs from this
+//! a `PolynomialSystem`, using `build_system_custom_parameters()`.
 
-//! In short, this module constructs multicategories from models, and [`ode::polynomial_ode`] then
-//! constructs `PolynomialSystem` from multicategories.
+//! In short, this module constructs multicategories from models, and [`ode::v1::polynomial_ode`]
+//! then constructs `PolynomialSystem` from multicategories.
 //!
 //! To implement a new ODE semantics for models in some theory, one essentially needs to create an
 //! empty struct and implement `ODESemantics`, and then follow the compiler. For more documentation,
-//! see [`ode::polynomial_ode`]; for a simple example see [`ode::lotka_volterra`], and for a more
-//! complicated example see [`ode::mass_action`].
+//! see [`ode::v1::polynomial_ode`]; for a simple example see [`ode::v1::lotka_volterra`], and for a
+//! more complicated example see [`ode::v1::mass_action`].
 //!
-//! [`ode::polynomial_ode`]: crate::stdlib::analyses::ode::polynomial_ode
-//! [`ode::polynomial_ode::PolynomialODEAnalysis`]: crate::stdlib::analyses::ode::polynomial_ode::PolynomialODEAnalysis
-//! [`ode::lotka_volterra`]: crate::stdlib::analyses::ode::lotka_volterra
-//! [`ode::mass_action`]: crate::stdlib::analyses::ode::mass_action
+//! [`ode::v1::polynomial_ode`]: crate::stdlib::analyses::ode::v1::polynomial_ode
+//! [`ode::v1::polynomial_ode::PolynomialODEAnalysis`]: crate::stdlib::analyses::ode::v1::polynomial_ode::PolynomialODEAnalysis
+//! [`ode::v1::lotka_volterra`]: crate::stdlib::analyses::ode::v1::lotka_volterra
+//! [`ode::v1::mass_action`]: crate::stdlib::analyses::ode::v1::mass_action
 
 use indexmap::IndexMap;
 use nalgebra::DVector;
@@ -55,7 +55,8 @@ pub trait ODESemantics {
     /// the model. The "default" value for this would be `QualifiedName`, but it can be useful to
     /// have a more descriptive type. For example, we might wish for certain parameters to be
     /// identified with one another, or to be rendered differently in debug/LaTeX output. For an
-    /// instructive example, see `MassActionParameter` in `ode::mass_action`.
+    /// instructive example, see `mass_action::MassActionParameter` or
+    /// `lotka_volterra::LotkaVolterraParameter`.
     type ParameterType: ODEParameterType;
     /// The data describing the things that the ODE semantics "cares about". See the documentation
     /// for `ODESemanticsAnalysis` for more details.
@@ -85,6 +86,45 @@ impl DblModelForODESemantics for ModalDblModel<NonUnital> {}
 // ┌------------------┐
 // | 1. ParameterType |
 // └------------------┘
+
+// Our way of viewing multicategories as polynomial ODE systems leads to a specific choice of
+// interpretation of *parameters*, or coefficients. As explained in `ode::v1::polynomial_ode`, we
+// build up our system of equations by giving *contributions*, i.e. monomials to add to the equation
+// describing the first-order time derivative of a specific variable. But in order to be able to
+// express arbitrary polynomial ODEs, we need the ability to multiply these monomials by scalar
+// coefficients. However, rather than reducing directly to *numerical* equations, it is useful to
+// be able to express "algebraic" equations. That is, rather than specifying e.g. the contributions
+//
+//     d/dt(A) += 5 A^2 B
+//     d/dt(B) += 2 A B
+//
+// we would like to be able to specify the contributions
+//
+//     d/dt(A) += c A^2 B
+//     d/dt(B) += d A B
+//
+// where c and d are scalars left unspecified up until the moment that we want to numerically
+// simulate the system.
+//
+// But we also care about how to render these parameters. For example, consider Lotka-Volterra
+// semantics, where we have two types of contributions:
+//
+//     d/dt(B) += g B    <- "growth"
+//     d/dt(B) += k A B  <- "interaction"
+//
+// for parameters g and k. For clarity, it's helpful to make clear that the growth parameter "comes
+// from" an object B, whereas the interaction parameter "comes from" an arrow A -> B, writing
+// something like
+//
+//     d/dt(B) += (g_B) B
+//     d/db(B) += (k_A^B) A B.
+//
+// To support this, we allow parameters to make explicit their dependencies, which enables the use
+// of `ToLatexWithMap` for more intricate rendering of parameters (as above), but also gives the
+// bonus of allowing us to specify that certain parameters should be made equal to one another.
+// For the latter, consider the case of taking all of the k_A^B above and instead simply writing
+// them as k_A. More precisely, we can appeal to this extra structure of explicit dependencies in
+// `ODESemanticsScalarExtension::extend_scalars` (see documentation there below).
 
 /// The type of the parameters in the ODE system need to be sufficiently nice, though
 /// (again) these bounds are not particularly restrictive. The two that will need the most
@@ -217,8 +257,8 @@ impl<P: ODEParameterType> PolynomialODESystemBuilder<P> {
 // | 2. AnalysisType |
 // └-----------------┘
 
-/// This trait is where we define the actual ODE semantics, in the implementation of
-/// `build_system_builder()`, whereas `build_system()` will almost certainly always use the default
+/// This trait is where we define the actual ODE semantics in the implementation of
+/// `build_system_builder`; `build_system` will almost certainly always use the default
 /// implementation given below.
 ///
 /// Note that the type that implements this trait is also where you are expected to state everything
@@ -245,6 +285,11 @@ pub trait ODESemanticsAnalysis<T: DblModelForODESemantics, P: ODEParameterType>:
 // ┌------------------┐
 // | 3. ParameterData |
 // └------------------┘
+
+// As the counterpart to `ParameterType` above, we make formal here the data needed in order to turn
+// a system of equations with "algebraic" parameters (with explicit dependencies) into numerical
+// parameters (i.e. coefficients). For a useful example, see the implementations of balanced versus
+// unbalanced mass-action semantics in `ode::v1::mass_action`.
 
 /// This trait is required to be implemented for the `ParameterData` type, and is used to convert
 /// the formal parameters of type `ODEParameterType` to floats.
@@ -298,8 +343,14 @@ impl ODESemanticsGeneralProblemData {
     }
 }
 
+/// Data for a numerical ODE semantics problem, which contains data generic across semantics and
+/// also data specific to the ODE semantics in question.
 pub trait ODESemanticsProblemData<S: ODESemantics>: Clone {
+    /// The type of parameter data, which must implement `ODESemanticsScalarExtension::extend_scalars`.
     type ParameterData: ODESemanticsScalarExtension<S::ParameterType>;
+    /// General data associated to an ODE problem: initial values and duration.
     fn general_data(self) -> ODESemanticsGeneralProblemData;
+    /// Parameter-specific data associated to an ODE problem, depending on the associated type of
+    /// parameter data.
     fn parameter_data(self) -> Self::ParameterData;
 }

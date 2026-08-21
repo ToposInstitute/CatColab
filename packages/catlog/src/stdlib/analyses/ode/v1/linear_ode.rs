@@ -192,6 +192,7 @@ impl ODESemanticsScalarExtension<<LinearODESemantics as ODESemantics>::Parameter
     }
 }
 
+/// Data for a numerical linear ODE system.
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde-wasm", derive(Tsify))]
 #[cfg_attr(
@@ -200,8 +201,10 @@ impl ODESemanticsScalarExtension<<LinearODESemantics as ODESemantics>::Parameter
 )]
 #[derive(Clone)]
 pub struct LinearODEProblemData {
+    /// Data common to all ODE problems.
     #[cfg_attr(feature = "serde", serde(rename = "generalData"))]
     pub general_data: ODESemanticsGeneralProblemData,
+    /// Data specific to linear ODE problems.
     #[cfg_attr(feature = "serde", serde(rename = "parameterData"))]
     pub parameter_data: LinearODEParameterData,
 }

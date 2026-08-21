@@ -8,7 +8,6 @@ import "./simulation.css";
 /** Display the symbolic mass-action dynamics equations for a model. */
 export default function ODESemanticsEquationsDisplay(
     props: ModelAnalysisProps<null> & {
-        content: null;
         getEquations: (model: DblModel) => LatexEquations;
         title?: string;
     },

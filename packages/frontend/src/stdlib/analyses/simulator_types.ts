@@ -4,7 +4,7 @@ import type {
     LatexEquations,
     LotkaVolterraProblemData,
     LinearODEProblemData,
-    PetriNetMassActionProblemData,
+    MassActionProblemData,
     ODEResult,
     ODEResultWithEquations,
     PolynomialODEProblemData,
@@ -15,7 +15,7 @@ export type {
     KuramotoProblemData,
     LotkaVolterraProblemData,
     LinearODEProblemData,
-    PetriNetMassActionProblemData,
+    MassActionProblemData,
     PolynomialODEProblemData,
     StochasticMassActionProblemData,
 };
@@ -33,9 +33,12 @@ export type LotkaVolterraSimulator = (
 export type LotkaVolterraEquations = (model: DblModel) => LatexEquations;
 export type MassActionSimulator = (
     model: DblModel,
-    data: PetriNetMassActionProblemData,
+    data: MassActionProblemData,
 ) => ODEResultWithEquations;
-export type MassActionEquations = (model: DblModel) => LatexEquations;
+export type MassActionEquations = (
+    model: DblModel,
+    variant: MassActionProblemData,
+) => LatexEquations;
 export type StochasticMassActionSimulator = (
     model: DblModel,
     data: StochasticMassActionProblemData,
