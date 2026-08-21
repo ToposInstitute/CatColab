@@ -1,0 +1,10 @@
+.table {
+    width: fit-content;
+    max-width: 100%;
+    overflow-x: auto;
+}
+
+.table :global(.handsontable) {
+    font-family: inherit;
+    font-size: 0.9rem;
+}
