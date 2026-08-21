@@ -32,29 +32,29 @@ export interface Instance<H, S extends Shape> {
     updateRow(
         row: TableRow,
         values: Record<string, LiteralValue | TableRow>,
-    ): Promise<Result<undefined, ReadonlyArray<Issue | TableFieldIssue>>>;
+    ): Promise<Result<void, ReadonlyArray<Issue | TableFieldIssue>>>;
     updateRows(
         updates: ReadonlyArray<{
             row: TableRow;
             values: ReadonlyArray<Record<string, LiteralValue | TableRow>>;
         }>,
-    ): Promise<Result<undefined, ReadonlyArray<Issue | TableFieldIssue>>>;
+    ): Promise<Result<void, ReadonlyArray<Issue | TableFieldIssue>>>;
     set(
         row: TableRow,
         morphism: { id: string },
         value: LiteralValue | TableRow,
-    ): Promise<Result<undefined, ReadonlyArray<Issue | TableFieldIssue>>>;
+    ): Promise<Result<void, ReadonlyArray<Issue | TableFieldIssue>>>;
 
     /** Delete stored rows without requiring a valid schema. */
     deleteRow(tableId: string, rowId: string): void;
     deleteRows(rows: ReadonlyArray<{ tableId: string; rowId: string }>): void;
 
     /* Validate both the schema and then the instance */
-    validate(): Promise<Result<undefined, ReadonlyArray<Issue | TableFieldIssue>>>;
+    validate(): Promise<Result<void, ReadonlyArray<Issue | TableFieldIssue>>>;
     /** Subscribe to changes to either the instance document or its schema. */
     onChange(callback: () => void): () => void;
     /** Revalidate initially and whenever either the instance or its schema changes. */
     onValidate(
-        callback: (result: Result<undefined, ReadonlyArray<Issue | TableFieldIssue>>) => void,
+        callback: (result: Result<void, ReadonlyArray<Issue | TableFieldIssue>>) => void,
     ): () => void;
 }
