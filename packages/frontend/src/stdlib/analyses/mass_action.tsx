@@ -12,7 +12,7 @@ import {
 } from "catcolab-ui-components";
 import {
     collectProduct,
-    type PetriNetMassActionProblemData,
+    type MassActionProblemData,
     type MorType,
     type ObType,
     type QualifiedName,
@@ -28,7 +28,7 @@ import "./simulation.css";
 
 /** Analyze a model using mass-action dynamics. */
 export default function MassAction(
-    props: ModelAnalysisProps<PetriNetMassActionProblemData> & {
+    props: ModelAnalysisProps<MassActionProblemData> & {
         ratesHaveGranularity: boolean;
         simulate: MassActionSimulator;
         stateType?: ObType;
@@ -60,11 +60,11 @@ export default function MassAction(
             data: (id) => {
                 switch (variant()) {
                     case "Balanced":
-                        return props.content.balanced.initialValues[id];
+                        return props.content.balanced.generalData.initialValues[id];
                     case "Unbalanced":
-                        return props.content.unbalanced.initialValues[id];
-                    case "VeryUnbalanced":
-                        return props.content.veryUnbalanced.initialValues[id];
+                        return props.content.unbalanced.generalData.initialValues[id];
+                    case "PerPlace":
+                        return props.content.perPlace.generalData.initialValues[id];
                 }
             },
             validate: (_, data) => data >= 0,
@@ -72,13 +72,13 @@ export default function MassAction(
                 props.changeContent((content) => {
                     switch (variant()) {
                         case "Balanced":
-                            content.balanced.initialValues[id] = data;
+                            content.balanced.generalData.initialValues[id] = data;
                             break;
                         case "Unbalanced":
-                            content.unbalanced.initialValues[id] = data;
+                            content.unbalanced.generalData.initialValues[id] = data;
                             break;
-                        case "VeryUnbalanced":
-                            content.veryUnbalanced.initialValues[id] = data;
+                        case "PerPlace":
+                            content.perPlace.generalData.initialValues[id] = data;
                             break;
                     }
                 }),
@@ -158,8 +158,8 @@ export default function MassAction(
     });
 
     // The schema that we use for the <FixedTableEditor> JSX element depends on the
-    // value of `variant: MassActionVariant`. We might as well construct all possibilities.
-
+    // value of `variant: MassActionVariant`.
+    //
     // Firstly, the case `variant = Balanced`.
     const morSchema: ColumnSchema<QualifiedName>[] = [
         {
@@ -215,7 +215,7 @@ export default function MassAction(
         }),
     ];
 
-    // Finally, the case `MassActionVariant = VeryUnbalanced`.
+    // Finally, the case `MassActionVariant = PerPlace`.
     const morInputsSchema: ColumnSchema<[QualifiedName, QualifiedName]>[] = [
         {
             contentType: "string",
@@ -230,15 +230,15 @@ export default function MassAction(
         createNumericalColumn({
             name: "Consumption (𝜅)",
             data: ([mor, input]) =>
-                props.content.veryUnbalanced.parameterData.consumptionRates[mor]?.[input],
+                props.content.perPlace.parameterData.consumptionRates[mor]?.[input],
             default: 1,
             validate: (_, data) => data >= 0,
             setData: ([mor, input], data) =>
                 props.changeContent((content) => {
-                    if (content.veryUnbalanced.parameterData.consumptionRates[mor]) {
-                        content.veryUnbalanced.parameterData.consumptionRates[mor][input] = data;
+                    if (content.perPlace.parameterData.consumptionRates[mor]) {
+                        content.perPlace.parameterData.consumptionRates[mor][input] = data;
                     } else {
-                        content.veryUnbalanced.parameterData.consumptionRates[mor] = {
+                        content.perPlace.parameterData.consumptionRates[mor] = {
                             [input]: data,
                         };
                     }
@@ -259,15 +259,15 @@ export default function MassAction(
         createNumericalColumn({
             name: "Production (𝜌)",
             data: ([mor, output]) =>
-                props.content.veryUnbalanced.parameterData.productionRates[mor]?.[output],
+                props.content.perPlace.parameterData.productionRates[mor]?.[output],
             default: 1,
             validate: (_, data) => data >= 0,
             setData: ([mor, output], data) =>
                 props.changeContent((content) => {
-                    if (content.veryUnbalanced.parameterData.productionRates[mor]) {
-                        content.veryUnbalanced.parameterData.productionRates[mor][output] = data;
+                    if (content.perPlace.parameterData.productionRates[mor]) {
+                        content.perPlace.parameterData.productionRates[mor][output] = data;
                     } else {
-                        content.veryUnbalanced.parameterData.productionRates[mor] = {
+                        content.perPlace.parameterData.productionRates[mor] = {
                             [output]: data,
                         };
                     }
@@ -285,7 +285,7 @@ export default function MassAction(
                 <FixedTableEditor rows={morGenerators()} schema={morInputSchema} />
                 <FixedTableEditor rows={morGenerators()} schema={morOutputSchema} />
             </Match>
-            <Match when={variant() === "VeryUnbalanced"}>
+            <Match when={variant() === "PerPlace"}>
                 <FixedTableEditor rows={morGeneratorsInputs()} schema={morInputsSchema} />
                 <FixedTableEditor rows={morGeneratorsOutputs()} schema={morOutputsSchema} />
             </Match>
@@ -299,11 +299,11 @@ export default function MassAction(
             data: (_) => {
                 switch (variant()) {
                     case "Balanced":
-                        return props.content.balanced.duration;
+                        return props.content.balanced.generalData.duration;
                     case "Unbalanced":
-                        return props.content.unbalanced.duration;
-                    case "VeryUnbalanced":
-                        return props.content.veryUnbalanced.duration;
+                        return props.content.unbalanced.generalData.duration;
+                    case "PerPlace":
+                        return props.content.perPlace.generalData.duration;
                 }
             },
             validate: (_, data) => data >= 0,
@@ -311,13 +311,13 @@ export default function MassAction(
                 props.changeContent((content) => {
                     switch (variant()) {
                         case "Balanced":
-                            content.balanced.duration = data;
+                            content.balanced.generalData.duration = data;
                             break;
                         case "Unbalanced":
-                            content.unbalanced.duration = data;
+                            content.unbalanced.generalData.duration = data;
                             break;
-                        case "VeryUnbalanced":
-                            content.veryUnbalanced.duration = data;
+                        case "PerPlace":
+                            content.perPlace.generalData.duration = data;
                             break;
                     }
                 }),
@@ -326,17 +326,7 @@ export default function MassAction(
 
     const result = createModelODEPlotWithEquations(
         () => props.liveModel.validatedModel(),
-        (model) => props.simulate(model, props.content.balanced),
-        // (model) => {
-        //     switch (variant()) {
-        //         case "Balanced":
-        //             return props.simulate(model, props.content.balanced);
-        //         case "Unbalanced":
-        //             return props.simulate(model, props.content.unbalanced);
-        //         case "VeryUnbalanced":
-        //             return props.simulate(model, props.content.veryUnbalanced);
-        //     }
-        // },
+        (model) => props.simulate(model, props.content),
     );
 
     const plotResult = () => result()?.plotData;

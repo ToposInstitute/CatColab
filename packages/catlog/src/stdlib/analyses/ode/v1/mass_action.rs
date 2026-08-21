@@ -46,15 +46,14 @@ use crate::{
 //
 // The variations of mass-action determine the coefficients of these contributions:
 //
-// - In the balanced (i.e. classical) case, all four contributions will have the same coefficient.
+// - In the *balanced* (i.e. classical) case, all four contributions will have the same coefficient.
 //
-// - In the unbalanced (per-transition) case, the two positive contributions will have the same
+// - In the *unbalanced* (per-transition) case, the two positive contributions will have the same
 //   coefficient (the "production rate" of the transition) and the two negative contributions will
 //   have the same coefficient (the "consumption rate" of the transition).
 //
-// - In the very unbalanced (per-place) case, the production (resp. consumption) rates from the
-//   unbalanced case are now potentially distinct, i.e. each coefficient depends on the specific
-//   (transition, place) pair.
+// - In the *per-place* case, the production (resp. consumption) rates from the unbalanced case are
+//   now potentially distinct, i.e. each coefficient depends on a *pair* (transition, place).
 //
 // For stock-flow diagrams, each flow gives a positive contribution to the term corresponding to its
 // output, and a negative contribution to the term corresponding to its input; the term is given by
@@ -312,6 +311,7 @@ impl ODESemanticsScalarExtension<BalancedMassActionParameter> for BalancedMassAc
     }
 }
 
+/// Data for a numerical balanced mass-action system.
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde-wasm", derive(Tsify))]
 #[cfg_attr(
@@ -320,13 +320,27 @@ impl ODESemanticsScalarExtension<BalancedMassActionParameter> for BalancedMassAc
 )]
 #[derive(Clone)]
 pub struct BalancedMassActionProblemData {
+    /// Data common to all ODE problems.
     #[cfg_attr(feature = "serde", serde(rename = "generalData"))]
     pub general_data: ODESemanticsGeneralProblemData,
+    /// Data specific to balanced mass-action problems.
     #[cfg_attr(feature = "serde", serde(rename = "parameterData"))]
     pub parameter_data: BalancedMassActionParameterData,
 }
 
 impl ODESemanticsProblemData<PetriNetBalancedMassActionSemantics>
+    for BalancedMassActionProblemData
+{
+    type ParameterData = BalancedMassActionParameterData;
+    fn general_data(self) -> ODESemanticsGeneralProblemData {
+        self.general_data
+    }
+    fn parameter_data(self) -> Self::ParameterData {
+        self.parameter_data
+    }
+}
+
+impl ODESemanticsProblemData<StockFlowBalancedMassActionSemantics>
     for BalancedMassActionProblemData
 {
     type ParameterData = BalancedMassActionParameterData;
@@ -611,6 +625,7 @@ impl ODESemanticsScalarExtension<UnbalancedMassActionParameter>
     }
 }
 
+/// Data for a numerical unbalanced mass-action system.
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde-wasm", derive(Tsify))]
 #[cfg_attr(
@@ -619,8 +634,10 @@ impl ODESemanticsScalarExtension<UnbalancedMassActionParameter>
 )]
 #[derive(Clone)]
 pub struct UnbalancedMassActionProblemData {
+    /// Data common to all ODE problems.
     #[cfg_attr(feature = "serde", serde(rename = "generalData"))]
     pub general_data: ODESemanticsGeneralProblemData,
+    /// Data specific to unbalanced mass-action problems.
     #[cfg_attr(feature = "serde", serde(rename = "parameterData"))]
     pub parameter_data: UnbalancedMassActionParameterData,
 }
@@ -637,28 +654,40 @@ impl ODESemanticsProblemData<PetriNetUnbalancedMassActionSemantics>
     }
 }
 
-// ┌------------------------------┐
-// | C. VERY UNBALANCED SEMANTICS |
-// └------------------------------┘
+impl ODESemanticsProblemData<StockFlowUnbalancedMassActionSemantics>
+    for UnbalancedMassActionProblemData
+{
+    type ParameterData = UnbalancedMassActionParameterData;
+    fn general_data(self) -> ODESemanticsGeneralProblemData {
+        self.general_data
+    }
+    fn parameter_data(self) -> Self::ParameterData {
+        self.parameter_data
+    }
+}
 
-/// Unbalanced ("per-place") mass-action semantics for Petri nets.
-pub struct PetriNetVeryUnbalancedMassActionSemantics;
-impl ODESemantics for PetriNetVeryUnbalancedMassActionSemantics {
+// ┌------------------------┐
+// | C. PER-PLACE SEMANTICS |
+// └------------------------┘
+
+/// Per-place mass-action semantics for Petri nets.
+pub struct PetriNetPerPlaceMassActionSemantics;
+impl ODESemantics for PetriNetPerPlaceMassActionSemantics {
     type ModelType = ModalDblModel<Unital>;
-    type ParameterType = VeryUnbalancedMassActionParameter;
-    type AnalysisType = PetriNetVeryUnbalancedMassActionAnalysis;
-    type ParameterData = VeryUnbalancedMassActionParameterData;
+    type ParameterType = PerPlaceMassActionParameter;
+    type AnalysisType = PetriNetPerPlaceMassActionAnalysis;
+    type ParameterData = PerPlaceMassActionParameterData;
 }
 
 // ┌--------------------┐
 // | C.1. ParameterType |
 // └--------------------┘
 
-/// Parameters for very unbalanced ("per-place") mass-action semantics, where each transition has
+/// Parameters for per-place mass-action semantics, where each transition has
 /// individual consumption (resp. production) rates for each of its input (resp. output) stock. Note
 /// that this only makes sense for Petri nets, not stock-flow diagrams.
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone)]
-pub enum VeryUnbalancedMassActionParameter {
+pub enum PerPlaceMassActionParameter {
     /// The consumption parameter associated to a specific input stock to a transition.
     Consumption {
         /// The transition in question.
@@ -675,47 +704,47 @@ pub enum VeryUnbalancedMassActionParameter {
     },
 }
 
-impl fmt::Display for VeryUnbalancedMassActionParameter {
+impl fmt::Display for PerPlaceMassActionParameter {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            VeryUnbalancedMassActionParameter::Consumption { transition, input_place } => {
+            PerPlaceMassActionParameter::Consumption { transition, input_place } => {
                 write!(f, "Consumption([{}] <- {})", transition, input_place)
             }
-            VeryUnbalancedMassActionParameter::Production { transition, output_place } => {
+            PerPlaceMassActionParameter::Production { transition, output_place } => {
                 write!(f, "Production([{}] -> {})", transition, output_place)
             }
         }
     }
 }
 
-impl ToLatexWithMap for VeryUnbalancedMassActionParameter {
+impl ToLatexWithMap for PerPlaceMassActionParameter {
     fn to_latex_with_map<T: Fn(&QualifiedName) -> String>(&self, f: T) -> Latex {
         match self {
-            VeryUnbalancedMassActionParameter::Consumption { transition, input_place } => {
+            PerPlaceMassActionParameter::Consumption { transition, input_place } => {
                 Latex(format!("\\kappa_{{{}}}^{{{}}}", f(transition), f(input_place)))
             }
-            VeryUnbalancedMassActionParameter::Production { transition, output_place } => {
+            PerPlaceMassActionParameter::Production { transition, output_place } => {
                 Latex(format!("\\rho_{{{}}}^{{{}}}", f(transition), f(output_place)))
             }
         }
     }
 }
 
-impl ODEParameterType for VeryUnbalancedMassActionParameter {}
+impl ODEParameterType for PerPlaceMassActionParameter {}
 
 // ┌-------------------┐
 // | C.2. AnalysisType |
 // └-------------------┘
 
 /// Unbalanced ("per-transition") mass-action ODE analysis for Petri nets.
-pub struct PetriNetVeryUnbalancedMassActionAnalysis {
+pub struct PetriNetPerPlaceMassActionAnalysis {
     /// Object type for places.
     pub place_ob_type: ModalObType,
     /// Morphism type for transitions.
     pub transition_mor_type: ModalMorType,
 }
 
-impl Default for PetriNetVeryUnbalancedMassActionAnalysis {
+impl Default for PetriNetPerPlaceMassActionAnalysis {
     fn default() -> Self {
         let ob_type = ModalObType::new(name("Object"));
         Self {
@@ -727,14 +756,14 @@ impl Default for PetriNetVeryUnbalancedMassActionAnalysis {
 
 impl
     ODESemanticsAnalysis<
-        <PetriNetVeryUnbalancedMassActionSemantics as ODESemantics>::ModelType,
-        <PetriNetVeryUnbalancedMassActionSemantics as ODESemantics>::ParameterType,
-    > for PetriNetVeryUnbalancedMassActionAnalysis
+        <PetriNetPerPlaceMassActionSemantics as ODESemantics>::ModelType,
+        <PetriNetPerPlaceMassActionSemantics as ODESemantics>::ParameterType,
+    > for PetriNetPerPlaceMassActionAnalysis
 {
     fn build_system_builder(
         &self,
         model: &ModalDblModel<Unital>,
-    ) -> PolynomialODESystemBuilder<VeryUnbalancedMassActionParameter> {
+    ) -> PolynomialODESystemBuilder<PerPlaceMassActionParameter> {
         let mut builder = PolynomialODESystemBuilder::new();
 
         // For each place, we create a variable.
@@ -754,7 +783,7 @@ impl
 
             for output in outputs.clone() {
                 let id = output.cons(name_seg("ToOutput")).cons(transition.only().unwrap());
-                let output_parameter = VeryUnbalancedMassActionParameter::Production {
+                let output_parameter = PerPlaceMassActionParameter::Production {
                     transition: transition.clone(),
                     output_place: output.clone(),
                 };
@@ -769,7 +798,7 @@ impl
 
             for input in inputs.clone() {
                 let id = input.cons(name_seg("FromInput")).cons(transition.only().unwrap());
-                let input_parameter = VeryUnbalancedMassActionParameter::Consumption {
+                let input_parameter = PerPlaceMassActionParameter::Consumption {
                     transition: transition.clone(),
                     input_place: input.clone(),
                 };
@@ -799,7 +828,7 @@ impl
     tsify(into_wasm_abi, from_wasm_abi, hashmap_as_object)
 )]
 #[derive(Clone)]
-pub struct VeryUnbalancedMassActionParameterData {
+pub struct PerPlaceMassActionParameterData {
     /// Map from morphism IDs to (map from input objects to consumption rate coefficients).
     #[cfg_attr(feature = "serde", serde(rename = "consumptionRates"))]
     pub(crate) consumption_rates: HashMap<QualifiedName, HashMap<QualifiedName, f32>>,
@@ -809,22 +838,20 @@ pub struct VeryUnbalancedMassActionParameterData {
     pub(crate) production_rates: HashMap<QualifiedName, HashMap<QualifiedName, f32>>,
 }
 
-impl ODESemanticsScalarExtension<VeryUnbalancedMassActionParameter>
-    for VeryUnbalancedMassActionParameterData
-{
+impl ODESemanticsScalarExtension<PerPlaceMassActionParameter> for PerPlaceMassActionParameterData {
     fn extend_scalars(
         &self,
-        sys: PolynomialSystem<QualifiedName, Parameter<VeryUnbalancedMassActionParameter>, i8>,
+        sys: PolynomialSystem<QualifiedName, Parameter<PerPlaceMassActionParameter>, i8>,
     ) -> PolynomialSystem<QualifiedName, f32, i8> {
         let sys = sys.extend_scalars(|poly| {
             poly.eval(|parameter| match parameter {
-                VeryUnbalancedMassActionParameter::Consumption { transition, input_place } => self
+                PerPlaceMassActionParameter::Consumption { transition, input_place } => self
                     .consumption_rates
                     .get(transition)
                     .and_then(|rate| rate.get(input_place))
                     .copied()
                     .unwrap_or_default(),
-                VeryUnbalancedMassActionParameter::Production { transition, output_place } => self
+                PerPlaceMassActionParameter::Production { transition, output_place } => self
                     .production_rates
                     .get(transition)
                     .and_then(|rate| rate.get(output_place))
@@ -837,6 +864,7 @@ impl ODESemanticsScalarExtension<VeryUnbalancedMassActionParameter>
     }
 }
 
+/// Data for a numerical per-place mass-action system.
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde-wasm", derive(Tsify))]
 #[cfg_attr(
@@ -844,17 +872,19 @@ impl ODESemanticsScalarExtension<VeryUnbalancedMassActionParameter>
     tsify(into_wasm_abi, from_wasm_abi, hashmap_as_object)
 )]
 #[derive(Clone)]
-pub struct VeryUnbalancedMassActionProblemData {
+pub struct PerPlaceMassActionProblemData {
+    /// Data common to all ODE problems.
     #[cfg_attr(feature = "serde", serde(rename = "generalData"))]
     pub general_data: ODESemanticsGeneralProblemData,
+    /// Data specific to per-place mass-action problems.
     #[cfg_attr(feature = "serde", serde(rename = "parameterData"))]
-    pub parameter_data: VeryUnbalancedMassActionParameterData,
+    pub parameter_data: PerPlaceMassActionParameterData,
 }
 
-impl ODESemanticsProblemData<PetriNetVeryUnbalancedMassActionSemantics>
-    for VeryUnbalancedMassActionProblemData
+impl ODESemanticsProblemData<PetriNetPerPlaceMassActionSemantics>
+    for PerPlaceMassActionProblemData
 {
-    type ParameterData = VeryUnbalancedMassActionParameterData;
+    type ParameterData = PerPlaceMassActionParameterData;
     fn general_data(self) -> ODESemanticsGeneralProblemData {
         self.general_data
     }
@@ -863,9 +893,9 @@ impl ODESemanticsProblemData<PetriNetVeryUnbalancedMassActionSemantics>
     }
 }
 
-// ┌------------┐
-// | MIGRATIONS |
-// └------------┘
+// ┌------------------------------┐
+// | MIGRATIONS AND WASM BINDINGS |
+// └------------------------------┘
 
 // For backwards compatibility to when there was a *single* mass-action semantics with three
 // internal variants, we give here some wrappers that will be useful in `analyses::ode::v1::migrate`
@@ -877,35 +907,45 @@ impl ODESemanticsProblemData<PetriNetVeryUnbalancedMassActionSemantics>
 #[cfg_attr(feature = "serde-wasm", tsify(into_wasm_abi, from_wasm_abi))]
 #[derive(PartialEq, Eq, Hash, Clone)]
 pub enum MassActionVariant {
+    /// The balanced (i.e. classical) case.
     Balanced,
+    /// The unbalanced ("per-flow"/"per-transition") case.
     Unbalanced,
-    VeryUnbalanced,
+    /// The per-place case.
+    PerPlace,
 }
 
-/// In order for `migrate_petri_net_mass_action_v0_to_v1` to have a well-defined return type, we
-/// unify the three mass-action semantics for Petri nets into a single struct.
+/// For `migrate_stock_flow_mass_action_v0_to_v1` to have a well-defined return type, we unify both
+/// balanced and unbalanced mass-action semantics into a single struct.
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde-wasm", derive(Tsify))]
 #[cfg_attr(feature = "serde-wasm", tsify(into_wasm_abi, from_wasm_abi))]
 #[derive(Clone)]
-pub struct PetriNetMassActionProblemData {
+pub struct RestrictedMassActionProblemData {
+    /// The mass-action variant of interest, which may be switched at any point.
     pub variant: MassActionVariant,
+    /// Problem data for balanced mass-action.
     pub balanced: BalancedMassActionProblemData,
+    /// Problem data for unbalanced mass-action.
     pub unbalanced: UnbalancedMassActionProblemData,
-    #[cfg_attr(feature = "serde", serde(rename = "veryUnbalanced"))]
-    pub very_unbalanced: VeryUnbalancedMassActionProblemData,
 }
 
-/// In order for `migrate_stock_flow_mass_action_v0_to_v1` to have a well-defined return type, we
-/// unify the two mass-action semantics for stock-flow diagrams into a single struct.
+/// For `migrate_petri_net_mass_action_v0_to_v1` to have a well-defined return type, we unify the
+/// all three mass-action semantics into a single struct.
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde-wasm", derive(Tsify))]
 #[cfg_attr(feature = "serde-wasm", tsify(into_wasm_abi, from_wasm_abi))]
 #[derive(Clone)]
-pub struct StockFlowMassActionProblemData {
+pub struct MassActionProblemData {
+    /// The mass-action variant of interest, which may be switched at any point.
     pub variant: MassActionVariant,
+    /// Problem data for balanced mass-action.
     pub balanced: BalancedMassActionProblemData,
+    /// Problem data for unbalanced mass-action.
     pub unbalanced: UnbalancedMassActionProblemData,
+    /// Problem data for per-place mass-action.
+    #[cfg_attr(feature = "serde", serde(rename = "perPlace"))]
+    pub per_place: PerPlaceMassActionProblemData,
 }
 
 // ┌-------┐
@@ -983,7 +1023,7 @@ mod tests {
     fn unbalanced_petri_per_place() {
         let th = Rc::new(th_sym_monoidal_category());
         let model = catalyzed_reaction(th);
-        let sys = PetriNetVeryUnbalancedMassActionAnalysis::default().build_system(&model);
+        let sys = PetriNetPerPlaceMassActionAnalysis::default().build_system(&model);
         let expected = expect!([r#"
             dx = -Consumption([f] <- x) c x
             dy = Production([f] -> y) c x
@@ -1096,14 +1136,14 @@ mod tests {
     fn unbalanced_petri_per_place_numerical() {
         let th = Rc::new(th_sym_monoidal_category());
         let model = catalyzed_reaction(th);
-        let data = VeryUnbalancedMassActionProblemData {
+        let data = PerPlaceMassActionProblemData {
             general_data: ODESemanticsGeneralProblemData {
                 initial_values: [(name("x"), 1.0), (name("y"), 1.5), (name("c"), 2.0)]
                     .into_iter()
                     .collect(),
                 duration: 10.0,
             },
-            parameter_data: VeryUnbalancedMassActionParameterData {
+            parameter_data: PerPlaceMassActionParameterData {
                 consumption_rates: [(
                     name("f"),
                     [(name("x"), 2.0), (name("c"), 3.0)].into_iter().collect(),
@@ -1118,7 +1158,7 @@ mod tests {
                 .collect(),
             },
         };
-        let sys = PetriNetVeryUnbalancedMassActionAnalysis::default().build_system(&model);
+        let sys = PetriNetPerPlaceMassActionAnalysis::default().build_system(&model);
         let analysis = data.parameter_data.extend_scalars(sys);
         let expected = expect!([r#"
             dx = -2 c x

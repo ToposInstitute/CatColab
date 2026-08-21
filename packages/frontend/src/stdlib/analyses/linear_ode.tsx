@@ -33,11 +33,11 @@ export default function LinearODE(
         },
         createNumericalColumn({
             name: "Initial value",
-            data: (id) => props.content.initialValues[id],
+            data: (id) => props.content.generalData.initialValues[id],
             validate: (_, data) => data >= 0,
             setData: (id, data) =>
                 props.changeContent((content) => {
-                    content.initialValues[id] = data;
+                    content.generalData.initialValues[id] = data;
                 }),
         }),
     ];
@@ -50,12 +50,12 @@ export default function LinearODE(
         },
         createNumericalColumn({
             name: "Coefficient",
-            data: (id) => props.content.coefficients[id],
+            data: (id) => props.content.parameterData.coefficients[id],
             default: 1,
             validate: (_, data) => data >= 0,
             setData: (id, data) =>
                 props.changeContent((content) => {
-                    content.coefficients[id] = data;
+                    content.parameterData.coefficients[id] = data;
                 }),
         }),
     ];
@@ -63,11 +63,11 @@ export default function LinearODE(
     const toplevelSchema: ColumnSchema<null>[] = [
         createNumericalColumn({
             name: "Duration",
-            data: (_) => props.content.duration,
+            data: (_) => props.content.generalData.duration,
             validate: (_, data) => data >= 0,
             setData: (_, data) =>
                 props.changeContent((content) => {
-                    content.duration = data;
+                    content.generalData.duration = data;
                 }),
         }),
     ];

@@ -6,21 +6,20 @@ use crate::stdlib::analyses::ode::*;
 pub fn migrate_linear_ode_v0_to_v1(
     v0: v0::linear_ode::LinearODEProblemData,
 ) -> LinearODEProblemData {
-    let v1 = LinearODEProblemData {
+    LinearODEProblemData {
         general_data: ODESemanticsGeneralProblemData {
             initial_values: v0.initial_values,
             duration: v0.duration,
         },
         parameter_data: LinearODEParameterData { coefficients: v0.coefficients },
-    };
-    v1
+    }
 }
 
 /// Migration for problem data for Lotka-Volterra.
 pub fn migrate_lotka_volterra_v0_to_v1(
     v0: v0::lotka_volterra::LotkaVolterraProblemData,
 ) -> LotkaVolterraProblemData {
-    let v1 = LotkaVolterraProblemData {
+    LotkaVolterraProblemData {
         general_data: ODESemanticsGeneralProblemData {
             initial_values: v0.initial_values,
             duration: v0.duration,
@@ -29,28 +28,38 @@ pub fn migrate_lotka_volterra_v0_to_v1(
             interaction_coeffs: v0.interaction_coeffs,
             growth_rates: v0.growth_rates,
         },
-    };
-    v1
+    }
 }
 
 /// Migration for problem data for polynomial ODE.
 pub fn migrate_polynomial_ode_v0_to_v1(
     v0: v0::polynomial_ode::PolynomialODEProblemData,
 ) -> PolynomialODEProblemData {
-    let v1 = PolynomialODEProblemData {
+    PolynomialODEProblemData {
         general_data: ODESemanticsGeneralProblemData {
             initial_values: v0.initial_values,
             duration: v0.duration,
         },
         parameter_data: PolynomialODEParameterData { coefficients: v0.coefficients },
-    };
-    v1
+    }
+}
+
+fn migrate_mass_action_variant(v0: v0::mass_action::MassConservationType) -> MassActionVariant {
+    match v0 {
+        v0::mass_action::MassConservationType::Balanced => MassActionVariant::Balanced,
+        v0::mass_action::MassConservationType::Unbalanced(rate_granularity) => {
+            match rate_granularity {
+                v0::mass_action::RateGranularity::PerTransition => MassActionVariant::Unbalanced,
+                v0::mass_action::RateGranularity::PerPlace => MassActionVariant::PerPlace,
+            }
+        }
+    }
 }
 
 /// Migration for problem data for mass-action on a Petri net.
 pub fn migrate_petri_net_mass_action_v0_to_v1(
     v0: v0::mass_action::MassActionProblemData,
-) -> PetriNetMassActionProblemData {
+) -> MassActionProblemData {
     let balanced = BalancedMassActionProblemData {
         general_data: ODESemanticsGeneralProblemData {
             initial_values: v0.initial_values.clone(),
@@ -68,29 +77,29 @@ pub fn migrate_petri_net_mass_action_v0_to_v1(
             production_rates: v0.transition_production_rates,
         },
     };
-    let very_unbalanced = VeryUnbalancedMassActionProblemData {
+    let per_place = PerPlaceMassActionProblemData {
         general_data: ODESemanticsGeneralProblemData {
             initial_values: v0.initial_values,
             duration: v0.duration,
         },
-        parameter_data: VeryUnbalancedMassActionParameterData {
+        parameter_data: PerPlaceMassActionParameterData {
             consumption_rates: v0.place_consumption_rates,
             production_rates: v0.place_production_rates,
         },
     };
 
-    PetriNetMassActionProblemData {
-        variant: MassActionVariant::Balanced,
+    MassActionProblemData {
+        variant: migrate_mass_action_variant(v0.equations_data.mass_conservation_type),
         balanced,
         unbalanced,
-        very_unbalanced,
+        per_place,
     }
 }
 
 /// Migration for problem data for mass-action on a stock-flow diagram.
 pub fn migrate_stock_flow_mass_action_v0_to_v1(
     v0: v0::mass_action::MassActionProblemData,
-) -> StockFlowMassActionProblemData {
+) -> RestrictedMassActionProblemData {
     let balanced = BalancedMassActionProblemData {
         general_data: ODESemanticsGeneralProblemData {
             initial_values: v0.initial_values.clone(),
@@ -108,8 +117,8 @@ pub fn migrate_stock_flow_mass_action_v0_to_v1(
             production_rates: v0.transition_production_rates,
         },
     };
-    StockFlowMassActionProblemData {
-        variant: MassActionVariant::Balanced,
+    RestrictedMassActionProblemData {
+        variant: migrate_mass_action_variant(v0.equations_data.mass_conservation_type),
         balanced,
         unbalanced,
     }
@@ -124,8 +133,8 @@ mod test {
         stdlib::{
             analyses::ode::{
                 LinearODEAnalysis, LotkaVolterraAnalysis, ODESemanticsAnalysis,
-                PetriNetBalancedMassActionAnalysis, PetriNetUnbalancedMassActionAnalysis,
-                PetriNetVeryUnbalancedMassActionAnalysis, PolynomialODEAnalysis,
+                PetriNetBalancedMassActionAnalysis, PetriNetPerPlaceMassActionAnalysis,
+                PetriNetUnbalancedMassActionAnalysis, PolynomialODEAnalysis,
                 StockFlowBalancedMassActionAnalysis, StockFlowUnbalancedMassActionAnalysis,
             },
             backward_link, catalyzed_reaction, negative_feedback, th_category_links,
@@ -218,8 +227,6 @@ mod test {
         expected.assert_eq(&analysis.to_string());
     }
 
-    // TODO: Petri net mass-action migration tests.
-
     #[test]
     fn petri_net_mass_action_v0_to_v1_migration() {
         let th = Rc::new(th_sym_monoidal_category());
@@ -272,16 +279,14 @@ mod test {
         "#]);
         unbalanced_expected.assert_eq(&unbalanced_analysis.to_string());
 
-        let very_unbalanced_system =
-            PetriNetVeryUnbalancedMassActionAnalysis::default().build_system(&model);
-        let very_unbalanced_analysis =
-            v1_data.very_unbalanced.parameter_data.extend_scalars(very_unbalanced_system);
-        let very_unbalanced_expected = expect!([r#"
+        let per_place_system = PetriNetPerPlaceMassActionAnalysis::default().build_system(&model);
+        let per_place_analysis = v1_data.per_place.parameter_data.extend_scalars(per_place_system);
+        let per_place_expected = expect!([r#"
             dx = -2 c x
             dy = 1.5 c x
             dc = -0.5 c x
         "#]);
-        very_unbalanced_expected.assert_eq(&very_unbalanced_analysis.to_string());
+        per_place_expected.assert_eq(&per_place_analysis.to_string());
     }
 
     #[test]

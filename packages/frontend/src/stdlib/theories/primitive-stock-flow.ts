@@ -58,23 +58,22 @@ export default function createPrimitiveStockFlowTheory(theoryMeta: TheoryMeta): 
                 description: "Visualize the stock and flow diagram",
                 help: "visualization",
             }),
-            // TODO: fix mass-action for stock-flow
-            // analyses.massAction({
-            //     ratesHaveGranularity: false,
-            //     simulate(model, data) {
-            //         return thCategoryLinks.massAction(model, data);
-            //     },
-            //     transitionType: {
-            //         tag: "Hom",
-            //         content: { tag: "Basic", content: "Object" },
-            //     },
-            // }),
-            // analyses.massActionEquations({
-            //     ratesHaveGranularity: false,
-            //     getEquations(model, data) {
-            //         return thCategoryLinks.massActionEquations(model, data);
-            //     },
-            // }),
+            analyses.massAction({
+                ratesHaveGranularity: false,
+                simulate(model, data) {
+                    return thCategoryLinks.massAction(model, data);
+                },
+                transitionType: {
+                    tag: "Hom",
+                    content: { tag: "Basic", content: "Object" },
+                },
+            }),
+            analyses.massActionEquations({
+                ratesHaveGranularity: false,
+                getEquations(model, data) {
+                    return thCategoryLinks.massActionEquations(model, data);
+                },
+            }),
         ],
     });
 }
