@@ -1,16 +1,14 @@
 import { BlockTitle, ExpandableTable, KatexDisplay } from "catcolab-ui-components";
-import type { MassActionVariant } from "catlog-wasm";
 import type { ModelAnalysisProps } from "../../analysis";
 import { MassActionConfigForm } from "./mass_action_config_form";
 import { createModelODELatex } from "./model_ode_plot";
-import type { MassActionEquations } from "./simulator_types";
+import type { MassActionEquations, MassActionProblemData } from "./simulator_types";
 
 import "./simulation.css";
 
 /** Display the symbolic mass-action dynamics equations for a model. */
 export default function MassActionEquationsDisplay(
-    props: ModelAnalysisProps<MassActionVariant> & {
-        content: MassActionVariant;
+    props: ModelAnalysisProps<MassActionProblemData> & {
         getEquations: MassActionEquations;
         ratesHaveGranularity: boolean;
         title?: string;
@@ -18,7 +16,7 @@ export default function MassActionEquationsDisplay(
 ) {
     const latexEquations = createModelODELatex(
         () => props.liveModel.validatedModel(),
-        (model) => props.getEquations(model),
+        (model) => props.getEquations(model, props.content),
     );
 
     return (

@@ -264,12 +264,11 @@ pub(crate) mod tests {
     fn petri_net_unbalanced_pp_mass_action_latex_equations() {
         // The Petri net with places "liquid", "solid", and "c", and one (unnamed) transition [liquid, c] -> [solid, c].
         let model = catalytic_petri_net("liquid", "solid", "c", "");
-        let system = ode::PetriNetVeryUnbalancedMassActionAnalysis::default()
+        let system = ode::PetriNetPerPlaceMassActionAnalysis::default()
             .build_system(model.modal_unital().unwrap());
-        let equations = ode_semantics_equations::<ode::PetriNetVeryUnbalancedMassActionSemantics>(
-            &model, system,
-        )
-        .unwrap();
+        let equations =
+            ode_semantics_equations::<ode::PetriNetPerPlaceMassActionSemantics>(&model, system)
+                .unwrap();
 
         let expected = LatexEquations(vec![
             LatexEquation {

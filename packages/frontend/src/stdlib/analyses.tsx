@@ -1,10 +1,6 @@
 import { lazy } from "solid-js";
 
-import type {
-    MassActionVariant,
-    MorType,
-    ObType,
-} from "catlog-wasm";
+import type { MorType, ObType } from "catlog-wasm";
 import type { DiagramAnalysisMeta, ModelAnalysisMeta } from "../theory";
 import * as GraphLayoutConfig from "../visualization/graph_layout_config";
 import type * as Checkers from "./analyses/checker_types";
@@ -129,8 +125,8 @@ export function linearODE(
                 duration: 10,
             },
             parameterData: {
-                coefficients: {}
-            }
+                coefficients: {},
+            },
         }),
     };
 }
@@ -187,7 +183,7 @@ export function lotkaVolterra(
             parameterData: {
                 interactionCoefficients: {},
                 growthRates: {},
-            }
+            },
         }),
     };
 }
@@ -225,7 +221,7 @@ export function massAction(
         stateType?: ObType;
         transitionType?: MorType;
     },
-): ModelAnalysisMeta<Simulators.PetriNetMassActionProblemData> {
+): ModelAnalysisMeta<Simulators.MassActionProblemData> {
     const {
         id = "mass-action",
         name = "Mass-action dynamics",
@@ -260,7 +256,7 @@ export function massAction(
                     consumptionRates: {},
                 },
             },
-            veryUnbalanced: {
+            perPlace: {
                 generalData: {
                     initialValues: {},
                     duration: 10,
@@ -281,7 +277,7 @@ export function massActionEquations(
         ratesHaveGranularity: boolean;
         getEquations: Simulators.MassActionEquations;
     },
-): ModelAnalysisMeta<MassActionVariant> {
+): ModelAnalysisMeta<Simulators.MassActionProblemData> {
     const {
         id = "mass-action-equations",
         name = "Mass-action dynamics equations",
@@ -297,9 +293,38 @@ export function massActionEquations(
         component: (props) => (
             <MassActionEquationsDisplay title={name} {...otherOptions} {...props} />
         ),
-        initialContent: () => (
-            "Balanced"
-        ),
+        initialContent: () => ({
+            variant: "Balanced",
+            balanced: {
+                generalData: {
+                    initialValues: {},
+                    duration: 10,
+                },
+                parameterData: {
+                    rates: {},
+                },
+            },
+            unbalanced: {
+                generalData: {
+                    initialValues: {},
+                    duration: 10,
+                },
+                parameterData: {
+                    productionRates: {},
+                    consumptionRates: {},
+                },
+            },
+            perPlace: {
+                generalData: {
+                    initialValues: {},
+                    duration: 10,
+                },
+                parameterData: {
+                    productionRates: {},
+                    consumptionRates: {},
+                },
+            },
+        }),
     };
 }
 const MassActionEquationsDisplay = lazy(() => import("./analyses/mass_action_equations"));
@@ -492,14 +517,13 @@ export function polynomialODESimulation(
         help,
         component: (props) => <PolynomialODESimulation title={name} {...otherOptions} {...props} />,
         initialContent: () => ({
-            generalData: 
-            {
+            generalData: {
                 initialValues: {},
                 duration: 10,
             },
             parameterData: {
                 coefficients: {},
-            }
+            },
         }),
     };
 }

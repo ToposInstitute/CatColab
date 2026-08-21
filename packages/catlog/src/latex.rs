@@ -70,7 +70,7 @@ pub trait ToLatex {
 /// An object that can be rendered to Latex, with some function that can be applied to selected
 /// appearances of a `QualifiedName` within the object. The main purpose of this trait is for rendering
 /// the equations derived from an ODE semantics analysis, where we do not want to show UUIDs directly
-/// to the frontend. For an example implementation see e.g. `catlog::src::stdlib::analyses::ode::mass_action`
+/// to the frontend. For an example implementation see e.g. `analyses::ode::v1::mass_action`
 /// where this is implemented for `MassActionParameter`.
 pub trait ToLatexWithMap {
     /// Convert the object to its Latex representation, after applying the provided function `f` to

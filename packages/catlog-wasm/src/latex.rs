@@ -46,7 +46,7 @@ mod tests {
     use catlog::latex::{Latex, LatexEquation, LatexEquations};
     use catlog::stdlib::analyses::ode::{
         LinearODEAnalysis, LotkaVolterraAnalysis, PetriNetBalancedMassActionAnalysis,
-        PetriNetUnbalancedMassActionAnalysis, PetriNetVeryUnbalancedMassActionAnalysis,
+        PetriNetPerPlaceMassActionAnalysis, PetriNetUnbalancedMassActionAnalysis,
         StockFlowBalancedMassActionAnalysis, StockFlowUnbalancedMassActionAnalysis,
         ode_semantics::*,
     };
@@ -217,11 +217,10 @@ mod tests {
         // The Petri net with places "liquid", "solid", and "c", and one (unnamed) transition [liquid, c] -> [solid, c].
         let model = catalytic_petri_net("liquid", "solid", "c", "");
         let modal_model = model.modal_unital().unwrap();
-        let equations = PetriNetVeryUnbalancedMassActionAnalysis::default()
+        let equations = PetriNetPerPlaceMassActionAnalysis::default()
             .build_system(modal_model)
             .to_latex_equations_with_map(|param| latex_names(&model)(param));
 
-        // TODO: write down the expected equations
         let expected = LatexEquations(vec![
             LatexEquation {
                 lhs: Latex("\\frac{\\mathrm{d}}{\\mathrm{d}t} \\text{liquid}".to_string()),
