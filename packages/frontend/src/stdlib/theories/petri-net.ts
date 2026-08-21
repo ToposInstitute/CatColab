@@ -79,8 +79,8 @@ export default function createPetriNetTheory(theoryMeta: TheoryMeta): Theory {
             }),
             analyses.massActionEquations({
                 ratesHaveGranularity: true,
-                getEquations(model, data) {
-                    return thSymMonoidalCategory.massActionEquations(model, data);
+                getEquations(model) {
+                    return thSymMonoidalCategory.massActionEquations(model);
                 },
             }),
             analyses.stochasticMassAction({

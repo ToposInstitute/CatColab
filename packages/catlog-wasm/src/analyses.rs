@@ -5,7 +5,9 @@ use serde::{Deserialize, Serialize};
 use tsify::Tsify;
 
 use catlog::simulate::ode::PolynomialSystem;
-use catlog::stdlib::analyses::ode::{self, ODESemantics, ODESemanticsProblemData, Parameter};
+use catlog::stdlib::analyses::ode::{
+    self, ODESemantics, ODESemanticsProblemData, ODESemanticsScalarExtension, Parameter,
+};
 use catlog::zero::QualifiedName;
 
 use super::latex::latex_names;
@@ -29,15 +31,15 @@ pub struct ODEResultWithEquations {
 }
 
 /// Simulate specific ODE semantics on a model, for use in a simulation analysis.
-pub(crate) fn ode_semantics_simulation<S: ODESemantics>(
+pub(crate) fn ode_semantics_simulation<S: ODESemantics, P: ODESemanticsProblemData<S>>(
     model: &DblModel,
-    problem_data: ODESemanticsProblemData<S>,
+    problem_data: P,
     system: PolynomialSystem<QualifiedName, Parameter<S::ParameterType>, i8>,
 ) -> Result<ODEResultWithEquations, String> {
-    let sys_extended_scalars = problem_data.extend_scalars(system);
+    let sys_extended_scalars = problem_data.clone().parameter_data().extend_scalars(system);
     let latex_equations =
         sys_extended_scalars.map_variables(latex_names(model)).to_latex_equations();
-    let analysis = problem_data.build_analysis(sys_extended_scalars);
+    let analysis = problem_data.general_data().build_analysis(sys_extended_scalars);
     let solution = analysis.solve_with_defaults().map_err(|err| format!("{err:?}"));
     Ok(ODEResultWithEquations {
         solution: ODEResult(solution.into()),
@@ -156,10 +158,11 @@ pub(crate) mod tests {
     #[test]
     fn stock_flow_balanced_mass_action_latex_equations() {
         let model = backward_link("xylophone", "y", "fff");
-        let system =
-            ode::StockFlowMassActionAnalysis::default().build_system(model.discrete_tab().unwrap());
+        let system = ode::StockFlowBalancedMassActionAnalysis::default()
+            .build_system(model.discrete_tab().unwrap());
         let equations =
-            ode_semantics_equations::<ode::StockFlowMassActionSemantics>(&model, system).unwrap();
+            ode_semantics_equations::<ode::StockFlowBalancedMassActionSemantics>(&model, system)
+                .unwrap();
 
         let expected = LatexEquations(vec![
             LatexEquation {
@@ -200,10 +203,11 @@ pub(crate) mod tests {
     fn petri_net_balanced_mass_action_latex_equations() {
         // The Petri net with places `liquid`, `solid`, and `c`, and one (unnamed) transition `[liquid, c] -> [solid, c]`.
         let model = catalytic_petri_net("liquid", "solid", "c", "");
-        let system =
-            ode::PetriNetMassActionAnalysis::default().build_system(model.modal_unital().unwrap());
+        let system = ode::PetriNetBalancedMassActionAnalysis::default()
+            .build_system(model.modal_unital().unwrap());
         let equations =
-            ode_semantics_equations::<ode::PetriNetMassActionSemantics>(&model, system).unwrap();
+            ode_semantics_equations::<ode::PetriNetBalancedMassActionSemantics>(&model, system)
+                .unwrap();
 
         let expected = LatexEquations(vec![
             LatexEquation {

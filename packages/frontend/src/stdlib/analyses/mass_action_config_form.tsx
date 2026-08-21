@@ -1,13 +1,15 @@
 import { Show } from "solid-js";
 
 import { CheckboxField, FormGroup, SelectField } from "catcolab-ui-components";
-import type { MassActionEquationsData, MassActionProblemData, RateGranularity } from "catlog-wasm";
+import type { MassActionVariant, PetriNetMassActionProblemData } from "catlog-wasm";
 
-/** Configuration of a mass-action analysis. */
-export type Config = MassActionEquationsData | MassActionProblemData;
+/** Configuration of a mass-action analysis. Note that we need to be able to accept either an
+ *  entire `PetriNetMassActionProblemData` or just a `MassActionVariant`, depending on whether we
+ *  are in the simulation analysis widget or the equations one (respectively). */
+export type Config = MassActionVariant | PetriNetMassActionProblemData;
 
-function isMassActionProblemData(config: Config): config is MassActionProblemData {
-    return (config as MassActionProblemData).equationsData !== undefined;
+function isProblemData(config: Config): config is PetriNetMassActionProblemData {
+    return (config as PetriNetMassActionProblemData).variant !== undefined;
 }
 
 /** Form to configure a mass-action analysis. */
@@ -16,65 +18,72 @@ export function MassActionConfigForm(props: {
     changeConfig: (f: (config: Config) => void) => void;
     enableGranularity: boolean;
 }) {
-    function massActionEquationsData(): MassActionEquationsData {
-        if (isMassActionProblemData(props.config)) {
-            return props.config.equationsData;
+    function massActionVariant(): MassActionVariant {
+        if (isProblemData(props.config)) {
+            return props.config.variant || "Balanced";
         } else {
-            return props.config;
+            return props.config || "Balanced";
         }
     }
 
-    const massConservation = () => massActionEquationsData().massConservationType;
     const massConservationGranularity = () => {
-        const massConversarvation = massActionEquationsData().massConservationType;
-        return massConversarvation.type === "Unbalanced"
-            ? massConversarvation.granularity
-            : undefined;
+        switch (massActionVariant()) {
+            case "Balanced":
+                return "PerTransition";
+            case "Unbalanced":
+                return "PerTransition";
+            case "VeryUnbalanced":
+                return "PerPlace";
+        }
     };
 
     return (
         <FormGroup compact style={{ "min-width": "286px" }}>
             <CheckboxField
                 label="Conserve mass"
-                checked={massConservation().type === "Balanced"}
+                checked={massActionVariant() === "Balanced"}
                 onChange={(evt) => {
                     props.changeConfig((content) => {
-                        let massActionEquationsData: MassActionEquationsData;
-                        if (isMassActionProblemData(content)) {
-                            massActionEquationsData = content.equationsData;
+                        if (isProblemData(content)) {
+                            if (evt.currentTarget.checked) {
+                                content.variant = "Balanced";
+                            } else {
+                                content.variant = "Unbalanced";
+                            }
                         } else {
-                            massActionEquationsData = content;
-                        }
-                        if (evt.currentTarget.checked) {
-                            massActionEquationsData.massConservationType = {
-                                type: "Balanced",
-                            };
-                        } else {
-                            massActionEquationsData.massConservationType = {
-                                type: "Unbalanced",
-                                granularity: "PerPlace",
-                            };
+                            if (evt.currentTarget.checked) {
+                                content = "Balanced";
+                            } else {
+                                content = "Unbalanced";
+                            }
                         }
                     });
                 }}
             />
-            <Show when={massConservation().type === "Unbalanced" && props.enableGranularity}>
+            <Show when={massActionVariant() === "Unbalanced" && props.enableGranularity}>
                 <SelectField
                     label="Rate granularity"
-                    value={massConservationGranularity() ?? "PerPlace"}
+                    value={massConservationGranularity() ?? "PerTransition"}
                     onChange={(evt) => {
                         props.changeConfig((content) => {
-                            let massActionEquationsData: MassActionEquationsData;
-                            if (isMassActionProblemData(content)) {
-                                massActionEquationsData = content.equationsData;
+                            if (isProblemData(content)) {
+                                switch (evt.currentTarget.value) {
+                                    case "PerTransition":
+                                        content.variant = "Unbalanced";
+                                        break;
+                                    case "PerPlace":
+                                        content.variant = "VeryUnbalanced";
+                                        break;
+                                }
                             } else {
-                                massActionEquationsData = content;
-                            }
-                            if (
-                                massActionEquationsData.massConservationType.type === "Unbalanced"
-                            ) {
-                                massActionEquationsData.massConservationType.granularity = evt
-                                    .currentTarget.value as RateGranularity;
+                                switch (evt.currentTarget.value) {
+                                    case "PerTransition":
+                                        content = "Unbalanced";
+                                        break;
+                                    case "PerPlace":
+                                        content = "VeryUnbalanced";
+                                        break;
+                                }
                             }
                         });
                     }}
