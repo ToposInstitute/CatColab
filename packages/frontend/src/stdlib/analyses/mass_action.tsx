@@ -12,7 +12,7 @@ import {
 } from "catcolab-ui-components";
 import {
     collectProduct,
-    type MassActionProblemData,
+    type PetriNetMassActionProblemData,
     type MorType,
     type ObType,
     type QualifiedName,
@@ -28,8 +28,7 @@ import "./simulation.css";
 
 /** Analyze a model using mass-action dynamics. */
 export default function MassAction(
-    // TODO: switch to GeneralMassActionProblemData = MassActionProblemData | PPMassActionProblemData | PTMassActionProblemData
-    props: ModelAnalysisProps<MassActionProblemData> & {
+    props: ModelAnalysisProps<PetriNetMassActionProblemData> & {
         ratesHaveGranularity: boolean;
         simulate: MassActionSimulator;
         stateType?: ObType;
@@ -39,9 +38,9 @@ export default function MassAction(
 ) {
     const elaboratedModel = () => props.liveModel.elaboratedModel();
 
-    // Irrelevant of the value of massConservationType, we only ever need a single
-    // schema for objects: each object needs to be assigned an initial value.
+    const variant = () => props.content.variant || "Balanced";
 
+    // Each object needs to be assigned an initial value.
     const obGenerators = createMemo<QualifiedName[]>(() => {
         const model = elaboratedModel();
         if (!model) {
@@ -58,16 +57,35 @@ export default function MassAction(
         },
         createNumericalColumn({
             name: "Initial value",
-            data: (id) => props.content.initialValues[id],
+            data: (id) => {
+                switch (variant()) {
+                    case "Balanced":
+                        return props.content.balanced.initialValues[id];
+                    case "Unbalanced":
+                        return props.content.unbalanced.initialValues[id];
+                    case "VeryUnbalanced":
+                        return props.content.veryUnbalanced.initialValues[id];
+                }
+            },
             validate: (_, data) => data >= 0,
             setData: (id, data) =>
                 props.changeContent((content) => {
-                    content.initialValues[id] = data;
+                    switch (variant()) {
+                        case "Balanced":
+                            content.balanced.initialValues[id] = data;
+                            break;
+                        case "Unbalanced":
+                            content.unbalanced.initialValues[id] = data;
+                            break;
+                        case "VeryUnbalanced":
+                            content.veryUnbalanced.initialValues[id] = data;
+                            break;
+                    }
                 }),
         }),
     ];
 
-    // For morphisms, the data that we need now does depend on massConservationType.
+    // For morphisms, the data that we need depends on `variant: MassActionVariant`.
     // We don't simply want to get a list of morphism generators, but instead
     // account for the entire *interface* of each morphism. In a Petri net, this
     // consists of a list of input places and a list of output places for each
@@ -140,9 +158,9 @@ export default function MassAction(
     });
 
     // The schema that we use for the <FixedTableEditor> JSX element depends on the
-    // value of MassConservationType. We might as well construct all possibilities.
+    // value of `variant: MassActionVariant`. We might as well construct all possibilities.
 
-    // Firstly, the case MassConservationType = Balanced
+    // Firstly, the case `variant = Balanced`.
     const morSchema: ColumnSchema<QualifiedName>[] = [
         {
             contentType: "string",
@@ -151,17 +169,17 @@ export default function MassAction(
         },
         createNumericalColumn({
             name: "Rate (𝑟)",
-            data: (mor) => props.content.rates[mor],
+            data: (mor) => props.content.balanced.parameterData.rates[mor],
             default: 1,
             validate: (_, data) => data >= 0,
             setData: (mor, data) =>
                 props.changeContent((content) => {
-                    content.rates[mor] = data;
+                    content.balanced.parameterData.rates[mor] = data;
                 }),
         }),
     ];
 
-    // Secondly, the case MassConservationType = Unbalanced(PerTransition)
+    // Secondly, the case `MassActionVariant = Unbalanced`.
     const morInputSchema: ColumnSchema<QualifiedName>[] = [
         {
             contentType: "string",
@@ -170,12 +188,12 @@ export default function MassAction(
         },
         createNumericalColumn({
             name: "Consumption (𝜅)",
-            data: (mor) => props.content.transitionConsumptionRates[mor],
+            data: (mor) => props.content.unbalanced.parameterData.consumptionRates[mor],
             default: 1,
             validate: (_, data) => data >= 0,
             setData: (mor, data) =>
                 props.changeContent((content) => {
-                    content.transitionConsumptionRates[mor] = data;
+                    content.unbalanced.parameterData.consumptionRates[mor] = data;
                 }),
         }),
     ];
@@ -187,17 +205,17 @@ export default function MassAction(
         },
         createNumericalColumn({
             name: "Production (𝜌)",
-            data: (mor) => props.content.transitionProductionRates[mor],
+            data: (mor) => props.content.unbalanced.parameterData.productionRates[mor],
             default: 1,
             validate: (_, data) => data >= 0,
             setData: (mor, data) =>
                 props.changeContent((content) => {
-                    content.transitionProductionRates[mor] = data;
+                    content.unbalanced.parameterData.productionRates[mor] = data;
                 }),
         }),
     ];
 
-    // Finally, the case MassConservationType = Unbalanced(PerPlace)
+    // Finally, the case `MassActionVariant = VeryUnbalanced`.
     const morInputsSchema: ColumnSchema<[QualifiedName, QualifiedName]>[] = [
         {
             contentType: "string",
@@ -211,15 +229,18 @@ export default function MassAction(
         },
         createNumericalColumn({
             name: "Consumption (𝜅)",
-            data: ([mor, input]) => props.content.placeConsumptionRates[mor]?.[input],
+            data: ([mor, input]) =>
+                props.content.veryUnbalanced.parameterData.consumptionRates[mor]?.[input],
             default: 1,
             validate: (_, data) => data >= 0,
             setData: ([mor, input], data) =>
                 props.changeContent((content) => {
-                    if (content.placeConsumptionRates[mor]) {
-                        content.placeConsumptionRates[mor][input] = data;
+                    if (content.veryUnbalanced.parameterData.consumptionRates[mor]) {
+                        content.veryUnbalanced.parameterData.consumptionRates[mor][input] = data;
                     } else {
-                        content.placeConsumptionRates[mor] = { [input]: data };
+                        content.veryUnbalanced.parameterData.consumptionRates[mor] = {
+                            [input]: data,
+                        };
                     }
                 }),
         }),
@@ -237,15 +258,18 @@ export default function MassAction(
         },
         createNumericalColumn({
             name: "Production (𝜌)",
-            data: ([mor, output]) => props.content.placeProductionRates[mor]?.[output],
+            data: ([mor, output]) =>
+                props.content.veryUnbalanced.parameterData.productionRates[mor]?.[output],
             default: 1,
             validate: (_, data) => data >= 0,
             setData: ([mor, output], data) =>
                 props.changeContent((content) => {
-                    if (content.placeProductionRates[mor]) {
-                        content.placeProductionRates[mor][output] = data;
+                    if (content.veryUnbalanced.parameterData.productionRates[mor]) {
+                        content.veryUnbalanced.parameterData.productionRates[mor][output] = data;
                     } else {
-                        content.placeProductionRates[mor] = { [output]: data };
+                        content.veryUnbalanced.parameterData.productionRates[mor] = {
+                            [output]: data,
+                        };
                     }
                 }),
         }),
@@ -254,24 +278,14 @@ export default function MassAction(
     // Now we can generate the parameter tables that will actually be rendered.
     const ParameterTables = () => (
         <Switch>
-            <Match when={props.content.equationsData.massConservationType.type === "Balanced"}>
+            <Match when={variant() === "Balanced"}>
                 <FixedTableEditor rows={morGenerators()} schema={morSchema} />
             </Match>
-            <Match
-                when={
-                    props.content.equationsData.massConservationType.type === "Unbalanced" &&
-                    props.content.equationsData.massConservationType.granularity === "PerTransition"
-                }
-            >
+            <Match when={variant() === "Unbalanced"}>
                 <FixedTableEditor rows={morGenerators()} schema={morInputSchema} />
                 <FixedTableEditor rows={morGenerators()} schema={morOutputSchema} />
             </Match>
-            <Match
-                when={
-                    props.content.equationsData.massConservationType.type === "Unbalanced" &&
-                    props.content.equationsData.massConservationType.granularity === "PerPlace"
-                }
-            >
+            <Match when={variant() === "VeryUnbalanced"}>
                 <FixedTableEditor rows={morGeneratorsInputs()} schema={morInputsSchema} />
                 <FixedTableEditor rows={morGeneratorsOutputs()} schema={morOutputsSchema} />
             </Match>
@@ -282,18 +296,47 @@ export default function MassAction(
     const toplevelSchema: ColumnSchema<null>[] = [
         createNumericalColumn({
             name: "Duration",
-            data: (_) => props.content.duration,
+            data: (_) => {
+                switch (variant()) {
+                    case "Balanced":
+                        return props.content.balanced.duration;
+                    case "Unbalanced":
+                        return props.content.unbalanced.duration;
+                    case "VeryUnbalanced":
+                        return props.content.veryUnbalanced.duration;
+                }
+            },
             validate: (_, data) => data >= 0,
             setData: (_, data) =>
                 props.changeContent((content) => {
-                    content.duration = data;
+                    switch (variant()) {
+                        case "Balanced":
+                            content.balanced.duration = data;
+                            break;
+                        case "Unbalanced":
+                            content.unbalanced.duration = data;
+                            break;
+                        case "VeryUnbalanced":
+                            content.veryUnbalanced.duration = data;
+                            break;
+                    }
                 }),
         }),
     ];
 
     const result = createModelODEPlotWithEquations(
         () => props.liveModel.validatedModel(),
-        (model) => props.simulate(model, props.content),
+        (model) => props.simulate(model, props.content.balanced),
+        // (model) => {
+        //     switch (variant()) {
+        //         case "Balanced":
+        //             return props.simulate(model, props.content.balanced);
+        //         case "Unbalanced":
+        //             return props.simulate(model, props.content.unbalanced);
+        //         case "VeryUnbalanced":
+        //             return props.simulate(model, props.content.veryUnbalanced);
+        //     }
+        // },
     );
 
     const plotResult = () => result()?.plotData;

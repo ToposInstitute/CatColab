@@ -45,9 +45,10 @@ pub(crate) fn latex_names(model: &DblModel) -> impl Fn(&QualifiedName) -> String
 mod tests {
     use catlog::latex::{Latex, LatexEquation, LatexEquations};
     use catlog::stdlib::analyses::ode::{
-        LinearODEAnalysis, LotkaVolterraAnalysis, PetriNetMassActionAnalysis,
+        LinearODEAnalysis, LotkaVolterraAnalysis, PetriNetBalancedMassActionAnalysis,
         PetriNetUnbalancedMassActionAnalysis, PetriNetVeryUnbalancedMassActionAnalysis,
-        StockFlowMassActionAnalysis, StockFlowUnbalancedMassActionAnalysis, ode_semantics::*,
+        StockFlowBalancedMassActionAnalysis, StockFlowUnbalancedMassActionAnalysis,
+        ode_semantics::*,
     };
 
     use super::*;
@@ -113,7 +114,7 @@ mod tests {
     fn stock_flow_balanced_mass_action_latex_equations() {
         let model = backward_link("xxx", "yyy", "fff");
         let tab_model = model.discrete_tab().unwrap();
-        let analysis = StockFlowMassActionAnalysis::default();
+        let analysis = StockFlowBalancedMassActionAnalysis::default();
         let sys = analysis.build_system(tab_model);
         let equations = sys.to_latex_equations_with_map(|param| latex_names(&model)(param));
 
@@ -158,7 +159,7 @@ mod tests {
         // The Petri net with places "liquid", "solid", and "c", and one (unnamed) transition [liquid, c] -> [solid, c].
         let model = catalytic_petri_net("liquid", "solid", "c", "");
         let modal_model = model.modal_unital().unwrap();
-        let equations = PetriNetMassActionAnalysis::default()
+        let equations = PetriNetBalancedMassActionAnalysis::default()
             .build_system(modal_model)
             .to_latex_equations_with_map(|param| latex_names(&model)(param));
 

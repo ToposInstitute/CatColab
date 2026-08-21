@@ -1,10 +1,9 @@
 import { lazy } from "solid-js";
 
 import type {
-    MassActionEquationsData,
+    MassActionVariant,
     MorType,
     ObType,
-    StochasticMassActionProblemData,
 } from "catlog-wasm";
 import type { DiagramAnalysisMeta, ModelAnalysisMeta } from "../theory";
 import * as GraphLayoutConfig from "../visualization/graph_layout_config";
@@ -125,9 +124,13 @@ export function linearODE(
         help,
         component: (props) => <LinearODE simulate={simulate} title={name} {...props} />,
         initialContent: () => ({
-            coefficients: {},
-            initialValues: {},
-            duration: 10,
+            generalData: {
+                initialValues: {},
+                duration: 10,
+            },
+            parameterData: {
+                coefficients: {}
+            }
         }),
     };
 }
@@ -177,10 +180,14 @@ export function lotkaVolterra(
         help,
         component: (props) => <LotkaVolterra simulate={simulate} title={name} {...props} />,
         initialContent: () => ({
-            interactionCoefficients: {},
-            growthRates: {},
-            initialValues: {},
-            duration: 10,
+            generalData: {
+                initialValues: {},
+                duration: 10,
+            },
+            parameterData: {
+                interactionCoefficients: {},
+                growthRates: {},
+            }
         }),
     };
 }
@@ -218,7 +225,7 @@ export function massAction(
         stateType?: ObType;
         transitionType?: MorType;
     },
-): ModelAnalysisMeta<Simulators.MassActionProblemData> {
+): ModelAnalysisMeta<Simulators.PetriNetMassActionProblemData> {
     const {
         id = "mass-action",
         name = "Mass-action dynamics",
@@ -233,14 +240,36 @@ export function massAction(
         help,
         component: (props) => <MassAction title={name} {...otherOptions} {...props} />,
         initialContent: () => ({
-            equationsData: { massConservationType: { type: "Balanced" } },
-            rates: {},
-            transitionProductionRates: {},
-            transitionConsumptionRates: {},
-            placeProductionRates: {},
-            placeConsumptionRates: {},
-            initialValues: {},
-            duration: 10,
+            variant: "Balanced",
+            balanced: {
+                generalData: {
+                    initialValues: {},
+                    duration: 10,
+                },
+                parameterData: {
+                    rates: {},
+                },
+            },
+            unbalanced: {
+                generalData: {
+                    initialValues: {},
+                    duration: 10,
+                },
+                parameterData: {
+                    productionRates: {},
+                    consumptionRates: {},
+                },
+            },
+            veryUnbalanced: {
+                generalData: {
+                    initialValues: {},
+                    duration: 10,
+                },
+                parameterData: {
+                    productionRates: {},
+                    consumptionRates: {},
+                },
+            },
         }),
     };
 }
@@ -252,7 +281,7 @@ export function massActionEquations(
         ratesHaveGranularity: boolean;
         getEquations: Simulators.MassActionEquations;
     },
-): ModelAnalysisMeta<MassActionEquationsData> {
+): ModelAnalysisMeta<MassActionVariant> {
     const {
         id = "mass-action-equations",
         name = "Mass-action dynamics equations",
@@ -268,9 +297,9 @@ export function massActionEquations(
         component: (props) => (
             <MassActionEquationsDisplay title={name} {...otherOptions} {...props} />
         ),
-        initialContent: () => ({
-            massConservationType: { type: "Balanced" },
-        }),
+        initialContent: () => (
+            "Balanced"
+        ),
     };
 }
 const MassActionEquationsDisplay = lazy(() => import("./analyses/mass_action_equations"));
@@ -281,7 +310,7 @@ export function stochasticMassAction(
         stateType?: ObType;
         transitionType?: MorType;
     },
-): ModelAnalysisMeta<StochasticMassActionProblemData> {
+): ModelAnalysisMeta<Simulators.StochasticMassActionProblemData> {
     const {
         id = "stochastic-mass-action",
         name = "Stochastic mass-action dynamics",
@@ -463,9 +492,14 @@ export function polynomialODESimulation(
         help,
         component: (props) => <PolynomialODESimulation title={name} {...otherOptions} {...props} />,
         initialContent: () => ({
-            coefficients: {},
-            initialValues: {},
-            duration: 10,
+            generalData: 
+            {
+                initialValues: {},
+                duration: 10,
+            },
+            parameterData: {
+                coefficients: {},
+            }
         }),
     };
 }

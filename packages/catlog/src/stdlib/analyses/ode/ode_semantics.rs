@@ -259,38 +259,23 @@ pub trait ODESemanticsScalarExtension<P: ODEParameterType> {
 /// The struct describing how to turn the formal system of ODEs into a numerical problem, to be
 /// solved by an ODE solver and presented to the front-end. At minimum, such data must contain
 /// initial values for variables and the intended duration of simulation, as well as the method for
-/// converting the parameters (which are of type `ODEParameterType`) into floats. Note that it must
-/// also contain `ODESemanticsEquationsConfig`, since we need to know how to build the equations
-/// before we are able to solve them numerically.
+/// converting the parameters (which are of type `ODEParameterType`) into floats.
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde-wasm", derive(Tsify))]
 #[cfg_attr(
     feature = "serde-wasm",
     tsify(into_wasm_abi, from_wasm_abi, hashmap_as_object)
 )]
-pub struct ODESemanticsProblemData<T>
-where
-    T: ODESemantics,
-{
+#[derive(Clone)]
+pub struct ODESemanticsGeneralProblemData {
     /// Map from object IDs to initial values (nonnegative reals).
     #[cfg_attr(feature = "serde", serde(rename = "initialValues"))]
     pub initial_values: HashMap<QualifiedName, f32>,
     /// Duration of simulation.
     pub duration: f32,
-    /// Data needed to fill in parameters.
-    #[cfg_attr(feature = "serde", serde(rename = "parameterData"))]
-    pub parameter_data: T::ParameterData,
 }
 
-impl<T: ODESemantics> ODESemanticsProblemData<T> {
-    /// Take formal parameters and convert them into floats using `self.parameter_data`.
-    pub fn extend_scalars(
-        &self,
-        system: PolynomialSystem<QualifiedName, Parameter<T::ParameterType>, i8>,
-    ) -> PolynomialSystem<QualifiedName, f32, i8> {
-        self.parameter_data.extend_scalars(system)
-    }
-
+impl ODESemanticsGeneralProblemData {
     /// Converting the polynomial system into a system ready for use in numerical solvers. The default
     /// implementation here should essentially always be the desired one.
     pub fn build_analysis(
@@ -311,4 +296,10 @@ impl<T: ODESemantics> ODESemanticsProblemData<T> {
 
         ODEAnalysis::new(problem, ob_index)
     }
+}
+
+pub trait ODESemanticsProblemData<S: ODESemantics>: Clone {
+    type ParameterData: ODESemanticsScalarExtension<S::ParameterType>;
+    fn general_data(self) -> ODESemanticsGeneralProblemData;
+    fn parameter_data(self) -> Self::ParameterData;
 }

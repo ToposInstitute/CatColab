@@ -17,10 +17,12 @@ use crate::dbl::model::{FpDblModel, MutDblModel};
 use crate::latex::{Latex, ToLatexWithMap};
 use crate::one::Path;
 use crate::simulate::ode::PolynomialSystem;
-use crate::stdlib::analyses::ode::Parameter;
 use crate::stdlib::analyses::ode::ode_semantics::{
     ContributionSign, ODEParameterType, ODESemantics, ODESemanticsAnalysis,
     ODESemanticsScalarExtension, PolynomialODESystemBuilder,
+};
+use crate::stdlib::analyses::ode::{
+    ODESemanticsGeneralProblemData, ODESemanticsProblemData, Parameter,
 };
 use crate::zero::name;
 use crate::{dbl::model::DiscreteDblModel, one::QualifiedPath, zero::QualifiedName};
@@ -190,6 +192,7 @@ impl
     feature = "serde-wasm",
     tsify(into_wasm_abi, from_wasm_abi, hashmap_as_object)
 )]
+#[derive(Clone)]
 pub struct LotkaVolterraParameterData {
     /// Map from morphism IDs to interaction coefficients (nonnegative reals).
     #[cfg_attr(feature = "serde", serde(rename = "interactionCoefficients"))]
@@ -222,6 +225,30 @@ impl ODESemanticsScalarExtension<<LotkaVolterraSemantics as ODESemantics>::Param
     }
 }
 
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde-wasm", derive(Tsify))]
+#[cfg_attr(
+    feature = "serde-wasm",
+    tsify(into_wasm_abi, from_wasm_abi, hashmap_as_object)
+)]
+#[derive(Clone)]
+pub struct LotkaVolterraProblemData {
+    #[cfg_attr(feature = "serde", serde(rename = "generalData"))]
+    pub general_data: ODESemanticsGeneralProblemData,
+    #[cfg_attr(feature = "serde", serde(rename = "parameterData"))]
+    pub parameter_data: LotkaVolterraParameterData,
+}
+
+impl ODESemanticsProblemData<LotkaVolterraSemantics> for LotkaVolterraProblemData {
+    type ParameterData = LotkaVolterraParameterData;
+    fn general_data(self) -> ODESemanticsGeneralProblemData {
+        self.general_data
+    }
+    fn parameter_data(self) -> Self::ParameterData {
+        self.parameter_data
+    }
+}
+
 // ┌-------┐
 // | TESTS |
 // └-------┘
@@ -235,7 +262,7 @@ mod test {
     use crate::{
         dbl::model::MutDblModel,
         latex::{LatexEquation, LatexEquations, wrap_with_backslash_text},
-        stdlib::{analyses::ode::ODESemanticsProblemData, models::*, theories::*},
+        stdlib::{models::*, theories::*},
     };
 
     // Symbolic tests.
@@ -280,9 +307,11 @@ mod test {
     fn predator_prey_numerical() {
         let th = Rc::new(th_signed_category());
         let model = negative_feedback(th);
-        let data: ODESemanticsProblemData<LotkaVolterraSemantics> = ODESemanticsProblemData {
-            initial_values: [(name("x"), 1.0), (name("y"), 1.0)].into_iter().collect(),
-            duration: 10.0,
+        let data = LotkaVolterraProblemData {
+            general_data: ODESemanticsGeneralProblemData {
+                initial_values: [(name("x"), 1.0), (name("y"), 1.0)].into_iter().collect(),
+                duration: 10.0,
+            },
             parameter_data: LotkaVolterraParameterData {
                 interaction_coeffs: [(name("positive"), 1.0), (name("negative"), 1.0)]
                     .into_iter()
@@ -291,7 +320,7 @@ mod test {
             },
         };
         let sys = LotkaVolterraAnalysis::default().build_system(&model);
-        let analysis = data.extend_scalars(sys);
+        let analysis = data.parameter_data.extend_scalars(sys);
         let expected = expect!([r#"
             dx = 2 x - x y
             dy = x y - y
