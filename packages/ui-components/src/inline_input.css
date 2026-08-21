@@ -9,6 +9,13 @@
     border-top: 3px solid transparent;
     border-bottom: 3px solid transparent;
     border-radius: 0;
+
+    &.incomplete {
+        border-bottom: 2px solid var(--color-inline-input-warning);
+    }
+    &.invalid {
+        border-bottom: 2px solid var(--color-inline-input-danger);
+    }
 }
 
 .inline-input-filler {
@@ -33,18 +40,14 @@
     padding-right: 5px;
     font: inherit;
     color: inherit;
-
-    &.incomplete {
-        border-bottom: 2px solid var(--color-inline-input-warning);
-    }
-    &.invalid {
-        border-bottom: 2px solid var(--color-inline-input-danger);
-    }
 }
 
-/* Used by `PlaceholderInlineInput`: make the filler visible (since there is
-   no real input on top of it) and render it in the placeholder color. */
-.inline-input-filler.placeholder-inline-input {
+/* Used by `StaticInlineInput`: make the filler visible, since there is no real
+   input on top of it, and de-emphasize it when shown as a placeholder. */
+.inline-input-filler.static-inline-input {
     visibility: visible;
-    color: var(--color-text-placeholder);
+
+    &.placeholder-inline-input {
+        color: var(--color-text-placeholder);
+    }
 }

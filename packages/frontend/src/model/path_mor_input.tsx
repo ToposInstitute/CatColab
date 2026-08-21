@@ -1,4 +1,12 @@
-import { createEffect, createSignal, splitProps, useContext } from "solid-js";
+import {
+    type JSX,
+    Match,
+    Switch,
+    createEffect,
+    createSignal,
+    splitProps,
+    useContext,
+} from "solid-js";
 import invariant from "tiny-invariant";
 import { P, match } from "ts-pattern";
 
@@ -7,26 +15,26 @@ import {
     InlineInput,
     type InlineInputErrorStatus,
     type InlineInputOptions,
+    StaticInlineInput,
 } from "catcolab-ui-components";
-import type { Mor, Uuid } from "catlog-wasm";
+import type { DblModel, Mor, QualifiedLabel, Uuid } from "catlog-wasm";
 import { UNNAMED } from "../components";
 import { LiveModelContext } from "./context";
 
 import "../components/id_input.css";
-import styles from "../components/id_input.module.css";
-
-/** Text wrapping the object name of an identity morphism, e.g. `id(X)`. */
-const ID_PREFIX = "id(";
-const ID_SUFFIX = ")";
+import idStyles from "../components/id_input.module.css";
+import styles from "./path_mor_input.module.css";
 
 /** Optional props for `PathMorInput`. */
 export type PathMorInputOptions = {
     /** Basic morphism generators offered as completions. */
     morCompletions?: Uuid[];
-    /** Object generators offered as `id(...)` completions. */
+    /** Object generators offered as identity morphism completions. */
     obCompletions?: Uuid[];
     /** Whether the current morphism is invalid in context. */
     isInvalid?: boolean;
+    /** Called when the displayed text changes. */
+    onTextChange?: (text: string) => void;
 } & Omit<InlineInputOptions, "completions" | "status">;
 
 /** Input a morphism in a path by its human-readable name.
@@ -35,10 +43,7 @@ Unlike the generic `MorIdInput`, this input understands two kinds of morphisms,
 both relevant when building a path of composable morphisms:
 
 - basic morphism generators, entered and displayed by name;
-- identity morphisms, entered and displayed as `id(<object name>)`.
-
-Label lookups are read from the live model in context; the caller supplies the
-(usually domain-filtered) sets of generators to offer as completions.
+- identity morphisms, entered by the name of the object.
  */
 export function PathMorInput(
     allProps: {
@@ -52,6 +57,11 @@ export function PathMorInput(
         "morCompletions",
         "obCompletions",
         "isInvalid",
+        "onTextChange",
+        "focus",
+        "isActive",
+        "hasFocused",
+        "placeholder",
     ]);
 
     const liveModel = useContext(LiveModelContext);
@@ -59,22 +69,15 @@ export function PathMorInput(
 
     const model = () => liveModel().elaboratedModel();
 
-    // Display label for a morphism: a basic generator's name, or `id(<object>)`
-    // for an identity morphism. Unnamed generators fall back to a placeholder
-    // label, flagged so it can be styled as de-emphasized.
+    // Display label for a morphism: the name of a basic generator, or of the
+    // object of an identity morphism.
     const morLabel = (mor: Mor | null): { text: string; isUnnamed: boolean } => {
-        if (mor === null) {
-            return { text: "", isUnnamed: false };
-        }
-        const obId = identityOb(mor);
+        const obId = mor && identityObId(mor);
         if (obId !== null) {
             const name = model()?.obGeneratorLabel(obId)?.join(".");
-            return {
-                text: `${ID_PREFIX}${name || UNNAMED}${ID_SUFFIX}`,
-                isUnnamed: !name,
-            };
+            return { text: name || UNNAMED, isUnnamed: !name };
         }
-        const id = basicMor(mor);
+        const id = mor && basicMorId(mor);
         if (id !== null) {
             const name = model()?.morGeneratorLabel(id)?.join(".");
             return { text: name || UNNAMED, isUnnamed: !name };
@@ -84,15 +87,9 @@ export function PathMorInput(
 
     const morToText = (mor: Mor | null): string => morLabel(mor).text;
 
-    // Resolve display text to a morphism, or `null` if it doesn't name one.
     const textToMor = (text: string): Mor | null => {
-        const obName = parseIdentityName(text);
-        if (obName !== null) {
-            const lookup = model()?.obGeneratorWithLabel([obName]);
-            return lookup && lookup.tag !== "None" ? identityMor(lookup.content) : null;
-        }
-        const lookup = model()?.morGeneratorWithLabel([text.trim()]);
-        return lookup && lookup.tag !== "None" ? { tag: "Basic", content: lookup.content } : null;
+        const currentModel = model();
+        return currentModel ? morWithLabel(currentModel, [text.trim()]) : null;
     };
 
     const [text, setText] = createSignal("");
@@ -110,6 +107,8 @@ export function PathMorInput(
             }
         }
     });
+
+    createEffect(() => props.onTextChange?.(text()));
 
     const handleNewText = (newText: string) => {
         const mor = textToMor(newText);
@@ -136,7 +135,8 @@ export function PathMorInput(
             const label = morLabel(mor);
             return {
                 name: label.text,
-                nameClass: label.isUnnamed ? styles.unnamed : undefined,
+                nameClass: label.isUnnamed ? idStyles.unnamed : undefined,
+                description: mor.tag === "Basic" ? undefined : "Identity",
                 onComplete: () => setCompletion(mor),
             };
         };
@@ -165,21 +165,84 @@ export function PathMorInput(
     // unnamed generator (but not while the user is typing something else).
     const showsUnnamed = () => isComplete() && morLabel(props.mor).isUnnamed;
 
+    const isActive = () => props.focus?.hasFocus() ?? props.isActive ?? false;
+
+    const activate = (evt: MouseEvent) => {
+        props.focus?.setFocused(true);
+        props.hasFocused?.();
+        evt.preventDefault();
+    };
+
+    // Non-editable display of the morphism, shown while the input is inactive.
+    const Display = (displayProps: { children: JSX.Element }) => (
+        <StaticInlineInput
+            class={styles.display}
+            status={status()}
+            isPlaceholder={text() === ""}
+            onMouseDown={activate}
+        >
+            {displayProps.children}
+        </StaticInlineInput>
+    );
+
     return (
-        <div class="id-input" classList={{ [styles.unnamed]: showsUnnamed() }}>
-            <InlineInput
-                text={text()}
-                setText={handleNewText}
-                completions={completions()}
-                status={status()}
-                {...inputProps}
-            />
+        <div class="id-input" classList={{ [idStyles.unnamed]: showsUnnamed() }}>
+            <Switch fallback={<Display>{text() || props.placeholder}</Display>}>
+                <Match when={isActive()}>
+                    <InlineInput
+                        text={text()}
+                        setText={handleNewText}
+                        completions={completions()}
+                        status={status()}
+                        focus={props.focus}
+                        isActive={props.isActive}
+                        hasFocused={props.hasFocused}
+                        placeholder={props.placeholder}
+                        {...inputProps}
+                    />
+                </Match>
+                <Match when={props.mor !== null && isComplete() ? identityObId(props.mor) : null}>
+                    {(obId) => (
+                        <Display>
+                            <span class={styles.identityPrefix}>{"id"}</span>
+                            <sub class={styles.subscript}>
+                                {model()?.obGeneratorLabel(obId())?.join(".")}
+                            </sub>
+                        </Display>
+                    )}
+                </Match>
+            </Switch>
         </div>
     );
 }
 
+/** Get a morphism for a path item with the given label.
+
+A name can refer to a morphism generator or an object generator, in the latter
+case giving the identity morphism on that object. We assume that objects and
+morphisms do not share names.
+ */
+function morWithLabel(model: DblModel, label: QualifiedLabel): Mor | null {
+    const morLookup = model.morGeneratorWithLabel(label);
+    if (morLookup.tag !== "None") {
+        const mor: Mor = { tag: "Basic", content: morLookup.content };
+        // FIXME: Objects and morphisms belong to a single namespace, so a
+        // lookup by label can return a name of the wrong kind. The kind of the
+        // name found is therefore checked against the model. We should probably
+        // fix this in `catlog-wasm`.
+        if (model.hasMor(mor)) {
+            return mor;
+        }
+    }
+    const obLookup = model.obGeneratorWithLabel(label);
+    if (obLookup.tag !== "None" && model.hasOb({ tag: "Basic", content: obLookup.content })) {
+        return identityMor(obLookup.content);
+    }
+    return null;
+}
+
 /** Extract the object generator of an identity morphism, if any. */
-function identityOb(mor: Mor): Uuid | null {
+function identityObId(mor: Mor): Uuid | null {
     return match(mor)
         .with(
             {
@@ -192,7 +255,7 @@ function identityOb(mor: Mor): Uuid | null {
 }
 
 /** Extract the generator of a basic morphism, if any. */
-function basicMor(mor: Mor): Uuid | null {
+function basicMorId(mor: Mor): Uuid | null {
     return match(mor)
         .with({ tag: "Basic", content: P.select() }, (id) => id)
         .otherwise(() => null);
@@ -204,13 +267,4 @@ function identityMor(obId: Uuid): Mor {
         tag: "Composite",
         content: { tag: "Id", content: { tag: "Basic", content: obId } },
     };
-}
-
-/** Parse the object name out of `id(<name>)` text, if it matches. */
-function parseIdentityName(text: string): string | null {
-    const trimmed = text.trim();
-    if (trimmed.startsWith(ID_PREFIX) && trimmed.endsWith(ID_SUFFIX)) {
-        return trimmed.slice(ID_PREFIX.length, trimmed.length - ID_SUFFIX.length).trim();
-    }
-    return null;
 }
