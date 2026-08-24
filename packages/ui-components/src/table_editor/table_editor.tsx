@@ -14,10 +14,26 @@ const DELETE_COLUMN_WIDTH = 40;
 const ROW_HEIGHT = 28;
 const COLUMN_HEADER_HEIGHT = 28;
 
+export type TableEditorColumnSettings = Omit<Handsontable.GridSettings, "width"> & {
+    width?: number;
+};
+
 export type TableEditorSettings = Omit<
     HandsontableSettings,
-    "width" | "height" | "rowHeaders" | "rowHeaderWidth"
->;
+    | "width"
+    | "height"
+    | "rowHeaders"
+    | "rowHeaderWidth"
+    | "columns"
+    | "colHeaders"
+    | "colWidths"
+    | "data"
+> & {
+    columns: TableEditorColumnSettings[];
+    colHeaders?: string[];
+    colWidths?: number[];
+    data: unknown[];
+};
 export type TableEditorInstance = HandsontableInstance;
 
 export type TableEditorProps = {
@@ -52,7 +68,7 @@ export function TableEditor(props: TableEditorProps) {
         return td;
     };
 
-    const deleteColumn: Handsontable.GridSettings = {
+    const deleteColumn: TableEditorColumnSettings = {
         data: "__tableEditorDelete",
         width: DELETE_COLUMN_WIDTH,
         readOnly: true,
@@ -61,37 +77,32 @@ export function TableEditor(props: TableEditorProps) {
     };
 
     const settings = () => {
-        const settings = props.settings;
-        const columns =
-            Array.isArray(settings.columns) && !settings.readOnly
-                ? [...settings.columns, deleteColumn]
-                : settings.columns;
-        const colHeaders =
-            Array.isArray(settings.colHeaders) && !settings.readOnly
-                ? [...settings.colHeaders, " "]
-                : settings.colHeaders;
-        const width = Array.isArray(columns)
-            ? columns.reduce((total, column, index) => {
-                  const configuredWidth = Array.isArray(settings.colWidths)
-                      ? settings.colWidths[index]
-                      : settings.colWidths;
-                  const columnWidth =
-                      typeof column.width === "number"
-                          ? column.width
-                          : typeof configuredWidth === "number"
-                            ? configuredWidth
-                            : DEFAULT_COLUMN_WIDTH;
-                  return total + columnWidth;
-              }, 0)
-            : undefined;
-        const rowCount = Array.isArray(settings.data) ? settings.data.length : 0;
+        const baseSettings = props.settings;
+        const editable = !baseSettings.readOnly;
+
+        let columns = baseSettings.columns;
+        if (editable) {
+            columns = [...columns, deleteColumn];
+        }
+
+        let colHeaders = baseSettings.colHeaders;
+        if (colHeaders && editable) {
+            colHeaders = [...colHeaders, " "];
+        }
+
+        const width = columns.reduce((total, column, index) => {
+            const configuredWidth = baseSettings.colWidths?.[index];
+            const columnWidth = column.width ?? configuredWidth ?? DEFAULT_COLUMN_WIDTH;
+            return total + columnWidth;
+        }, 0);
+
         return {
-            ...settings,
+            ...baseSettings,
             columns,
             colHeaders,
             rowHeaders: false,
             width,
-            height: tableHeight(rowCount),
+            height: tableHeight(baseSettings.data.length),
             rowHeights: ROW_HEIGHT,
             columnHeaderHeight: COLUMN_HEADER_HEIGHT,
             wordWrap: false,
