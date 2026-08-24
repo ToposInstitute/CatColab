@@ -1,0 +1,104 @@
+import {
+    LLMConversation as LLMConversationMethods,
+    type LLMConversationDocument,
+} from "catcolab-document-methods";
+import type { FeedbackResolution, LLMInteraction, Uuid } from "catcolab-document-types";
+import type { DocumentStore } from "./document-store";
+import type { Instance } from "./instance/instance";
+import type { ModelDocument } from "./model/document";
+import type { Notebook } from "./model/notebook";
+import type { Shape } from "./shape";
+
+export type { LLMConversationDocument } from "catcolab-document-methods";
+
+export type LLMConversationAttachment<S extends Shape = Shape, H = unknown> =
+    | Notebook<S, ModelDocument, H>
+    | Instance<H, S>;
+
+export interface LLMConversation<A = LLMConversationAttachment, H = unknown> {
+    readonly handle: H;
+    readonly attachment: A;
+    readonly document: Readonly<LLMConversationDocument>;
+    readonly title: string;
+
+    interactions(): readonly LLMInteraction[];
+    appendInteraction(interaction: LLMInteraction): void;
+    rejectPendingFeedbackRequests(): void;
+    resolveFeedbackRequest(
+        requestId: Uuid,
+        resolution: Exclude<FeedbackResolution, "unresolved">,
+    ): boolean;
+
+    update(patch: Partial<{ title: string }>): void;
+    dump(): LLMConversationDocument;
+    onChange(callback: () => void): () => void;
+}
+
+export function llmConversationFromStore<
+    Handle,
+    Attachment extends LLMConversationAttachment<Shape, Handle>,
+>(
+    store: DocumentStore<Handle>,
+    handle: Handle,
+    attachment: Attachment,
+): LLMConversation<Attachment, Handle> {
+    function currentDocument(): Readonly<LLMConversationDocument> {
+        return store.getDocumentView(handle) as Readonly<LLMConversationDocument>;
+    }
+
+    return {
+        handle,
+        attachment,
+        get document(): Readonly<LLMConversationDocument> {
+            return currentDocument();
+        },
+        get title(): string {
+            return currentDocument().name;
+        },
+        interactions(): readonly LLMInteraction[] {
+            return currentDocument().interactions;
+        },
+        appendInteraction(interaction: LLMInteraction): void {
+            store.changeDocument(handle, (document) => {
+                LLMConversationMethods.appendLLMInteraction(
+                    document as LLMConversationDocument,
+                    interaction,
+                );
+            });
+        },
+        rejectPendingFeedbackRequests(): void {
+            store.changeDocument(handle, (document) => {
+                LLMConversationMethods.rejectPendingFeedbackRequests(
+                    document as LLMConversationDocument,
+                );
+            });
+        },
+        resolveFeedbackRequest(
+            requestId: Uuid,
+            resolution: Exclude<FeedbackResolution, "unresolved">,
+        ): boolean {
+            let resolved = false;
+            store.changeDocument(handle, (document) => {
+                resolved = LLMConversationMethods.resolveUserFeedbackRequest(
+                    document as LLMConversationDocument,
+                    requestId,
+                    resolution,
+                );
+            });
+            return resolved;
+        },
+        update(patch: Partial<{ title: string }>): void {
+            if (patch.title !== undefined) {
+                store.changeDocument(handle, (document) => {
+                    (document as LLMConversationDocument).name = patch.title as string;
+                });
+            }
+        },
+        dump(): LLMConversationDocument {
+            return store.copyValue(handle, currentDocument());
+        },
+        onChange(callback: () => void): () => void {
+            return store.subscribe(handle, callback);
+        },
+    };
+}
