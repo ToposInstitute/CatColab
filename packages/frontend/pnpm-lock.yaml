@@ -86,6 +86,9 @@ importers:
       catcolab-document-types:
         specifier: link:../document-types/pkg
         version: link:../document-types/pkg
+      catcolab-documents:
+        specifier: link:../documents
+        version: link:../documents
       catcolab-ui-components:
         specifier: link:../ui-components
         version: link:../ui-components

@@ -60,7 +60,7 @@ describe("chat turn over OpenRouter", () => {
             const transcript: OpenAITranscript = [
                 { role: "user", content: "Reply with exactly the word: pong" },
             ];
-            const result = await runOpenAIChatTurn(client, transcript, {}, undefined, testModel);
+            const result = await runOpenAIChatTurn(client, transcript, {}, { model: testModel });
 
             assert.ok(result.content.length > 0, "final content should be a non-empty string");
             assert.strictEqual(transcript[0]?.role, "user");
@@ -83,7 +83,7 @@ describe("chat turn over OpenRouter", () => {
                     content: "Use contextExec to evaluate 6 * 7, then tell me the result.",
                 },
             ];
-            const result = await runOpenAIChatTurn(client, transcript, {}, undefined, testModel);
+            const result = await runOpenAIChatTurn(client, transcript, {}, { model: testModel });
 
             const assistant = result.generatedMessageDelta.find(
                 (message) =>

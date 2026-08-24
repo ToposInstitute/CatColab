@@ -42,6 +42,14 @@ export type OpenAIChatTurnResult = {
     generatedMessageDelta: GeneratedOpenAIMessage[];
 };
 
+export type OpenAIChatTurnOptions = {
+    onContent?: (delta: string, snapshot: string) => void;
+    model?: string;
+    systemPromptSuffix?: string;
+    onSuccessHook?: () => Promise<void>;
+    maxChatCompletions?: number;
+};
+
 /** Create an OpenAI client configured for OpenRouter. */
 export function createInferenceClient(apiKey: string): OpenAI {
     return new OpenAI({
@@ -56,19 +64,21 @@ export async function runOpenAIChatTurn(
     client: OpenAI,
     openAITranscript: readonly OpenAITranscriptMessage[],
     scope: ContextExecScope,
-    onContent?: (delta: string, snapshot: string) => void,
-    model = DEFAULT_LLM_MODEL,
+    options: OpenAIChatTurnOptions = {},
 ): Promise<OpenAIChatTurnResult> {
     const contextScope: ContextExecScope = { files: EMPTY_FILES, ...scope };
+    const systemPrompt = options.systemPromptSuffix
+        ? `${SYSTEM_PROMPT}\n\n${options.systemPromptSuffix}`
+        : SYSTEM_PROMPT;
 
     const messages: ChatCompletionMessageParam[] = [
-        { role: "system", content: SYSTEM_PROMPT },
+        { role: "system", content: systemPrompt },
         ...openAITranscript,
     ];
 
     const runner = client.chat.completions.runTools(
         {
-            model,
+            model: options.model ?? DEFAULT_LLM_MODEL,
             messages,
             stream: true,
             parallel_tool_calls: false,
@@ -96,17 +106,23 @@ export async function runOpenAIChatTurn(
                             if (!args) {
                                 return { tag: "Err", error: "Invalid contextExec arguments" };
                             }
-                            return await contextExec(args.code, contextScope);
+                            return await contextExec(
+                                args.code,
+                                contextScope,
+                                options.onSuccessHook,
+                            );
                         },
                     },
                 },
             ],
         },
-        { maxChatCompletions: MAX_CHAT_COMPLETIONS_PER_TURN },
+        {
+            maxChatCompletions: options.maxChatCompletions ?? MAX_CHAT_COMPLETIONS_PER_TURN,
+        },
     );
 
-    if (onContent) {
-        runner.on("content", onContent);
+    if (options.onContent) {
+        runner.on("content", options.onContent);
     }
 
     const content = (await runner.finalContent()) ?? "";

@@ -6,16 +6,23 @@ import type {
     StableRef,
     Uuid,
 } from "catcolab-document-types";
+import type {
+    DocumentStore,
+    LLMConversation as LLMConversationAPI,
+    LLMConversationAttachment,
+    Shape,
+} from "catcolab-documents";
 import type { JsResult } from "catlog-wasm";
 import type { Api, DocRef, LiveDoc } from "../api";
 import {
     createInferenceClient,
+    MAX_CHAT_COMPLETIONS_PER_TURN,
     parseContextExecArguments,
     parseContextExecResult,
     runOpenAIChatTurn,
     type GeneratedOpenAIMessage,
+    type OpenAITranscript,
 } from "../inference/chat.ts";
-import type { ContextExecScope } from "../inference/context_exec.ts";
 import * as LLMConversationAdapter from "../inference/llm_conversation_adapter.ts";
 import type { LiveModelDoc, ModelLibrary } from "../model";
 import type { InferenceKeyResult } from "../user/inference_key_context.tsx";
@@ -24,6 +31,7 @@ import {
     type ConversationAttachmentMetadata,
     validateConversationAttachments,
 } from "./conversation_attachment_policy.ts";
+import { createLLMConversationExecutionScope } from "./execution_scope.ts";
 
 /** A live LLM conversation and the model it is attached to. */
 export type LiveLLMConversationDoc = {
@@ -104,114 +112,140 @@ export function resolveLLMConversationFeedback(
     return resolved;
 }
 
-/**
- * Persist a user message, run one OpenAI turn, then persist its completed output.
- * Streaming assistant text is reported only through `onContent` and is never persisted.
- */
-export async function runLLMConversationTurn(
-    conversation: LiveLLMConversationDoc,
+/** Persist a user message, run one model turn, and apply its valid document edits. */
+export async function runLLMConversationTurn<
+    Handle,
+    Attachment extends LLMConversationAttachment<Shape, Handle>,
+>(
+    conversation: LLMConversationAPI<Attachment, Handle>,
+    store: DocumentStore<Handle>,
     inferenceKey: InferenceKeyResult,
     userInput: LLMConversationUserInput,
-    contextExecScope: ContextExecScope,
     onContent?: (delta: string, snapshot: string) => void,
 ): Promise<LLMConversationTurnResult> {
-    if (conversation.docRef.isDeleted) {
-        return { tag: "Failed", error: "This LLM conversation has been deleted." };
-    }
     if (inferenceKey.tag !== "Ready") {
         return { tag: "Failed", error: "Inference is unavailable." };
     }
 
-    const inputValidation = validateUserInput(conversation.liveDoc.doc.interactions, userInput);
+    const inputValidation = validateUserInput(conversation.interactions(), userInput);
     if (inputValidation.tag === "Err") {
         return { tag: "Failed", error: inputValidation.content };
     }
 
     try {
-        const userInteraction = LLMConversation.newUserMessage(userInput.content, userInput.files);
-        conversation.liveDoc.changeDoc((doc) => {
-            LLMConversation.rejectPendingFeedbackRequests(doc);
-            LLMConversation.appendLLMInteraction(doc, userInteraction);
-        });
-
-        return generateLLMConversationResponse(
-            conversation,
-            inferenceKey,
-            contextExecScope,
-            onContent,
+        conversation.rejectPendingFeedbackRequests();
+        conversation.appendInteraction(
+            LLMConversation.newUserMessage(userInput.content, userInput.files),
         );
+        return generateLLMConversationResponse(conversation, store, inferenceKey, onContent);
     } catch (error) {
         return { tag: "Failed", error: errorMessage(error) };
     }
 }
 
-/** Retry the latest persisted user message without adding it to the conversation again. */
-export async function retryLastLLMConversationResponse(
-    conversation: LiveLLMConversationDoc,
+/** Retry the latest persisted user message without adding it again. */
+export async function retryLastLLMConversationResponse<
+    Handle,
+    Attachment extends LLMConversationAttachment<Shape, Handle>,
+>(
+    conversation: LLMConversationAPI<Attachment, Handle>,
+    store: DocumentStore<Handle>,
     inferenceKey: InferenceKeyResult,
-    contextExecScope: ContextExecScope,
     onContent?: (delta: string, snapshot: string) => void,
 ): Promise<LLMConversationTurnResult> {
-    if (conversation.docRef.isDeleted) {
-        return { tag: "Failed", error: "This LLM conversation has been deleted." };
-    }
     if (inferenceKey.tag !== "Ready") {
         return { tag: "Failed", error: "Inference is unavailable." };
     }
-    const latestInteraction = conversation.liveDoc.doc.interactions.at(-1);
-    if (latestInteraction?.tag !== "user-message") {
+
+    if (conversation.interactions().at(-1)?.tag !== "user-message") {
         return { tag: "Failed", error: "The latest interaction is not a user message." };
     }
 
-    return generateLLMConversationResponse(conversation, inferenceKey, contextExecScope, onContent);
+    return generateLLMConversationResponse(conversation, store, inferenceKey, onContent);
 }
 
-/** Generate and persist a response to the current persisted conversation. */
-async function generateLLMConversationResponse(
-    conversation: LiveLLMConversationDoc,
+async function generateLLMConversationResponse<
+    Handle,
+    Attachment extends LLMConversationAttachment<Shape, Handle>,
+>(
+    conversation: LLMConversationAPI<Attachment, Handle>,
+    store: DocumentStore<Handle>,
     inferenceKey: Extract<InferenceKeyResult, { tag: "Ready" }>,
-    contextExecScope: ContextExecScope,
     onContent?: (delta: string, snapshot: string) => void,
 ): Promise<LLMConversationTurnResult> {
     try {
-        const persistedConversation = conversation.liveDoc.docHandle.doc();
-        const context =
-            LLMConversationAdapter.prepareLLMConversationInference(persistedConversation);
-        const result = await runOpenAIChatTurn(
-            createInferenceClient(inferenceKey.key),
-            context.transcript,
-            { ...contextExecScope, files: context.files },
-            onContent,
-            persistedConversation.llmModel,
-        );
-        const generated = generatedOpenAIMessageDeltaToLLMInteractions(
-            result.generatedMessageDelta,
-        );
+        const executionScope = await createLLMConversationExecutionScope(conversation, store);
+        const context = LLMConversationAdapter.prepareLLMConversationInference(conversation.dump());
+        const transcript: OpenAITranscript = [...context.transcript];
+        const generatedMessages: GeneratedOpenAIMessage[] = [];
+        const client = createInferenceClient(inferenceKey.key);
+        let remainingCompletions = MAX_CHAT_COMPLETIONS_PER_TURN;
+        let content = "";
+        let problems: ReadonlyArray<string> = [];
+
+        do {
+            const result = await runOpenAIChatTurn(
+                client,
+                transcript,
+                { ...executionScope.bindings, files: context.files },
+                {
+                    model: conversation.document.llmModel,
+                    onContent,
+                    systemPromptSuffix: executionScope.systemPromptSuffix,
+                    maxChatCompletions: remainingCompletions,
+                    onSuccessHook: async () => {
+                        const toolProblems = await executionScope.validate();
+                        if (toolProblems.length > 0) {
+                            throw new Error(validationFeedback(toolProblems));
+                        }
+                    },
+                },
+            );
+            content = result.content;
+            transcript.push(...result.generatedMessageDelta);
+            generatedMessages.push(...result.generatedMessageDelta);
+            const completions = result.generatedMessageDelta.filter(
+                (message) => message.role === "assistant",
+            ).length;
+            remainingCompletions -= Math.max(completions, 1);
+
+            problems = await executionScope.validate();
+            if (problems.length > 0 && remainingCompletions > 0) {
+                transcript.push({ role: "system", content: validationFeedback(problems) });
+            }
+        } while (problems.length > 0 && remainingCompletions > 0);
+
+        const generated = generatedOpenAIMessageDeltaToLLMInteractions(generatedMessages);
         if (generated.tag === "Err") {
             return { tag: "Retryable", error: generated.content };
         }
-        if (generated.content.length === 0 && result.content.trim().length === 0) {
+        if (generated.content.length === 0 && content.trim().length === 0) {
             return { tag: "Retryable", error: "The model produced no usable output." };
         }
 
-        conversation.liveDoc.changeDoc((doc) => {
-            for (const interaction of generated.content) {
-                LLMConversation.appendLLMInteraction(doc, interaction);
-            }
-            if (
-                !generated.content.some((interaction) => interaction.tag === "llm-message") &&
-                result.content.trim().length > 0
-            ) {
-                LLMConversation.appendLLMInteraction(
-                    doc,
-                    LLMConversation.newLLMMessage(result.content),
-                );
-            }
-        });
-        return { tag: "Completed", content: result.content };
+        for (const interaction of generated.content) {
+            conversation.appendInteraction(interaction);
+        }
+        if (
+            !generated.content.some((interaction) => interaction.tag === "llm-message") &&
+            content.trim().length > 0
+        ) {
+            conversation.appendInteraction(LLMConversation.newLLMMessage(content));
+        }
+
+        if (problems.length > 0) {
+            return { tag: "Retryable", error: validationFeedback(problems) };
+        }
+
+        executionScope.commit();
+        return { tag: "Completed", content };
     } catch (error) {
         return { tag: "Retryable", error: errorMessage(error) };
     }
+}
+
+function validationFeedback(problems: ReadonlyArray<string>): string {
+    return `The documents have validation problems:\n${problems.map((problem) => `- ${problem}`).join("\n")}\nFix all problems before completing the turn.`;
 }
 
 /** Convert generated OpenAI assistant/tool messages to persisted LLM interactions. */
