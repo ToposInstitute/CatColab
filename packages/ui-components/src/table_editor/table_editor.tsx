@@ -53,7 +53,7 @@ export function TableEditor(props: TableEditorProps) {
     const deleteRowRenderer = (instance: Handsontable, td: HTMLElement, row: number) => {
         const button = document.createElement("button");
         button.type = "button";
-        button.className = styles.deleteRow!;
+        button.className = styles.deleteRow;
         button.title = "Delete row";
         button.setAttribute("aria-label", "Delete row");
         button.textContent = "×";
@@ -63,7 +63,7 @@ export function TableEditor(props: TableEditorProps) {
             event.stopPropagation();
             instance.alter("remove_row", row);
         });
-        td.classList.add(styles.deleteCell!);
+        td.classList.add(styles.deleteCell);
         td.replaceChildren(button);
         return td;
     };
