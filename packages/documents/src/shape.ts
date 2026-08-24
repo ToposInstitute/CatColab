@@ -69,6 +69,13 @@ export function defineShape<const S extends Shape>(shape: S): S {
     return shape;
 }
 
+/** A shape that declares support for tabular instances of its models. */
+export type InstanceCapableShape = Shape & {
+    readonly supportsInstances: {
+        readonly tableObjects: readonly ObjectType[];
+    };
+};
+
 export type RichTextType = typeof RichText;
 export type ObjectTypesOf<S extends Shape> = NonNullable<S["objects"]>[number];
 export type MorphismTypesOf<S extends Shape> = NonNullable<S["morphisms"]>[number];
