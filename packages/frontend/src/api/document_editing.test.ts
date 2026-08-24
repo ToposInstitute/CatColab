@@ -3,15 +3,14 @@ import { type DocHandle, isValidDocumentId, Repo } from "@automerge/automerge-re
 import { BrowserWebSocketClientAdapter } from "@automerge/automerge-repo-network-websocket";
 import type { DocInfo, UserState } from "catcolab-api/src/user_state";
 import { type FirebaseOptions, initializeApp } from "firebase/app";
-import { deleteUser, getAuth, signInWithEmailAndPassword } from "firebase/auth";
-import invariant from "tiny-invariant";
+import { deleteUser, getAuth } from "firebase/auth";
 import { v4 } from "uuid";
 import { afterAll, assert, describe, test } from "vitest";
 
 import type { ModelDocument } from "catcolab-document-methods";
 import type { Document } from "catcolab-document-types";
 import { normalizeImmutableStrings } from "../util/immutable_string";
-import { createTestDocument, initTestUserAuth } from "../util/test_util.ts";
+import { createTestDocument, createTestUserAuth } from "../util/test_util.ts";
 import { createFetchWithAuth, createRpcClient, unwrap } from "./rpc.ts";
 
 const serverUrl = import.meta.env.VITE_SERVER_URL;
@@ -43,12 +42,8 @@ const waitFor = async (
 
 describe("Document editing, snapshots, and undo/redo", async () => {
     const auth = getAuth(firebaseApp);
-    const email = "test-doc-editing@catcolab.org";
     const password = "foobar";
-    await initTestUserAuth(auth, email, password);
-
-    const user = auth.currentUser;
-    invariant(user);
+    const { user } = await createTestUserAuth(auth, "test-doc-editing", password);
 
     const createdRefs: string[] = [];
     afterAll(async () => {
@@ -111,8 +106,6 @@ describe("Document editing, snapshots, and undo/redo", async () => {
     // Autosave creates a second snapshot after edits
     // ---------------------------------------------------------------
     test.sequential("should create a new snapshot via autosave after editing", async () => {
-        await signInWithEmailAndPassword(auth, email, password);
-
         const name = `Autosave Test - ${v4()}`;
         const refId = await createDoc(name);
 
@@ -150,8 +143,6 @@ describe("Document editing, snapshots, and undo/redo", async () => {
     // Snapshot chain has correct parent/child structure
     // ---------------------------------------------------------------
     test.sequential("should have correct parent/child snapshot structure", async () => {
-        await signInWithEmailAndPassword(auth, email, password);
-
         const name = `Chain Test - ${v4()}`;
         const refId = await createDoc(name);
 
@@ -194,8 +185,6 @@ describe("Document editing, snapshots, and undo/redo", async () => {
     // load_snapshot reverts the live document content
     // ---------------------------------------------------------------
     test.sequential("should revert live document content when navigating to an older snapshot", async () => {
-        await signInWithEmailAndPassword(auth, email, password);
-
         const originalName = `Revert Original - ${v4()}`;
         const refId = await createDoc(originalName);
 
@@ -242,8 +231,6 @@ describe("Document editing, snapshots, and undo/redo", async () => {
     // load_snapshot updates the database snapshot content
     // ---------------------------------------------------------------
     test.sequential("should update document content after navigating to an older snapshot", async () => {
-        await signInWithEmailAndPassword(auth, email, password);
-
         const originalName = `DB Revert Original - ${v4()}`;
         const refId = await createDoc(originalName);
 
@@ -296,8 +283,6 @@ describe("Document editing, snapshots, and undo/redo", async () => {
     // Multiple edits → multiple snapshots → navigate history
     // ---------------------------------------------------------------
     test.sequential("should navigate through a chain of three snapshots", async () => {
-        await signInWithEmailAndPassword(auth, email, password);
-
         const name1 = `History V1 - ${v4()}`;
         const refId = await createDoc(name1);
 
@@ -376,8 +361,6 @@ describe("Document editing, snapshots, and undo/redo", async () => {
     // Undo (go to parent) and redo (go to child)
     // ---------------------------------------------------------------
     test.sequential("should undo and redo through snapshot history", async () => {
-        await signInWithEmailAndPassword(auth, email, password);
-
         const name1 = `Undo V1 - ${v4()}`;
         const refId = await createDoc(name1);
 
@@ -429,8 +412,6 @@ describe("Document editing, snapshots, and undo/redo", async () => {
     // Editing after undo creates a branch
     // ---------------------------------------------------------------
     test.sequential("should allow editing after navigating to an older snapshot", async () => {
-        await signInWithEmailAndPassword(auth, email, password);
-
         const name1 = `Branch V1 - ${v4()}`;
         const refId = await createDoc(name1);
 
@@ -482,8 +463,6 @@ describe("Document editing, snapshots, and undo/redo", async () => {
     // Content beyond just name is preserved during revert
     // ---------------------------------------------------------------
     test.sequential("should preserve full document structure when reverting snapshots", async () => {
-        await signInWithEmailAndPassword(auth, email, password);
-
         const name = `Structure Test - ${v4()}`;
         const refId = await createDoc(name);
 
@@ -548,8 +527,6 @@ describe("Document editing, snapshots, and undo/redo", async () => {
         "should not create extra snapshots when navigating to a historical snapshot",
         { timeout: 15000 },
         async () => {
-            await signInWithEmailAndPassword(auth, email, password);
-
             const name = `No Spurious Snapshot - ${v4()}`;
             const refId = await createDoc(name);
 
@@ -610,8 +587,6 @@ describe("Document editing, snapshots, and undo/redo", async () => {
         "should preserve rich text marks when navigating to a historical snapshot",
         { timeout: 15000 },
         async () => {
-            await signInWithEmailAndPassword(auth, email, password);
-
             const name = `Rich Text Marks - ${v4()}`;
             const refId = await createDoc(name);
 
@@ -709,8 +684,6 @@ describe("Document editing, snapshots, and undo/redo", async () => {
         "should not copy rich text content to other cells on redo",
         { timeout: 20000 },
         async () => {
-            await signInWithEmailAndPassword(auth, email, password);
-
             const name = `Multi Cell Redo - ${v4()}`;
             const refId = await createDoc(name);
 
@@ -845,8 +818,6 @@ describe("Document editing, snapshots, and undo/redo", async () => {
         "should preserve block markers as structural elements after undo",
         { timeout: 15000 },
         async () => {
-            await signInWithEmailAndPassword(auth, email, password);
-
             const name = `Block Markers - ${v4()}`;
             const refId = await createDoc(name);
 

@@ -6,7 +6,7 @@ import * as uuid from "uuid";
 import { afterAll, assert, describe, test } from "vitest";
 
 import type { Document } from "catlog-wasm";
-import { createTestDocument, initTestUserAuth } from "../util/test_util.ts";
+import { createTestDocument, createTestUserAuth } from "../util/test_util.ts";
 import { createFetchWithAuth, createRpcClient, unwrap, unwrapErr } from "./rpc.ts";
 
 const serverUrl = import.meta.env.VITE_SERVER_URL;
@@ -108,12 +108,9 @@ describe("RPC for Automerge documents", async () => {
 
 describe("Authorized RPC", async () => {
     const auth = getAuth(firebaseApp);
-    const email = "test-document-rpc@catcolab.org";
     const password = "foobar";
-    await initTestUserAuth(auth, email, password);
-
-    const user = auth.currentUser;
-    afterAll(async () => user && (await deleteUser(user)));
+    const { user } = await createTestUserAuth(auth, "test-document-rpc", password);
+    afterAll(async () => await deleteUser(user));
 
     unwrap(await rpc.sign_up_or_sign_in.mutate());
 

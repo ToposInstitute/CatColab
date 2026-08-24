@@ -2,8 +2,7 @@ import { type DocHandle, isValidDocumentId, Repo } from "@automerge/automerge-re
 import { BrowserWebSocketClientAdapter } from "@automerge/automerge-repo-network-websocket";
 import type { DocInfo, UserState } from "catcolab-api/src/user_state";
 import { type FirebaseOptions, initializeApp } from "firebase/app";
-import { deleteUser, getAuth, signInWithEmailAndPassword } from "firebase/auth";
-import invariant from "tiny-invariant";
+import { deleteUser, getAuth } from "firebase/auth";
 import { stringify as uuidStringify, v4 } from "uuid";
 import { afterAll, assert, describe, test } from "vitest";
 
@@ -11,7 +10,7 @@ import { normalizeImmutableStrings } from "../util/immutable_string";
 import {
     createChildTestDocument,
     createTestDocument,
-    initTestUserAuth,
+    createTestUserAuth,
 } from "../util/test_util.ts";
 import { createFetchWithAuth, createRpcClient, unwrap } from "./rpc.ts";
 
@@ -28,12 +27,8 @@ const repo = new Repo({
 
 describe("User state Automerge document", async () => {
     const auth = getAuth(firebaseApp);
-    const email = "test-user-state-doc@catcolab.org";
     const password = "foobar";
-    await initTestUserAuth(auth, email, password);
-
-    const user = auth.currentUser;
-    invariant(user);
+    const { user } = await createTestUserAuth(auth, "test-user-state-doc", password);
 
     const createdRefs: string[] = [];
     afterAll(async () => {
@@ -139,7 +134,6 @@ describe("User state Automerge document", async () => {
         );
 
         // Soft-delete.
-        await signInWithEmailAndPassword(auth, email, password);
         unwrap(await rpc.delete_ref.mutate(refId));
 
         await waitFor(() => {
@@ -223,8 +217,6 @@ describe("User state Automerge document", async () => {
     });
 
     test("should sync document name change via autosave", async () => {
-        await signInWithEmailAndPassword(auth, email, password);
-
         const name = `Test Autosave - ${v4()}`;
         const refId = await createDoc(name);
         await waitFor(
@@ -255,8 +247,6 @@ describe("User state Automerge document", async () => {
     });
 
     test("should switch current snapshot via load_snapshot", async () => {
-        await signInWithEmailAndPassword(auth, email, password);
-
         const name = `Test Snapshot Switch - ${v4()}`;
         const refId = await createDoc(name);
         await waitFor(

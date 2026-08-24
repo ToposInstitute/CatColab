@@ -1,24 +1,14 @@
-import { FirebaseError } from "firebase/app";
-import {
-    type Auth,
-    createUserWithEmailAndPassword,
-    signInWithEmailAndPassword,
-} from "firebase/auth";
+import { type Auth, createUserWithEmailAndPassword } from "firebase/auth";
+import { v4 } from "uuid";
 
 import type { JsonValue } from "catcolab-api";
 import type { Document } from "catlog-wasm";
 
-/** Initialize a test user in Firebase auth. */
-export async function initTestUserAuth(auth: Auth, email: string, password: string) {
-    try {
-        await createUserWithEmailAndPassword(auth, email, password);
-    } catch (err) {
-        if (err instanceof FirebaseError && err.code === "auth/email-already-in-use") {
-            await signInWithEmailAndPassword(auth, email, password);
-        } else {
-            throw err;
-        }
-    }
+/** Create a Firebase user isolated from other local and CI test runs. */
+export async function createTestUserAuth(auth: Auth, label: string, password: string) {
+    const email = `${label}-${v4()}@catcolab.org`;
+    const { user } = await createUserWithEmailAndPassword(auth, email, password);
+    return { email, user };
 }
 
 /** Creates a valid test document with the given name. */
