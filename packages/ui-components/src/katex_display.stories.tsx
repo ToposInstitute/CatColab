@@ -69,14 +69,14 @@ export const Reactive: Story = {
             "\\sum_{i=1}^{n} i = \\frac{n(n+1)}{2}",
             "\\int_{a}^{b} f(x)\\,dx",
             "e^{i\\pi} + 1 = 0",
-        ];
+        ] as const;
         const [currentIndex, setCurrentIndex] = createSignal(0);
-        const [math, setMath] = createSignal(equations[0]);
+        const [math, setMath] = createSignal<(typeof equations)[number]>(equations[0]);
 
         const nextEquation = () => {
             const nextIndex = (currentIndex() + 1) % equations.length;
             setCurrentIndex(nextIndex);
-            setMath(equations[nextIndex]);
+            setMath(equations[nextIndex]!);
         };
 
         return (

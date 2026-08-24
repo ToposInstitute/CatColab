@@ -8,12 +8,13 @@
         "./*": "./src/*"
     },
     "scripts": {
+        "build:tcm": "tcm -p 'src/**/*.module.css' .",
         "format": "oxfmt .",
         "lint": "oxlint --fix && oxfmt . &&  stylelint 'src/**/*.css' --fix",
-        "check": "pnpm run lint && tsc",
-        "ci": "tsc --noEmit && oxlint --deny-warnings && oxfmt --check . && stylelint 'src/**/*.css'",
-        "dev": "storybook dev -p 6006 --no-version-updates --no-open",
-        "build": "NODE_ENV=production storybook build",
+        "check": "pnpm run build:tcm && pnpm run lint && tsc",
+        "ci": "pnpm run build:tcm && tsc --noEmit && oxlint --deny-warnings && oxfmt --check . && stylelint 'src/**/*.css'",
+        "dev": "pnpm run build:tcm && storybook dev -p 6006 --no-version-updates --no-open",
+        "build": "pnpm run build:tcm && NODE_ENV=production storybook build",
         "test": "vitest --project=storybook"
     },
     "dependencies": {
@@ -50,6 +51,7 @@
         "playwright": "^1.56.1",
         "storybook": "^10.0.2",
         "storybook-solidjs-vite": "^10.0.5",
+        "typed-css-modules": "^0.9.1",
         "typescript": "^6.0.3",
         "vite": "^7.2.2",
         "vite-plugin-solid": "^2.11.10",

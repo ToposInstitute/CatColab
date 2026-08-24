@@ -90,9 +90,13 @@ function newestChild(snapshotId: string, history: Record<string, HistoryEntry>):
 function buildFullChain(head: string, history: Record<string, HistoryEntry>): string[] {
     const backwards: string[] = [];
     let current: string | null = head;
-    while (current != null && history[current] != null) {
+    while (current != null) {
+        const entry: HistoryEntry | undefined = history[current];
+        if (!entry) {
+            break;
+        }
         backwards.push(current);
-        current = history[current].parent ?? null;
+        current = entry.parent ?? null;
     }
     backwards.reverse();
 
@@ -113,6 +117,9 @@ function chainToItems(
     const items: HistoryItem[] = [];
     for (let i = chain.length - 1; i >= 0; i--) {
         const id = chain[i];
+        if (id === undefined) {
+            continue;
+        }
         const e = history[id];
         if (e) {
             items.push({ id, createdAt: e.createdAt, active: id === head });

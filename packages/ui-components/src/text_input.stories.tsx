@@ -263,12 +263,12 @@ export const MultipleInputsWithNavigation: Story = {
 
 export const HorizontalInputRow: Story = {
     render: () => {
-        const [texts, setTexts] = createSignal(["", "", ""]);
+        const [texts, setTexts] = createSignal<[string, string, string]>(["", "", ""]);
         const [activeIndex, setActiveIndex] = createSignal(0);
 
         const setText = (index: number, value: string) => {
             setTexts((prev) => {
-                const newTexts = [...prev];
+                const newTexts: [string, string, string] = [...prev];
                 newTexts[index] = value;
                 return newTexts;
             });
