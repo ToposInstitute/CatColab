@@ -5,7 +5,7 @@ import {
     type HandsontableInstance,
     type HandsontableSettings,
 } from "./handsontable";
-import Handsontable from "./handsontable_core.js";
+import type Handsontable from "./handsontable_core.js";
 
 import styles from "./table_editor.module.css";
 
