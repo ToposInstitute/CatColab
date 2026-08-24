@@ -10,7 +10,7 @@ export function AnalysisInfo(props: { liveAnalysis: LiveAnalysisDoc }) {
 
     return (
         <>
-            <div class="name">Analysis</div>
+            <div class="name">Analysis of</div>
             <div class="model">
                 <A href={parentUrl()}>{parentName()}</A>
             </div>
