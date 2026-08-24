@@ -23,6 +23,7 @@ export * from "./panel";
 export * from "./relative_time";
 export * from "./resizable";
 export * from "./spinner";
+export * from "./table_editor";
 export * from "./text_input";
 export * from "./util/focus";
 export * from "./util/keyboard";
