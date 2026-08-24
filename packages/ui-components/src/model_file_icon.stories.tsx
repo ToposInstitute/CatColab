@@ -4,7 +4,7 @@ import type { Meta, StoryObj } from "storybook-solidjs-vite";
 
 import { ModelFileIcon } from "./model_file_icon";
 
-const theoryToLetterMap: Record<string, [string, string]> = {
+const theoryToLetterMap = {
     empty: ["I", "n"],
     "simple-olog": ["O", "l"],
     "simple-schema": ["S", "c"],
@@ -16,7 +16,7 @@ const theoryToLetterMap: Record<string, [string, string]> = {
     "reg-net": ["R", "n"],
     "unary-dec": ["D", "c"],
     "power-system": ["P", "s"],
-};
+} satisfies Record<string, [string, string]>;
 
 const meta = {
     title: "Icons/_internal/ModelFileIcon",
