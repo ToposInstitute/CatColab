@@ -1,10 +1,10 @@
 import { type FirebaseOptions, initializeApp } from "firebase/app";
-import { deleteUser, getAuth } from "firebase/auth";
+import { deleteUser, getAuth, type User } from "firebase/auth";
 import invariant from "tiny-invariant";
 import { afterAll, assert, beforeAll, describe, test } from "vitest";
 
 import { createFetchWithAuth, createRpcClient } from "../api/rpc.ts";
-import { initTestUserAuth } from "../util/test_util.ts";
+import { createTestUserAuth } from "../util/test_util.ts";
 import { createInferenceClient, runOpenAIChatTurn, type OpenAITranscript } from "./chat.ts";
 
 // When inference is configured, these tests exercise a live `runOpenAIChatTurn`
@@ -23,9 +23,10 @@ const testModel = "openai/gpt-oss-20b:free";
 describe("chat turn over OpenRouter", () => {
     const auth = getAuth(firebaseApp);
     let client: ReturnType<typeof createInferenceClient> | undefined;
+    let user: User | undefined;
 
     beforeAll(async () => {
-        await initTestUserAuth(auth, "test-inference-chat@catcolab.org", "foobar");
+        ({ user } = await createTestUserAuth(auth, "test-inference-chat", "foobar"));
         invariant(auth.currentUser);
 
         await rpc.sign_up_or_sign_in.mutate();
@@ -42,8 +43,8 @@ describe("chat turn over OpenRouter", () => {
     });
 
     afterAll(async () => {
-        if (auth.currentUser) {
-            await deleteUser(auth.currentUser);
+        if (user) {
+            await deleteUser(user);
         }
     });
 
