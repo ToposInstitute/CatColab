@@ -1,0 +1,238 @@
+/* Conversations place document metadata below the title. */
+.llm-conversation-pane .document-head {
+    align-items: stretch;
+    flex-direction: column;
+
+    & .title {
+        min-width: 0;
+
+        & .inline-input-container {
+            display: block;
+            max-width: 100%;
+            overflow: hidden;
+        }
+
+        & .inline-input-filler {
+            display: block;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        & .inline-input {
+            text-overflow: ellipsis;
+        }
+    }
+
+    & .info {
+        flex-shrink: 0;
+        justify-content: flex-end;
+        min-width: 0;
+        width: 100%;
+    }
+
+    & .model {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+}
+
+/* Conversations scroll only their transcript, keeping the title and composer visible. */
+.llm-conversation-pane .document-pane-content {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.llm-conversation-pane .notebook-container {
+    box-sizing: border-box;
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-height: 0;
+    width: 100%;
+}
+
+.llm-conversation-pane .notebook-container > :first-child {
+    flex-shrink: 0;
+}
+
+.llm-conversation-editor {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.llm-conversation-transcript {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 1rem 0.5rem 1rem 0;
+}
+
+.llm-conversation-empty {
+    color: var(--color-gray-600);
+    padding: 2rem 0;
+    text-align: center;
+}
+
+.llm-conversation-ephemeral {
+    opacity: 0.75;
+}
+
+.llm-message,
+.llm-code-execution,
+.llm-transaction,
+.llm-feedback-request {
+    border: 1px solid var(--color-gray-200);
+    border-radius: 6px;
+    box-sizing: border-box;
+    margin: 0.75rem 0;
+    padding: 0.7rem 0.8rem;
+}
+
+.llm-user-message {
+    background: var(--color-gray-100);
+    margin-left: 12%;
+}
+
+.llm-assistant-message,
+.llm-code-execution {
+    background: var(--color-gray-50);
+    margin-right: 5%;
+}
+
+.llm-message-label,
+.llm-code-section-label {
+    color: var(--color-gray-600);
+    font-size: var(--h5-font-size);
+    font-weight: 500;
+    margin-bottom: 0.35rem;
+}
+
+.llm-message-content,
+.llm-code-result {
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
+}
+
+.llm-message-attachments,
+.llm-conversation-files,
+.llm-conversation-composer-buttons,
+.llm-feedback-actions {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+}
+
+.llm-message-attachments {
+    margin-top: 0.6rem;
+}
+
+.llm-message-attachments span,
+.llm-conversation-file {
+    align-items: center;
+    background: var(--color-gray-150);
+    border-radius: 4px;
+    display: inline-flex;
+    font-size: var(--h5-font-size);
+    gap: 0.2rem;
+    padding: 0.15rem 0.35rem;
+}
+
+.llm-code-execution .foldable-header {
+    align-items: center;
+}
+
+.llm-code-section {
+    margin-top: 0.8rem;
+}
+
+.llm-code-view,
+.llm-code-result {
+    background: white;
+    border: 1px solid var(--color-gray-200);
+    border-radius: 4px;
+    box-sizing: border-box;
+    margin: 0;
+    max-height: 20rem;
+    overflow: auto;
+    padding: 0.5rem;
+}
+
+.llm-code-view pre {
+    margin: 0;
+}
+
+.llm-transaction {
+    border-style: dashed;
+    margin-left: 1rem;
+}
+
+.llm-feedback-actions {
+    justify-content: flex-end;
+    margin-top: 0.6rem;
+}
+
+.llm-feedback-resolution {
+    color: var(--color-gray-600);
+    font-size: var(--h5-font-size);
+    margin-top: 0.5rem;
+    text-transform: capitalize;
+}
+
+.llm-conversation-composer {
+    background: var(--color-gray-50);
+    border-top: 1px solid var(--color-gray-200);
+    padding: 0.75rem 0 0.25rem;
+}
+
+.llm-conversation-notice {
+    margin-bottom: 0.5rem;
+}
+
+.llm-conversation-composer form > textarea {
+    box-sizing: border-box;
+    display: block;
+    min-height: 5rem;
+    resize: vertical;
+    width: 100%;
+}
+
+.llm-conversation-files {
+    margin-top: 0.5rem;
+}
+
+.llm-conversation-file .icon-button {
+    min-height: auto;
+    min-width: auto;
+    padding: 1px;
+}
+
+.llm-conversation-composer-actions {
+    align-items: center;
+    color: var(--color-gray-600);
+    display: flex;
+    font-size: var(--h5-font-size);
+    justify-content: space-between;
+    margin-top: 0.45rem;
+}
+
+.llm-conversation-file-input {
+    display: none;
+}
+
+@media (max-width: 700px) {
+    .llm-user-message {
+        margin-left: 4%;
+    }
+
+    .llm-assistant-message,
+    .llm-code-execution {
+        margin-right: 0;
+    }
+}

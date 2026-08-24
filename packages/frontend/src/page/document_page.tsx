@@ -49,7 +49,8 @@ import { InstanceInfo } from "../instance/instance_info";
 import { getLiveInstance, type LiveInstanceDoc } from "../instance/live_doc_compatibility";
 import {
     getLiveLLMConversation,
-    LLMConversationEditorStub,
+    LLMConversationEditor,
+    LLMConversationInfo,
     type LiveLLMConversationDoc,
 } from "../llm_conversation";
 import { type LiveModelDoc, type ModelLibrary, ModelLibraryContext } from "../model";
@@ -500,7 +501,11 @@ export function DocumentPane(props: {
     // oxlint-disable solid/reactivity -- Context.Provider value getter is reactive
     return (
         <DocRefIdContext.Provider value={() => props.docRef.refId}>
-            <div class="document-pane-layout" onMouseDown={() => props.focus.setFocused(true)}>
+            <div
+                class="document-pane-layout"
+                classList={{ "llm-conversation-pane": props.doc.type === "llmconversation" }}
+                onMouseDown={() => props.focus.setFocused(true)}
+            >
                 <div class="document-pane-content">
                     <Show when={isDeleted()}>
                         <WarningBanner
@@ -550,7 +555,9 @@ export function DocumentPane(props: {
                             </Match>
                             <Match keyed when={props.doc.type === "llmconversation" && props.doc}>
                                 {(liveConversation) => (
-                                    <DocumentHead liveDoc={liveConversation.liveDoc} />
+                                    <DocumentHead liveDoc={liveConversation.liveDoc}>
+                                        <LLMConversationInfo liveConversation={liveConversation} />
+                                    </DocumentHead>
                                 )}
                             </Match>
                         </Switch>
@@ -584,8 +591,14 @@ export function DocumentPane(props: {
                                     <InstanceEditor instance={liveInstance.instance} />
                                 )}
                             </Match>
-                            <Match when={props.doc.type === "llmconversation"}>
-                                <LLMConversationEditorStub />
+                            <Match keyed when={props.doc.type === "llmconversation" && props.doc}>
+                                {(liveConversation) => (
+                                    <LLMConversationEditor
+                                        conversation={liveConversation.conversation}
+                                        store={liveConversation.store}
+                                        canEdit={() => canEditConversation(props)}
+                                    />
+                                )}
                             </Match>
                         </Switch>
                     </div>
@@ -598,6 +611,15 @@ export function DocumentPane(props: {
             </div>
         </DocRefIdContext.Provider>
     );
+}
+
+/** Whether the user may edit the LLM conversation opened in a document pane. */
+function canEditConversation(props: { docRef: DocRef }): boolean {
+    const { user, anyone } = props.docRef.permissions;
+    const writable = [user, anyone].some(
+        (permission) => permission !== null && permission !== "Read",
+    );
+    return !props.docRef.isDeleted && writable;
 }
 
 async function getLiveDocument(

@@ -1,0 +1,96 @@
+.llm-markdown {
+    overflow-wrap: anywhere;
+}
+
+.llm-markdown > :first-child {
+    margin-top: 0;
+}
+
+.llm-markdown > :last-child {
+    margin-bottom: 0;
+}
+
+.llm-markdown p,
+.llm-markdown ul,
+.llm-markdown ol,
+.llm-markdown blockquote,
+.llm-markdown table,
+.llm-markdown pre {
+    margin: 0.6rem 0;
+}
+
+.llm-markdown h1,
+.llm-markdown h2,
+.llm-markdown h3,
+.llm-markdown h4,
+.llm-markdown h5,
+.llm-markdown h6 {
+    margin: 0.9rem 0 0.45rem;
+}
+
+.llm-markdown h1 {
+    font-size: var(--h2-font-size);
+}
+
+.llm-markdown h2 {
+    font-size: var(--h3-font-size);
+}
+
+.llm-markdown h3,
+.llm-markdown h4,
+.llm-markdown h5,
+.llm-markdown h6 {
+    font-size: var(--h4-font-size);
+}
+
+.llm-markdown ul,
+.llm-markdown ol {
+    padding-left: 1.5rem;
+}
+
+.llm-markdown blockquote {
+    border-left: 3px solid var(--color-gray-300);
+    color: var(--color-gray-700);
+    margin-left: 0;
+    padding-left: 0.75rem;
+}
+
+.llm-markdown :not(pre) > code {
+    background: var(--color-gray-150);
+    border-radius: 3px;
+    font-family: monospace;
+    padding: 0.1em 0.25em;
+}
+
+.llm-markdown pre {
+    background: white;
+    border: 1px solid var(--color-gray-200);
+    border-radius: 4px;
+    box-sizing: border-box;
+    max-height: 20rem;
+    overflow: auto;
+    padding: 0.5rem;
+    white-space: pre-wrap;
+}
+
+.llm-markdown pre code {
+    font-family: monospace;
+}
+
+.llm-markdown table {
+    border-collapse: collapse;
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+}
+
+.llm-markdown th,
+.llm-markdown td {
+    border: 1px solid var(--color-gray-300);
+    padding: 0.3rem 0.5rem;
+    text-align: left;
+}
+
+.llm-markdown th {
+    background: var(--color-gray-100);
+}
