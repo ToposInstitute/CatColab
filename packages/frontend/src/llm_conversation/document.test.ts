@@ -143,14 +143,16 @@ describe("LLM conversation turns", () => {
         const call = inference.runOpenAIChatTurn.mock.calls[0]!;
         assert.deepStrictEqual(call[2].files, { "values.csv": "left,right\n0,1\n" });
         assert.strictEqual(call[3]?.model, "test-model");
-        assert.match(call[3]?.systemPromptSuffix ?? "", /Company schema/);
+        const suffix = call[3]?.systemPromptSuffix ?? "";
+        assert.match(suffix, /Company schema/);
+        assert.match(suffix, /attached document/);
         assert.deepStrictEqual(
             fixture.conversation.interactions().map((interaction) => interaction.tag),
             ["user-message", "llm-code-execution", "llm-message"],
         );
     });
 
-    test("puts an attached instance and its schema in scope", async () => {
+    test("puts an attached document and the document it links to in scope", async () => {
         const fixture = await makeFixture(true);
         inference.createInferenceClient.mockReturnValue({});
         inference.runOpenAIChatTurn.mockImplementation(async (_client, _transcript, scope) => {
@@ -169,8 +171,9 @@ describe("LLM conversation turns", () => {
         assert.deepStrictEqual(await runTurn(fixture), { tag: "Completed", content: "Done." });
         assert.strictEqual(fixture.instance?.title, "Updated data");
         const suffix = inference.runOpenAIChatTurn.mock.calls[0]?.[3]?.systemPromptSuffix ?? "";
-        assert.match(suffix, /Company data/);
-        assert.match(suffix, /instance .* of/);
+        assert.match(suffix, /`document_Company_data` is the attached document "Company data"/);
+        assert.match(suffix, /Its `instanceOf` link points to `document_Company_schema`/);
+        assert.match(suffix, /`document_Company_schema` is the document "Company schema"/);
     });
 
     test("reprompts while the in-memory documents are invalid", async () => {
