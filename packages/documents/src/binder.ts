@@ -4,7 +4,7 @@ import {
     Model,
 } from "catcolab-document-methods";
 import type { Document } from "catcolab-document-types";
-import type { DocumentStore } from "./document-store";
+import type { DocumentRef, DocumentStore } from "./document-store";
 import { createInMemoryStore } from "./document-store";
 import { instanceFromStore, type Instance } from "./instance/instance";
 import {
@@ -26,6 +26,11 @@ export interface Binder<Handle> {
         options: { title: string },
     ): Promise<Notebook<S, ModelDocument, Handle>>;
 
+    loadNotebookFromRef<S extends Shape & { readonly theory: string }>(
+        shape: S,
+        ref: DocumentRef,
+    ): Promise<Result<Notebook<S, ModelDocument, Handle>>>;
+
     createInstance<S extends Shape>(
         schema: Notebook<S, ModelDocument, Handle>,
         options: { title: string },
@@ -36,6 +41,11 @@ export interface Binder<Handle> {
         llmModel: string,
         options: { title: string },
     ): Promise<LLMConversation<Attachment, Handle>>;
+
+    loadInstanceFromRef<S extends Shape>(
+        schema: Notebook<S, ModelDocument, Handle>,
+        ref: DocumentRef,
+    ): Promise<Result<Instance<Handle, S>>>;
 }
 
 /* Overloads rather than a single signature `createBinder<Handle>(store?:
@@ -70,12 +80,52 @@ function binderFromStore<Handle>(store: DocumentStore<Handle>): Binder<Handle> {
 
             return modelNotebookFromStore(shape, store, handle);
         },
+        async loadNotebookFromRef<S extends Shape & { readonly theory: string }>(
+            shape: S,
+            ref: DocumentRef,
+        ) {
+            const result = await store.getHandle(ref);
+            if (result.tag === "Err") {
+                return result;
+            }
+
+            const document = store.getDocumentView(result.content);
+            if (document.type !== "model") {
+                return {
+                    tag: "Err",
+                    content: [
+                        {
+                            message: `Cannot load document of type "${document.type}" as a notebook.`,
+                            path: ["type"],
+                        },
+                    ],
+                };
+            }
+            if (document.theory !== shape.theory) {
+                return {
+                    tag: "Err",
+                    content: [
+                        {
+                            message:
+                                `Cannot load document with theory "${document.theory}"` +
+                                `using shape "${shape.theory}".`,
+                            path: ["theory"],
+                        },
+                    ],
+                };
+            }
+
+            return {
+                tag: "Ok",
+                content: modelNotebookFromStore(shape, store, result.content),
+            };
+        },
         async createInstance<S extends Shape>(
             schema: Notebook<S, ModelDocument, Handle>,
             options: { title: string },
         ) {
             const shape = schema.shape;
-            if (shape.supportsInstances === undefined) {
+            if (!shape.supportsInstances) {
                 return {
                     tag: "Err",
                     content: [
@@ -128,6 +178,63 @@ function binderFromStore<Handle>(store: DocumentStore<Handle>): Binder<Handle> {
 
             const handle = await store.createHandle(document);
             return llmConversationFromStore(store, handle, attachment);
+        },
+        async loadInstanceFromRef<S extends Shape>(
+            schema: Notebook<S, ModelDocument, Handle>,
+            ref: DocumentRef,
+        ) {
+            if (!schema.shape.supportsInstances) {
+                return {
+                    tag: "Err",
+                    content: [
+                        {
+                            message: `Shape${schema.shape.theory ? ' "' + schema.shape.theory + '"' : ""} does not support instances`,
+                        },
+                    ],
+                };
+            }
+
+            const result = await store.getHandle(ref);
+            if (result.tag === "Err") {
+                return result;
+            }
+
+            const document = store.getDocumentView(result.content);
+            if (document.type !== "instance") {
+                return {
+                    tag: "Err",
+                    content: [
+                        {
+                            message: `Cannot load document of type "${document.type}" as an instance.`,
+                            path: ["type"],
+                        },
+                    ],
+                };
+            }
+
+            const schemaRef = store.getDocumentRef(schema.handle);
+            if (
+                document.instanceOf._id !== schemaRef.id ||
+                document.instanceOf._version !== schemaRef.version ||
+                document.instanceOf._server !== (schemaRef.server ?? "")
+            ) {
+                return {
+                    tag: "Err",
+                    content: [
+                        {
+                            message:
+                                `Cannot load instance of schema "${document.instanceOf._id}" ` +
+                                `using schema "${schemaRef.id}".`,
+                            path: ["instanceOf"],
+                        },
+                    ],
+                };
+            }
+
+            return {
+                tag: "Ok",
+                content: instanceFromStore(schema.shape, schema, store, result.content),
+            };
         },
     };
 }
