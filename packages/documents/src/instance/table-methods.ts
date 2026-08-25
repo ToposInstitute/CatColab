@@ -100,13 +100,16 @@ export function addInstanceRowsToStore<Handle>(
             for (const rowValues of values) {
                 const fields = encodeFieldsByLabel(schemaTable, rowValues, issues);
                 const id = freshRowId(instanceDocument);
-                let storedTable = instanceDocument.tables[schemaTable.id];
+                const storedTable = instanceDocument.tables[schemaTable.id];
                 if (storedTable === undefined) {
-                    storedTable = { rows: {}, rowOrder: [] };
-                    instanceDocument.tables[schemaTable.id] = storedTable;
+                    instanceDocument.tables[schemaTable.id] = {
+                        rows: { [id]: { fields } },
+                        rowOrder: [id],
+                    };
+                } else {
+                    storedTable.rows[id] = { fields };
+                    storedTable.rowOrder.push(id);
                 }
-                storedTable.rows[id] = { fields };
-                storedTable.rowOrder.push(id);
                 addedRows.push({ schemaTable, id });
             }
         }
