@@ -12,8 +12,8 @@ import {
 import type { ContextExecScope } from "../inference/context_exec";
 import {
     createScopedDocument,
-    stringifyDocumentIssues,
     type ScopedDocument,
+    type ScopedDocumentRole,
 } from "./scoped_document";
 
 const API_PROMPT = `The document bindings expose the CatColab document API. A notebook binding has \`title\`, \`cells()\`, \`cellsOf(type)\`, \`add(type, values)\`, \`update(patch)\`, and \`validate()\`. A tabular document binding has \`title\`, \`tables()\`, \`get(path)\`, row editing methods, \`update(patch)\`, and \`validate()\`. These APIs mutate in-memory working copies; changes are applied to the user's documents only after every document validates.`;
@@ -44,10 +44,7 @@ export async function createLLMConversationExecutionScope<
     store: DocumentStore<Handle>,
 ): Promise<LLMConversationExecutionScope> {
     const documents = await createScopedDocuments(conversation.attachment, store);
-    const descriptions = [
-        ...documents.filter((document) => document.isAttachment),
-        ...documents.filter((document) => !document.isAttachment),
-    ].map((document) => document.description);
+    const descriptions = documents.map((document) => document.description);
 
     return {
         bindings: Object.freeze(
@@ -85,38 +82,38 @@ async function createScopedDocuments<Handle>(
         title: sourceNotebook.title,
     });
     const usedBindings = new Set<string>();
-    const scopeNotebook = (isAttachment: boolean) =>
+    const scopeNotebook = (role: ScopedDocumentRole) =>
         createScopedDocument({
             binding: copyNotebook,
             bindingStore: copyBinder.store,
             sourceHandle: sourceNotebook.handle,
             sourceStore: store,
-            isAttachment,
+            role,
             usedBindings,
         });
 
     if (sources.tag === "SingleDocument") {
-        return [scopeNotebook(true)];
+        return [scopeNotebook("attachment")];
     }
 
     const created = await copyBinder.createInstance(copyNotebook, {
         title: sources.attachment.title,
     });
     if (created.tag === "Err") {
-        throw new Error(stringifyDocumentIssues(created.content).join("\n"));
+        throw new Error(JSON.stringify(created.content));
     }
-    const parentDocument = scopeNotebook(false);
+    const parentDocument = scopeNotebook("linked");
     const attachedDocument = createScopedDocument({
         binding: created.content,
         bindingStore: copyBinder.store,
         sourceHandle: sources.attachment.handle,
         sourceStore: store,
-        isAttachment: true,
+        role: "attachment",
         links: [{ name: "instanceOf", targetBinding: parentDocument.binding }],
         preservedKeys: ["instanceOf"],
         usedBindings,
     });
-    return [parentDocument, attachedDocument];
+    return [attachedDocument, parentDocument];
 }
 
 async function resolveSourceDocuments<Handle>(
@@ -155,7 +152,7 @@ async function resolveHandle<Handle>(
         server: ref._server,
     });
     if (result.tag === "Err") {
-        throw new Error(stringifyDocumentIssues(result.content).join("\n"));
+        throw new Error(JSON.stringify(result.content));
     }
     return result.content;
 }

@@ -15,17 +15,18 @@ export type ScopedDocumentLink = {
     targetBinding: string;
 };
 
+export type ScopedDocumentRole = "attachment" | "linked";
+
 type ScopedDocumentDescription = {
     binding: string;
     title: string;
-    isAttachment: boolean;
+    role: ScopedDocumentRole;
     links?: ReadonlyArray<ScopedDocumentLink>;
 };
 
 export type ScopedDocument = {
     binding: string;
     value: unknown;
-    isAttachment: boolean;
     description: string;
     validate(): Promise<ReadonlyArray<string>>;
     commit(): void;
@@ -37,7 +38,7 @@ export function createScopedDocument<Handle, E extends Issue>(options: {
     bindingStore: DocumentStore<Document>;
     sourceHandle: Handle;
     sourceStore: DocumentStore<Handle>;
-    isAttachment: boolean;
+    role: ScopedDocumentRole;
     links?: ReadonlyArray<ScopedDocumentLink>;
     preservedKeys?: ReadonlyArray<string>;
     usedBindings: Set<string>;
@@ -55,20 +56,15 @@ export function createScopedDocument<Handle, E extends Issue>(options: {
     return {
         binding: bindingName,
         value: options.binding,
-        isAttachment: options.isAttachment,
         description: describeScopedDocument({
             binding: bindingName,
             title: options.binding.title,
-            isAttachment: options.isAttachment,
+            role: options.role,
             links: options.links,
         }),
         validate: () => validateScopedDocument(options.binding, bindingName),
         commit: () => transaction.commit(),
     };
-}
-
-export function stringifyDocumentIssues(issues: ReadonlyArray<Issue>): string[] {
-    return issues.map((issue) => JSON.stringify(issue));
 }
 
 async function validateScopedDocument<E extends Issue>(
@@ -77,7 +73,7 @@ async function validateScopedDocument<E extends Issue>(
 ): Promise<ReadonlyArray<string>> {
     const result = await document.validate();
     if (result.tag === "Err") {
-        return stringifyDocumentIssues(result.content).map((issue) => `${binding}: ${issue}`);
+        return [`${binding}: ${JSON.stringify(result.content)}`];
     }
     if (document.document.type === "model") {
         (result.content as DblModel).free();
@@ -86,7 +82,7 @@ async function validateScopedDocument<E extends Issue>(
 }
 
 function describeScopedDocument(description: ScopedDocumentDescription): string {
-    const kind = description.isAttachment ? "attached document" : "document";
+    const kind = description.role === "attachment" ? "attached document" : "document";
     const links = (description.links ?? [])
         .map((link) => ` Its \`${link.name}\` link points to \`${link.targetBinding}\`.`)
         .join("");
