@@ -9,6 +9,8 @@ announcement and a blog post. Minor versions are not announced but allow
 features and fixes to be released with greater frequency. Minor versions often
 include notable new features.
 
+## [Unreleased]
+
 ### Added
 
 - Specifying path equations (equational axioms) in ologs and schemas
