@@ -1,8 +1,17 @@
-import { Instance as InstanceMethods, Model } from "catcolab-document-methods";
+import {
+    Instance as InstanceMethods,
+    LLMConversation as LLMConversationMethods,
+    Model,
+} from "catcolab-document-methods";
 import type { Document } from "catcolab-document-types";
 import type { DocumentStore } from "./document-store";
 import { createInMemoryStore } from "./document-store";
 import { instanceFromStore, type Instance } from "./instance/instance";
+import {
+    type LLMConversation,
+    type LLMConversationAttachment,
+    llmConversationFromStore,
+} from "./llm-conversation";
 import type { ModelDocument } from "./model/document";
 import { modelNotebookFromStore, type Notebook } from "./model/notebook";
 import type { Result } from "./result";
@@ -21,6 +30,12 @@ export interface Binder<Handle> {
         schema: Notebook<S, ModelDocument, Handle>,
         options: { title: string },
     ): Promise<Result<Instance<Handle, S>>>;
+
+    createLLMConversation<Attachment extends LLMConversationAttachment<Shape, Handle>>(
+        attachment: Attachment,
+        llmModel: string,
+        options: { title: string },
+    ): Promise<LLMConversation<Attachment, Handle>>;
 }
 
 /* Overloads rather than a single signature `createBinder<Handle>(store?:
@@ -94,6 +109,25 @@ function binderFromStore<Handle>(store: DocumentStore<Handle>): Binder<Handle> {
             } finally {
                 schemaModel.free();
             }
+        },
+        async createLLMConversation<Attachment extends LLMConversationAttachment<Shape, Handle>>(
+            attachment: Attachment,
+            llmModel: string,
+            options: { title: string },
+        ) {
+            const attachmentRef = store.getDocumentRef(attachment.handle);
+            const document = LLMConversationMethods.newLLMConversationDocument(
+                {
+                    _id: attachmentRef.id,
+                    _version: attachmentRef.version,
+                    _server: attachmentRef.server ?? "",
+                },
+                llmModel,
+            );
+            document.name = options.title;
+
+            const handle = await store.createHandle(document);
+            return llmConversationFromStore(store, handle, attachment);
         },
     };
 }
