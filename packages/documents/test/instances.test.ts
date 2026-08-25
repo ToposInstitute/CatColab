@@ -131,6 +131,23 @@ describe("instance document creation", () => {
         const issues = expectErr(await binder.createInstance(notebook, { title: "Bare instance" }));
         expect(issues[0]?.message).toMatch(/does not support instances/);
     });
+
+    test("an instance can be loaded from a document reference", async () => {
+        const binder = createBinder();
+        const schema = await binder.createNotebook(SimpleSchema, { title: "Company schema" });
+        schema.add(Entity, { label: "Company" });
+        const instance = expectOk(
+            await binder.createInstance(schema, { title: "Company instance" }),
+        );
+
+        const loaded = expectOk(
+            await binder.loadInstanceFromRef(schema, refOf(binder.store, instance.handle)),
+        );
+
+        expect(loaded.title).toBe("Company instance");
+        expect(loaded.shape).toBe(SimpleSchema);
+        expect(loaded.handle).toBe(instance.handle);
+    });
 });
 
 describe("instance schema validation", () => {
