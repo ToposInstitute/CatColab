@@ -36,8 +36,10 @@ describe.skip("serialization", () => {
             'Cannot load document with theory "petri-net" using a shape with theory "simple-olog".',
         );
     });
+});
 
-    test("loadNotebookFromRef returns an Err when the store cannot resolve the reference", async () => {
+describe("loading notebooks from references", () => {
+    test("returns an Err when the store cannot resolve the reference", async () => {
         const binder = createBinder();
 
         const loaded = await binder.loadNotebookFromRef(PetriNet, {
