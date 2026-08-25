@@ -3,11 +3,7 @@ import { assert, beforeEach, describe, test, vi } from "vitest";
 
 import type { Document } from "catcolab-document-types";
 import { createBinder, type Instance, type Notebook } from "catcolab-documents";
-import type {
-    OpenAIChatTurnOptions,
-    OpenAIChatTurnResult,
-    OpenAITranscript,
-} from "../inference/chat.ts";
+import type { ChatTurnOptions, OpenAIChatTurnResult, OpenAITranscript } from "../inference/chat.ts";
 import type { ContextExecScope } from "../inference/context_exec.ts";
 import { runLLMConversationTurn } from "./document.ts";
 
@@ -19,7 +15,7 @@ const inference = vi.hoisted(() => ({
                 client: unknown,
                 transcript: OpenAITranscript,
                 scope: ContextExecScope,
-                options?: OpenAIChatTurnOptions,
+                options?: ChatTurnOptions,
             ) => Promise<OpenAIChatTurnResult>
         >(),
 }));

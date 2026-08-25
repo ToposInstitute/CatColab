@@ -42,7 +42,7 @@ export type OpenAIChatTurnResult = {
     generatedMessageDelta: GeneratedOpenAIMessage[];
 };
 
-export type OpenAIChatTurnOptions = {
+export type ChatTurnOptions = {
     onContent?: (delta: string, snapshot: string) => void;
     model?: string;
     systemPromptSuffix?: string;
@@ -64,7 +64,7 @@ export async function runOpenAIChatTurn(
     client: OpenAI,
     openAITranscript: readonly OpenAITranscriptMessage[],
     scope: ContextExecScope,
-    options: OpenAIChatTurnOptions = {},
+    options: ChatTurnOptions = {},
 ): Promise<OpenAIChatTurnResult> {
     const contextScope: ContextExecScope = { files: EMPTY_FILES, ...scope };
     const systemPrompt = options.systemPromptSuffix
