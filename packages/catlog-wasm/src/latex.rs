@@ -13,13 +13,13 @@ use super::model::DblModel;
 pub(crate) fn latex_names(model: &DblModel) -> impl Fn(&QualifiedName) -> String {
     |id: &QualifiedName| {
         if let Some(ob_label) = model.ob_namespace.label(id) {
+            // If the uuid has a name in the object namespace.
             wrap_with_backslash_text(ob_label.to_string())
         } else if let Some(mor_label) = model.mor_namespace.label(id) {
+            // If the uuid has a name in the morphism namespace.
             wrap_with_backslash_text(mor_label.to_string())
-        } else {
-            let (dom, cod) = model
-                .mor_generator_dom_cod(id)
-                .expect("Morphism in equation system should have domain and codomain.");
+        } else if let Some((dom, cod)) = model.mor_generator_dom_cod(id) {
+            // If the uuid corresponds to a morphism without a name.
             let dom_labels: Vec<String> = model
                 .get_ob_label(&dom)
                 .expect("Object in equation system should have a label.")
@@ -37,6 +37,9 @@ pub(crate) fn latex_names(model: &DblModel) -> impl Fn(&QualifiedName) -> String
                 list_object_as_latex(dom_labels),
                 list_object_as_latex(cod_labels)
             )
+        } else {
+            // If the uuid corresponds to an unnamed (e.g. freshly-created) object.
+            "\\text{unnamed}".to_string()
         }
     }
 }
