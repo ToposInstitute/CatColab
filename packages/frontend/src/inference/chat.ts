@@ -10,6 +10,8 @@ import type {
 import { type ContextExecScope, type EvalResult, contextExec } from "./context_exec";
 
 const OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1";
+
+export type InferenceClient = OpenAI;
 /** Default LLM used for newly created CatColab conversations. */
 export const DEFAULT_LLM_MODEL = "z-ai/glm-5.2";
 
@@ -21,25 +23,25 @@ const EMPTY_FILES = Object.freeze(Object.create(null)) as Readonly<Record<string
 const SYSTEM_PROMPT =
     "You are an assistant embedded in CatColab. Use `contextExec` when you need to inspect, compute with, or act on the current CatColab context. It executes JavaScript with the available context values as local bindings. The read-only `files` binding maps available filenames to their UTF-8 content; use `Object.keys(files)` to inspect its keys. Use `return` when you need to observe a value; `await` can be used directly. Only use bindings and APIs explicitly described as available. Answer the user's request clearly and concisely, using tool results when relevant.";
 
-/** Message in the OpenAI-compatible transcript sent for an inference request. */
-export type OpenAITranscriptMessage =
+/** Message in the transcript sent for an inference request. */
+export type ChatTranscriptMessage =
     | ChatCompletionSystemMessageParam
     | ChatCompletionUserMessageParam
     | ChatCompletionAssistantMessageParam
     | ChatCompletionToolMessageParam;
 
-/** Ephemeral OpenAI-compatible transcript sent for an inference request. */
-export type OpenAITranscript = OpenAITranscriptMessage[];
+/** Ephemeral transcript sent for an inference request. */
+export type ChatTranscript = ChatTranscriptMessage[];
 
-/** Assistant or tool message newly generated during one OpenAI inference request. */
-export type GeneratedOpenAIMessage =
+/** Assistant or tool message newly generated during one inference request. */
+export type GeneratedChatMessage =
     | ChatCompletionAssistantMessageParam
     | ChatCompletionToolMessageParam;
 
-/** Completed OpenAI inference output, not including the request transcript. */
-export type OpenAIChatTurnResult = {
+/** Completed inference output, not including the request transcript. */
+export type ChatTurnResult = {
     content: string;
-    generatedMessageDelta: GeneratedOpenAIMessage[];
+    generatedMessageDelta: GeneratedChatMessage[];
 };
 
 export type ChatTurnOptions = {
@@ -50,8 +52,8 @@ export type ChatTurnOptions = {
     maxChatCompletions?: number;
 };
 
-/** Create an OpenAI client configured for OpenRouter. */
-export function createInferenceClient(apiKey: string): OpenAI {
+/** Create an inference client configured for OpenRouter. */
+export function createInferenceClient(apiKey: string): InferenceClient {
     return new OpenAI({
         baseURL: OPENROUTER_BASE_URL,
         apiKey,
@@ -59,13 +61,13 @@ export function createInferenceClient(apiKey: string): OpenAI {
     });
 }
 
-/** Run one OpenAI inference turn against a complete, ephemeral request transcript. */
-export async function runOpenAIChatTurn(
-    client: OpenAI,
-    openAITranscript: readonly OpenAITranscriptMessage[],
+/** Run one inference turn against a complete, ephemeral request transcript. */
+export async function runChatTurn(
+    client: InferenceClient,
+    transcript: readonly ChatTranscriptMessage[],
     scope: ContextExecScope,
     options: ChatTurnOptions = {},
-): Promise<OpenAIChatTurnResult> {
+): Promise<ChatTurnResult> {
     const contextScope: ContextExecScope = { files: EMPTY_FILES, ...scope };
     const systemPrompt = options.systemPromptSuffix
         ? `${SYSTEM_PROMPT}\n\n${options.systemPromptSuffix}`
@@ -73,7 +75,7 @@ export async function runOpenAIChatTurn(
 
     const messages: ChatCompletionMessageParam[] = [
         { role: "system", content: systemPrompt },
-        ...openAITranscript,
+        ...transcript,
     ];
 
     const runner = client.chat.completions.runTools(
@@ -126,7 +128,7 @@ export async function runOpenAIChatTurn(
     }
 
     const content = (await runner.finalContent()) ?? "";
-    const generatedMessageDelta: GeneratedOpenAIMessage[] = [];
+    const generatedMessageDelta: GeneratedChatMessage[] = [];
     for (const message of runner.messages.slice(messages.length)) {
         if (message.role !== "assistant" && message.role !== "tool") {
             throw new Error(`Unexpected generated message role: ${message.role}`);
@@ -137,7 +139,7 @@ export async function runOpenAIChatTurn(
     return { content, generatedMessageDelta };
 }
 
-/** Parse the arguments of an OpenAI `contextExec` function call. */
+/** Parse the arguments of a `contextExec` function call. */
 export function parseContextExecArguments(rawArgs: string): { code: string } | undefined {
     try {
         const value = JSON.parse(rawArgs) as { code?: unknown } | null;

@@ -19,9 +19,9 @@ import {
     MAX_CHAT_COMPLETIONS_PER_TURN,
     parseContextExecArguments,
     parseContextExecResult,
-    runOpenAIChatTurn,
-    type GeneratedOpenAIMessage,
-    type OpenAITranscript,
+    runChatTurn,
+    type ChatTranscript,
+    type GeneratedChatMessage,
 } from "../inference/chat.ts";
 import * as LLMConversationAdapter from "../inference/llm_conversation_adapter.ts";
 import type { LiveModelDoc, ModelLibrary } from "../model";
@@ -176,15 +176,15 @@ async function generateLLMConversationResponse<
     try {
         const executionScope = await createLLMConversationExecutionScope(conversation, store);
         const context = LLMConversationAdapter.prepareLLMConversationInference(conversation.dump());
-        const transcript: OpenAITranscript = [...context.transcript];
-        const generatedMessages: GeneratedOpenAIMessage[] = [];
+        const transcript: ChatTranscript = [...context.transcript];
+        const generatedMessages: GeneratedChatMessage[] = [];
         const client = createInferenceClient(inferenceKey.key);
         let remainingCompletions = MAX_CHAT_COMPLETIONS_PER_TURN;
         let content = "";
         let problems: ReadonlyArray<string> = [];
 
         do {
-            const result = await runOpenAIChatTurn(
+            const result = await runChatTurn(
                 client,
                 transcript,
                 { ...executionScope.bindings, files: context.files },
@@ -215,7 +215,7 @@ async function generateLLMConversationResponse<
             }
         } while (problems.length > 0 && remainingCompletions > 0);
 
-        const generated = generatedOpenAIMessageDeltaToLLMInteractions(generatedMessages);
+        const generated = generatedChatMessageDeltaToLLMInteractions(generatedMessages);
         if (generated.tag === "Err") {
             return { tag: "Retryable", error: generated.content };
         }
@@ -248,9 +248,9 @@ function validationFeedback(problems: ReadonlyArray<string>): string {
     return `The documents have validation problems:\n${problems.map((problem) => `- ${problem}`).join("\n")}\nFix all problems before completing the turn.`;
 }
 
-/** Convert generated OpenAI assistant/tool messages to persisted LLM interactions. */
-function generatedOpenAIMessageDeltaToLLMInteractions(
-    messages: readonly GeneratedOpenAIMessage[],
+/** Convert generated assistant/tool messages to persisted LLM interactions. */
+function generatedChatMessageDeltaToLLMInteractions(
+    messages: readonly GeneratedChatMessage[],
 ): JsResult<LLMInteraction[], string> {
     const interactions: LLMInteraction[] = [];
 

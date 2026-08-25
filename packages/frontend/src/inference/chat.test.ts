@@ -5,9 +5,9 @@ import { afterAll, assert, beforeAll, describe, test } from "vitest";
 
 import { createFetchWithAuth, createRpcClient } from "../api/rpc.ts";
 import { createTestUserAuth } from "../util/test_util.ts";
-import { createInferenceClient, runOpenAIChatTurn, type OpenAITranscript } from "./chat.ts";
+import { createInferenceClient, runChatTurn, type ChatTranscript } from "./chat.ts";
 
-// When inference is configured, these tests exercise a live `runOpenAIChatTurn`
+// When inference is configured, these tests exercise a live `runChatTurn`
 // against OpenRouter, using a free model. A backend without
 // `OPENROUTER_PROVISIONING_KEY` is expected to report inference as unavailable,
 // in which case the OpenRouter assertions have nothing to exercise.
@@ -57,10 +57,10 @@ describe("chat turn over OpenRouter", () => {
                 return;
             }
 
-            const transcript: OpenAITranscript = [
+            const transcript: ChatTranscript = [
                 { role: "user", content: "Reply with exactly the word: pong" },
             ];
-            const result = await runOpenAIChatTurn(client, transcript, {}, { model: testModel });
+            const result = await runChatTurn(client, transcript, {}, { model: testModel });
 
             assert.ok(result.content.length > 0, "final content should be a non-empty string");
             assert.strictEqual(transcript[0]?.role, "user");
@@ -69,7 +69,7 @@ describe("chat turn over OpenRouter", () => {
     );
 
     test(
-        "records the contextExec call and result as OpenAI messages",
+        "records the contextExec call and result as chat messages",
         { timeout: 120000 },
         async ({ skip }) => {
             if (!client) {
@@ -77,13 +77,13 @@ describe("chat turn over OpenRouter", () => {
                 return;
             }
 
-            const transcript: OpenAITranscript = [
+            const transcript: ChatTranscript = [
                 {
                     role: "user",
                     content: "Use contextExec to evaluate 6 * 7, then tell me the result.",
                 },
             ];
-            const result = await runOpenAIChatTurn(client, transcript, {}, { model: testModel });
+            const result = await runChatTurn(client, transcript, {}, { model: testModel });
 
             const assistant = result.generatedMessageDelta.find(
                 (message) =>

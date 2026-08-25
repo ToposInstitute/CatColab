@@ -3,20 +3,20 @@ import { assert, beforeEach, describe, test, vi } from "vitest";
 
 import type { Document } from "catcolab-document-types";
 import { createBinder, type Instance, type Notebook } from "catcolab-documents";
-import type { ChatTurnOptions, OpenAIChatTurnResult, OpenAITranscript } from "../inference/chat.ts";
+import type { ChatTranscript, ChatTurnOptions, ChatTurnResult } from "../inference/chat.ts";
 import type { ContextExecScope } from "../inference/context_exec.ts";
 import { runLLMConversationTurn } from "./document.ts";
 
 const inference = vi.hoisted(() => ({
     createInferenceClient: vi.fn<(apiKey: string) => unknown>(),
-    runOpenAIChatTurn:
+    runChatTurn:
         vi.fn<
             (
                 client: unknown,
-                transcript: OpenAITranscript,
+                transcript: ChatTranscript,
                 scope: ContextExecScope,
                 options?: ChatTurnOptions,
-            ) => Promise<OpenAIChatTurnResult>
+            ) => Promise<ChatTurnResult>
         >(),
 }));
 
@@ -76,7 +76,7 @@ function schemaBinding(scope: ContextExecScope): Notebook<typeof SimpleSchema> {
     return schema as Notebook<typeof SimpleSchema>;
 }
 
-function response(content: string): OpenAIChatTurnResult {
+function response(content: string): ChatTurnResult {
     return {
         content,
         generatedMessageDelta: [{ role: "assistant", content }],
@@ -95,13 +95,13 @@ async function runTurn(fixture: Fixture) {
 describe("LLM conversation turns", { timeout: 10_000 }, () => {
     beforeEach(() => {
         inference.createInferenceClient.mockReset();
-        inference.runOpenAIChatTurn.mockReset();
+        inference.runChatTurn.mockReset();
         inference.createInferenceClient.mockReturnValue({});
     });
 
     test("runs against an isolated document scope and commits valid changes", async () => {
         const fixture = await makeFixture();
-        inference.runOpenAIChatTurn.mockImplementation(async (_client, _transcript, scope) => {
+        inference.runChatTurn.mockImplementation(async (_client, _transcript, scope) => {
             schemaBinding(scope).update({ title: "Updated schema" });
             assert.strictEqual(fixture.schema.title, "Company schema");
             return response("Done.");
@@ -110,7 +110,7 @@ describe("LLM conversation turns", { timeout: 10_000 }, () => {
         assert.deepStrictEqual(await runTurn(fixture), { tag: "Completed", content: "Done." });
         assert.strictEqual(fixture.schema.title, "Updated schema");
 
-        const call = inference.runOpenAIChatTurn.mock.calls[0]!;
+        const call = inference.runChatTurn.mock.calls[0]!;
         assert.strictEqual(call[3]?.model, "test-model");
         assert.match(call[3]?.systemPromptSuffix ?? "", /attached document "Company schema"/);
         assert.deepStrictEqual(
@@ -123,45 +123,43 @@ describe("LLM conversation turns", { timeout: 10_000 }, () => {
         const fixture = await makeFixture(true);
         const { table, row } = await makeInvalidInstance(fixture);
         let firstCall = true;
-        inference.runOpenAIChatTurn.mockImplementation(
-            async (_client, transcript, scope, options) => {
-                const attachedDocument = scope.document_Company_data as
-                    | Instance<unknown, typeof SimpleSchema>
-                    | undefined;
-                assert(attachedDocument);
+        inference.runChatTurn.mockImplementation(async (_client, transcript, scope, options) => {
+            const attachedDocument = scope.document_Company_data as
+                | Instance<unknown, typeof SimpleSchema>
+                | undefined;
+            assert(attachedDocument);
 
-                if (firstCall) {
-                    firstCall = false;
-                    assert(scope.document_Company_schema);
-                    assert.match(
-                        options?.systemPromptSuffix ?? "",
-                        /Company data.*instanceOf.*Company schema/s,
-                    );
-                    return response("Done.");
-                }
-
-                const feedback = String(transcript.at(-1)?.content);
-                assert.match(feedback, /"issueType":"MistypedLiteral"/);
-                assert.ok(
-                    feedback.includes(
-                        JSON.stringify([table.id, "rows", row.id, "fields", "unexpected"]),
-                    ),
+            if (firstCall) {
+                firstCall = false;
+                assert(scope.document_Company_schema);
+                assert.match(
+                    options?.systemPromptSuffix ?? "",
+                    /Company data.*instanceOf.*Company schema/s,
                 );
-                attachedDocument.deleteRow(table.id, row.id);
-                return response("Repaired.");
-            },
-        );
+                return response("Done.");
+            }
+
+            const feedback = String(transcript.at(-1)?.content);
+            assert.match(feedback, /"issueType":"MistypedLiteral"/);
+            assert.ok(
+                feedback.includes(
+                    JSON.stringify([table.id, "rows", row.id, "fields", "unexpected"]),
+                ),
+            );
+            attachedDocument.deleteRow(table.id, row.id);
+            return response("Repaired.");
+        });
 
         assert.deepStrictEqual(await runTurn(fixture), {
             tag: "Completed",
             content: "Repaired.",
         });
-        assert.strictEqual(inference.runOpenAIChatTurn.mock.calls.length, 2);
+        assert.strictEqual(inference.runChatTurn.mock.calls.length, 2);
     });
 
     test("retains the user message when inference fails", async () => {
         const fixture = await makeFixture();
-        inference.runOpenAIChatTurn.mockRejectedValue(new Error("network failed"));
+        inference.runChatTurn.mockRejectedValue(new Error("network failed"));
 
         assert.deepStrictEqual(await runTurn(fixture), {
             tag: "Retryable",
