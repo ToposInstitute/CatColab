@@ -1,6 +1,6 @@
 import { lazy } from "solid-js";
 
-import type { MorType, ObType } from "catlog-wasm";
+import type { MorType, ObType, NullWrapper } from "catlog-wasm";
 import type { DiagramAnalysisMeta, ModelAnalysisMeta } from "../theory";
 import * as GraphLayoutConfig from "../visualization/graph_layout_config";
 import type * as Checkers from "./analyses/checker_types";
@@ -137,7 +137,7 @@ export function linearODEEquations(
     options: Partial<AnalysisOptions> & {
         getEquations: Simulators.LinearODEEquations;
     },
-): ModelAnalysisMeta<null> {
+): ModelAnalysisMeta<NullWrapper> {
     const {
         id = "linear-ode-equations",
         name = "Linear ODE equations",
@@ -153,7 +153,7 @@ export function linearODEEquations(
         component: (props) => (
             <ODESemanticsEquationsDisplay title={name} {...otherOptions} {...props} />
         ),
-        initialContent: () => null,
+        initialContent: () => ({ content: null }),
     };
 }
 
@@ -194,7 +194,7 @@ export function lotkaVolterraEquations(
     options: Partial<AnalysisOptions> & {
         getEquations: Simulators.LotkaVolterraEquations;
     },
-): ModelAnalysisMeta<null> {
+): ModelAnalysisMeta<NullWrapper> {
     const {
         id = "lotka-volterra-equations",
         name = "Lotka–Volterra equations",
@@ -210,7 +210,7 @@ export function lotkaVolterraEquations(
         component: (props) => (
             <ODESemanticsEquationsDisplay title={name} {...otherOptions} {...props} />
         ),
-        initialContent: () => null,
+        initialContent: () => ({ content: null }),
     };
 }
 
@@ -475,7 +475,7 @@ export function polynomialODEEquations(
     options: Partial<AnalysisOptions> & {
         getEquations: Simulators.PolynomialODEEquations;
     },
-): ModelAnalysisMeta<null> {
+): ModelAnalysisMeta<NullWrapper> {
     const {
         id = "polynomial-ode-equations",
         name = "Polynomial ODE equations",
@@ -491,7 +491,7 @@ export function polynomialODEEquations(
         component: (props) => (
             <ODESemanticsEquationsDisplay title={name} {...otherOptions} {...props} />
         ),
-        initialContent: () => null,
+        initialContent: () => ({ content: null }),
     };
 }
 
