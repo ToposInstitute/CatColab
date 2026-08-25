@@ -188,18 +188,16 @@ async function generateLLMConversationResponse<
                 client,
                 transcript,
                 { ...executionScope.bindings, files: context.files },
-                {
-                    model: conversation.document.llmModel,
-                    onContent,
-                    systemPromptSuffix: executionScope.systemPromptSuffix,
-                    maxChatCompletions: remainingCompletions,
-                    onSuccessHook: async () => {
-                        const toolProblems = await executionScope.validate();
-                        if (toolProblems.length > 0) {
-                            throw new Error(validationFeedback(toolProblems));
-                        }
-                    },
+                onContent,
+                conversation.document.llmModel,
+                executionScope.systemPromptSuffix,
+                async () => {
+                    const toolProblems = await executionScope.validate();
+                    if (toolProblems.length > 0) {
+                        throw new Error(validationFeedback(toolProblems));
+                    }
                 },
+                remainingCompletions,
             );
             content = result.content;
             transcript.push(...result.generatedMessageDelta);

@@ -44,14 +44,6 @@ export type ChatTurnResult = {
     generatedMessageDelta: GeneratedChatMessage[];
 };
 
-export type ChatTurnOptions = {
-    onContent?: (delta: string, snapshot: string) => void;
-    model?: string;
-    systemPromptSuffix?: string;
-    onSuccessHook?: () => Promise<void>;
-    maxChatCompletions?: number;
-};
-
 /** Create an inference client configured for OpenRouter. */
 export function createInferenceClient(apiKey: string): InferenceClient {
     return new OpenAI({
@@ -66,11 +58,15 @@ export async function runChatTurn(
     client: InferenceClient,
     transcript: readonly ChatTranscriptMessage[],
     scope: ContextExecScope,
-    options: ChatTurnOptions = {},
+    onContent?: (delta: string, snapshot: string) => void,
+    model = DEFAULT_LLM_MODEL,
+    systemPromptSuffix?: string,
+    onSuccessHook?: () => Promise<void>,
+    maxChatCompletions = MAX_CHAT_COMPLETIONS_PER_TURN,
 ): Promise<ChatTurnResult> {
     const contextScope: ContextExecScope = { files: EMPTY_FILES, ...scope };
-    const systemPrompt = options.systemPromptSuffix
-        ? `${SYSTEM_PROMPT}\n\n${options.systemPromptSuffix}`
+    const systemPrompt = systemPromptSuffix
+        ? `${SYSTEM_PROMPT}\n\n${systemPromptSuffix}`
         : SYSTEM_PROMPT;
 
     const messages: ChatCompletionMessageParam[] = [
@@ -80,7 +76,7 @@ export async function runChatTurn(
 
     const runner = client.chat.completions.runTools(
         {
-            model: options.model ?? DEFAULT_LLM_MODEL,
+            model,
             messages,
             stream: true,
             parallel_tool_calls: false,
@@ -108,23 +104,17 @@ export async function runChatTurn(
                             if (!args) {
                                 return { tag: "Err", error: "Invalid contextExec arguments" };
                             }
-                            return await contextExec(
-                                args.code,
-                                contextScope,
-                                options.onSuccessHook,
-                            );
+                            return await contextExec(args.code, contextScope, onSuccessHook);
                         },
                     },
                 },
             ],
         },
-        {
-            maxChatCompletions: options.maxChatCompletions ?? MAX_CHAT_COMPLETIONS_PER_TURN,
-        },
+        { maxChatCompletions },
     );
 
-    if (options.onContent) {
-        runner.on("content", options.onContent);
+    if (onContent) {
+        runner.on("content", onContent);
     }
 
     const content = (await runner.finalContent()) ?? "";

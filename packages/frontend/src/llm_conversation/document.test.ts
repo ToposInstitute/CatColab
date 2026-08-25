@@ -3,21 +3,15 @@ import { assert, beforeEach, describe, test, vi } from "vitest";
 
 import type { Document } from "catcolab-document-types";
 import { createBinder, type Instance, type Notebook } from "catcolab-documents";
-import type { ChatTranscript, ChatTurnOptions, ChatTurnResult } from "../inference/chat.ts";
+import type { ChatTurnResult } from "../inference/chat.ts";
 import type { ContextExecScope } from "../inference/context_exec.ts";
 import { runLLMConversationTurn } from "./document.ts";
 
+type RunChatTurn = (typeof import("../inference/chat.ts"))["runChatTurn"];
+
 const inference = vi.hoisted(() => ({
     createInferenceClient: vi.fn<(apiKey: string) => unknown>(),
-    runChatTurn:
-        vi.fn<
-            (
-                client: unknown,
-                transcript: ChatTranscript,
-                scope: ContextExecScope,
-                options?: ChatTurnOptions,
-            ) => Promise<ChatTurnResult>
-        >(),
+    runChatTurn: vi.fn<RunChatTurn>(),
 }));
 
 vi.mock("../inference/chat.ts", async (importOriginal) => ({
@@ -111,8 +105,8 @@ describe("LLM conversation turns", { timeout: 10_000 }, () => {
         assert.strictEqual(fixture.schema.title, "Updated schema");
 
         const call = inference.runChatTurn.mock.calls[0]!;
-        assert.strictEqual(call[3]?.model, "test-model");
-        assert.match(call[3]?.systemPromptSuffix ?? "", /attached document "Company schema"/);
+        assert.strictEqual(call[4], "test-model");
+        assert.match(call[5] ?? "", /attached document "Company schema"/);
         assert.deepStrictEqual(
             fixture.conversation.interactions().map((interaction) => interaction.tag),
             ["user-message", "llm-message"],
@@ -123,32 +117,34 @@ describe("LLM conversation turns", { timeout: 10_000 }, () => {
         const fixture = await makeFixture(true);
         const { table, row } = await makeInvalidInstance(fixture);
         let firstCall = true;
-        inference.runChatTurn.mockImplementation(async (_client, transcript, scope, options) => {
-            const attachedDocument = scope.document_Company_data as
-                | Instance<unknown, typeof SimpleSchema>
-                | undefined;
-            assert(attachedDocument);
+        inference.runChatTurn.mockImplementation(
+            async (_client, transcript, scope, _onContent, _model, systemPromptSuffix) => {
+                const attachedDocument = scope.document_Company_data as
+                    | Instance<unknown, typeof SimpleSchema>
+                    | undefined;
+                assert(attachedDocument);
 
-            if (firstCall) {
-                firstCall = false;
-                assert(scope.document_Company_schema);
-                assert.match(
-                    options?.systemPromptSuffix ?? "",
-                    /Company data.*instanceOf.*Company schema/s,
+                if (firstCall) {
+                    firstCall = false;
+                    assert(scope.document_Company_schema);
+                    assert.match(
+                        systemPromptSuffix ?? "",
+                        /Company data.*instanceOf.*Company schema/s,
+                    );
+                    return response("Done.");
+                }
+
+                const feedback = String(transcript.at(-1)?.content);
+                assert.match(feedback, /"issueType":"MistypedLiteral"/);
+                assert.ok(
+                    feedback.includes(
+                        JSON.stringify([table.id, "rows", row.id, "fields", "unexpected"]),
+                    ),
                 );
-                return response("Done.");
-            }
-
-            const feedback = String(transcript.at(-1)?.content);
-            assert.match(feedback, /"issueType":"MistypedLiteral"/);
-            assert.ok(
-                feedback.includes(
-                    JSON.stringify([table.id, "rows", row.id, "fields", "unexpected"]),
-                ),
-            );
-            attachedDocument.deleteRow(table.id, row.id);
-            return response("Repaired.");
-        });
+                attachedDocument.deleteRow(table.id, row.id);
+                return response("Repaired.");
+            },
+        );
 
         assert.deepStrictEqual(await runTurn(fixture), {
             tag: "Completed",
