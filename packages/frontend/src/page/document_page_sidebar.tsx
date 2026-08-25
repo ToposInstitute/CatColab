@@ -51,6 +51,9 @@ async function getDocParent(doc: Document, api: Api): Promise<LiveDocWithRef | u
         case "analysis":
             parentLink = doc.analysisOf;
             break;
+        case "instance":
+            parentLink = doc.instanceOf;
+            break;
         case "llmconversation":
             parentLink = doc.llmConversationOf;
             break;
@@ -124,6 +127,7 @@ function DocumentsTreeNode(props: {
                 .filter(
                     (relation) =>
                         relation.relationType === "diagram-in" ||
+                        relation.relationType === "instance-of" ||
                         relation.relationType === "analysis-of" ||
                         relation.relationType === "llmconversation-of",
                 )

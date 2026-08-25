@@ -32,10 +32,21 @@ import {
 import { getLiveAnalysis, type LiveAnalysisDoc } from "../analysis";
 import { AnalysisNotebookEditor } from "../analysis/analysis_editor";
 import { AnalysisInfo } from "../analysis/analysis_info";
-import { type Api, type DocRef, type DocumentType, documentTypeLabel, useApi } from "../api";
+import {
+    type Api,
+    type ApiBinder,
+    type DocRef,
+    type DocumentType,
+    documentTypeLabel,
+    useApi,
+    useBinder,
+} from "../api";
 import { getLiveDiagram, type LiveDiagramDoc } from "../diagram";
 import { DiagramNotebookEditor } from "../diagram/diagram_editor";
 import { DiagramInfo } from "../diagram/diagram_info";
+import { InstanceEditor } from "../instance/instance_editor";
+import { InstanceInfo } from "../instance/instance_info";
+import { getLiveInstance, type LiveInstanceDoc } from "../instance/live_doc_compatibility";
 import { type LiveModelDoc, type ModelLibrary, ModelLibraryContext } from "../model";
 import { ModelNotebookEditor } from "../model/model_editor";
 import { ModelDocumentHead } from "../model/model_info";
@@ -51,7 +62,7 @@ import { useSnapshotHistory } from "./use_snapshot_history";
 
 import "./document_page.css";
 
-type AnyLiveDoc = LiveModelDoc | LiveDiagramDoc | LiveAnalysisDoc;
+type AnyLiveDoc = LiveModelDoc | LiveDiagramDoc | LiveAnalysisDoc | LiveInstanceDoc;
 
 /** A Live*Document bundled with its backend DocRef.
  *
@@ -68,6 +79,7 @@ const INITIAL_SPLIT_SIZE = 0.5;
 
 export default function DocumentPage() {
     const api = useApi();
+    const binder = useBinder();
     const models = useContext(ModelLibraryContext);
     invariant(models, "Must provide model library as context to page");
 
@@ -85,7 +97,7 @@ export default function DocumentPage() {
 
     const [primaryLiveDoc, { refetch: refetchPrimaryDoc }] = createResource(
         () => params.ref,
-        (refId) => getLiveDocument(refId, api, models, params.kind as DocumentType),
+        (refId) => getLiveDocument(refId, api, models, binder, params.kind as DocumentType),
     );
 
     const [secondaryLiveDoc, { refetch: refetchSecondaryDoc }] = createResource(
@@ -108,7 +120,7 @@ export default function DocumentPage() {
                 return undefined;
             }
 
-            return getLiveDocument(source.ref, api, models, source.kind as DocumentType);
+            return getLiveDocument(source.ref, api, models, binder, source.kind as DocumentType);
         },
     );
 
@@ -512,6 +524,13 @@ export function DocumentPane(props: {
                                     </DocumentHead>
                                 )}
                             </Match>
+                            <Match keyed when={props.doc.type === "instance" && props.doc}>
+                                {(liveInstance) => (
+                                    <DocumentHead liveDoc={liveInstance.liveDoc}>
+                                        <InstanceInfo liveInstance={liveInstance} />
+                                    </DocumentHead>
+                                )}
+                            </Match>
                         </Switch>
                         <Switch>
                             <Match keyed when={props.doc.type === "model" && props.doc}>
@@ -538,6 +557,11 @@ export function DocumentPane(props: {
                                     />
                                 )}
                             </Match>
+                            <Match keyed when={props.doc.type === "instance" && props.doc}>
+                                {(liveInstance) => (
+                                    <InstanceEditor instance={liveInstance.instance} />
+                                )}
+                            </Match>
                         </Switch>
                     </div>
                 </div>
@@ -555,6 +579,7 @@ async function getLiveDocument(
     refId: string,
     api: Api,
     models: ModelLibrary<string>,
+    binder: ApiBinder,
     documentType: DocumentType,
 ): Promise<AnyLiveDocWithRef> {
     switch (documentType) {
@@ -571,8 +596,10 @@ async function getLiveDocument(
             const { liveAnalysis, docRef } = await getLiveAnalysis(refId, api, models);
             return { liveDoc: liveAnalysis, docRef };
         }
-        case "instance":
-            throw new Error("Instance documents are not supported by the frontend");
+        case "instance": {
+            const { liveInstance, docRef } = await getLiveInstance(refId, api, models, binder);
+            return { liveDoc: liveInstance, docRef };
+        }
         case "llmconversation":
             throw new Error("LLM conversation pages are not implemented");
         default:
