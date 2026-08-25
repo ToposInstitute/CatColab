@@ -55,6 +55,17 @@ pub(crate) fn ode_semantics_equations<S: ODESemantics>(
     Ok(system.to_latex_equations_with_map(|param| latex_names(model)(param)))
 }
 
+/// This type is simply to accommodate for analyses that require no input data. This is because
+/// `initialContent` for `ModelAnalysisMeta<T>` in `frontend/src/stdlib/analyses.tsx` really needs to
+/// be an entire JavaScript object, so we can't simply work with `ModelAnalysisMeta<null>`
+/// and set `initialContent: () => null`.
+#[derive(Serialize, Deserialize, Tsify)]
+#[tsify(into_wasm_abi, from_wasm_abi)]
+pub struct NullWrapper {
+    /// Trivial data.
+    pub content: (),
+}
+
 #[cfg(test)]
 pub(crate) mod tests {
     use super::*;
