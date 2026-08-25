@@ -12,8 +12,7 @@ import {
 import type { ContextExecScope } from "../inference/context_exec";
 import {
     createScopedDocument,
-    formatDocumentIssues,
-    isNotebookDocument,
+    stringifyDocumentIssues,
     type ScopedDocument,
 } from "./scoped_document";
 
@@ -104,7 +103,7 @@ async function createScopedDocuments<Handle>(
         title: sources.attachment.title,
     });
     if (created.tag === "Err") {
-        throw new Error(formatDocumentIssues(created.content).join("\n"));
+        throw new Error(stringifyDocumentIssues(created.content).join("\n"));
     }
     const parentDocument = scopeNotebook(false);
     const attachedDocument = createScopedDocument({
@@ -124,7 +123,7 @@ async function resolveSourceDocuments<Handle>(
     attachment: LLMConversationAttachment<Shape, Handle>,
     store: DocumentStore<Handle>,
 ): Promise<SourceDocuments<Handle>> {
-    if (isNotebookDocument(attachment)) {
+    if (isNotebook(attachment)) {
         return { tag: "SingleDocument", attachment };
     }
 
@@ -140,6 +139,12 @@ async function resolveSourceDocuments<Handle>(
     };
 }
 
+function isNotebook<Handle>(
+    document: LLMConversationAttachment<Shape, Handle>,
+): document is Notebook<Shape, ModelDocument, Handle> {
+    return document.document.type === "model";
+}
+
 async function resolveHandle<Handle>(
     store: DocumentStore<Handle>,
     ref: { _id: string; _version: string | null; _server: string },
@@ -150,7 +155,7 @@ async function resolveHandle<Handle>(
         server: ref._server,
     });
     if (result.tag === "Err") {
-        throw new Error(formatDocumentIssues(result.content).join("\n"));
+        throw new Error(stringifyDocumentIssues(result.content).join("\n"));
     }
     return result.content;
 }

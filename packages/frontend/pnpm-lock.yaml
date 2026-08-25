@@ -186,6 +186,9 @@ importers:
       '@types/node':
         specifier: ^24.0.0
         version: 24.10.0
+      catcolab-logics:
+        specifier: link:../logics
+        version: link:../logics
       eslint-plugin-solid:
         specifier: ^0.14.5
         version: 0.14.5(eslint@9.39.4)(typescript@6.0.3)

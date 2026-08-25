@@ -1,12 +1,14 @@
 import type { Document } from "catcolab-document-types";
-import {
-    type DocumentStore,
-    type LLMConversationAttachment,
-    type ModelDocument,
-    type Notebook,
-    type Shape,
-} from "catcolab-documents";
+import { type DocumentStore, type Issue, type Result } from "catcolab-documents";
+import type { DblModel } from "catlog-wasm";
 import { createDocumentTransaction } from "./document_transaction";
+
+export type DocumentBinding<Handle = unknown, E extends Issue = Issue> = {
+    readonly document: Readonly<Document>;
+    readonly handle: Handle;
+    readonly title: string;
+    validate(): Promise<Result<unknown, ReadonlyArray<E>>>;
+};
 
 export type ScopedDocumentLink = {
     name: string;
@@ -30,8 +32,8 @@ export type ScopedDocument = {
 };
 
 /** Create and stage the execution-scope representation of one document. */
-export function createScopedDocument<Handle, S extends Shape>(options: {
-    binding: LLMConversationAttachment<S, Document>;
+export function createScopedDocument<Handle, E extends Issue>(options: {
+    binding: DocumentBinding<Document, E>;
     bindingStore: DocumentStore<Document>;
     sourceHandle: Handle;
     sourceStore: DocumentStore<Handle>;
@@ -65,47 +67,22 @@ export function createScopedDocument<Handle, S extends Shape>(options: {
     };
 }
 
-export function isNotebookDocument<S extends Shape, Handle>(
-    document: LLMConversationAttachment<S, Handle>,
-): document is Notebook<S, ModelDocument, Handle> {
-    return document.document.type === "model";
+export function stringifyDocumentIssues(issues: ReadonlyArray<Issue>): string[] {
+    return issues.map((issue) => JSON.stringify(issue));
 }
 
-export function formatDocumentIssues(
-    issues: ReadonlyArray<{ message: string; path?: ReadonlyArray<unknown> }>,
-): string[] {
-    return issues.map((issue) => {
-        if (!issue.path?.length) {
-            return issue.message;
-        }
-        const path = issue.path
-            .map((segment) =>
-                typeof segment === "object" && segment !== null && "key" in segment
-                    ? String(segment.key)
-                    : String(segment),
-            )
-            .join(".");
-        return `${issue.message} (at ${path})`;
-    });
-}
-
-async function validateScopedDocument<S extends Shape>(
-    document: LLMConversationAttachment<S, Document>,
+async function validateScopedDocument<E extends Issue>(
+    document: DocumentBinding<Document, E>,
     binding: string,
 ): Promise<ReadonlyArray<string>> {
-    if (isNotebookDocument(document)) {
-        const result = await document.validate();
-        if (result.tag === "Err") {
-            return formatDocumentIssues(result.content).map((issue) => `${binding}: ${issue}`);
-        }
-        result.content.free();
-        return [];
-    }
-
     const result = await document.validate();
-    return result.tag === "Err"
-        ? formatDocumentIssues(result.content).map((issue) => `${binding}: ${issue}`)
-        : [];
+    if (result.tag === "Err") {
+        return stringifyDocumentIssues(result.content).map((issue) => `${binding}: ${issue}`);
+    }
+    if (document.document.type === "model") {
+        (result.content as DblModel).free();
+    }
+    return [];
 }
 
 function describeScopedDocument(description: ScopedDocumentDescription): string {

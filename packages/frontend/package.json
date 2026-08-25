@@ -85,6 +85,7 @@
         "@types/html-escaper": "^3.0.4",
         "@types/mdx": "^2.0.13",
         "@types/node": "^24.0.0",
+        "catcolab-logics": "link:../logics",
         "eslint-plugin-solid": "^0.14.5",
         "rehype-katex": "^7.0.1",
         "rehype-raw": "^7.0.0",

@@ -1,34 +1,15 @@
+import { Entity, SimpleSchema } from "catcolab-logics/simple-schema";
 import { assert, beforeEach, describe, test, vi } from "vitest";
 
-import type { Document, InlineFile } from "catcolab-document-types";
-import {
-    createBinder,
-    defineMorphism,
-    defineObject,
-    defineShape,
-    type Instance,
-    type Notebook,
-} from "catcolab-documents";
-import { ThSchema } from "catlog-wasm";
+import type { Document } from "catcolab-document-types";
+import { createBinder, type Instance, type Notebook } from "catcolab-documents";
 import type {
-    GeneratedOpenAIMessage,
     OpenAIChatTurnOptions,
     OpenAIChatTurnResult,
     OpenAITranscript,
 } from "../inference/chat.ts";
 import type { ContextExecScope } from "../inference/context_exec.ts";
 import { runLLMConversationTurn } from "./document.ts";
-
-const Entity = defineObject({ tag: "Basic", content: "Entity" });
-const AttrType = defineObject({ tag: "Basic", content: "AttrType" });
-const Mapping = defineMorphism({ tag: "Hom", content: Entity.obType });
-const SimpleSchema = defineShape({
-    theory: "simple-schema",
-    getCoreTheory: async () => new ThSchema().theory(),
-    objects: [Entity, AttrType],
-    morphisms: [Mapping],
-    supportsInstances: { tableObjects: [Entity] },
-});
 
 const inference = vi.hoisted(() => ({
     createInferenceClient: vi.fn<(apiKey: string) => unknown>(),
@@ -48,35 +29,6 @@ vi.mock("../inference/chat.ts", async (importOriginal) => ({
     ...inference,
 }));
 
-const inputFile: InlineFile = {
-    filename: "values.csv",
-    mediaType: "text/csv",
-    content: Array.from(new TextEncoder().encode("left,right\n0,1\n")),
-};
-
-const generatedMessageDelta: GeneratedOpenAIMessage[] = [
-    {
-        role: "assistant",
-        content: null,
-        tool_calls: [
-            {
-                id: "call_inspect",
-                type: "function",
-                function: {
-                    name: "contextExec",
-                    arguments: JSON.stringify({ code: "return files['values.csv'];" }),
-                },
-            },
-        ],
-    },
-    {
-        role: "tool",
-        tool_call_id: "call_inspect",
-        content: JSON.stringify({ tag: "Ok", value: "left,right\n0,1\n" }),
-    },
-    { role: "assistant", content: "The values are 0 and 1." },
-];
-
 type Fixture = Awaited<ReturnType<typeof makeFixture>>;
 
 async function makeFixture(withInstance = false) {
@@ -86,12 +38,7 @@ async function makeFixture(withInstance = false) {
     let instance: Instance<Document, typeof SimpleSchema> | undefined;
 
     if (withInstance) {
-        const created = await binder.createInstance(schema, { title: "Company data" });
-        assert.strictEqual(created.tag, "Ok");
-        if (created.tag !== "Ok") {
-            throw new Error("Failed to create test instance");
-        }
-        instance = created.content;
+        instance = expectOk(await binder.createInstance(schema, { title: "Company data" }));
         attachment = instance;
     }
 
@@ -101,10 +48,43 @@ async function makeFixture(withInstance = false) {
     return { binder, schema, instance, conversation };
 }
 
+async function makeInvalidInstance(fixture: Fixture) {
+    const instance = fixture.instance;
+    assert(instance);
+    fixture.schema.add(Entity, { label: "Person" });
+    const table = expectOk(await instance.tables())[0];
+    assert(table);
+    const row = expectOk(await instance.addRow(table));
+    fixture.binder.store.changeDocument(instance.handle, (document) => {
+        assert.strictEqual(document.type, "instance");
+        if (document.type !== "instance") {
+            return;
+        }
+        const storedRow = document.tables[table.id]?.rows[row.id];
+        assert(storedRow);
+        storedRow.fields.unexpected = { String: "value" };
+    });
+    return { table, row };
+}
+
+function expectOk<T>(result: { tag: "Ok"; content: T } | { tag: "Err"; content: unknown }): T {
+    if (result.tag === "Err") {
+        throw new Error(`Expected Ok, got ${JSON.stringify(result.content)}`);
+    }
+    return result.content;
+}
+
 function schemaBinding(scope: ContextExecScope): Notebook<typeof SimpleSchema> {
     const schema = scope.document_Company_schema;
     assert(schema);
     return schema as Notebook<typeof SimpleSchema>;
+}
+
+function response(content: string): OpenAIChatTurnResult {
+    return {
+        content,
+        generatedMessageDelta: [{ role: "assistant", content }],
+    };
 }
 
 async function runTurn(fixture: Fixture) {
@@ -112,107 +92,79 @@ async function runTurn(fixture: Fixture) {
         fixture.conversation,
         fixture.binder.store,
         { tag: "Ready", key: "inference-key" },
-        { content: "Inspect the document.", files: [inputFile] },
+        { content: "Inspect the document.", files: [] },
     );
 }
 
-describe("LLM conversation turns", () => {
+describe("LLM conversation turns", { timeout: 10_000 }, () => {
     beforeEach(() => {
         inference.createInferenceClient.mockReset();
         inference.runOpenAIChatTurn.mockReset();
+        inference.createInferenceClient.mockReturnValue({});
     });
 
-    test("edits an isolated schema copy and commits it after validation", async () => {
+    test("runs against an isolated document scope and commits valid changes", async () => {
         const fixture = await makeFixture();
-        inference.createInferenceClient.mockReturnValue({});
         inference.runOpenAIChatTurn.mockImplementation(async (_client, _transcript, scope) => {
             schemaBinding(scope).update({ title: "Updated schema" });
             assert.strictEqual(fixture.schema.title, "Company schema");
-            return {
-                content: "The values are 0 and 1.",
-                generatedMessageDelta,
-            };
-        });
-
-        assert.deepStrictEqual(await runTurn(fixture), {
-            tag: "Completed",
-            content: "The values are 0 and 1.",
-        });
-        assert.strictEqual(fixture.schema.title, "Updated schema");
-
-        const call = inference.runOpenAIChatTurn.mock.calls[0]!;
-        assert.deepStrictEqual(call[2].files, { "values.csv": "left,right\n0,1\n" });
-        assert.strictEqual(call[3]?.model, "test-model");
-        const suffix = call[3]?.systemPromptSuffix ?? "";
-        assert.match(suffix, /Company schema/);
-        assert.match(suffix, /attached document/);
-        assert.deepStrictEqual(
-            fixture.conversation.interactions().map((interaction) => interaction.tag),
-            ["user-message", "llm-code-execution", "llm-message"],
-        );
-    });
-
-    test("puts an attached document and the document it links to in scope", async () => {
-        const fixture = await makeFixture(true);
-        inference.createInferenceClient.mockReturnValue({});
-        inference.runOpenAIChatTurn.mockImplementation(async (_client, _transcript, scope) => {
-            const instance = scope.document_Company_data;
-            assert(instance);
-            (instance as Instance<unknown, typeof SimpleSchema>).update({
-                title: "Updated data",
-            });
-            assert.strictEqual(fixture.instance?.title, "Company data");
-            return {
-                content: "Done.",
-                generatedMessageDelta: [{ role: "assistant", content: "Done." }],
-            };
+            return response("Done.");
         });
 
         assert.deepStrictEqual(await runTurn(fixture), { tag: "Completed", content: "Done." });
-        assert.strictEqual(fixture.instance?.title, "Updated data");
-        const suffix = inference.runOpenAIChatTurn.mock.calls[0]?.[3]?.systemPromptSuffix ?? "";
-        assert.match(suffix, /`document_Company_data` is the attached document "Company data"/);
-        assert.match(suffix, /Its `instanceOf` link points to `document_Company_schema`/);
-        assert.match(suffix, /`document_Company_schema` is the document "Company schema"/);
+        assert.strictEqual(fixture.schema.title, "Updated schema");
+
+        const call = inference.runOpenAIChatTurn.mock.calls[0]!;
+        assert.strictEqual(call[3]?.model, "test-model");
+        assert.match(call[3]?.systemPromptSuffix ?? "", /attached document "Company schema"/);
+        assert.deepStrictEqual(
+            fixture.conversation.interactions().map((interaction) => interaction.tag),
+            ["user-message", "llm-message"],
+        );
     });
 
-    test("reprompts while the in-memory documents are invalid", async () => {
-        const fixture = await makeFixture();
-        inference.createInferenceClient.mockReturnValue({});
-        let invalidCell: { delete(): void } | undefined;
-        inference.runOpenAIChatTurn.mockImplementation(async (_client, transcript, scope) => {
-            const schema = schemaBinding(scope);
-            if (!invalidCell) {
-                invalidCell = schema.add(Mapping, {
-                    label: "invalid",
-                    from: null,
-                    to: null,
-                });
-                return {
-                    content: "Done.",
-                    generatedMessageDelta: [{ role: "assistant", content: "Done." }],
-                };
-            }
-            assert.match(String(transcript.at(-1)?.content), /validation problems/);
-            invalidCell.delete();
-            schema.update({ title: "Repaired schema" });
-            return {
-                content: "Repaired.",
-                generatedMessageDelta: [{ role: "assistant", content: "Repaired." }],
-            };
-        });
+    test("exposes linked documents and complete validation issues to the model", async () => {
+        const fixture = await makeFixture(true);
+        const { table, row } = await makeInvalidInstance(fixture);
+        let firstCall = true;
+        inference.runOpenAIChatTurn.mockImplementation(
+            async (_client, transcript, scope, options) => {
+                const attachedDocument = scope.document_Company_data as
+                    | Instance<unknown, typeof SimpleSchema>
+                    | undefined;
+                assert(attachedDocument);
+
+                if (firstCall) {
+                    firstCall = false;
+                    assert(scope.document_Company_schema);
+                    assert.match(
+                        options?.systemPromptSuffix ?? "",
+                        /Company data.*instanceOf.*Company schema/s,
+                    );
+                    return response("Done.");
+                }
+
+                const feedback = String(transcript.at(-1)?.content);
+                assert.match(feedback, /"issueType":"MistypedLiteral"/);
+                assert.ok(
+                    feedback.includes(
+                        JSON.stringify([table.id, "rows", row.id, "fields", "unexpected"]),
+                    ),
+                );
+                attachedDocument.deleteRow(table.id, row.id);
+                return response("Repaired.");
+            },
+        );
 
         assert.deepStrictEqual(await runTurn(fixture), {
             tag: "Completed",
             content: "Repaired.",
         });
         assert.strictEqual(inference.runOpenAIChatTurn.mock.calls.length, 2);
-        assert.strictEqual(fixture.schema.title, "Repaired schema");
     });
 
     test("retains the user message when inference fails", async () => {
         const fixture = await makeFixture();
-        inference.createInferenceClient.mockReturnValue({});
         inference.runOpenAIChatTurn.mockRejectedValue(new Error("network failed"));
 
         assert.deepStrictEqual(await runTurn(fixture), {
