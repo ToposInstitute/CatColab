@@ -70,7 +70,7 @@ export default function MassAction(
             validate: (_, data) => data >= 0,
             setData: (id, data) =>
                 props.changeContent((content) => {
-                    switch (variant()) {
+                    switch (content.variant) {
                         case "Balanced":
                             content.balanced.generalData.initialValues[id] = data;
                             break;
@@ -309,7 +309,7 @@ export default function MassAction(
             validate: (_, data) => data >= 0,
             setData: (_, data) =>
                 props.changeContent((content) => {
-                    switch (variant()) {
+                    switch (content.variant) {
                         case "Balanced":
                             content.balanced.generalData.duration = data;
                             break;
