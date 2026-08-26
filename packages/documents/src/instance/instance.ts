@@ -94,7 +94,7 @@ export function instanceFromStore<Handle, S extends Shape>(
     const validateSchemaResult = createSchemaResultValidator(schema, store, handle);
 
     async function validateCurrentDocument(): Promise<
-        Result<undefined, ReadonlyArray<Issue | TableFieldIssue>>
+        Result<void, ReadonlyArray<Issue | TableFieldIssue>>
     > {
         return validateSchemaResult(await schema.validate());
     }
@@ -148,7 +148,7 @@ export function instanceFromStore<Handle, S extends Shape>(
         deleteRows(rows: ReadonlyArray<{ tableId: string; rowId: string }>): void {
             deleteStoredRows(rows);
         },
-        validate(): Promise<Result<undefined, ReadonlyArray<Issue | TableFieldIssue>>> {
+        validate(): Promise<Result<void, ReadonlyArray<Issue | TableFieldIssue>>> {
             return validateCurrentDocument();
         },
         onChange(callback: () => void): () => void {
@@ -160,13 +160,11 @@ export function instanceFromStore<Handle, S extends Shape>(
             };
         },
         onValidate(
-            callback: (result: Result<undefined, ReadonlyArray<Issue | TableFieldIssue>>) => void,
+            callback: (result: Result<void, ReadonlyArray<Issue | TableFieldIssue>>) => void,
         ): () => void {
             let active: boolean = true;
 
-            function notify(
-                result: Result<undefined, ReadonlyArray<Issue | TableFieldIssue>>,
-            ): void {
+            function notify(result: Result<void, ReadonlyArray<Issue | TableFieldIssue>>): void {
                 if (active) {
                     callback(result);
                 }
