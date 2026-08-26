@@ -1,7 +1,7 @@
 import type { InstanceDocument } from "catcolab-document-methods";
-import type { DblModel } from "catlog-wasm";
 import type { DocumentStore } from "../document-store";
 import type { ModelDocument } from "../model/document";
+import type { ElaboratedModel } from "../model/elaborated-model";
 import type { Notebook } from "../model/notebook";
 import type { Issue, Result } from "../result";
 import type { InstanceCapableShape, Shape } from "../shape";
@@ -26,7 +26,7 @@ function instanceCapableShape<Handle, S extends Shape>(
     return shape as InstanceCapableShape;
 }
 
-/** Validate the schema, run an operation against the resulting model, and free it.
+/** Validate the schema and run an operation against the resulting model.
 
 `operation` is expected to report its own failures as a `Result`; this does not
 catch exceptions, so an operation that throws lets that exception propagate. */
@@ -37,19 +37,14 @@ async function withValidatedSchema<
     E extends ReadonlyArray<Issue> = ReadonlyArray<Issue>,
 >(
     schema: Notebook<S, ModelDocument, Handle>,
-    operation: (schemaModel: DblModel) => Result<T, E>,
+    operation: (schemaModel: ElaboratedModel<S>) => Result<T, E>,
 ): Promise<Result<T, E>> {
     const schemaResult = await schema.validate();
     if (schemaResult.tag === "Err") {
         return schemaResult as Result<T, E>;
     }
 
-    const schemaModel = schemaResult.content;
-    try {
-        return operation(schemaModel);
-    } finally {
-        schemaModel.free();
-    }
+    return operation(schemaResult.content);
 }
 
 export function createTablesMethod<Handle, S extends Shape>(
@@ -189,29 +184,26 @@ export function createSchemaResultValidator<Handle, S extends Shape>(
     schema: Notebook<S, ModelDocument, Handle>,
     store: DocumentStore<Handle>,
     handle: Handle,
-): (schemaResult: Result<DblModel>) => Result<undefined, ReadonlyArray<Issue | TableFieldIssue>> {
+): (
+    schemaResult: Result<ElaboratedModel<S>>,
+) => Result<undefined, ReadonlyArray<Issue | TableFieldIssue>> {
     return (schemaResult) => {
         if (schemaResult.tag === "Err") {
             return schemaResult;
         }
 
-        const schemaModel = schemaResult.content;
-        try {
-            const tables = instanceTablesFromModel(
-                instanceCapableShape(schema),
-                store,
-                handle,
-                schemaModel,
-            );
-            const issues: TableFieldIssue[] = validateTableFields(
-                store.getDocumentView(handle) as Readonly<InstanceDocument>,
-                tables,
-            );
-            return issues.length === 0
-                ? { tag: "Ok", content: undefined }
-                : { tag: "Err", content: issues };
-        } finally {
-            schemaModel.free();
-        }
+        const tables = instanceTablesFromModel(
+            instanceCapableShape(schema),
+            store,
+            handle,
+            schemaResult.content,
+        );
+        const issues: TableFieldIssue[] = validateTableFields(
+            store.getDocumentView(handle) as Readonly<InstanceDocument>,
+            tables,
+        );
+        return issues.length === 0
+            ? { tag: "Ok", content: undefined }
+            : { tag: "Err", content: issues };
     };
 }

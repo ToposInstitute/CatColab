@@ -2,11 +2,11 @@ import { v7 as uuid } from "uuid";
 
 import type { InstanceDocument } from "catcolab-document-methods";
 import type * as DocumentTypes from "catcolab-document-types";
-import type { DblModel, ObGenerator } from "catlog-wasm";
+import type { QualifiedLabel } from "catlog-wasm";
 import type { DocumentStore } from "../document-store";
-import { objectTypesEqual } from "../model/equality";
+import type { ElaboratedModel, ObjectJudgment } from "../model/elaborated-model";
 import type { Issue, Result } from "../result";
-import type { InstanceCapableShape } from "../shape";
+import type { InstanceCapableShape, ObjectType, Shape } from "../shape";
 import type { FieldPath } from "./errors";
 import type {
     FieldValue,
@@ -25,7 +25,7 @@ export function readInstancePathFromStore<Handle>(
     shape: InstanceCapableShape,
     store: DocumentStore<Handle>,
     handle: Handle,
-    schemaModel: DblModel,
+    schemaModel: ElaboratedModel<Shape>,
     path: InstancePath,
 ): Result<InstanceTable | TableRow | FieldValue> {
     const schemaTables = instanceTablesFromModel(shape, store, handle, schemaModel);
@@ -73,7 +73,7 @@ export function addInstanceRowsToStore<Handle>(
     shape: InstanceCapableShape,
     store: DocumentStore<Handle>,
     handle: Handle,
-    schemaModel: DblModel,
+    schemaModel: ElaboratedModel<Shape>,
     additions: ReadonlyArray<{
         table: InstanceTable;
         values: ReadonlyArray<Record<string, LiteralValue | TableRow>>;
@@ -132,7 +132,7 @@ export function updateInstanceFieldsByLabelInStore<Handle>(
     shape: InstanceCapableShape,
     store: DocumentStore<Handle>,
     handle: Handle,
-    schemaModel: DblModel,
+    schemaModel: ElaboratedModel<Shape>,
     updates: ReadonlyArray<{
         row: TableRow;
         values: ReadonlyArray<Record<string, LiteralValue | TableRow>>;
@@ -172,7 +172,7 @@ export function updateInstanceFieldByIdInStore<Handle>(
     shape: InstanceCapableShape,
     store: DocumentStore<Handle>,
     handle: Handle,
-    schemaModel: DblModel,
+    schemaModel: ElaboratedModel<Shape>,
     row: TableRow,
     field: { id: string },
     value: LiteralValue | TableRow,
@@ -320,48 +320,45 @@ export function instanceTablesFromModel<Handle>(
     shape: InstanceCapableShape,
     store: DocumentStore<Handle>,
     handle: Handle,
-    schemaModel: DblModel,
+    schemaModel: ElaboratedModel<Shape>,
 ): readonly InstanceTable[] {
-    const presentation = schemaModel.presentation();
-    const objectsById = new Map(presentation.obGenerators.map((object) => [object.id, object]));
-    const tableObjects = presentation.obGenerators.filter((object) =>
-        shape.supportsInstances.tableObjects.some((type) =>
-            objectTypesEqual(type.obType, object.obType),
-        ),
-    );
+    const judgments = schemaModel.judgments();
+    const tableObjects = schemaModel
+        .judgmentsOf({ objects: shape.supportsInstances.tableObjects })
+        // This shouldn't be needed once judgmentsOf returns narrower types.
+        .filter((judgment): judgment is ObjectJudgment<ObjectType> => judgment.kind === "object");
     const tableIds = new Set(tableObjects.map((object) => object.id));
 
     return tableObjects.map((tableObject) => {
         const headers: TableHeader[] = [];
-        for (const morphism of presentation.morGenerators) {
-            if (morphism.dom.tag !== "Basic" || morphism.dom.content !== tableObject.id) {
+        for (const morphism of judgments) {
+            if (morphism.kind !== "morphism" || morphism.from?.id !== tableObject.id) {
                 continue;
             }
-            if (morphism.cod.tag !== "Basic") {
-                continue;
-            }
-            const codomainObject = objectsById.get(morphism.cod.content);
-            if (codomainObject === undefined) {
+            const codomain = morphism.to;
+            if (codomain === null) {
                 continue;
             }
 
-            const label = displayLabel(morphism);
-            if (tableIds.has(codomainObject.id)) {
+            if (tableIds.has(codomain.id)) {
                 headers.push({
                     id: morphism.id,
-                    label,
-                    type: { tag: "RowRef", content: { id: codomainObject.id } },
+                    label: displayLabel(morphism.label),
+                    type: { tag: "RowRef", content: { id: codomain.id } },
                 });
                 continue;
             }
 
-            const attributeType = codomainObject;
-            const literalType = atomicTypeOfAttributeType(attributeType);
-            headers.push({ id: morphism.id, label, type: { tag: literalType } });
+            const literalType = atomicTypeOfAttributeType(codomain.label);
+            headers.push({
+                id: morphism.id,
+                label: displayLabel(morphism.label),
+                type: { tag: literalType },
+            });
         }
         const table: InstanceTable = {
             id: tableObject.id,
-            label: displayLabel(tableObject),
+            label: displayLabel(tableObject.label),
             headers,
             get rows() {
                 const document = store.getDocumentView(handle) as Readonly<InstanceDocument>;
@@ -374,8 +371,8 @@ export function instanceTablesFromModel<Handle>(
     });
 }
 
-function displayLabel(generator: Pick<ObGenerator, "label">): string {
-    return generator.label?.join(".") ?? "";
+function displayLabel(label: QualifiedLabel): string {
+    return label.join(".");
 }
 
 function fieldValueFromStored(path: FieldPath, value: DocumentTypes.FieldValue): FieldValue {

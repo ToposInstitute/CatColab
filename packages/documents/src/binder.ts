@@ -141,24 +141,19 @@ function binderFromStore<Handle>(store: DocumentStore<Handle>): Binder<Handle> {
                 return schemaResult;
             }
 
-            const schemaModel = schemaResult.content;
-            try {
-                const schemaRef = store.getDocumentRef(schema.handle);
-                const document = InstanceMethods.newInstanceDocument({
-                    _id: schemaRef.id,
-                    _version: schemaRef.version,
-                    _server: schemaRef.server ?? "",
-                });
-                document.name = options.title;
+            const schemaRef = store.getDocumentRef(schema.handle);
+            const document = InstanceMethods.newInstanceDocument({
+                _id: schemaRef.id,
+                _version: schemaRef.version,
+                _server: schemaRef.server ?? "",
+            });
+            document.name = options.title;
 
-                const handle = await store.createHandle(document);
-                return {
-                    tag: "Ok",
-                    content: instanceFromStore(shape, schema, store, handle),
-                };
-            } finally {
-                schemaModel.free();
-            }
+            const handle = await store.createHandle(document);
+            return {
+                tag: "Ok",
+                content: instanceFromStore(shape, schema, store, handle),
+            };
         },
         async createLLMConversation<Attachment extends LLMConversationAttachment<Shape, Handle>>(
             attachment: Attachment,

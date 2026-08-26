@@ -1,4 +1,4 @@
-import type { ModelPresentation, MorGenerator, ObGenerator } from "catlog-wasm";
+import type { ModelPresentation, MorGenerator, QualifiedLabel } from "catlog-wasm";
 import {
     findMorphismType,
     findObjectType,
@@ -11,18 +11,17 @@ import {
 } from "../shape";
 import { morphismTypesEqual, objectTypesEqual } from "./equality";
 
-/** An object judgment of an elaborated model. Mirrors [`ObjectCell`], minus mutation. */
+/** An object judgment of an elaborated model. Mirrors [`ObjectCell`], minus
+mutation */
 export interface ObjectJudgment<O extends ObjectType> {
     readonly kind: "object";
     readonly id: string;
     readonly type: O;
-    readonly label: string;
+    readonly label: QualifiedLabel;
 }
 
-/** A morphism judgment of an elaborated model. Mirrors [`MorphismCell`], minus mutation.
-
-The endpoints are resolved to object judgments; an endpoint that is not a basic
-object generator is `null`. */
+/** A morphism judgment of an elaborated model. Mirrors [`MorphismCell`], minus
+mutation display string. */
 export interface MorphismJudgment<
     out S extends Shape,
     M extends MorphismType = MorphismTypesOf<S>,
@@ -30,7 +29,7 @@ export interface MorphismJudgment<
     readonly kind: "morphism";
     readonly id: string;
     readonly type: M;
-    readonly label: string;
+    readonly label: QualifiedLabel;
     readonly from: ObjectJudgment<ObjectTypesOf<S>> | null;
     readonly to: ObjectJudgment<ObjectTypesOf<S>> | null;
 }
@@ -71,7 +70,7 @@ export function elaboratedModelFromPresentation<S extends Shape>(
                 kind: "object",
                 id: generator.id,
                 type,
-                label: displayLabel(generator),
+                label: generator.label ?? [],
             };
             objectsById.set(generator.id, judgment);
             objects.push(judgment);
@@ -87,7 +86,7 @@ export function elaboratedModelFromPresentation<S extends Shape>(
                 kind: "morphism",
                 id: generator.id,
                 type,
-                label: displayLabel(generator),
+                label: generator.label ?? [],
                 from: endpointJudgment(objectsById, generator.dom),
                 to: endpointJudgment(objectsById, generator.cod),
             });
@@ -102,10 +101,6 @@ export function elaboratedModelFromPresentation<S extends Shape>(
             return judgments().filter((judgment) => judgmentMatchesFilter(judgment, typeOrShape));
         },
     };
-}
-
-function displayLabel(generator: Pick<ObGenerator, "label">): string {
-    return generator.label?.join(".") ?? "";
 }
 
 function endpointJudgment<S extends Shape>(

@@ -2,15 +2,16 @@
 
 import type { InstanceDocument } from "catcolab-document-methods";
 import type * as DocumentTypes from "catcolab-document-types";
-import type { ObGenerator } from "catlog-wasm";
+import type { QualifiedLabel } from "catlog-wasm";
 import type { FieldPath, TableFieldIssue } from "./errors";
 import type { InstanceTable, LiteralType, TableHeader } from "./tables";
 
-/** Decide which concrete atomic type an attribute type denotes. This function
-    is intended to be temporary and should be replaced once we have an account
-    of typing with which we are satisfied. */
-export function atomicTypeOfAttributeType(attributeType: Pick<ObGenerator, "label">): LiteralType {
-    const name = attributeType.label?.[0];
+/** Decide which concrete atomic type an attribute type's qualified label
+    denotes. The first label segment decides. This function is intended to be
+    temporary and should be replaced once we have an account of typing with
+    which we are satisfied. */
+export function atomicTypeOfAttributeType(label: QualifiedLabel): LiteralType {
+    const name = label[0];
     switch (name) {
         case "Bool":
         case "Int":

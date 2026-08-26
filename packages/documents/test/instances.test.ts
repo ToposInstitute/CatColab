@@ -497,12 +497,12 @@ describe("tabular instances", () => {
 
 describe("atomic instance column types", () => {
     test("attribute type labels match exact atomic names", () => {
-        expect(atomicTypeOfAttributeType({ label: ["Bool"] })).toBe("Bool");
-        expect(atomicTypeOfAttributeType({ label: ["Int"] })).toBe("Int");
-        expect(atomicTypeOfAttributeType({ label: ["Float"] })).toBe("Float");
-        expect(atomicTypeOfAttributeType({ label: ["String"] })).toBe("String");
-        expect(atomicTypeOfAttributeType({ label: ["namespace", "Bool"] })).toBe("String");
-        expect(atomicTypeOfAttributeType({ label: undefined })).toBe("String");
-        expect(atomicTypeOfAttributeType({ label: ["string"] })).toBe("String");
+        expect(atomicTypeOfAttributeType(["Bool"])).toBe("Bool");
+        expect(atomicTypeOfAttributeType(["Int"])).toBe("Int");
+        expect(atomicTypeOfAttributeType(["Float"])).toBe("Float");
+        expect(atomicTypeOfAttributeType(["String"])).toBe("String");
+        expect(atomicTypeOfAttributeType(["namespace", "Bool"])).toBe("String");
+        expect(atomicTypeOfAttributeType([])).toBe("String");
+        expect(atomicTypeOfAttributeType(["string"])).toBe("String");
     });
 });

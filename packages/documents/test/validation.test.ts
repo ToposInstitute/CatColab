@@ -3,8 +3,7 @@ import { describe, expect, test } from "vitest";
 
 // RFC-0006 "Model validation": the asynchronous `validate` method, subscribing
 // to validation changes with `onValidate`, and validation failures.
-import { createBinder, Instantiation, type Result } from "catcolab-documents";
-import type { DblModel } from "catlog-wasm";
+import { createBinder, type ElaboratedModel, Instantiation, type Result } from "catcolab-documents";
 
 async function wellFormedOlog() {
     const binder = createBinder();
@@ -20,14 +19,14 @@ async function wellFormedOlog() {
 // the first time tests run we incur the cost of loading the catlog-wasm bundle,
 // so these tests have longer timeouts
 describe("validate", { timeout: 10000 }, () => {
-    test("a well-formed notebook validates to an Ok carrying the model", async () => {
+    test("a well-formed notebook validates to an Ok carrying the elaborated model", async () => {
         const notebook = await wellFormedOlog();
 
-        const result: Result<DblModel> = await notebook.validate();
+        const result: Result<ElaboratedModel<typeof SimpleOlog>> = await notebook.validate();
         expect(result.tag).toBe("Ok");
     });
 
-    test("the validated model is available on the result and can be queried", async () => {
+    test("the elaborated model is available on the result and can be queried", async () => {
         const notebook = await wellFormedOlog();
 
         const result = await notebook.validate();
@@ -35,8 +34,8 @@ describe("validate", { timeout: 10000 }, () => {
         if (result.tag !== "Ok") {
             return;
         }
-        expect(result.content.obGenerators().length).toBe(2);
-        expect(result.content.morGenerators().length).toBe(1);
+        expect(result.content.judgmentsOf(Type).length).toBe(2);
+        expect(result.content.judgmentsOf(Aspect).length).toBe(1);
     });
 });
 
@@ -44,8 +43,8 @@ describe("onValidate", { timeout: 10000 }, () => {
     test("always calls the callback at least once with the current validation", async () => {
         const notebook = await wellFormedOlog();
 
-        const first = await new Promise<Result<DblModel>>((resolve) => {
-            const unsubscribe = notebook.onValidate((result: Result<DblModel>) => {
+        const first = await new Promise<Result<ElaboratedModel<typeof SimpleOlog>>>((resolve) => {
+            const unsubscribe = notebook.onValidate((result) => {
                 resolve(result);
                 unsubscribe();
             });
@@ -57,8 +56,8 @@ describe("onValidate", { timeout: 10000 }, () => {
     test("notifies when changes to the formal content affect the validation result", async () => {
         const notebook = await wellFormedOlog();
 
-        const results: Result<DblModel>[] = [];
-        const unsubscribe = notebook.onValidate((result: Result<DblModel>) => {
+        const results: Result<ElaboratedModel<typeof SimpleOlog>>[] = [];
+        const unsubscribe = notebook.onValidate((result) => {
             results.push(result);
         });
 
