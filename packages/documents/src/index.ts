@@ -1,7 +1,7 @@
 export { createBinder } from "./binder";
 export { CellKind } from "./model/cell";
 export type { Binder } from "./binder";
-export type { DocumentStore, DocumentRef } from "./document-store";
+export type { DocumentStore, DocumentRef, ReactiveView } from "./document-store";
 export type { Issue, PathSegment, Result } from "./result";
 export { createInMemoryStore } from "./document-store";
 export { atomicTypeOfAttributeType } from "./instance/validation";
@@ -32,6 +32,7 @@ export type {
     MorphismJudgment,
     ObjectJudgment,
     ElaboratedModel,
+    ValidationView,
 } from "./model/elaborated-model";
 export type { NotebookDocument } from "./notebook-document";
 export type { RichTextCell } from "./rich-text";

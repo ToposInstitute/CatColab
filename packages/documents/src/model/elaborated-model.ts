@@ -1,4 +1,5 @@
 import type { ModelPresentation, MorGenerator, QualifiedLabel } from "catlog-wasm";
+import type { Issue } from "../result";
 import {
     findMorphismType,
     findObjectType,
@@ -46,6 +47,25 @@ presentation order (objects first, then morphisms). */
 export interface ElaboratedModel<out S extends Shape> {
     judgments(): ReadonlyArray<JudgmentOf<S>>;
     judgmentsOf(typeOrShape: AnyCellType | Shape): ReadonlyArray<JudgmentOf<S>>;
+}
+
+/** A live view of a notebook's validation state.
+
+While the view is active, the notebook revalidates whenever its document
+changes; `model` and `issues` reflect the latest outcome. The caller must
+dispose the view when it is no longer needed.
+
+Elaboration and validation are separate steps, so `model` is always available:
+it reflects the latest elaboration even when validation fails. It is empty
+only before the first elaboration completes or when elaboration itself fails. 
+
+In the case of an empty model the `model.judgments` and `model.judgementsOf` methods 
+return empty arrays. */
+export interface ValidationView<out S extends Shape> {
+    readonly model: ElaboratedModel<S>;
+    /** Validation issues; empty when the notebook is valid. */
+    readonly issues: ReadonlyArray<Issue>;
+    dispose(): void;
 }
 
 /** Create an elaborated model over a (possibly changing) model presentation. */

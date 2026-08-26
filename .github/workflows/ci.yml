@@ -124,13 +124,7 @@ jobs:
 
       - name: Typescript documents package tests
         run: |
-          pnpm --filter catcolab-documents exec vitest run \
-            test/creating-and-editing.test.ts \
-            test/definitions.test.ts \
-            test/binder.test-d.ts \
-            test/llm-conversation.test.ts \
-            test/instances.test.ts \
-            test/serialization.test.ts \
+          pnpm --filter catcolab-documents test
 
       - name: Typescript logic package tests
         run: |
