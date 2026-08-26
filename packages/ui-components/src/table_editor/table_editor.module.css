@@ -3,11 +3,14 @@
     flex-direction: column;
     width: fit-content;
     max-width: 100%;
+    overflow-x: auto;
     border: 1px solid var(--color-gray-450);
     background: var(--color-background);
 }
 
 .header {
+    position: sticky;
+    left: 0;
     padding: 0.4rem 0.75rem;
     background: var(--color-gray-50);
 }
@@ -18,19 +21,147 @@
     font-weight: 500;
 }
 
+.grid {
+    width: max-content;
+    border-collapse: collapse;
+    table-layout: fixed;
+}
+
+.columnHeader {
+    height: 28px;
+    padding: 0 0.5rem;
+    border: 1px solid var(--color-gray-450);
+    background: var(--color-gray-50);
+    font-weight: 500;
+    text-align: left;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.unnamed {
+    color: var(--color-text-secondary);
+    font-style: italic;
+}
+
+.cell {
+    position: relative;
+    height: 28px;
+    padding: 0;
+    border: 1px solid var(--color-gray-450);
+    vertical-align: middle;
+    overflow: hidden;
+    white-space: nowrap;
+    outline: none;
+}
+
+/* A darker shade of the active-item highlight in the completions popup
+(--color-highlight-bg). An outline is used because, unlike an inset box
+shadow, it is painted above the cell editor input. */
+.cell.selected {
+    outline: 2px solid #bdd0e2;
+    outline-offset: -2px;
+}
+
+.cellText {
+    display: block;
+    padding: 0 0.5rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    user-select: none;
+}
+
+.rowRefContent {
+    position: relative;
+    display: flex;
+    align-items: center;
+    height: 100%;
+}
+
+.rowRefIndicator {
+    position: absolute;
+    top: 0;
+    right: 0.35rem;
+    display: grid;
+    place-items: center;
+    width: 24px;
+    height: 100%;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--color-text-secondary);
+    cursor: pointer;
+}
+
+.rowRefIndicator:hover {
+    color: var(--color-foreground);
+}
+
+.rowRefIndicator:disabled {
+    cursor: default;
+}
+
+.cellInput {
+    display: block;
+    box-sizing: border-box;
+    min-width: 0;
+    width: 100%;
+    height: 100%;
+    padding: 0 0.5rem;
+    border: none;
+
+    /* Transparent so cell state backgrounds show through the editor. */
+    background: transparent;
+    font: inherit;
+    outline: none;
+}
+
+.cellInput:read-only {
+    caret-color: transparent;
+    cursor: default;
+}
+
+.rowRefContent .cellText,
+.rowRefContent .cellInput {
+    padding-right: calc(24px + 0.35rem);
+}
+
+.rowRefContent .cellText {
+    flex: 1;
+    min-width: 0;
+}
+
+/* Highlight the whole cell, not just the input, when the content is invalid. */
+.cell.invalid,
+.cell:has(.cellInput.invalid) {
+    background: var(--color-form-invalid-bg);
+}
+
+.checkbox {
+    display: block;
+    margin: 0 auto;
+}
+
 .deleteCell {
     position: relative;
+    height: 28px;
     padding: 0;
+    border: 1px solid var(--color-gray-450);
     text-align: center;
     vertical-align: middle;
 }
 
-.deleteCell:hover {
-    background: var(--color-icon-button-danger-hover);
+.grid tr:has(.deleteCell:hover) {
+    position: relative;
 }
 
-.table :global(tr):has(.deleteCell:hover) > :global(td) {
-    background: var(--color-icon-button-danger-hover);
+.grid tr:has(.deleteCell:hover)::after {
+    position: absolute;
+    z-index: 1;
+    inset: 0;
+    border: 3px solid #d87878;
+    pointer-events: none;
+    content: "";
 }
 
 .deleteRow {
@@ -45,17 +176,31 @@
     background: transparent;
     color: var(--color-text-secondary);
     font-size: 1rem;
+    font-weight: 600;
     line-height: 1;
     cursor: pointer;
 }
 
 .deleteCell:hover .deleteRow {
-    color: var(--color-icon-button-danger-text);
+    color: #d87878;
 }
 
 .footer {
+    position: sticky;
+    left: 0;
     display: flex;
     background: var(--color-gray-50);
+}
+
+.table.unknown {
+    outline: 2px solid var(--color-button-danger-base);
+    background: var(--color-icon-button-danger-hover);
+}
+
+.table.unknown .header,
+.table.unknown .columnHeader,
+.table.unknown .footer {
+    background: var(--color-icon-button-danger-hover);
 }
 
 .addRow {
