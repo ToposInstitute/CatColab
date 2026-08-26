@@ -1,3 +1,5 @@
+import { cellTypesForTheory } from "catcolab-logics/cell-types";
+
 import {
     createBinder,
     type Instance,
@@ -16,7 +18,7 @@ import {
     type ScopedDocumentRole,
 } from "./scoped_document";
 
-const API_PROMPT = `The document bindings expose the CatColab document API. A notebook binding has \`title\`, \`cells()\`, \`cellsOf(type)\`, \`add(type, values)\`, \`update(patch)\`, and \`validate()\`. A tabular document binding has \`title\`, \`tables()\`, \`get(path)\`, row editing methods, \`update(patch)\`, and \`validate()\`. These APIs mutate in-memory working copies; changes are applied to the user's documents only after every document validates.`;
+const API_PROMPT = `The document bindings expose the CatColab document API. A notebook binding has \`title\`, \`cells()\`, \`cellsOf(type)\`, \`add(type, values)\`, \`update(patch)\`, and \`validate()\`. The \`type\` argument of a notebook's \`add\` method must be one of the cell-type bindings in scope; the \`values\` argument is an object: \`{ label }\` to add an object cell, \`{ label, from, to }\` to add a morphism cell (\`from\`/\`to\` are existing object cells), or \`{ content }\` to add an informal text cell. A tabular document binding has \`title\`, \`tables()\`, \`get(path)\`, row editing methods, \`update(patch)\`, and \`validate()\`. These APIs mutate in-memory working copies; changes are applied to the user's documents only after every document validates.`;
 
 type SourceDocuments<Handle> =
     | {
@@ -43,14 +45,29 @@ export async function createLLMConversationExecutionScope<
     conversation: LLMConversation<Attachment, Handle>,
     store: DocumentStore<Handle>,
 ): Promise<LLMConversationExecutionScope> {
-    const documents = await createScopedDocuments(conversation.attachment, store);
+    const { documents, theory } = await createScopedDocuments(conversation.attachment, store);
     const descriptions = documents.map((document) => document.description);
+    const cellTypes = cellTypesForTheory(theory);
+    const vocabularyDescription = cellTypes
+        ? `The cell types of the notebook documents, for use with their \`add\` method, are: ${Object.keys(
+              cellTypes,
+          )
+              .map((name) => `\`${name}\``)
+              .join(", ")}.`
+        : undefined;
 
     return {
-        bindings: Object.freeze(
-            Object.fromEntries(documents.map(({ binding, value }) => [binding, value])),
-        ),
-        systemPromptSuffix: `${API_PROMPT}\n\nThe following documents are in scope:\n${descriptions.join("\n")}`,
+        bindings: Object.freeze({
+            ...Object.fromEntries(documents.map(({ binding, value }) => [binding, value])),
+            ...cellTypes,
+        }),
+        systemPromptSuffix: [
+            API_PROMPT,
+            `The following documents are in scope:\n${descriptions.join("\n")}`,
+            vocabularyDescription,
+        ]
+            .filter((part) => part !== undefined)
+            .join("\n\n"),
         async validate() {
             const problems: string[] = [];
             for (const document of documents) {
@@ -69,7 +86,7 @@ export async function createLLMConversationExecutionScope<
 async function createScopedDocuments<Handle>(
     attachment: LLMConversationAttachment<Shape, Handle>,
     store: DocumentStore<Handle>,
-): Promise<ReadonlyArray<ScopedDocument>> {
+): Promise<{ documents: ReadonlyArray<ScopedDocument>; theory?: string }> {
     const sources = await resolveSourceDocuments(attachment, store);
     const sourceNotebook = sources.tag === "SingleDocument" ? sources.attachment : sources.parent;
     if (!sourceNotebook.shape.theory) {
@@ -93,7 +110,7 @@ async function createScopedDocuments<Handle>(
         });
 
     if (sources.tag === "SingleDocument") {
-        return [scopeNotebook("attachment")];
+        return { documents: [scopeNotebook("attachment")], theory: shape.theory };
     }
 
     const created = await copyBinder.createInstance(copyNotebook, {
@@ -113,7 +130,10 @@ async function createScopedDocuments<Handle>(
         preservedKeys: ["instanceOf"],
         usedBindings,
     });
-    return [attachedDocument, parentDocument];
+    return {
+        documents: [attachedDocument, parentDocument],
+        theory: shape.theory,
+    };
 }
 
 async function resolveSourceDocuments<Handle>(

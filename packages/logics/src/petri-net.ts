@@ -20,3 +20,9 @@ export const PetriNet = defineShape({
     morphisms: [Transition],
     informal: [RichText],
 });
+
+export const petriNetCellTypes = {
+    petri_net_place: Place,
+    petri_net_transition: Transition,
+    petri_net_rich_text: RichText,
+};
