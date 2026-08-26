@@ -2,7 +2,7 @@ import { Entity, SimpleSchema } from "catcolab-logics/simple-schema";
 import { assert, beforeEach, describe, test, vi } from "vitest";
 
 import type { Document } from "catcolab-document-types";
-import { createBinder, type Instance, type Notebook } from "catcolab-documents";
+import { createBinder, type Instance, type Notebook, type Result } from "catcolab-documents";
 import type { ChatTurnResult } from "../inference/chat.ts";
 import type { ContextExecScope } from "../inference/context_exec.ts";
 import { runLLMConversationTurn } from "./document.ts";
@@ -57,7 +57,7 @@ async function makeInvalidInstance(fixture: Fixture) {
     return { table, row };
 }
 
-function expectOk<T>(result: { tag: "Ok"; content: T } | { tag: "Err"; content: unknown }): T {
+function expectOk<T, E>(result: Result<T, E>): T {
     if (result.tag === "Err") {
         throw new Error(`Expected Ok, got ${JSON.stringify(result.content)}`);
     }
