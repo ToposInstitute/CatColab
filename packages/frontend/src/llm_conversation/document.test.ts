@@ -74,6 +74,7 @@ function response(content: string): ChatTurnResult {
     return {
         content,
         generatedMessageDelta: [{ role: "assistant", content }],
+        termination: { tag: "FinalResponse" },
     };
 }
 
@@ -113,36 +114,70 @@ describe("LLM conversation turns", { timeout: 20_000 }, () => {
         );
     });
 
-    test("exposes linked documents and complete validation issues to the model", async () => {
+    test("persists complete validation feedback from linked document tools", async () => {
         const fixture = await makeFixture(true);
         const { table, row } = await makeInvalidInstance(fixture);
-        let firstCall = true;
         inference.runChatTurn.mockImplementation(
-            async (_client, transcript, scope, _onContent, _model, systemPromptSuffix) => {
+            async (
+                _client,
+                _transcript,
+                scope,
+                _onContent,
+                _model,
+                systemPromptSuffix,
+                onSuccessHook,
+            ) => {
                 const attachedDocument = scope.document_Company_data as
                     | Instance<unknown, typeof SimpleSchema>
                     | undefined;
                 assert(attachedDocument);
+                assert(scope.document_Company_schema);
+                assert.match(systemPromptSuffix ?? "", /Company data.*instanceOf.*Company schema/s);
+                assert(onSuccessHook);
 
-                if (firstCall) {
-                    firstCall = false;
-                    assert(scope.document_Company_schema);
-                    assert.match(
-                        systemPromptSuffix ?? "",
-                        /Company data.*instanceOf.*Company schema/s,
-                    );
-                    return response("Done.");
+                let validationError: unknown;
+                try {
+                    await onSuccessHook();
+                } catch (error) {
+                    validationError = error;
                 }
-
-                const feedback = String(transcript.at(-1)?.content);
+                assert(validationError instanceof Error);
+                const feedback = validationError.message;
                 assert.match(feedback, /"issueType":"MistypedLiteral"/);
                 assert.ok(
                     feedback.includes(
                         JSON.stringify([table.id, "rows", row.id, "fields", "unexpected"]),
                     ),
                 );
+
                 attachedDocument.deleteRow(table.id, row.id);
-                return response("Repaired.");
+                await onSuccessHook();
+                return {
+                    content: "Repaired.",
+                    generatedMessageDelta: [
+                        {
+                            role: "assistant",
+                            content: null,
+                            tool_calls: [
+                                {
+                                    id: "call-inspect",
+                                    type: "function",
+                                    function: {
+                                        name: "contextExec",
+                                        arguments: JSON.stringify({ code: "return 'inspection';" }),
+                                    },
+                                },
+                            ],
+                        },
+                        {
+                            role: "tool",
+                            tool_call_id: "call-inspect",
+                            content: JSON.stringify({ tag: "Err", error: feedback }),
+                        },
+                        { role: "assistant", content: "Repaired." },
+                    ],
+                    termination: { tag: "FinalResponse" },
+                };
             },
         );
 
@@ -150,7 +185,36 @@ describe("LLM conversation turns", { timeout: 20_000 }, () => {
             tag: "Completed",
             content: "Repaired.",
         });
-        assert.strictEqual(inference.runChatTurn.mock.calls.length, 2);
+        assert.strictEqual(inference.runChatTurn.mock.calls.length, 1);
+        const interactions = fixture.conversation.interactions();
+        assert.deepStrictEqual(
+            interactions.map((interaction) => interaction.tag),
+            ["user-message", "llm-code-execution", "llm-message"],
+        );
+        const execution = interactions[1];
+        assert(execution?.tag === "llm-code-execution");
+        assert.strictEqual(execution.result.tag, "Err");
+        if (execution.result.tag === "Err") {
+            assert.match(execution.result.error, /"issueType":"MistypedLiteral"/);
+        }
+    });
+
+    test("does not commit when the provider request limit is reached", async () => {
+        const fixture = await makeFixture();
+        inference.runChatTurn.mockImplementation(async (_client, _transcript, scope) => {
+            schemaBinding(scope).update({ title: "Unfinished update" });
+            return {
+                content: "",
+                generatedMessageDelta: [],
+                termination: { tag: "ProviderRequestLimit" },
+            };
+        });
+
+        assert.deepStrictEqual(await runTurn(fixture), {
+            tag: "Retryable",
+            error: "The model exhausted the provider request budget before producing a final response.",
+        });
+        assert.strictEqual(fixture.schema.title, "Company schema");
     });
 
     test("retains the user message when inference fails", async () => {

@@ -8,7 +8,7 @@ describe("contextExec", () => {
         assert.deepStrictEqual(result, { tag: "Ok", value: "3" });
     });
 
-    test("captures runtime and syntax errors", async () => {
+    test("captures syntax, runtime, and success hook errors", async () => {
         const runtimeError = await contextExec("throw new Error('boom')", {});
         assert.strictEqual(runtimeError.tag, "Err");
         if (runtimeError.tag === "Err") {
@@ -17,6 +17,11 @@ describe("contextExec", () => {
 
         const syntaxError = await contextExec("return (", {});
         assert.strictEqual(syntaxError.tag, "Err");
+
+        const hookError = await contextExec("return 'done'", {}, async () => {
+            throw new Error("validation failed");
+        });
+        assert.deepStrictEqual(hookError, { tag: "Err", error: "validation failed" });
     });
 
     test("always returns a string for successful execution", async () => {

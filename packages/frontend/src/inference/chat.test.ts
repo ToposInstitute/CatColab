@@ -63,6 +63,7 @@ describe("chat turn over OpenRouter", () => {
             const result = await runChatTurn(client, transcript, {}, undefined, testModel);
 
             assert.ok(result.content.length > 0, "final content should be a non-empty string");
+            assert.deepStrictEqual(result.termination, { tag: "FinalResponse" });
             assert.strictEqual(transcript[0]?.role, "user");
             assert.strictEqual(result.generatedMessageDelta.at(-1)?.role, "assistant");
         },
@@ -85,6 +86,7 @@ describe("chat turn over OpenRouter", () => {
             ];
             const result = await runChatTurn(client, transcript, {}, undefined, testModel);
 
+            assert.deepStrictEqual(result.termination, { tag: "FinalResponse" });
             const assistant = result.generatedMessageDelta.find(
                 (message) =>
                     message.role === "assistant" &&

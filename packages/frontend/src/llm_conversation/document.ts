@@ -16,11 +16,9 @@ import type { JsResult } from "catlog-wasm";
 import type { Api, DocRef, LiveDoc } from "../api";
 import {
     createInferenceClient,
-    MAX_CHAT_COMPLETIONS_PER_TURN,
     parseContextExecArguments,
     parseContextExecResult,
     runChatTurn,
-    type ChatTranscript,
     type GeneratedChatMessage,
 } from "../inference/chat.ts";
 import * as LLMConversationAdapter from "../inference/llm_conversation_adapter.ts";
@@ -176,67 +174,57 @@ async function generateLLMConversationResponse<
     try {
         const executionScope = await createLLMConversationExecutionScope(conversation, store);
         const context = LLMConversationAdapter.prepareLLMConversationInference(conversation.dump());
-        const transcript: ChatTranscript = [...context.transcript];
-        const generatedMessages: GeneratedChatMessage[] = [];
         const client = createInferenceClient(inferenceKey.key);
-        let remainingCompletions = MAX_CHAT_COMPLETIONS_PER_TURN;
-        let content = "";
-        let problems: ReadonlyArray<string> = [];
-
-        do {
-            const result = await runChatTurn(
-                client,
-                transcript,
-                { ...executionScope.bindings, files: context.files },
-                onContent,
-                conversation.document.llmModel,
-                executionScope.systemPromptSuffix,
-                async () => {
-                    const toolProblems = await executionScope.validate();
-                    if (toolProblems.length > 0) {
-                        throw new Error(validationFeedback(toolProblems));
-                    }
-                },
-                remainingCompletions,
-            );
-            content = result.content;
-            transcript.push(...result.generatedMessageDelta);
-            generatedMessages.push(...result.generatedMessageDelta);
-            const completions = result.generatedMessageDelta.filter(
-                (message) => message.role === "assistant",
-            ).length;
-            remainingCompletions -= Math.max(completions, 1);
-
-            problems = await executionScope.validate();
-            if (problems.length > 0 && remainingCompletions > 0) {
-                transcript.push({ role: "system", content: validationFeedback(problems) });
-            }
-        } while (problems.length > 0 && remainingCompletions > 0);
-
-        const generated = generatedChatMessageDeltaToLLMInteractions(generatedMessages);
+        const result = await runChatTurn(
+            client,
+            context.transcript,
+            { ...executionScope.bindings, files: context.files },
+            onContent,
+            conversation.document.llmModel,
+            executionScope.systemPromptSuffix,
+            async () => {
+                const problems = await executionScope.validate();
+                if (problems.length > 0) {
+                    throw new Error(validationFeedback(problems));
+                }
+            },
+        );
+        const problems = await executionScope.validate();
+        const generated = generatedChatMessageDeltaToLLMInteractions(result.generatedMessageDelta);
         if (generated.tag === "Err") {
             return { tag: "Retryable", error: generated.content };
         }
-        if (generated.content.length === 0 && content.trim().length === 0) {
-            return { tag: "Retryable", error: "The model produced no usable output." };
-        }
-
         for (const interaction of generated.content) {
             conversation.appendInteraction(interaction);
         }
         if (
             !generated.content.some((interaction) => interaction.tag === "llm-message") &&
-            content.trim().length > 0
+            result.content.trim().length > 0
         ) {
-            conversation.appendInteraction(LLMConversation.newLLMMessage(content));
+            conversation.appendInteraction(LLMConversation.newLLMMessage(result.content));
         }
 
         if (problems.length > 0) {
             return { tag: "Retryable", error: validationFeedback(problems) };
         }
+        if (result.termination.tag === "ProviderRequestLimit") {
+            return {
+                tag: "Retryable",
+                error: "The model exhausted the provider request budget before producing a final response.",
+            };
+        }
+        if (result.termination.tag === "IncompleteResponse") {
+            return {
+                tag: "Retryable",
+                error: `The provider stopped before producing a complete response: ${result.termination.reason}.`,
+            };
+        }
+        if (generated.content.length === 0 && result.content.trim().length === 0) {
+            return { tag: "Retryable", error: "The model produced no usable output." };
+        }
 
         executionScope.commit();
-        return { tag: "Completed", content };
+        return { tag: "Completed", content: result.content };
     } catch (error) {
         return { tag: "Retryable", error: errorMessage(error) };
     }

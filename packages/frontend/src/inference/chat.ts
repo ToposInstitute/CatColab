@@ -15,8 +15,8 @@ export type InferenceClient = OpenAI;
 /** Default LLM used for newly created CatColab conversations. */
 export const DEFAULT_LLM_MODEL = "z-ai/glm-5.2";
 
-/** Maximum model completions, including tool-use continuations, in one user turn. */
-export const MAX_CHAT_COMPLETIONS_PER_TURN = 10;
+/** Maximum provider requests made while resolving one inference attempt. */
+const MAX_PROVIDER_REQUESTS_PER_ATTEMPT = 32;
 
 const EMPTY_FILES = Object.freeze(Object.create(null)) as Readonly<Record<string, string>>;
 
@@ -33,15 +33,22 @@ export type ChatTranscriptMessage =
 /** Ephemeral transcript sent for an inference request. */
 export type ChatTranscript = ChatTranscriptMessage[];
 
-/** Assistant or tool message newly generated during one inference request. */
+/** Assistant or tool message newly generated during one inference attempt. */
 export type GeneratedChatMessage =
     | ChatCompletionAssistantMessageParam
     | ChatCompletionToolMessageParam;
+
+/** Why an inference attempt stopped producing provider responses. */
+export type ChatTurnTermination =
+    | { tag: "FinalResponse" }
+    | { tag: "ProviderRequestLimit" }
+    | { tag: "IncompleteResponse"; reason: string };
 
 /** Completed inference output, not including the request transcript. */
 export type ChatTurnResult = {
     content: string;
     generatedMessageDelta: GeneratedChatMessage[];
+    termination: ChatTurnTermination;
 };
 
 /** Create an inference client configured for OpenRouter. */
@@ -53,7 +60,10 @@ export function createInferenceClient(apiKey: string): InferenceClient {
     });
 }
 
-/** Run one inference turn against a complete, ephemeral request transcript. */
+/**
+ * Run one inference attempt against a complete, ephemeral transcript.
+ * The provider request budget includes any continuations after tool calls.
+ */
 export async function runChatTurn(
     client: InferenceClient,
     transcript: readonly ChatTranscriptMessage[],
@@ -62,7 +72,6 @@ export async function runChatTurn(
     model = DEFAULT_LLM_MODEL,
     systemPromptSuffix?: string,
     onSuccessHook?: () => Promise<void>,
-    maxChatCompletions = MAX_CHAT_COMPLETIONS_PER_TURN,
 ): Promise<ChatTurnResult> {
     const contextScope: ContextExecScope = { files: EMPTY_FILES, ...scope };
     const systemPrompt = systemPromptSuffix
@@ -110,7 +119,7 @@ export async function runChatTurn(
                 },
             ],
         },
-        { maxChatCompletions },
+        { maxChatCompletions: MAX_PROVIDER_REQUESTS_PER_ATTEMPT },
     );
 
     if (onContent) {
@@ -126,7 +135,15 @@ export async function runChatTurn(
         generatedMessageDelta.push(message);
     }
 
-    return { content, generatedMessageDelta };
+    const finishReason = (await runner.finalChatCompletion()).choices[0]?.finish_reason;
+    const termination: ChatTurnTermination =
+        finishReason === "stop"
+            ? { tag: "FinalResponse" }
+            : finishReason === "tool_calls"
+              ? { tag: "ProviderRequestLimit" }
+              : { tag: "IncompleteResponse", reason: finishReason ?? "unknown" };
+
+    return { content, generatedMessageDelta, termination };
 }
 
 /** Parse the arguments of a `contextExec` function call. */
