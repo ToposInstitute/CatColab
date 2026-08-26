@@ -1,6 +1,6 @@
 import type { DocHandle } from "@automerge/automerge-repo";
 import { makeDocumentProjection } from "@automerge/automerge-repo-solid-primitives";
-import { unwrap } from "solid-js/store";
+import { createStore, reconcile, unwrap } from "solid-js/store";
 
 import type { Document } from "catcolab-document-types";
 import {
@@ -67,6 +67,15 @@ export function createApiDocumentStore(api: Api): ApiDocumentStore {
             return () => handle.automergeHandle.off("change", callback);
         },
         copyValue: (_handle, value) => structuredClone(unwrap(value)),
+        createReactiveView(initial) {
+            const [current, setCurrent] = createStore(initial);
+            return {
+                current,
+                replace(next) {
+                    setCurrent(reconcile(next));
+                },
+            };
+        },
         getDocumentRef: (handle) => handle.ref,
         async getHandle(ref: DocumentRef): Promise<Result<ApiDocumentHandle>> {
             if (ref.version !== null) {
