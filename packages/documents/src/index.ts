@@ -27,6 +27,12 @@ export type { CellOf as NotebookCell, MorphismCell, ObjectCell } from "./model/c
 export type { ModelDocument } from "./model/document";
 export { modelNotebookFromStore } from "./model/notebook";
 export type { Notebook } from "./model/notebook";
+export type {
+    JudgmentOf,
+    MorphismJudgment,
+    ObjectJudgment,
+    ElaboratedModel,
+} from "./model/elaborated-model";
 export type { NotebookDocument } from "./notebook-document";
 export type { RichTextCell } from "./rich-text";
 export { defineMorphism, defineObject, defineShape, RichText } from "./shape";
