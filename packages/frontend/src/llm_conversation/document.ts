@@ -54,6 +54,7 @@ function conversationAttachmentMetadata(
 /** Outcome of attempting one LLM conversation turn. */
 export type LLMConversationTurnResult =
     | { tag: "Completed"; content: string }
+    | { tag: "Incomplete"; reason: string }
     | { tag: "Failed"; error: string }
     | { tag: "Retryable"; error: string };
 
@@ -165,14 +166,14 @@ async function generateLLMConversationResponse<
 
         if (result.termination.tag === "ProviderRequestLimit") {
             return {
-                tag: "Retryable",
-                error: "The model exhausted the provider request budget before producing a final response.",
+                tag: "Incomplete",
+                reason: "The model exhausted the provider request budget before producing a final response.",
             };
         }
         if (result.termination.tag === "IncompleteResponse") {
             return {
-                tag: "Retryable",
-                error: `The provider stopped before producing a complete response: ${result.termination.reason}.`,
+                tag: "Incomplete",
+                reason: `The provider stopped before producing a complete response: ${result.termination.reason}.`,
             };
         }
         return { tag: "Completed", content: result.content };

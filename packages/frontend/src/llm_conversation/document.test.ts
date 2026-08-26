@@ -5,7 +5,7 @@ import type { Document } from "catcolab-document-types";
 import { createBinder, type Instance, type Notebook, type Result } from "catcolab-documents";
 import type { ChatTurnResult } from "../inference/chat.ts";
 import type { ContextExecScope } from "../inference/context_exec.ts";
-import { runLLMConversationTurn } from "./document.ts";
+import { retryLastLLMConversationResponse, runLLMConversationTurn } from "./document.ts";
 
 type RunChatTurn = (typeof import("../inference/chat.ts"))["runChatTurn"];
 
@@ -233,14 +233,22 @@ describe("LLM conversation turns", { timeout: 20_000 }, () => {
         });
 
         assert.deepStrictEqual(await runTurn(fixture), {
-            tag: "Retryable",
-            error: "The model exhausted the provider request budget before producing a final response.",
+            tag: "Incomplete",
+            reason: "The model exhausted the provider request budget before producing a final response.",
         });
         assert.strictEqual(fixture.schema.title, "Unfinished update");
         assert.deepStrictEqual(
             fixture.conversation.interactions().map((interaction) => interaction.tag),
             ["user-message", "llm-code-execution"],
         );
+        assert.deepStrictEqual(
+            await retryLastLLMConversationResponse(fixture.conversation, fixture.binder.store, {
+                tag: "Ready",
+                key: "inference-key",
+            }),
+            { tag: "Failed", error: "The latest interaction is not a user message." },
+        );
+        assert.strictEqual(inference.runChatTurn.mock.calls.length, 1);
     });
 
     test("retains the user message when inference fails", async () => {
