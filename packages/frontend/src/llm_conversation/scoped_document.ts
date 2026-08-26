@@ -1,6 +1,5 @@
 import type { Document } from "catcolab-document-types";
 import { type DocumentStore, type Issue, type Result } from "catcolab-documents";
-import type { DblModel } from "catlog-wasm";
 import { createDocumentTransaction } from "./document_transaction";
 
 export type DocumentBinding<Handle = unknown, E extends Issue = Issue> = {
@@ -74,9 +73,6 @@ async function validateScopedDocument<E extends Issue>(
     const result = await document.validate();
     if (result.tag === "Err") {
         return [`${binding}: ${JSON.stringify(result.content)}`];
-    }
-    if (document.document.type === "model") {
-        (result.content as DblModel).free();
     }
     return [];
 }

@@ -1,6 +1,6 @@
 import type { FormalCell, ModelDocument } from "catcolab-document-methods";
 import type { ModelJudgment, Notebook } from "catcolab-document-types";
-import type { DblModel, DblTheory, InvalidDblModel } from "catlog-wasm";
+import type { DblModel, DblTheory, InvalidDblModel, ModelPresentation } from "catlog-wasm";
 import type { Issue, Result } from "../result";
 
 function formalCellForGenerator(
@@ -88,12 +88,14 @@ function invalidModelIssue(notebook: Notebook<ModelJudgment>, error: InvalidDblM
     }
 }
 
-/** Elaborate and validate a model document against its core theory. */
+/** Elaborate and validate a model document against its core theory.
+
+On success, returns the presentation of the validated model. */
 export async function validateModelDocument(
     document: Readonly<ModelDocument>,
     theory: DblTheory,
     refId: string,
-): Promise<Result<DblModel>> {
+): Promise<Result<ModelPresentation>> {
     const { DblModelMap, elaborateModel } = await import("catlog-wasm");
     const instantiatedModels = new DblModelMap();
     let model: DblModel;
@@ -108,12 +110,18 @@ export async function validateModelDocument(
         instantiatedModels.free();
     }
 
-    const validation = model.validate();
-    if (validation.tag === "Err") {
-        return {
-            tag: "Err",
-            content: validation.content.map((error) => invalidModelIssue(document.notebook, error)),
-        };
+    try {
+        const validation = model.validate();
+        if (validation.tag === "Err") {
+            return {
+                tag: "Err",
+                content: validation.content.map((error) =>
+                    invalidModelIssue(document.notebook, error),
+                ),
+            };
+        }
+        return { tag: "Ok", content: model.presentation() };
+    } finally {
+        model.free();
     }
-    return { tag: "Ok", content: model };
 }

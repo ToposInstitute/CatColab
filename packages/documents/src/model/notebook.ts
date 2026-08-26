@@ -1,6 +1,6 @@
 import { Model, Nb } from "catcolab-document-methods";
 import type { ModelJudgment } from "catcolab-document-types";
-import type { DblModel, DblTheory } from "catlog-wasm";
+import type { DblTheory, ModelPresentation } from "catlog-wasm";
 import type { DocumentStore } from "../document-store";
 import type { NotebookDocument } from "../notebook-document";
 import type { Result } from "../result";
@@ -27,6 +27,7 @@ import {
     type ObjectCell,
 } from "./cell";
 import type { ModelDocument } from "./document";
+import { elaboratedModelFromPresentation, type ElaboratedModel } from "./elaborated-model";
 import { morphismTypesEqual, objectTypesEqual } from "./equality";
 import { validateModelDocument } from "./validation";
 
@@ -179,8 +180,8 @@ export interface Notebook<
     update(patch: Partial<{ title: string }>): void;
     dump(): D;
     onChange(callback: () => void): () => void;
-    validate(): Promise<Result<DblModel>>;
-    onValidate(callback: (result: Result<DblModel>) => void): () => void;
+    validate(): Promise<Result<ElaboratedModel<S>>>;
+    onValidate(callback: (result: Result<ElaboratedModel<S>>) => void): () => void;
 }
 
 export function modelNotebookFromStore<Handle, S extends Shape>(
@@ -190,8 +191,8 @@ export function modelNotebookFromStore<Handle, S extends Shape>(
 ): Notebook<S, ModelDocument, Handle> {
     let coreTheory: Promise<DblTheory> | undefined;
 
-    async function validateCurrentDocument(): Promise<Result<DblModel>> {
-        let result: Result<DblModel>;
+    async function validateCurrentDocument(): Promise<Result<ElaboratedModel<S>>> {
+        let result: Result<ModelPresentation>;
         if (!shape.getCoreTheory) {
             let shapeName = "unnamed";
             if (shape.theory) {
@@ -224,7 +225,14 @@ export function modelNotebookFromStore<Handle, S extends Shape>(
             }
         }
 
-        return result;
+        if (result.tag === "Err") {
+            return result;
+        }
+        const presentation = result.content;
+        return {
+            tag: "Ok",
+            content: elaboratedModelFromPresentation(shape, () => presentation),
+        };
     }
 
     function appendCell(
