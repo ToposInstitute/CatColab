@@ -9,6 +9,7 @@ import type {
 import type { JsResult } from "catlog-wasm";
 import {
     createInferenceClient,
+    type ChatTurnEvent,
     parseContextExecArguments,
     parseContextExecResult,
     runChatTurn,
@@ -56,7 +57,11 @@ export type LLMConversationTurnResult =
     | { tag: "Completed"; content: string }
     | { tag: "Incomplete"; reason: string }
     | { tag: "Failed"; error: string }
-    | { tag: "Retryable"; error: string };
+    | {
+          tag: "Retryable";
+          error: string;
+          attempts: readonly LLMInteraction[];
+      };
 
 /** Persist a user message, run one model turn, and apply its valid document edits. */
 export async function runLLMConversationTurn<
@@ -67,7 +72,7 @@ export async function runLLMConversationTurn<
     store: DocumentStore<Handle>,
     inferenceKey: InferenceKeyResult,
     userInput: LLMConversationUserInput,
-    onContent?: (delta: string, snapshot: string) => void,
+    onEvent?: (event: ChatTurnEvent) => void,
 ): Promise<LLMConversationTurnResult> {
     if (inferenceKey.tag !== "Ready") {
         return { tag: "Failed", error: "Inference is unavailable." };
@@ -83,7 +88,7 @@ export async function runLLMConversationTurn<
         conversation.appendInteraction(
             LLMConversation.newUserMessage(userInput.content, userInput.files),
         );
-        return generateLLMConversationResponse(conversation, store, inferenceKey, onContent);
+        return generateLLMConversationResponse(conversation, store, inferenceKey, onEvent);
     } catch (error) {
         return { tag: "Failed", error: errorMessage(error) };
     }
@@ -97,7 +102,7 @@ export async function retryLastLLMConversationResponse<
     conversation: LLMConversationAPI<Attachment, Handle>,
     store: DocumentStore<Handle>,
     inferenceKey: InferenceKeyResult,
-    onContent?: (delta: string, snapshot: string) => void,
+    onEvent?: (event: ChatTurnEvent) => void,
 ): Promise<LLMConversationTurnResult> {
     if (inferenceKey.tag !== "Ready") {
         return { tag: "Failed", error: "Inference is unavailable." };
@@ -107,7 +112,7 @@ export async function retryLastLLMConversationResponse<
         return { tag: "Failed", error: "The latest interaction is not a user message." };
     }
 
-    return generateLLMConversationResponse(conversation, store, inferenceKey, onContent);
+    return generateLLMConversationResponse(conversation, store, inferenceKey, onEvent);
 }
 
 async function generateLLMConversationResponse<
@@ -117,7 +122,7 @@ async function generateLLMConversationResponse<
     conversation: LLMConversationAPI<Attachment, Handle>,
     store: DocumentStore<Handle>,
     inferenceKey: Extract<InferenceKeyResult, { tag: "Ready" }>,
-    onContent?: (delta: string, snapshot: string) => void,
+    onEvent?: (event: ChatTurnEvent) => void,
 ): Promise<LLMConversationTurnResult> {
     try {
         const executionScope = await createLLMConversationExecutionScope(conversation, store);
@@ -127,7 +132,7 @@ async function generateLLMConversationResponse<
             client,
             context.transcript,
             { ...executionScope.bindings, files: context.files },
-            onContent,
+            onEvent,
             conversation.document.llmModel,
             executionScope.systemPromptSuffix,
             async () => {
@@ -140,17 +145,25 @@ async function generateLLMConversationResponse<
         const problems = await executionScope.validate();
         const generated = generatedChatMessageDeltaToLLMInteractions(result.generatedMessageDelta);
         if (generated.tag === "Err") {
-            return { tag: "Retryable", error: generated.content };
+            return { tag: "Retryable", error: generated.content, attempts: [] };
         }
         if (problems.length > 0) {
-            return { tag: "Retryable", error: validationFeedback(problems) };
+            return {
+                tag: "Retryable",
+                error: validationFeedback(problems),
+                attempts: generated.content,
+            };
         }
         if (
             result.termination.tag === "FinalResponse" &&
             generated.content.length === 0 &&
             result.content.trim().length === 0
         ) {
-            return { tag: "Retryable", error: "The model produced no usable output." };
+            return {
+                tag: "Retryable",
+                error: "The model produced no usable output.",
+                attempts: [],
+            };
         }
 
         for (const interaction of generated.content) {
@@ -178,7 +191,7 @@ async function generateLLMConversationResponse<
         }
         return { tag: "Completed", content: result.content };
     } catch (error) {
-        return { tag: "Retryable", error: errorMessage(error) };
+        return { tag: "Retryable", error: errorMessage(error), attempts: [] };
     }
 }
 
@@ -217,11 +230,9 @@ function generatedChatMessageDeltaToLLMInteractions(
         if (toolCalls.length !== 1) {
             return { tag: "Err", content: "Expected exactly one contextExec tool call" };
         }
-        if (message.content !== null && message.content !== undefined && message.content !== "") {
-            return {
-                tag: "Err",
-                content: "Cannot store assistant content alongside a contextExec tool call",
-            };
+        if (typeof message.content === "string" && message.content.trim().length > 0) {
+            // sometimes we have narration and tools calls together, persist the text
+            interactions.push(LLMConversation.newLLMMessage(message.content));
         }
 
         const toolCall = toolCalls[0]!;

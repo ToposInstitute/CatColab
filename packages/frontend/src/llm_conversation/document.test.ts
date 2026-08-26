@@ -258,6 +258,7 @@ describe("LLM conversation turns", { timeout: 30_000 }, () => {
         assert.deepStrictEqual(await runTurn(fixture), {
             tag: "Retryable",
             error: "network failed",
+            attempts: [],
         });
         assert.deepStrictEqual(
             fixture.conversation.interactions().map((interaction) => interaction.tag),

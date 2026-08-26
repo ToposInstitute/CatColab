@@ -51,6 +51,12 @@ export type ChatTurnResult = {
     termination: ChatTurnTermination;
 };
 
+/** Event emitted while an inference attempt runs. */
+export type ChatTurnEvent =
+    | { tag: "Streaming"; delta: string; snapshot: string }
+    | { tag: "RunTool"; code: string }
+    | { tag: "ToolResult"; code: string; result: EvalResult };
+
 /** Create an inference client configured for OpenRouter. */
 export function createInferenceClient(apiKey: string): InferenceClient {
     return new OpenAI({
@@ -68,7 +74,7 @@ export async function runChatTurn(
     client: InferenceClient,
     transcript: readonly ChatTranscriptMessage[],
     scope: ContextExecScope,
-    onContent?: (delta: string, snapshot: string) => void,
+    onEvent?: (event: ChatTurnEvent) => void,
     model = DEFAULT_LLM_MODEL,
     systemPromptSuffix?: string,
     onSuccessHook?: () => Promise<void>,
@@ -113,7 +119,14 @@ export async function runChatTurn(
                             if (!args) {
                                 return { tag: "Err", error: "Invalid contextExec arguments" };
                             }
-                            return await contextExec(args.code, contextScope, onSuccessHook);
+                            onEvent?.({ tag: "RunTool", code: args.code });
+                            const result = await contextExec(
+                                args.code,
+                                contextScope,
+                                onSuccessHook,
+                            );
+                            onEvent?.({ tag: "ToolResult", code: args.code, result });
+                            return result;
                         },
                     },
                 },
@@ -122,8 +135,10 @@ export async function runChatTurn(
         { maxChatCompletions: MAX_PROVIDER_REQUESTS_PER_ATTEMPT },
     );
 
-    if (onContent) {
-        runner.on("content", onContent);
+    if (onEvent) {
+        runner.on("content", (delta: string, snapshot: string) =>
+            onEvent({ tag: "Streaming", delta, snapshot }),
+        );
     }
 
     const content = (await runner.finalContent()) ?? "";
