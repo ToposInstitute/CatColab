@@ -186,7 +186,7 @@ export function createSchemaResultValidator<Handle, S extends Shape>(
     handle: Handle,
 ): (
     schemaResult: Result<ElaboratedModel<S>>,
-) => Result<undefined, ReadonlyArray<Issue | TableFieldIssue>> {
+) => Result<void, ReadonlyArray<Issue | TableFieldIssue>> {
     return (schemaResult) => {
         if (schemaResult.tag === "Err") {
             return schemaResult;
