@@ -1,6 +1,5 @@
 import { Model, Nb } from "catcolab-document-methods";
 import type { ModelJudgment } from "catcolab-document-types";
-import type { DblTheory, ModelPresentation } from "catlog-wasm";
 import type { DocumentStore } from "../document-store";
 import type { NotebookDocument } from "../notebook-document";
 import type { Result } from "../result";
@@ -27,9 +26,9 @@ import {
     type ObjectCell,
 } from "./cell";
 import type { ModelDocument } from "./document";
-import { elaboratedModelFromPresentation, type ElaboratedModel } from "./elaborated-model";
+import type { ElaboratedModel, ValidationView } from "./elaborated-model";
 import { morphismTypesEqual, objectTypesEqual } from "./equality";
-import { validateModelDocument } from "./validation";
+import { createNotebookValidator } from "./validation";
 
 /**
  * The value given to [`Notebook.add`].
@@ -182,6 +181,9 @@ export interface Notebook<
     onChange(callback: () => void): () => void;
     validate(): Promise<Result<ElaboratedModel<S>>>;
     onValidate(callback: (result: Result<ElaboratedModel<S>>) => void): () => void;
+    /** Create a live, reactive view of the notebook's validation state. The
+     * caller must dispose the view when it is no longer needed. */
+    createValidationView(): ValidationView<S>;
 }
 
 export function modelNotebookFromStore<Handle, S extends Shape>(
@@ -189,51 +191,7 @@ export function modelNotebookFromStore<Handle, S extends Shape>(
     store: DocumentStore<Handle>,
     handle: Handle,
 ): Notebook<S, ModelDocument, Handle> {
-    let coreTheory: Promise<DblTheory> | undefined;
-
-    async function validateCurrentDocument(): Promise<Result<ElaboratedModel<S>>> {
-        let result: Result<ModelPresentation>;
-        if (!shape.getCoreTheory) {
-            let shapeName = "unnamed";
-            if (shape.theory) {
-                shapeName = shape.theory;
-            }
-            result = {
-                tag: "Err",
-                content: [{ message: `Shape \`${shapeName}\` has no core theory` }],
-            };
-        } else {
-            try {
-                if (!coreTheory) {
-                    coreTheory = shape.getCoreTheory();
-                }
-                const theory = await coreTheory;
-                const document = store.copyValue(
-                    handle,
-                    store.getDocumentView(handle),
-                ) as ModelDocument;
-                result = await validateModelDocument(
-                    document,
-                    theory,
-                    store.getDocumentRef(handle).id,
-                );
-            } catch (error) {
-                result = {
-                    tag: "Err",
-                    content: [{ message: `Failed to load core theory: ${String(error)}` }],
-                };
-            }
-        }
-
-        if (result.tag === "Err") {
-            return result;
-        }
-        const presentation = result.content;
-        return {
-            tag: "Ok",
-            content: elaboratedModelFromPresentation(shape, () => presentation),
-        };
-    }
+    const validator = createNotebookValidator(shape, store, handle);
 
     function appendCell(
         cell: ReturnType<typeof Nb.newRichTextCell> | Nb.FormalCell<ModelJudgment>,
@@ -319,29 +277,8 @@ export function modelNotebookFromStore<Handle, S extends Shape>(
         onChange(callback) {
             return store.subscribe(handle, callback);
         },
-        validate() {
-            return validateCurrentDocument();
-        },
-        onValidate(callback) {
-            let active = true;
-
-            async function validateAndNotify(): Promise<void> {
-                const result = await validateCurrentDocument();
-                if (!active) {
-                    return;
-                }
-                callback(result);
-            }
-
-            const unsubscribe = store.subscribe(handle, () => {
-                void validateAndNotify();
-            });
-            void validateAndNotify();
-
-            return () => {
-                active = false;
-                unsubscribe();
-            };
-        },
+        validate: validator.validate,
+        onValidate: validator.onValidate,
+        createValidationView: validator.createValidationView,
     };
 }

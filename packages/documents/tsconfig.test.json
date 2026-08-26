@@ -15,6 +15,8 @@
         "test/definitions.test.ts",
         "test/instances.test.ts",
         "test/llm-conversation.test.ts",
-        "test/binder.test-d.ts"
+        "test/binder.test-d.ts",
+        "test/validation-view.test.ts",
+        "test/stores/solid-validation-view.test.ts"
     ]
 }
