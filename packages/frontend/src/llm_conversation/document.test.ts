@@ -199,13 +199,35 @@ describe("LLM conversation turns", { timeout: 20_000 }, () => {
         }
     });
 
-    test("does not commit when the provider request limit is reached", async () => {
+    test("commits valid progress when the provider request limit is reached", async () => {
         const fixture = await makeFixture();
         inference.runChatTurn.mockImplementation(async (_client, _transcript, scope) => {
             schemaBinding(scope).update({ title: "Unfinished update" });
             return {
                 content: "",
-                generatedMessageDelta: [],
+                generatedMessageDelta: [
+                    {
+                        role: "assistant",
+                        content: null,
+                        tool_calls: [
+                            {
+                                id: "call-update",
+                                type: "function",
+                                function: {
+                                    name: "contextExec",
+                                    arguments: JSON.stringify({
+                                        code: "document_Company_schema.update({ title: 'Unfinished update' });",
+                                    }),
+                                },
+                            },
+                        ],
+                    },
+                    {
+                        role: "tool",
+                        tool_call_id: "call-update",
+                        content: JSON.stringify({ tag: "Ok", value: "undefined" }),
+                    },
+                ],
                 termination: { tag: "ProviderRequestLimit" },
             };
         });
@@ -214,7 +236,11 @@ describe("LLM conversation turns", { timeout: 20_000 }, () => {
             tag: "Retryable",
             error: "The model exhausted the provider request budget before producing a final response.",
         });
-        assert.strictEqual(fixture.schema.title, "Company schema");
+        assert.strictEqual(fixture.schema.title, "Unfinished update");
+        assert.deepStrictEqual(
+            fixture.conversation.interactions().map((interaction) => interaction.tag),
+            ["user-message", "llm-code-execution"],
+        );
     });
 
     test("retains the user message when inference fails", async () => {

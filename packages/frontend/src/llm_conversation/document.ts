@@ -1,11 +1,5 @@
-import { LLMConversation, type LLMConversationDocument } from "catcolab-document-methods";
-import type {
-    FeedbackResolution,
-    InlineFile,
-    LLMInteraction,
-    StableRef,
-    Uuid,
-} from "catcolab-document-types";
+import { LLMConversation } from "catcolab-document-methods";
+import type { InlineFile, LLMInteraction } from "catcolab-document-types";
 import type {
     DocumentStore,
     LLMConversation as LLMConversationAPI,
@@ -13,7 +7,6 @@ import type {
     Shape,
 } from "catcolab-documents";
 import type { JsResult } from "catlog-wasm";
-import type { Api, DocRef, LiveDoc } from "../api";
 import {
     createInferenceClient,
     parseContextExecArguments,
@@ -22,7 +15,6 @@ import {
     type GeneratedChatMessage,
 } from "../inference/chat.ts";
 import * as LLMConversationAdapter from "../inference/llm_conversation_adapter.ts";
-import type { LiveModelDoc, ModelLibrary } from "../model";
 import type { InferenceKeyResult } from "../user/inference_key_context.tsx";
 import { errorMessage } from "../util/error.ts";
 import {
@@ -31,14 +23,6 @@ import {
 } from "./conversation_attachment_policy.ts";
 import { createLLMConversationExecutionScope } from "./execution_scope.ts";
 
-/** A live LLM conversation and the model it is attached to. */
-export type LiveLLMConversationDoc = {
-    type: "llmconversation";
-    liveDoc: LiveDoc<LLMConversationDocument>;
-    docRef: DocRef;
-    liveModel: LiveModelDoc;
-};
-
 /** Input for a user message submitted to an LLM conversation. */
 export type LLMConversationUserInput = {
     content: string;
@@ -46,7 +30,7 @@ export type LLMConversationUserInput = {
 };
 
 /** Project a persisted inline file into attachment policy metadata. */
-export function inlineFileMetadata(file: InlineFile): ConversationAttachmentMetadata {
+function inlineFileMetadata(file: InlineFile): ConversationAttachmentMetadata {
     return {
         filename: file.filename,
         mediaType: file.mediaType,
@@ -55,7 +39,7 @@ export function inlineFileMetadata(file: InlineFile): ConversationAttachmentMeta
 }
 
 /** Project all persisted conversation attachments into attachment policy metadata. */
-export function conversationAttachmentMetadata(
+function conversationAttachmentMetadata(
     interactions: readonly LLMInteraction[],
 ): ConversationAttachmentMetadata[] {
     const result: ConversationAttachmentMetadata[] = [];
@@ -72,43 +56,6 @@ export type LLMConversationTurnResult =
     | { tag: "Completed"; content: string }
     | { tag: "Failed"; error: string }
     | { tag: "Retryable"; error: string };
-
-/** Create a new LLM conversation attached to a model. */
-export function createLLMConversation(
-    api: Api,
-    modelRef: StableRef,
-    llmModel: string,
-): Promise<Uuid> {
-    return api.createDoc(LLMConversation.newLLMConversationDocument(modelRef, llmModel));
-}
-
-/** Retrieve an LLM conversation and its parent model for live editing. */
-export async function getLiveLLMConversation(
-    refId: Uuid,
-    api: Api,
-    models: ModelLibrary<Uuid>,
-): Promise<LiveLLMConversationDoc> {
-    const { liveDoc, docRef } = await api.getLiveDoc<LLMConversationDocument>(
-        refId,
-        "llmconversation",
-    );
-    const liveModel = await models.getLiveModel(liveDoc.doc.llmConversationOf._id);
-
-    return { type: "llmconversation", liveDoc, docRef, liveModel };
-}
-
-/** Resolve a pending feedback request in a live conversation. */
-export function resolveLLMConversationFeedback(
-    conversation: LiveLLMConversationDoc,
-    requestId: Uuid,
-    resolution: Exclude<FeedbackResolution, "unresolved">,
-) {
-    let resolved = false;
-    conversation.liveDoc.changeDoc((doc) => {
-        resolved = LLMConversation.resolveUserFeedbackRequest(doc, requestId, resolution);
-    });
-    return resolved;
-}
 
 /** Persist a user message, run one model turn, and apply its valid document edits. */
 export async function runLLMConversationTurn<
@@ -194,6 +141,17 @@ async function generateLLMConversationResponse<
         if (generated.tag === "Err") {
             return { tag: "Retryable", error: generated.content };
         }
+        if (problems.length > 0) {
+            return { tag: "Retryable", error: validationFeedback(problems) };
+        }
+        if (
+            result.termination.tag === "FinalResponse" &&
+            generated.content.length === 0 &&
+            result.content.trim().length === 0
+        ) {
+            return { tag: "Retryable", error: "The model produced no usable output." };
+        }
+
         for (const interaction of generated.content) {
             conversation.appendInteraction(interaction);
         }
@@ -203,10 +161,8 @@ async function generateLLMConversationResponse<
         ) {
             conversation.appendInteraction(LLMConversation.newLLMMessage(result.content));
         }
+        executionScope.commit();
 
-        if (problems.length > 0) {
-            return { tag: "Retryable", error: validationFeedback(problems) };
-        }
         if (result.termination.tag === "ProviderRequestLimit") {
             return {
                 tag: "Retryable",
@@ -219,11 +175,6 @@ async function generateLLMConversationResponse<
                 error: `The provider stopped before producing a complete response: ${result.termination.reason}.`,
             };
         }
-        if (generated.content.length === 0 && result.content.trim().length === 0) {
-            return { tag: "Retryable", error: "The model produced no usable output." };
-        }
-
-        executionScope.commit();
         return { tag: "Completed", content: result.content };
     } catch (error) {
         return { tag: "Retryable", error: errorMessage(error) };
