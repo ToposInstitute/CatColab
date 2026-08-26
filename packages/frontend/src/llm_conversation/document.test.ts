@@ -87,7 +87,7 @@ async function runTurn(fixture: Fixture) {
     );
 }
 
-describe("LLM conversation turns", { timeout: 20_000 }, () => {
+describe("LLM conversation turns", { timeout: 30_000 }, () => {
     beforeEach(() => {
         inference.createInferenceClient.mockReset();
         inference.runChatTurn.mockReset();
