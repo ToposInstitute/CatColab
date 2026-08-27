@@ -22,7 +22,7 @@ export const PetriNet = defineShape({
 });
 
 export const petriNetCellTypes = {
-    petri_net_place: Place,
-    petri_net_transition: Transition,
-    petri_net_rich_text: RichText,
+    Place,
+    Transition,
+    RichText,
 };
