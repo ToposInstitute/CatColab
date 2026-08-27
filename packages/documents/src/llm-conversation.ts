@@ -4,18 +4,14 @@ import {
 } from "catcolab-document-methods";
 import type { FeedbackResolution, LLMInteraction, Uuid } from "catcolab-document-types";
 import type { DocumentStore } from "./document-store";
-import type { Instance } from "./instance/instance";
-import type { ModelDocument } from "./model/document";
-import type { Notebook } from "./model/notebook";
 import type { Shape } from "./shape";
+import type { SupportedDocument } from "./supported-document";
 
 export type { LLMConversationDocument } from "catcolab-document-methods";
 
-export type LLMConversationAttachment<S extends Shape = Shape, H = unknown> =
-    | Notebook<S, ModelDocument, H>
-    | Instance<H, S>;
+export type LLMConversationAttachment<S extends Shape, H, V> = SupportedDocument<S, H, V>;
 
-export interface LLMConversation<A = LLMConversationAttachment, H = unknown> {
+export interface LLMConversation<A, H> {
     readonly handle: H;
     readonly attachment: A;
     readonly document: Readonly<LLMConversationDocument>;
@@ -37,9 +33,10 @@ export interface LLMConversation<A = LLMConversationAttachment, H = unknown> {
 
 export function llmConversationFromStore<
     Handle,
-    Attachment extends LLMConversationAttachment<Shape, Handle>,
+    Attachment extends LLMConversationAttachment<Shape, Handle, Version>,
+    Version,
 >(
-    store: DocumentStore<Handle>,
+    store: DocumentStore<Handle, Version>,
     handle: Handle,
     attachment: Attachment,
 ): LLMConversation<Attachment, Handle> {

@@ -17,8 +17,8 @@ import {
 import type { InstanceTable, LiteralValue, TableRow } from "./tables";
 import { validateInstanceTables } from "./validation";
 
-function instanceCapableShape<Handle, S extends Shape>(
-    schema: Notebook<S, ModelDocument, Handle>,
+function instanceCapableShape<Handle, S extends Shape, Version>(
+    schema: Notebook<S, ModelDocument, Handle, Version>,
 ): InstanceCapableShape {
     const shape = schema.shape;
     if (shape.supportsInstances === undefined) {
@@ -36,17 +36,17 @@ reported by the operation as addressing failures.
 
 `operation` is expected to report its own failures as a `Result`; this does not
 catch exceptions, so an operation that throws lets that exception propagate. */
-async function withElaboratedSchema<Handle, S extends Shape, T>(
-    schema: Notebook<S, ModelDocument, Handle>,
+async function withElaboratedSchema<Handle, S extends Shape, Version, T>(
+    schema: Notebook<S, ModelDocument, Handle, Version>,
     operation: (schemaModel: ElaboratedModel<S>) => Result<T>,
 ): Promise<Result<T>> {
     const schemaValidation = await schema.validate();
     return operation(schemaValidation.model);
 }
 
-export function createAddRowsMethod<Handle, S extends Shape>(
-    schema: Notebook<S, ModelDocument, Handle>,
-    store: DocumentStore<Handle>,
+export function createAddRowsMethod<Handle, S extends Shape, Version>(
+    schema: Notebook<S, ModelDocument, Handle, Version>,
+    store: DocumentStore<Handle, Version>,
     handle: Handle,
 ): (
     additions: ReadonlyArray<{
@@ -84,9 +84,9 @@ export function createAddRowMethod(
     };
 }
 
-export function createUpdateRowsMethod<Handle, S extends Shape>(
-    schema: Notebook<S, ModelDocument, Handle>,
-    store: DocumentStore<Handle>,
+export function createUpdateRowsMethod<Handle, S extends Shape, Version>(
+    schema: Notebook<S, ModelDocument, Handle, Version>,
+    store: DocumentStore<Handle, Version>,
     handle: Handle,
 ): (
     updates: ReadonlyArray<{
@@ -112,9 +112,9 @@ export function createUpdateRowMethod(
     return (row, values) => updateRows([{ row, values: [values] }]);
 }
 
-export function createSetMethod<Handle, S extends Shape>(
-    schema: Notebook<S, ModelDocument, Handle>,
-    store: DocumentStore<Handle>,
+export function createSetMethod<Handle, S extends Shape, Version>(
+    schema: Notebook<S, ModelDocument, Handle, Version>,
+    store: DocumentStore<Handle, Version>,
     handle: Handle,
 ): (
     row: TableRow,
@@ -136,9 +136,9 @@ export function createSetMethod<Handle, S extends Shape>(
 }
 
 /** Build a validator that combines schema and instance validation. */
-export function createInstanceValidator<Handle, S extends Shape>(
-    schema: Notebook<S, ModelDocument, Handle>,
-    store: DocumentStore<Handle>,
+export function createInstanceValidator<Handle, S extends Shape, Version>(
+    schema: Notebook<S, ModelDocument, Handle, Version>,
+    store: DocumentStore<Handle, Version>,
     handle: Handle,
 ): (schemaValidation: ModelValidation<S>) => InstanceValidation<S> {
     return (schemaValidation) => {

@@ -2,7 +2,13 @@ import { Entity, Mapping, SimpleSchema } from "catcolab-logics/simple-schema";
 import { assert, beforeEach, describe, test, vi } from "vitest";
 
 import type { Document } from "catcolab-document-types";
-import { createBinder, type Instance, type Notebook, type Result } from "catcolab-documents";
+import {
+    createBinder,
+    type Instance,
+    type ModelDocument,
+    type Notebook,
+    type Result,
+} from "catcolab-documents";
 import type { ChatTurnResult } from "../inference/chat.ts";
 import type { ContextExecScope } from "../inference/context_exec.ts";
 import { retryLastLLMConversationResponse, runLLMConversationTurn } from "./document.ts";
@@ -24,8 +30,8 @@ type Fixture = Awaited<ReturnType<typeof makeFixture>>;
 async function makeFixture(withInstance = false) {
     const binder = createBinder();
     const schema = await binder.createNotebook(SimpleSchema, { title: "Company schema" });
-    let attachment: typeof schema | Instance<Document, typeof SimpleSchema> = schema;
-    let instance: Instance<Document, typeof SimpleSchema> | undefined;
+    let attachment: typeof schema | Instance<Document, typeof SimpleSchema, Document> = schema;
+    let instance: Instance<Document, typeof SimpleSchema, Document> | undefined;
 
     if (withInstance) {
         instance = expectOk(await binder.createInstance(schema, { title: "Company data" }));
@@ -64,10 +70,12 @@ function expectOk<T, E>(result: Result<T, E>): T {
     return result.content;
 }
 
-function schemaBinding(scope: ContextExecScope): Notebook<typeof SimpleSchema> {
+function schemaBinding(
+    scope: ContextExecScope,
+): Notebook<typeof SimpleSchema, ModelDocument, Document, Document> {
     const schema = scope.document_Company_schema;
     assert(schema);
-    return schema as Notebook<typeof SimpleSchema>;
+    return schema as Notebook<typeof SimpleSchema, ModelDocument, Document, Document>;
 }
 
 function response(content: string): ChatTurnResult {
@@ -169,7 +177,7 @@ describe("LLM conversation turns", { timeout: 30_000 }, () => {
                 onSuccessHook,
             ) => {
                 const attachedDocument = scope.document_Company_data as
-                    | Instance<unknown, typeof SimpleSchema>
+                    | Instance<unknown, typeof SimpleSchema, Document>
                     | undefined;
                 assert(attachedDocument);
                 assert(scope.document_Company_schema);

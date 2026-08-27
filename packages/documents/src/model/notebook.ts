@@ -15,6 +15,7 @@ import type {
     RichTextType,
     Shape,
 } from "../shape";
+import type { Commit } from "../transaction";
 import {
     getModelCell,
     getMorphismCell,
@@ -165,6 +166,7 @@ export interface Notebook<
     S extends Shape,
     D extends NotebookDocument = NotebookDocument,
     H = unknown,
+    V = unknown,
 > {
     readonly shape: S;
     readonly document: Readonly<D>;
@@ -183,13 +185,16 @@ export interface Notebook<
     /** Create a live, reactive view of the notebook's validation state. The
      * caller must dispose the view when it is no longer needed. */
     createValidationView(): ModelValidationView<S>;
+
+    /** Undo the changes this notebook's document received in a commit. */
+    revert(commit: Commit<H, V>): void;
 }
 
-export function modelNotebookFromStore<Handle, S extends Shape>(
+export function modelNotebookFromStore<Handle, S extends Shape, Version>(
     shape: S,
-    store: DocumentStore<Handle>,
+    store: DocumentStore<Handle, Version>,
     handle: Handle,
-): Notebook<S, ModelDocument, Handle> {
+): Notebook<S, ModelDocument, Handle, Version> {
     const validator = createNotebookValidator(shape, store, handle);
 
     function appendCell(
@@ -279,5 +284,12 @@ export function modelNotebookFromStore<Handle, S extends Shape>(
         validate: validator.validate,
         onValidate: validator.onValidate,
         createValidationView: validator.createValidationView,
+        revert(commit) {
+            const change = commit.documents.get(handle);
+            if (change === undefined) {
+                throw new Error("The notebook's document was not part of the commit.");
+            }
+            store.revertCommit(handle, change);
+        },
     };
 }
