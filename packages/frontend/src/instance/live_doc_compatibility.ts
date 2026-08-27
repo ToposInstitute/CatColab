@@ -1,12 +1,19 @@
 import type { Instance, InstanceDocument } from "catcolab-documents";
-import type { Api, ApiBinder, ApiDocumentHandle, DocRef, LiveDoc } from "../api";
+import type {
+    Api,
+    ApiBinder,
+    ApiDocumentHandle,
+    ApiDocumentVersion,
+    DocRef,
+    LiveDoc,
+} from "../api";
 import type { LiveModelDoc, ModelLibrary } from "../model";
 import { instanceShapes, shapeForTheory as shapeForTheoryIn } from "../model/shapes";
 
 type SupportedInstanceShape = (typeof instanceShapes)[number];
 
 /** An instance loaded through a frontend document binder. */
-export type ApiInstance = Instance<ApiDocumentHandle, SupportedInstanceShape>;
+export type ApiInstance = Instance<ApiDocumentHandle, SupportedInstanceShape, ApiDocumentVersion>;
 
 /** An instance document "live" for compatibility with existing container components.
 

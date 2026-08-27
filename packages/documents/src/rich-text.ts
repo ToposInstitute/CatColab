@@ -22,8 +22,8 @@ function tryGetStoredRichTextCell(document: Readonly<NotebookDocument>, cellId: 
     return cell;
 }
 
-export function getRichTextCell<Handle>(
-    store: DocumentStore<Handle>,
+export function getRichTextCell<Handle, Version>(
+    store: DocumentStore<Handle, Version>,
     handle: Handle,
     cellId: string,
 ): RichTextCell {
