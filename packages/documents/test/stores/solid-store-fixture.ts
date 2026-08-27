@@ -37,6 +37,32 @@ export const solidStore: DocumentStore<SolidStoreHandle> = {
             listener();
         }
     },
+    createDraft: (handle) => {
+        const draftDoc = structuredClone(handle.draftDoc);
+        const [docView, setDocView] = createStore<Document>(draftDoc);
+        return { draftDoc, docView, setDocView, listeners: new Set() };
+    },
+    commitDraft: (handle, draft) => {
+        const before = structuredClone(handle.draftDoc);
+        const after = structuredClone(draft.draftDoc);
+        solidStore.changeDocument(handle, (document): void => {
+            for (const key of Object.keys(document)) {
+                delete (document as unknown as Record<string, unknown>)[key];
+            }
+            Object.assign(document, after);
+        });
+        return { before, after };
+    },
+    discardDraft: () => {},
+    revertCommit: (handle, change) => {
+        const before = structuredClone(change.before);
+        solidStore.changeDocument(handle, (document): void => {
+            for (const key of Object.keys(document)) {
+                delete (document as unknown as Record<string, unknown>)[key];
+            }
+            Object.assign(document, before);
+        });
+    },
     subscribe: (handle, callback) => {
         handle.listeners.add(callback);
         return () => {

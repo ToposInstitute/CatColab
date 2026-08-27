@@ -6,6 +6,7 @@ import type { ModelValidation, ModelValidationView } from "../model/elaborated-m
 import type { Notebook } from "../model/notebook";
 import type { Result } from "../result";
 import type { Shape } from "../shape";
+import type { Commit } from "../transaction";
 import type { TableIssue } from "./errors";
 import {
     createAddRowsMethod,
@@ -20,7 +21,7 @@ import type { FieldValue, InstancePath, InstanceTable, LiteralValue, TableRow } 
 export type { InstanceDocument } from "catcolab-document-methods";
 
 /** API for an instance document and its schema-derived tables. */
-export interface Instance<H, S extends Shape> {
+export interface Instance<H, S extends Shape, V> {
     readonly handle: H;
     readonly shape: S;
     readonly document: Readonly<InstanceDocument>;
@@ -69,6 +70,9 @@ export interface Instance<H, S extends Shape> {
     /** Create a live, reactive view of the instance's validation state. The
      * caller must dispose the view when it is no longer needed. */
     createValidationView(): InstanceValidationView<S>;
+
+    /** Undo the changes this instance's document received in a commit. */
+    revert(commit: Commit<H, V>): void;
 }
 
 /** The result of validating an instance and its schema. */
@@ -91,12 +95,12 @@ export interface InstanceValidationView<out S extends Shape> extends InstanceVal
 }
 
 /** Create a store-backed instance. Schema-derived operations validate the schema on demand. */
-export function instanceFromStore<Handle, S extends Shape>(
+export function instanceFromStore<Handle, S extends Shape, Version>(
     shape: S,
-    schema: Notebook<S, ModelDocument, Handle>,
-    store: DocumentStore<Handle>,
+    schema: Notebook<S, ModelDocument, Handle, Version>,
+    store: DocumentStore<Handle, Version>,
     handle: Handle,
-): Instance<Handle, S> {
+): Instance<Handle, S, Version> {
     function currentDocument(): Readonly<InstanceDocument> {
         return store.getDocumentView(handle) as Readonly<InstanceDocument>;
     }
@@ -129,7 +133,7 @@ export function instanceFromStore<Handle, S extends Shape>(
         });
     }
 
-    const instance: Instance<Handle, S> = {
+    const instance: Instance<Handle, S, Version> = {
         handle,
         shape,
         get document(): Readonly<InstanceDocument> {
@@ -225,6 +229,13 @@ export function instanceFromStore<Handle, S extends Shape>(
                     modelValidation.dispose();
                 },
             };
+        },
+        revert(commit: Commit<Handle, Version>): void {
+            const change = commit.documents.get(handle);
+            if (change === undefined) {
+                throw new Error("The instance's document was not part of the commit.");
+            }
+            store.revertCommit(handle, change);
         },
     };
 

@@ -22,7 +22,10 @@ import {
     type ConversationAttachmentMetadata,
     validateConversationAttachments,
 } from "./conversation_attachment_policy.ts";
-import { createLLMConversationExecutionScope } from "./execution_scope.ts";
+import {
+    createLLMConversationExecutionScope,
+    type LLMConversationExecutionScope,
+} from "./execution_scope.ts";
 
 /** Input for a user message submitted to an LLM conversation. */
 export type LLMConversationUserInput = {
@@ -66,10 +69,11 @@ export type LLMConversationTurnResult =
 /** Persist a user message, run one model turn, and apply its valid document edits. */
 export async function runLLMConversationTurn<
     Handle,
-    Attachment extends LLMConversationAttachment<Shape, Handle>,
+    Version,
+    Attachment extends LLMConversationAttachment<Shape, Handle, Version>,
 >(
     conversation: LLMConversationAPI<Attachment, Handle>,
-    store: DocumentStore<Handle>,
+    store: DocumentStore<Handle, Version>,
     inferenceKey: InferenceKeyResult,
     userInput: LLMConversationUserInput,
     onEvent?: (event: ChatTurnEvent) => void,
@@ -97,10 +101,11 @@ export async function runLLMConversationTurn<
 /** Retry the latest persisted user message without adding it again. */
 export async function retryLastLLMConversationResponse<
     Handle,
-    Attachment extends LLMConversationAttachment<Shape, Handle>,
+    Version,
+    Attachment extends LLMConversationAttachment<Shape, Handle, Version>,
 >(
     conversation: LLMConversationAPI<Attachment, Handle>,
-    store: DocumentStore<Handle>,
+    store: DocumentStore<Handle, Version>,
     inferenceKey: InferenceKeyResult,
     onEvent?: (event: ChatTurnEvent) => void,
 ): Promise<LLMConversationTurnResult> {
@@ -117,15 +122,18 @@ export async function retryLastLLMConversationResponse<
 
 async function generateLLMConversationResponse<
     Handle,
-    Attachment extends LLMConversationAttachment<Shape, Handle>,
+    Version,
+    Attachment extends LLMConversationAttachment<Shape, Handle, Version>,
 >(
     conversation: LLMConversationAPI<Attachment, Handle>,
-    store: DocumentStore<Handle>,
+    store: DocumentStore<Handle, Version>,
     inferenceKey: Extract<InferenceKeyResult, { tag: "Ready" }>,
     onEvent?: (event: ChatTurnEvent) => void,
 ): Promise<LLMConversationTurnResult> {
+    let createdScope: LLMConversationExecutionScope | undefined;
     try {
         const executionScope = await createLLMConversationExecutionScope(conversation, store);
+        createdScope = executionScope;
         const context = LLMConversationAdapter.prepareLLMConversationInference(conversation.dump());
         const client = createInferenceClient(inferenceKey.key);
         const result = await runChatTurn(
@@ -145,9 +153,11 @@ async function generateLLMConversationResponse<
         const problems = await executionScope.validate();
         const generated = generatedChatMessageDeltaToLLMInteractions(result.generatedMessageDelta);
         if (generated.tag === "Err") {
+            executionScope.abort();
             return { tag: "Retryable", error: generated.content, attempts: [] };
         }
         if (problems.length > 0) {
+            executionScope.abort();
             return {
                 tag: "Retryable",
                 error: validationFeedback(problems),
@@ -159,6 +169,7 @@ async function generateLLMConversationResponse<
             generated.content.length === 0 &&
             result.content.trim().length === 0
         ) {
+            executionScope.abort();
             return {
                 tag: "Retryable",
                 error: "The model produced no usable output.",
@@ -190,6 +201,7 @@ async function generateLLMConversationResponse<
         }
         return { tag: "Completed", content: result.content };
     } catch (error) {
+        createdScope?.abort();
         return { tag: "Retryable", error: errorMessage(error), attempts: [] };
     }
 }

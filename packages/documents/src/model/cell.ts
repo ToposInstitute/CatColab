@@ -55,8 +55,8 @@ export type CellOf<S extends Shape> =
     | ObjectCell<ObjectTypesOf<S>>
     | MorphismCell<S, MorphismTypesOf<S>>;
 
-export function getObjectCell<Handle, O extends ObjectType>(
-    store: DocumentStore<Handle>,
+export function getObjectCell<Handle, O extends ObjectType, Version>(
+    store: DocumentStore<Handle, Version>,
     handle: Handle,
     cellId: string,
     type: O,
@@ -102,9 +102,9 @@ export function getObjectCell<Handle, O extends ObjectType>(
     };
 }
 
-function objectCellFromOb<Handle, S extends Shape>(
+function objectCellFromOb<Handle, S extends Shape, Version>(
     shape: S,
-    store: DocumentStore<Handle>,
+    store: DocumentStore<Handle, Version>,
     handle: Handle,
     endpoint: Ob | null,
 ): ObjectCell<ObjectTypesOf<S>> | null {
@@ -144,9 +144,9 @@ export function obFromObjectCell(
     return { tag: "Basic", content: judgment.id };
 }
 
-export function getMorphismCell<Handle, S extends Shape, M extends MorphismTypesOf<S>>(
+export function getMorphismCell<Handle, S extends Shape, M extends MorphismTypesOf<S>, Version>(
     shape: S,
-    store: DocumentStore<Handle>,
+    store: DocumentStore<Handle, Version>,
     handle: Handle,
     cellId: string,
     type: M,
@@ -232,9 +232,9 @@ export function getMorphismCell<Handle, S extends Shape, M extends MorphismTypes
     };
 }
 
-export function getModelCell<Handle, S extends Shape>(
+export function getModelCell<Handle, S extends Shape, Version>(
     shape: S,
-    store: DocumentStore<Handle>,
+    store: DocumentStore<Handle, Version>,
     handle: Handle,
     cellId: string,
 ): CellOf<S> {
