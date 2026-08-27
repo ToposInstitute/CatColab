@@ -9,8 +9,10 @@ use wasm_bindgen::prelude::*;
 use catlog::dbl::theory::{self as theory, NonUnital, Unital};
 use catlog::latex::LatexEquations;
 use catlog::one::Path;
-use catlog::stdlib::analyses::ode::ODESemanticsAnalysis;
-use catlog::stdlib::{analyses, models, theories, theory_morphisms};
+use catlog::stdlib::{
+    analyses::{self, v1::ode::ODESemanticsAnalysis},
+    models, theories, theory_morphisms,
+};
 use catlog::zero::name;
 
 use super::model_morphism::{MotifOccurrence, MotifsOptions, motifs};
@@ -92,9 +94,9 @@ impl ThSchema {
     /// Renders a model into valid SQL
     #[wasm_bindgen(js_name = "renderSQL")]
     pub fn render_sql(&self, model: &DblModel, backend: &str) -> JsResult<String, String> {
-        analyses::sql::SQLBackend::try_from(backend)
+        analyses::v0::sql::SQLBackend::try_from(backend)
             .and_then(|backend| {
-                analyses::sql::SQLAnalysis::new(backend)
+                analyses::v0::sql::SQLAnalysis::new(backend)
                     .render(
                         model.discrete()?,
                         |id| model.ob_namespace.label_string(id),
@@ -149,13 +151,13 @@ impl ThSignedCategory {
     pub fn lotka_volterra(
         &self,
         model: &DblModel,
-        data: analyses::ode::LotkaVolterraProblemData,
+        data: analyses::v1::ode::LotkaVolterraProblemData,
     ) -> Result<ODEResultWithEquations, String> {
         let system =
-            analyses::ode::LotkaVolterraAnalysis::default().build_system(model.discrete()?);
+            analyses::v1::ode::LotkaVolterraAnalysis::default().build_system(model.discrete()?);
         ode_semantics_simulation::<
-            analyses::ode::LotkaVolterraSemantics,
-            analyses::ode::LotkaVolterraProblemData,
+            analyses::v1::ode::LotkaVolterraSemantics,
+            analyses::v1::ode::LotkaVolterraProblemData,
         >(model, data, system)
     }
 
@@ -163,8 +165,8 @@ impl ThSignedCategory {
     #[wasm_bindgen(js_name = "lotkaVolterraEquations")]
     pub fn lotka_volterra_equations(&self, model: &DblModel) -> Result<LatexEquations, String> {
         let system =
-            analyses::ode::LotkaVolterraAnalysis::default().build_system(model.discrete()?);
-        ode_semantics_equations::<analyses::ode::LotkaVolterraSemantics>(model, system)
+            analyses::v1::ode::LotkaVolterraAnalysis::default().build_system(model.discrete()?);
+        ode_semantics_equations::<analyses::v1::ode::LotkaVolterraSemantics>(model, system)
     }
 
     /// Simulate the linear ODE system derived from a model.
@@ -172,20 +174,22 @@ impl ThSignedCategory {
     pub fn linear_ode(
         &self,
         model: &DblModel,
-        data: analyses::ode::LinearODEProblemData,
+        data: analyses::v1::ode::LinearODEProblemData,
     ) -> Result<ODEResultWithEquations, String> {
-        let system = analyses::ode::LinearODEAnalysis::default().build_system(model.discrete()?);
+        let system =
+            analyses::v1::ode::LinearODEAnalysis::default().build_system(model.discrete()?);
         ode_semantics_simulation::<
-            analyses::ode::LinearODESemantics,
-            analyses::ode::LinearODEProblemData,
+            analyses::v1::ode::LinearODESemantics,
+            analyses::v1::ode::LinearODEProblemData,
         >(model, data, system)
     }
 
     /// Show the equations of the linear ODE system derived from a model.
     #[wasm_bindgen(js_name = "linearODEEquations")]
     pub fn linear_ode_equations(&self, model: &DblModel) -> Result<LatexEquations, String> {
-        let system = analyses::ode::LinearODEAnalysis::default().build_system(model.discrete()?);
-        ode_semantics_equations::<analyses::ode::LinearODESemantics>(model, system)
+        let system =
+            analyses::v1::ode::LinearODEAnalysis::default().build_system(model.discrete()?);
+        ode_semantics_equations::<analyses::v1::ode::LinearODESemantics>(model, system)
     }
 }
 
@@ -347,27 +351,28 @@ impl ThCategoryLinks {
     pub fn mass_action(
         &self,
         model: &DblModel,
-        data: analyses::ode::RestrictedMassActionProblemData,
+        data: analyses::v1::ode::RestrictedMassActionProblemData,
     ) -> Result<ODEResultWithEquations, String> {
         match data.variant {
-            analyses::ode::MassActionVariant::Balanced => {
-                let balanced_system = analyses::ode::StockFlowBalancedMassActionAnalysis::default()
-                    .build_system(model.discrete_tab()?);
-                ode_semantics_simulation::<
-                    analyses::ode::StockFlowBalancedMassActionSemantics,
-                    analyses::ode::BalancedMassActionProblemData,
-                >(model, data.balanced, balanced_system)
-            }
-            analyses::ode::MassActionVariant::Unbalanced => {
-                let unbalanced_system =
-                    analyses::ode::StockFlowUnbalancedMassActionAnalysis::default()
+            analyses::v1::ode::MassActionVariant::Balanced => {
+                let balanced_system =
+                    analyses::v1::ode::StockFlowBalancedMassActionAnalysis::default()
                         .build_system(model.discrete_tab()?);
                 ode_semantics_simulation::<
-                    analyses::ode::StockFlowUnbalancedMassActionSemantics,
-                    analyses::ode::UnbalancedMassActionProblemData,
+                    analyses::v1::ode::StockFlowBalancedMassActionSemantics,
+                    analyses::v1::ode::BalancedMassActionProblemData,
+                >(model, data.balanced, balanced_system)
+            }
+            analyses::v1::ode::MassActionVariant::Unbalanced => {
+                let unbalanced_system =
+                    analyses::v1::ode::StockFlowUnbalancedMassActionAnalysis::default()
+                        .build_system(model.discrete_tab()?);
+                ode_semantics_simulation::<
+                    analyses::v1::ode::StockFlowUnbalancedMassActionSemantics,
+                    analyses::v1::ode::UnbalancedMassActionProblemData,
                 >(model, data.unbalanced, unbalanced_system)
             }
-            catlog::stdlib::analyses::ode::MassActionVariant::PerPlace => {
+            catlog::stdlib::analyses::v1::ode::MassActionVariant::PerPlace => {
                 Err("Categories with links do not support fully unbalanced mass-action semantics."
                     .to_string())
             }
@@ -379,27 +384,28 @@ impl ThCategoryLinks {
     pub fn mass_action_equations(
         &self,
         model: &DblModel,
-        data: analyses::ode::RestrictedMassActionProblemData,
+        data: analyses::v1::ode::RestrictedMassActionProblemData,
     ) -> Result<LatexEquations, String> {
         match data.variant {
-            analyses::ode::MassActionVariant::Balanced => {
-                let balanced_system = analyses::ode::StockFlowBalancedMassActionAnalysis::default()
-                    .build_system(model.discrete_tab()?);
-                ode_semantics_equations::<analyses::ode::StockFlowBalancedMassActionSemantics>(
+            analyses::v1::ode::MassActionVariant::Balanced => {
+                let balanced_system =
+                    analyses::v1::ode::StockFlowBalancedMassActionAnalysis::default()
+                        .build_system(model.discrete_tab()?);
+                ode_semantics_equations::<analyses::v1::ode::StockFlowBalancedMassActionSemantics>(
                     model,
                     balanced_system,
                 )
             }
-            analyses::ode::MassActionVariant::Unbalanced => {
+            analyses::v1::ode::MassActionVariant::Unbalanced => {
                 let unbalanced_system =
-                    analyses::ode::StockFlowUnbalancedMassActionAnalysis::default()
+                    analyses::v1::ode::StockFlowUnbalancedMassActionAnalysis::default()
                         .build_system(model.discrete_tab()?);
-                ode_semantics_equations::<analyses::ode::StockFlowUnbalancedMassActionSemantics>(
+                ode_semantics_equations::<analyses::v1::ode::StockFlowUnbalancedMassActionSemantics>(
                     model,
                     unbalanced_system,
                 )
             }
-            analyses::ode::MassActionVariant::PerPlace => {
+            analyses::v1::ode::MassActionVariant::PerPlace => {
                 Err("Categories with links do not support fully unbalanced mass-action semantics."
                     .to_string())
             }
@@ -445,32 +451,34 @@ impl ThSymMonoidalCategory {
     pub fn mass_action(
         &self,
         model: &DblModel,
-        data: analyses::ode::MassActionProblemData,
+        data: analyses::v1::ode::MassActionProblemData,
     ) -> Result<ODEResultWithEquations, String> {
         match data.variant {
-            analyses::ode::MassActionVariant::Balanced => {
-                let balanced_system = analyses::ode::PetriNetBalancedMassActionAnalysis::default()
-                    .build_system(model.modal_unital()?);
-                ode_semantics_simulation::<
-                    analyses::ode::PetriNetBalancedMassActionSemantics,
-                    analyses::ode::BalancedMassActionProblemData,
-                >(model, data.balanced, balanced_system)
-            }
-            analyses::ode::MassActionVariant::Unbalanced => {
-                let unbalanced_system =
-                    analyses::ode::PetriNetUnbalancedMassActionAnalysis::default()
+            analyses::v1::ode::MassActionVariant::Balanced => {
+                let balanced_system =
+                    analyses::v1::ode::PetriNetBalancedMassActionAnalysis::default()
                         .build_system(model.modal_unital()?);
                 ode_semantics_simulation::<
-                    analyses::ode::PetriNetUnbalancedMassActionSemantics,
-                    analyses::ode::UnbalancedMassActionProblemData,
+                    analyses::v1::ode::PetriNetBalancedMassActionSemantics,
+                    analyses::v1::ode::BalancedMassActionProblemData,
+                >(model, data.balanced, balanced_system)
+            }
+            analyses::v1::ode::MassActionVariant::Unbalanced => {
+                let unbalanced_system =
+                    analyses::v1::ode::PetriNetUnbalancedMassActionAnalysis::default()
+                        .build_system(model.modal_unital()?);
+                ode_semantics_simulation::<
+                    analyses::v1::ode::PetriNetUnbalancedMassActionSemantics,
+                    analyses::v1::ode::UnbalancedMassActionProblemData,
                 >(model, data.unbalanced, unbalanced_system)
             }
-            analyses::ode::MassActionVariant::PerPlace => {
-                let per_place_system = analyses::ode::PetriNetPerPlaceMassActionAnalysis::default()
-                    .build_system(model.modal_unital()?);
+            analyses::v1::ode::MassActionVariant::PerPlace => {
+                let per_place_system =
+                    analyses::v1::ode::PetriNetPerPlaceMassActionAnalysis::default()
+                        .build_system(model.modal_unital()?);
                 ode_semantics_simulation::<
-                    analyses::ode::PetriNetPerPlaceMassActionSemantics,
-                    analyses::ode::PerPlaceMassActionProblemData,
+                    analyses::v1::ode::PetriNetPerPlaceMassActionSemantics,
+                    analyses::v1::ode::PerPlaceMassActionProblemData,
                 >(model, data.per_place, per_place_system)
             }
         }
@@ -481,30 +489,32 @@ impl ThSymMonoidalCategory {
     pub fn mass_action_equations(
         &self,
         model: &DblModel,
-        data: analyses::ode::MassActionProblemData,
+        data: analyses::v1::ode::MassActionProblemData,
     ) -> Result<LatexEquations, String> {
         match data.variant {
-            analyses::ode::MassActionVariant::Balanced => {
-                let balanced_system = analyses::ode::PetriNetBalancedMassActionAnalysis::default()
-                    .build_system(model.modal_unital()?);
-                ode_semantics_equations::<analyses::ode::PetriNetBalancedMassActionSemantics>(
+            analyses::v1::ode::MassActionVariant::Balanced => {
+                let balanced_system =
+                    analyses::v1::ode::PetriNetBalancedMassActionAnalysis::default()
+                        .build_system(model.modal_unital()?);
+                ode_semantics_equations::<analyses::v1::ode::PetriNetBalancedMassActionSemantics>(
                     model,
                     balanced_system,
                 )
             }
-            analyses::ode::MassActionVariant::Unbalanced => {
+            analyses::v1::ode::MassActionVariant::Unbalanced => {
                 let unbalanced_system =
-                    analyses::ode::PetriNetUnbalancedMassActionAnalysis::default()
+                    analyses::v1::ode::PetriNetUnbalancedMassActionAnalysis::default()
                         .build_system(model.modal_unital()?);
-                ode_semantics_equations::<analyses::ode::PetriNetUnbalancedMassActionSemantics>(
+                ode_semantics_equations::<analyses::v1::ode::PetriNetUnbalancedMassActionSemantics>(
                     model,
                     unbalanced_system,
                 )
             }
-            analyses::ode::MassActionVariant::PerPlace => {
-                let per_place_system = analyses::ode::PetriNetPerPlaceMassActionAnalysis::default()
-                    .build_system(model.modal_unital()?);
-                ode_semantics_equations::<analyses::ode::PetriNetPerPlaceMassActionSemantics>(
+            analyses::v1::ode::MassActionVariant::PerPlace => {
+                let per_place_system =
+                    analyses::v1::ode::PetriNetPerPlaceMassActionAnalysis::default()
+                        .build_system(model.modal_unital()?);
+                ode_semantics_equations::<analyses::v1::ode::PetriNetPerPlaceMassActionSemantics>(
                     model,
                     per_place_system,
                 )
@@ -517,10 +527,10 @@ impl ThSymMonoidalCategory {
     pub fn stochastic_mass_action(
         &self,
         model: &DblModel,
-        data: analyses::stochastic::StochasticMassActionProblemData,
+        data: analyses::v0::stochastic::StochasticMassActionProblemData,
     ) -> Result<ODEResult, String> {
-        Ok(ODEResult(JsResult::Ok(
-            analyses::stochastic::PetriNetStochasticMassActionAnalysis::default()
+        Ok(ODEResult::V0(JsResult::Ok(
+            analyses::v0::stochastic::PetriNetStochasticMassActionAnalysis::default()
                 .build_stochastic_system(model.modal_unital()?, data)
                 .simulate(),
         )))
@@ -531,10 +541,10 @@ impl ThSymMonoidalCategory {
     pub fn subreachability(
         &self,
         model: &DblModel,
-        data: analyses::reachability::ReachabilityProblemData,
+        data: analyses::v0::reachability::ReachabilityProblemData,
     ) -> Result<bool, String> {
         let model = model.modal_unital().map_err(|_| "Model should be of a modal theory")?;
-        Ok(analyses::reachability::subreachability(model, data))
+        Ok(analyses::v0::reachability::subreachability(model, data))
     }
 }
 
@@ -559,22 +569,22 @@ impl ThPolynomialODE {
     pub fn polynomial_ode_simulation(
         &self,
         model: &DblModel,
-        data: analyses::ode::PolynomialODEProblemData,
+        data: analyses::v1::ode::PolynomialODEProblemData,
     ) -> Result<ODEResultWithEquations, String> {
-        let system =
-            analyses::ode::PolynomialODEAnalysis::default().build_system(model.modal_nonunital()?);
+        let system = analyses::v1::ode::PolynomialODEAnalysis::default()
+            .build_system(model.modal_nonunital()?);
         ode_semantics_simulation::<
-            analyses::ode::PolynomialODESemantics,
-            analyses::ode::PolynomialODEProblemData,
+            analyses::v1::ode::PolynomialODESemantics,
+            analyses::v1::ode::PolynomialODEProblemData,
         >(model, data, system)
     }
 
     /// Returns the symbolic equations in LaTeX format.
     #[wasm_bindgen(js_name = "polynomialODEEquations")]
     pub fn polynomial_ode_equations(&self, model: &DblModel) -> Result<LatexEquations, String> {
-        let system =
-            analyses::ode::PolynomialODEAnalysis::default().build_system(model.modal_nonunital()?);
-        ode_semantics_equations::<analyses::ode::PolynomialODESemantics>(model, system)
+        let system = analyses::v1::ode::PolynomialODEAnalysis::default()
+            .build_system(model.modal_nonunital()?);
+        ode_semantics_equations::<analyses::v1::ode::PolynomialODESemantics>(model, system)
     }
 }
 
@@ -599,22 +609,22 @@ impl ThSignedPolynomialODE {
     pub fn polynomial_ode_simulation(
         &self,
         model: &DblModel,
-        data: analyses::ode::PolynomialODEProblemData,
+        data: analyses::v1::ode::PolynomialODEProblemData,
     ) -> Result<ODEResultWithEquations, String> {
-        let system =
-            analyses::ode::PolynomialODEAnalysis::default().build_system(model.modal_nonunital()?);
+        let system = analyses::v1::ode::PolynomialODEAnalysis::default()
+            .build_system(model.modal_nonunital()?);
         ode_semantics_simulation::<
-            analyses::ode::PolynomialODESemantics,
-            analyses::ode::PolynomialODEProblemData,
+            analyses::v1::ode::PolynomialODESemantics,
+            analyses::v1::ode::PolynomialODEProblemData,
         >(model, data, system)
     }
 
     /// Returns the symbolic equations in LaTeX format.
     #[wasm_bindgen(js_name = "polynomialODEEquations")]
     pub fn polynomial_ode_equations(&self, model: &DblModel) -> Result<LatexEquations, String> {
-        let system =
-            analyses::ode::PolynomialODEAnalysis::default().build_system(model.modal_nonunital()?);
-        ode_semantics_equations::<analyses::ode::PolynomialODESemantics>(model, system)
+        let system = analyses::v1::ode::PolynomialODEAnalysis::default()
+            .build_system(model.modal_nonunital()?);
+        ode_semantics_equations::<analyses::v1::ode::PolynomialODESemantics>(model, system)
     }
 }
 
@@ -639,10 +649,10 @@ impl ThPowerSystem {
     pub fn kuramoto(
         &self,
         model: &DblModel,
-        data: &analyses::ode::KuramotoProblemData,
+        data: &analyses::v0::ode::KuramotoProblemData,
     ) -> Result<ODEResult, String> {
-        Ok(ODEResult(
-            analyses::ode::KuramotoAnalysis::new(name("Bus"))
+        Ok(ODEResult::V0(
+            analyses::v0::ode::KuramotoAnalysis::new(name("Bus"))
                 // Should we distinguish between lines and transformers?
                 .add_link_type(Path::empty(name("Bus")))
                 .add_link_type(Path::single(name("Passive")))

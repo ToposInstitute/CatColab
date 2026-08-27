@@ -27,7 +27,7 @@ use crate::{
     },
     latex::{Latex, ToLatexWithMap},
     simulate::ode::PolynomialSystem,
-    stdlib::analyses::ode::{
+    stdlib::analyses::v1::ode::{
         ODEParameterType, ODESemantics, ODESemanticsAnalysis, ODESemanticsGeneralProblemData,
         ODESemanticsProblemData, ODESemanticsScalarExtension, Parameter,
         PolynomialODESystemBuilder,

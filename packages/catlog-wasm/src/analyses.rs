@@ -5,8 +5,9 @@ use serde::{Deserialize, Serialize};
 use tsify::Tsify;
 
 use catlog::simulate::ode::PolynomialSystem;
-use catlog::stdlib::analyses::ode::{
-    self, ODESemantics, ODESemanticsProblemData, ODESemanticsScalarExtension, Parameter,
+use catlog::stdlib::analyses;
+use catlog::stdlib::analyses::v1::ode::{
+    ODESemantics, ODESemanticsProblemData, ODESemanticsScalarExtension, Parameter,
 };
 use catlog::zero::QualifiedName;
 
@@ -14,6 +15,7 @@ use super::latex::latex_names;
 use super::model::DblModel;
 use super::result::JsResult;
 
+// pub fn migrate_analysis_document_widgets(input: JsValue) -> Result<JsValue, JsValue> {}
 // TODO: migration code: just take a JsValue and bump everything up to v0 if it has no version, and v1 if a v1 exists
 //       look at document_types::src::lib::migrate_document for inspiration
 //       (here you'll use your stuff from migrate.rs)
@@ -23,7 +25,12 @@ use super::result::JsResult;
 /// The result of an ODE analysis, containing the solution when successful.
 #[derive(Serialize, Deserialize, Tsify)]
 #[tsify(into_wasm_abi, from_wasm_abi)]
-pub struct ODEResult(pub JsResult<ode::ODESolution, String>);
+pub enum ODEResult {
+    /// The result from a version 0 ODE analysis.
+    V0(JsResult<analyses::v0::ode::ODESolution, String>),
+    /// The result from a version 1 ODE analysis.
+    V1(JsResult<analyses::v1::ode::ODESolution, String>),
+}
 
 /// The result of an ODE analysis including equations in LaTeX with substitutions.
 #[derive(Serialize, Deserialize, Tsify)]
@@ -48,7 +55,7 @@ pub(crate) fn ode_semantics_simulation<S: ODESemantics, P: ODESemanticsProblemDa
     let analysis = problem_data.general_data().build_analysis(sys_extended_scalars);
     let solution = analysis.solve_with_defaults().map_err(|err| format!("{err:?}"));
     Ok(ODEResultWithEquations {
-        solution: ODEResult(solution.into()),
+        solution: ODEResult::V1(solution.into()),
         latex_equations,
     })
 }
@@ -83,7 +90,7 @@ pub(crate) mod tests {
     use catlog::dbl::model::{ModalDblModel, MutDblModel};
     use catlog::latex::{Latex, LatexEquation, LatexEquations};
     use catlog::stdlib::{
-        analyses::ode::{self, ODESemanticsAnalysis},
+        analyses::v1::ode::{self, ODESemanticsAnalysis},
         theories,
     };
     use catlog::zero::{LabelSegment, Namespace, QualifiedName};

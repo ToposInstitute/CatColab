@@ -41,7 +41,7 @@ use crate::{
     one::FgCategory,
     simulate::ode::{NumericalPolynomialSystem, ODEProblem, PolynomialSystem},
     stdlib::{
-        analyses::ode::{ODEAnalysis, Parameter, PolynomialODEAnalysis},
+        analyses::v1::ode::{ODEAnalysis, Parameter, PolynomialODEAnalysis},
         th_signed_polynomial_ode_system,
     },
     zero::{QualifiedName, name},

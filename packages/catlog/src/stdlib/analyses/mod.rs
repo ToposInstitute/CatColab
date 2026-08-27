@@ -1,15 +1,5 @@
 //! Various analyses that can be performed on models.
 
-pub(crate) mod petri;
-pub(crate) mod stock_flow;
-
-#[cfg(feature = "ode")]
-pub mod ode;
-
-pub mod reachability;
-
-#[cfg(feature = "sql")]
-pub mod sql;
-
-#[cfg(feature = "stochastic")]
-pub mod stochastic;
+pub mod migrate;
+pub mod v0;
+pub mod v1;

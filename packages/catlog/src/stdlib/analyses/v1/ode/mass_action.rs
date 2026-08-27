@@ -14,10 +14,10 @@ use tsify::Tsify;
 
 use crate::latex::{Latex, ToLatexWithMap};
 use crate::simulate::ode::PolynomialSystem;
-use crate::stdlib::analyses::ode::Parameter;
-use crate::stdlib::analyses::ode::ode_semantics::*;
-use crate::stdlib::analyses::petri::transition_interface;
-use crate::stdlib::analyses::stock_flow::flow_interface;
+use crate::stdlib::analyses::v0::petri::transition_interface;
+use crate::stdlib::analyses::v0::stock_flow::flow_interface;
+use crate::stdlib::analyses::v1::ode::Parameter;
+use crate::stdlib::analyses::v1::ode::ode_semantics::*;
 use crate::zero::{QualifiedName, name};
 use crate::{
     dbl::{

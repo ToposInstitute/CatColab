@@ -1,10 +1,11 @@
 //! Migrations from v0 to v1 for analyses.
 
-use crate::stdlib::analyses::ode::*;
+use crate::stdlib::analyses::v0;
+use crate::stdlib::analyses::v1::ode::*;
 
 /// Migration for problem data for linear ODE.
 pub fn migrate_linear_ode_v0_to_v1(
-    v0: v0::linear_ode::LinearODEProblemData,
+    v0: v0::ode::linear_ode::LinearODEProblemData,
 ) -> LinearODEProblemData {
     LinearODEProblemData {
         general_data: ODESemanticsGeneralProblemData {
@@ -17,7 +18,7 @@ pub fn migrate_linear_ode_v0_to_v1(
 
 /// Migration for problem data for Lotka-Volterra.
 pub fn migrate_lotka_volterra_v0_to_v1(
-    v0: v0::lotka_volterra::LotkaVolterraProblemData,
+    v0: v0::ode::lotka_volterra::LotkaVolterraProblemData,
 ) -> LotkaVolterraProblemData {
     LotkaVolterraProblemData {
         general_data: ODESemanticsGeneralProblemData {
@@ -33,7 +34,7 @@ pub fn migrate_lotka_volterra_v0_to_v1(
 
 /// Migration for problem data for polynomial ODE.
 pub fn migrate_polynomial_ode_v0_to_v1(
-    v0: v0::polynomial_ode::PolynomialODEProblemData,
+    v0: v0::ode::polynomial_ode::PolynomialODEProblemData,
 ) -> PolynomialODEProblemData {
     PolynomialODEProblemData {
         general_data: ODESemanticsGeneralProblemData {
@@ -44,13 +45,17 @@ pub fn migrate_polynomial_ode_v0_to_v1(
     }
 }
 
-fn migrate_mass_action_variant(v0: v0::mass_action::MassConservationType) -> MassActionVariant {
+fn migrate_mass_action_variant(
+    v0: v0::ode::mass_action::MassConservationType,
+) -> MassActionVariant {
     match v0 {
-        v0::mass_action::MassConservationType::Balanced => MassActionVariant::Balanced,
-        v0::mass_action::MassConservationType::Unbalanced(rate_granularity) => {
+        v0::ode::mass_action::MassConservationType::Balanced => MassActionVariant::Balanced,
+        v0::ode::mass_action::MassConservationType::Unbalanced(rate_granularity) => {
             match rate_granularity {
-                v0::mass_action::RateGranularity::PerTransition => MassActionVariant::Unbalanced,
-                v0::mass_action::RateGranularity::PerPlace => MassActionVariant::PerPlace,
+                v0::ode::mass_action::RateGranularity::PerTransition => {
+                    MassActionVariant::Unbalanced
+                }
+                v0::ode::mass_action::RateGranularity::PerPlace => MassActionVariant::PerPlace,
             }
         }
     }
@@ -58,7 +63,7 @@ fn migrate_mass_action_variant(v0: v0::mass_action::MassConservationType) -> Mas
 
 /// Migration for problem data for mass-action on a Petri net.
 pub fn migrate_petri_net_mass_action_v0_to_v1(
-    v0: v0::mass_action::MassActionProblemData,
+    v0: v0::ode::mass_action::MassActionProblemData,
 ) -> MassActionProblemData {
     let balanced = BalancedMassActionProblemData {
         general_data: ODESemanticsGeneralProblemData {
@@ -98,7 +103,7 @@ pub fn migrate_petri_net_mass_action_v0_to_v1(
 
 /// Migration for problem data for mass-action on a stock-flow diagram.
 pub fn migrate_stock_flow_mass_action_v0_to_v1(
-    v0: v0::mass_action::MassActionProblemData,
+    v0: v0::ode::mass_action::MassActionProblemData,
 ) -> RestrictedMassActionProblemData {
     let balanced = BalancedMassActionProblemData {
         general_data: ODESemanticsGeneralProblemData {
@@ -150,7 +155,7 @@ mod test {
         let th = Rc::new(th_signed_category());
         let model = negative_feedback(th);
 
-        let v0_data = v0::linear_ode::LinearODEProblemData {
+        let v0_data = v0::ode::linear_ode::LinearODEProblemData {
             coefficients: [(name("positive"), 3.0), (name("negative"), 2.0)].into_iter().collect(),
             initial_values: [(name("x"), 1.0), (name("y"), 1.0)].into_iter().collect(),
             duration: 10.0,
@@ -172,7 +177,7 @@ mod test {
         let th = Rc::new(th_signed_category());
         let model = negative_feedback(th);
 
-        let v0_data = v0::lotka_volterra::LotkaVolterraProblemData {
+        let v0_data = v0::ode::lotka_volterra::LotkaVolterraProblemData {
             interaction_coeffs: [(name("positive"), 1.0), (name("negative"), 1.0)]
                 .into_iter()
                 .collect(),
@@ -197,7 +202,7 @@ mod test {
         let th = Rc::new(th_polynomial_ode_system());
         let model = unsigned_lotka_volterra_dynamics(th);
 
-        let v0_data = v0::polynomial_ode::PolynomialODEProblemData {
+        let v0_data = v0::ode::polynomial_ode::PolynomialODEProblemData {
             coefficients: [
                 (name("A_growth"), 1.0),
                 (name("B_growth"), 2.0),
@@ -232,13 +237,13 @@ mod test {
         let th = Rc::new(th_sym_monoidal_category());
         let model = catalyzed_reaction(th);
 
-        let v0_data = v0::mass_action::MassActionProblemData {
+        let v0_data = v0::ode::mass_action::MassActionProblemData {
             initial_values: [(name("x"), 1.0), (name("y"), 1.5), (name("c"), 2.0)]
                 .into_iter()
                 .collect(),
             duration: 10.0,
-            equations_data: v0::mass_action::MassActionEquationsData {
-                mass_conservation_type: v0::mass_action::MassConservationType::Balanced,
+            equations_data: v0::ode::mass_action::MassActionEquationsData {
+                mass_conservation_type: v0::ode::mass_action::MassConservationType::Balanced,
             },
             transition_rates: [(name("f"), 1.5)].into_iter().collect(),
             transition_consumption_rates: [(name("f"), 3.5)].into_iter().collect(),
@@ -294,12 +299,12 @@ mod test {
         let th = Rc::new(th_category_links());
         let model = backward_link(th);
 
-        let v0_data = v0::mass_action::MassActionProblemData {
+        let v0_data = v0::ode::mass_action::MassActionProblemData {
             initial_values: [(name("x"), 1.0), (name("y"), 1.0)].into_iter().collect(),
             duration: 10.0,
-            equations_data: v0::mass_action::MassActionEquationsData {
+            equations_data: v0::ode::mass_action::MassActionEquationsData {
                 mass_conservation_type:
-                    crate::stdlib::analyses::ode::v0::mass_action::MassConservationType::Balanced,
+                    crate::stdlib::analyses::ode::v0::ode::mass_action::MassConservationType::Balanced,
             },
             transition_rates: [(name("f"), 3.0)].into_iter().collect(),
             transition_consumption_rates: [(name("f"), 1.5)].into_iter().collect(),

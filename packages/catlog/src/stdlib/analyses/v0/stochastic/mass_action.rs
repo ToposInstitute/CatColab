@@ -9,8 +9,8 @@ use std::collections::HashMap;
 use crate::{
     dbl::{modal::*, model::FpDblModel, theory::Unital},
     stdlib::analyses::{
-        ode::ODESolution,
-        petri::{TransitionInterface, transition_interface},
+        v0::ode::ODESolution,
+        v0::petri::{TransitionInterface, transition_interface},
     },
     zero::{QualifiedName, name},
 };

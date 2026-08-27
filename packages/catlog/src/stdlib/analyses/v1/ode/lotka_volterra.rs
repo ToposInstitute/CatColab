@@ -17,12 +17,12 @@ use crate::dbl::model::{FpDblModel, MutDblModel};
 use crate::latex::{Latex, ToLatexWithMap};
 use crate::one::Path;
 use crate::simulate::ode::PolynomialSystem;
-use crate::stdlib::analyses::ode::ode_semantics::{
-    ContributionSign, ODEParameterType, ODESemantics, ODESemanticsAnalysis,
-    ODESemanticsScalarExtension, PolynomialODESystemBuilder,
-};
-use crate::stdlib::analyses::ode::{
+use crate::stdlib::analyses::v1::ode::{
     ODESemanticsGeneralProblemData, ODESemanticsProblemData, Parameter,
+    ode_semantics::{
+        ContributionSign, ODEParameterType, ODESemantics, ODESemanticsAnalysis,
+        ODESemanticsScalarExtension, PolynomialODESystemBuilder,
+    },
 };
 use crate::zero::name;
 use crate::{dbl::model::DiscreteDblModel, one::QualifiedPath, zero::QualifiedName};

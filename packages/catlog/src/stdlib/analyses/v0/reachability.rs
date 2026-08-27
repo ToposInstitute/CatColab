@@ -6,7 +6,7 @@ use std::collections::HashMap;
 use crate::dbl::modal::model::ModalDblModel;
 use crate::dbl::theory::Unital;
 use crate::one::category::FgCategory;
-use crate::stdlib::analyses::petri::{TransitionInterface, transition_interface};
+use crate::stdlib::analyses::v0::petri::{TransitionInterface, transition_interface};
 use crate::zero::QualifiedName;
 
 #[cfg(feature = "serde")]
