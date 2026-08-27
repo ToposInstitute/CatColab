@@ -17,6 +17,7 @@
         "test/llm-conversation.test.ts",
         "test/binder.test-d.ts",
         "test/validation-view.test.ts",
-        "test/stores/solid-validation-view.test.ts"
+        "test/stores/solid-validation-view.test.ts",
+        "test/stores/solid-completions-view.test.tsx"
     ]
 }
