@@ -22,3 +22,11 @@ export const SimpleSchema = defineShape({
         tableObjects: [Entity],
     },
 });
+
+export const simpleSchemaCellTypes = {
+    schema_entity: Entity,
+    schema_attr_type: AttrType,
+    schema_mapping: Mapping,
+    schema_attr: Attr,
+    schema_rich_text: RichText,
+};

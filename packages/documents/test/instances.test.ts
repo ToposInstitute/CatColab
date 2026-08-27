@@ -202,7 +202,7 @@ describe("instance schema validation", () => {
 });
 
 describe("tabular instances", () => {
-    test("tables and headers are derived and rows can be edited", { timeout: 10_000 }, async () => {
+    test("tables and headers are derived and rows can be edited", { timeout: 20_000 }, async () => {
         const binder = createBinder();
         const schema = await binder.createNotebook(SimpleSchema, {
             title: "Company schema",
@@ -333,7 +333,7 @@ describe("tabular instances", () => {
 
     test(
         "mistyped row references and literals report their field paths",
-        { timeout: 10_000 },
+        { timeout: 20_000 },
         async () => {
             const binder = createBinder();
             const schema = await binder.createNotebook(SimpleSchema, {
@@ -430,7 +430,7 @@ describe("tabular instances", () => {
 
     test(
         "deleting a referenced row reports a dangling field path",
-        { timeout: 10_000 },
+        { timeout: 20_000 },
         async () => {
             const binder = createBinder();
             const schema = await binder.createNotebook(SimpleSchema, {

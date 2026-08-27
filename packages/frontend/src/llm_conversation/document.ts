@@ -1,37 +1,28 @@
-import { LLMConversation, type LLMConversationDocument } from "catcolab-document-methods";
+import { LLMConversation } from "catcolab-document-methods";
+import type { InlineFile, LLMInteraction } from "catcolab-document-types";
 import type {
-    FeedbackResolution,
-    InlineFile,
-    LLMInteraction,
-    StableRef,
-    Uuid,
-} from "catcolab-document-types";
+    DocumentStore,
+    LLMConversation as LLMConversationAPI,
+    LLMConversationAttachment,
+    Shape,
+} from "catcolab-documents";
 import type { JsResult } from "catlog-wasm";
-import type { Api, DocRef, LiveDoc } from "../api";
 import {
     createInferenceClient,
+    type ChatTurnEvent,
     parseContextExecArguments,
     parseContextExecResult,
-    runOpenAIChatTurn,
-    type GeneratedOpenAIMessage,
+    runChatTurn,
+    type GeneratedChatMessage,
 } from "../inference/chat.ts";
-import type { ContextExecScope } from "../inference/context_exec.ts";
 import * as LLMConversationAdapter from "../inference/llm_conversation_adapter.ts";
-import type { LiveModelDoc, ModelLibrary } from "../model";
 import type { InferenceKeyResult } from "../user/inference_key_context.tsx";
 import { errorMessage } from "../util/error.ts";
 import {
     type ConversationAttachmentMetadata,
     validateConversationAttachments,
 } from "./conversation_attachment_policy.ts";
-
-/** A live LLM conversation and the model it is attached to. */
-export type LiveLLMConversationDoc = {
-    type: "llmconversation";
-    liveDoc: LiveDoc<LLMConversationDocument>;
-    docRef: DocRef;
-    liveModel: LiveModelDoc;
-};
+import { createLLMConversationExecutionScope } from "./execution_scope.ts";
 
 /** Input for a user message submitted to an LLM conversation. */
 export type LLMConversationUserInput = {
@@ -40,7 +31,7 @@ export type LLMConversationUserInput = {
 };
 
 /** Project a persisted inline file into attachment policy metadata. */
-export function inlineFileMetadata(file: InlineFile): ConversationAttachmentMetadata {
+function inlineFileMetadata(file: InlineFile): ConversationAttachmentMetadata {
     return {
         filename: file.filename,
         mediaType: file.mediaType,
@@ -49,7 +40,7 @@ export function inlineFileMetadata(file: InlineFile): ConversationAttachmentMeta
 }
 
 /** Project all persisted conversation attachments into attachment policy metadata. */
-export function conversationAttachmentMetadata(
+function conversationAttachmentMetadata(
     interactions: readonly LLMInteraction[],
 ): ConversationAttachmentMetadata[] {
     const result: ConversationAttachmentMetadata[] = [];
@@ -64,159 +55,153 @@ export function conversationAttachmentMetadata(
 /** Outcome of attempting one LLM conversation turn. */
 export type LLMConversationTurnResult =
     | { tag: "Completed"; content: string }
+    | { tag: "Incomplete"; reason: string }
     | { tag: "Failed"; error: string }
-    | { tag: "Retryable"; error: string };
+    | {
+          tag: "Retryable";
+          error: string;
+          attempts: readonly LLMInteraction[];
+      };
 
-/** Create a new LLM conversation attached to a model. */
-export function createLLMConversation(
-    api: Api,
-    modelRef: StableRef,
-    llmModel: string,
-): Promise<Uuid> {
-    return api.createDoc(LLMConversation.newLLMConversationDocument(modelRef, llmModel));
-}
-
-/** Retrieve an LLM conversation and its parent model for live editing. */
-export async function getLiveLLMConversation(
-    refId: Uuid,
-    api: Api,
-    models: ModelLibrary<Uuid>,
-): Promise<LiveLLMConversationDoc> {
-    const { liveDoc, docRef } = await api.getLiveDoc<LLMConversationDocument>(
-        refId,
-        "llmconversation",
-    );
-    const liveModel = await models.getLiveModel(liveDoc.doc.llmConversationOf._id);
-
-    return { type: "llmconversation", liveDoc, docRef, liveModel };
-}
-
-/** Resolve a pending feedback request in a live conversation. */
-export function resolveLLMConversationFeedback(
-    conversation: LiveLLMConversationDoc,
-    requestId: Uuid,
-    resolution: Exclude<FeedbackResolution, "unresolved">,
-) {
-    let resolved = false;
-    conversation.liveDoc.changeDoc((doc) => {
-        resolved = LLMConversation.resolveUserFeedbackRequest(doc, requestId, resolution);
-    });
-    return resolved;
-}
-
-/**
- * Persist a user message, run one OpenAI turn, then persist its completed output.
- * Streaming assistant text is reported only through `onContent` and is never persisted.
- */
-export async function runLLMConversationTurn(
-    conversation: LiveLLMConversationDoc,
+/** Persist a user message, run one model turn, and apply its valid document edits. */
+export async function runLLMConversationTurn<
+    Handle,
+    Attachment extends LLMConversationAttachment<Shape, Handle>,
+>(
+    conversation: LLMConversationAPI<Attachment, Handle>,
+    store: DocumentStore<Handle>,
     inferenceKey: InferenceKeyResult,
     userInput: LLMConversationUserInput,
-    contextExecScope: ContextExecScope,
-    onContent?: (delta: string, snapshot: string) => void,
+    onEvent?: (event: ChatTurnEvent) => void,
 ): Promise<LLMConversationTurnResult> {
-    if (conversation.docRef.isDeleted) {
-        return { tag: "Failed", error: "This LLM conversation has been deleted." };
-    }
     if (inferenceKey.tag !== "Ready") {
         return { tag: "Failed", error: "Inference is unavailable." };
     }
 
-    const inputValidation = validateUserInput(conversation.liveDoc.doc.interactions, userInput);
+    const inputValidation = validateUserInput(conversation.interactions(), userInput);
     if (inputValidation.tag === "Err") {
         return { tag: "Failed", error: inputValidation.content };
     }
 
     try {
-        const userInteraction = LLMConversation.newUserMessage(userInput.content, userInput.files);
-        conversation.liveDoc.changeDoc((doc) => {
-            LLMConversation.rejectPendingFeedbackRequests(doc);
-            LLMConversation.appendLLMInteraction(doc, userInteraction);
-        });
-
-        return generateLLMConversationResponse(
-            conversation,
-            inferenceKey,
-            contextExecScope,
-            onContent,
+        conversation.rejectPendingFeedbackRequests();
+        conversation.appendInteraction(
+            LLMConversation.newUserMessage(userInput.content, userInput.files),
         );
+        return generateLLMConversationResponse(conversation, store, inferenceKey, onEvent);
     } catch (error) {
         return { tag: "Failed", error: errorMessage(error) };
     }
 }
 
-/** Retry the latest persisted user message without adding it to the conversation again. */
-export async function retryLastLLMConversationResponse(
-    conversation: LiveLLMConversationDoc,
+/** Retry the latest persisted user message without adding it again. */
+export async function retryLastLLMConversationResponse<
+    Handle,
+    Attachment extends LLMConversationAttachment<Shape, Handle>,
+>(
+    conversation: LLMConversationAPI<Attachment, Handle>,
+    store: DocumentStore<Handle>,
     inferenceKey: InferenceKeyResult,
-    contextExecScope: ContextExecScope,
-    onContent?: (delta: string, snapshot: string) => void,
+    onEvent?: (event: ChatTurnEvent) => void,
 ): Promise<LLMConversationTurnResult> {
-    if (conversation.docRef.isDeleted) {
-        return { tag: "Failed", error: "This LLM conversation has been deleted." };
-    }
     if (inferenceKey.tag !== "Ready") {
         return { tag: "Failed", error: "Inference is unavailable." };
     }
-    const latestInteraction = conversation.liveDoc.doc.interactions.at(-1);
-    if (latestInteraction?.tag !== "user-message") {
+
+    if (conversation.interactions().at(-1)?.tag !== "user-message") {
         return { tag: "Failed", error: "The latest interaction is not a user message." };
     }
 
-    return generateLLMConversationResponse(conversation, inferenceKey, contextExecScope, onContent);
+    return generateLLMConversationResponse(conversation, store, inferenceKey, onEvent);
 }
 
-/** Generate and persist a response to the current persisted conversation. */
-async function generateLLMConversationResponse(
-    conversation: LiveLLMConversationDoc,
+async function generateLLMConversationResponse<
+    Handle,
+    Attachment extends LLMConversationAttachment<Shape, Handle>,
+>(
+    conversation: LLMConversationAPI<Attachment, Handle>,
+    store: DocumentStore<Handle>,
     inferenceKey: Extract<InferenceKeyResult, { tag: "Ready" }>,
-    contextExecScope: ContextExecScope,
-    onContent?: (delta: string, snapshot: string) => void,
+    onEvent?: (event: ChatTurnEvent) => void,
 ): Promise<LLMConversationTurnResult> {
     try {
-        const persistedConversation = conversation.liveDoc.docHandle.doc();
-        const context =
-            LLMConversationAdapter.prepareLLMConversationInference(persistedConversation);
-        const result = await runOpenAIChatTurn(
-            createInferenceClient(inferenceKey.key),
+        const executionScope = await createLLMConversationExecutionScope(conversation, store);
+        const context = LLMConversationAdapter.prepareLLMConversationInference(conversation.dump());
+        const client = createInferenceClient(inferenceKey.key);
+        const result = await runChatTurn(
+            client,
             context.transcript,
-            { ...contextExecScope, files: context.files },
-            onContent,
-            persistedConversation.llmModel,
+            { ...executionScope.bindings, files: context.files },
+            onEvent,
+            conversation.document.llmModel,
+            executionScope.systemPromptSuffix,
+            async () => {
+                const problems = await executionScope.validate();
+                if (problems.length > 0) {
+                    throw new Error(validationFeedback(problems));
+                }
+            },
         );
-        const generated = generatedOpenAIMessageDeltaToLLMInteractions(
-            result.generatedMessageDelta,
-        );
+        const problems = await executionScope.validate();
+        const generated = generatedChatMessageDeltaToLLMInteractions(result.generatedMessageDelta);
         if (generated.tag === "Err") {
-            return { tag: "Retryable", error: generated.content };
+            return { tag: "Retryable", error: generated.content, attempts: [] };
         }
-        if (generated.content.length === 0 && result.content.trim().length === 0) {
-            return { tag: "Retryable", error: "The model produced no usable output." };
+        if (problems.length > 0) {
+            return {
+                tag: "Retryable",
+                error: validationFeedback(problems),
+                attempts: generated.content,
+            };
+        }
+        if (
+            result.termination.tag === "FinalResponse" &&
+            generated.content.length === 0 &&
+            result.content.trim().length === 0
+        ) {
+            return {
+                tag: "Retryable",
+                error: "The model produced no usable output.",
+                attempts: [],
+            };
         }
 
-        conversation.liveDoc.changeDoc((doc) => {
-            for (const interaction of generated.content) {
-                LLMConversation.appendLLMInteraction(doc, interaction);
-            }
-            if (
-                !generated.content.some((interaction) => interaction.tag === "llm-message") &&
-                result.content.trim().length > 0
-            ) {
-                LLMConversation.appendLLMInteraction(
-                    doc,
-                    LLMConversation.newLLMMessage(result.content),
-                );
-            }
-        });
+        for (const interaction of generated.content) {
+            conversation.appendInteraction(interaction);
+        }
+        if (
+            !generated.content.some((interaction) => interaction.tag === "llm-message") &&
+            result.content.trim().length > 0
+        ) {
+            conversation.appendInteraction(LLMConversation.newLLMMessage(result.content));
+        }
+        executionScope.commit();
+
+        if (result.termination.tag === "ProviderRequestLimit") {
+            return {
+                tag: "Incomplete",
+                reason: "The model exhausted the provider request budget before producing a final response.",
+            };
+        }
+        if (result.termination.tag === "IncompleteResponse") {
+            return {
+                tag: "Incomplete",
+                reason: `The provider stopped before producing a complete response: ${result.termination.reason}.`,
+            };
+        }
         return { tag: "Completed", content: result.content };
     } catch (error) {
-        return { tag: "Retryable", error: errorMessage(error) };
+        return { tag: "Retryable", error: errorMessage(error), attempts: [] };
     }
 }
 
-/** Convert generated OpenAI assistant/tool messages to persisted LLM interactions. */
-function generatedOpenAIMessageDeltaToLLMInteractions(
-    messages: readonly GeneratedOpenAIMessage[],
+function validationFeedback(problems: ReadonlyArray<string>): string {
+    return `The documents have validation problems:\n${problems.map((problem) => `- ${problem}`).join("\n")}\nFix all problems before completing the turn.`;
+}
+
+/** Convert generated assistant/tool messages to persisted LLM interactions. */
+function generatedChatMessageDeltaToLLMInteractions(
+    messages: readonly GeneratedChatMessage[],
 ): JsResult<LLMInteraction[], string> {
     const interactions: LLMInteraction[] = [];
 
@@ -245,11 +230,9 @@ function generatedOpenAIMessageDeltaToLLMInteractions(
         if (toolCalls.length !== 1) {
             return { tag: "Err", content: "Expected exactly one contextExec tool call" };
         }
-        if (message.content !== null && message.content !== undefined && message.content !== "") {
-            return {
-                tag: "Err",
-                content: "Cannot store assistant content alongside a contextExec tool call",
-            };
+        if (typeof message.content === "string" && message.content.trim().length > 0) {
+            // sometimes we have narration and tools calls together, persist the text
+            interactions.push(LLMConversation.newLLMMessage(message.content));
         }
 
         const toolCall = toolCalls[0]!;

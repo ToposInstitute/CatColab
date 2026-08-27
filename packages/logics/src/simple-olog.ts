@@ -16,3 +16,8 @@ export const SimpleOlog = defineShape({
         tableObjects: [Type],
     },
 });
+
+export const simpleOlogCellTypes = {
+    olog_type: Type,
+    olog_aspect: Aspect,
+};
