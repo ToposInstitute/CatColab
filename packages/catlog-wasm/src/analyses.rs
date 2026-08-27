@@ -14,6 +14,12 @@ use super::latex::latex_names;
 use super::model::DblModel;
 use super::result::JsResult;
 
+// TODO: migration code: just take a JsValue and bump everything up to v0 if it has no version, and v1 if a v1 exists
+//       look at document_types::src::lib::migrate_document for inspiration
+//       (here you'll use your stuff from migrate.rs)
+//       ...
+//       THEN you'll put it in frontend/src/analysis/document.ts
+
 /// The result of an ODE analysis, containing the solution when successful.
 #[derive(Serialize, Deserialize, Tsify)]
 #[tsify(into_wasm_abi, from_wasm_abi)]

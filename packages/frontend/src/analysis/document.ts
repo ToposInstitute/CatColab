@@ -164,7 +164,6 @@ the set of fields changes. It allow new fields to be added. Renaming or removing
 existing fields is *not* supported.
  */
 function migrateAnalysis(liveAnalysis: LiveAnalysisDoc) {
-    // TODO: use `catlog::src::stdlib::analyses::ode::v1::migrate`
     const theory = theoryForLiveAnalysis(liveAnalysis);
 
     const getAnalysisMeta = (analysisId: string) => {
