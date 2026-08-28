@@ -1,7 +1,10 @@
-import { createForm, getValue, type SubmitHandler } from "@modular-forms/solid";
+import { createForm, getValue, reset, type SubmitHandler } from "@modular-forms/solid";
 import Send from "lucide-solid/icons/send";
+import rehypeKatex from "rehype-katex";
+import remarkGfm from "remark-gfm";
+import remarkMath from "remark-math";
 import { For, Match, Switch, Show } from "solid-js";
-import invariant from "tiny-invariant";
+import { SolidMarkdown } from "solid-markdown";
 
 import { LLMInteraction } from "catcolab-document-types";
 import { Button } from "catcolab-ui-components";
@@ -19,37 +22,36 @@ export function LLMConversationEditor(props: {
     conversation: ApiLLMConversation;
     documentStore: ApiDocumentStore;
 }) {
+    const inferenceKey = useInferenceKey();
     const controller = createLLMConversationController(
         () => props.conversation,
         () => props.documentStore,
-        useInferenceKey(),
+        inferenceKey,
     );
-
-    const conversationDoc = () => {
-        const doc = props.conversation.handle.docView;
-        invariant(doc.type === "llmconversation");
-        return doc;
-    };
 
     const [form, { Form, Field }] = createForm<LLMMessageForm>();
 
-    const formHasMessage = () => Boolean(getValue(form, "message")?.trim());
+    const canSubmit = (): boolean => {
+        const hasMessage = Boolean(getValue(form, "message")?.trim());
+        return inferenceKey()?.tag === "Ready" && !form.submitting && hasMessage;
+    };
 
     const onSubmit: SubmitHandler<LLMMessageForm> = (values) => {
+        reset(form, "message");
         return controller.runTurn({ content: values.message, files: [] });
     };
 
     return (
         <div class="llm-conversation">
             <div class="llm-transcript">
-                <For each={conversationDoc().interactions}>
+                <For each={props.conversation.interactions()}>
                     {(interaction) => <LLMInteractionView interaction={interaction} />}
                 </For>
                 <For each={controller.state.liveInteractions}>
                     {(interaction) => <LLMInteractionView interaction={interaction} />}
                 </For>
                 <Show when={controller.state.streamingContent}>
-                    {controller.state.streamingContent}
+                    <MarkdownMessage content={controller.state.streamingContent} />
                 </Show>
             </div>
             <Form onSubmit={onSubmit}>
@@ -62,11 +64,7 @@ export function LLMConversationEditor(props: {
                         />
                     )}
                 </Field>
-                <Button
-                    type="submit"
-                    variant="positive"
-                    disabled={!formHasMessage() || form.submitting}
-                >
+                <Button type="submit" variant="positive" disabled={!canSubmit()}>
                     <Send size={16} />
                     Send
                 </Button>
@@ -82,7 +80,27 @@ export const LLMInteractionView = (props: { interaction: LLMInteraction }) => (
             {(message) => <div class="user-message">{message().content}</div>}
         </Match>
         <Match when={props.interaction.tag === "llm-message" && props.interaction}>
-            {(message) => <div class="llm-message">{message().content}</div>}
+            {(message) => (
+                <div class="llm-message">
+                    <MarkdownMessage content={message().content} />
+                </div>
+            )}
         </Match>
     </Switch>
 );
+
+/** Render Markdown content, such as a message from the LLM. */
+export const MarkdownMessage = (props: { content: string }) => (
+    <SolidMarkdown
+        class="markdown-message"
+        renderingStrategy="reconcile"
+        remarkPlugins={remarkPlugins}
+        rehypePlugins={rehypePlugins}
+    >
+        {props.content}
+    </SolidMarkdown>
+);
+
+/** Support GitHub-flavored Markdown, plus math as rendered in MDX help pages. */
+const remarkPlugins = [remarkGfm, remarkMath];
+const rehypePlugins = [rehypeKatex];

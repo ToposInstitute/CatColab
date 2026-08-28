@@ -25,6 +25,15 @@ export default defineConfig({
         sourcemap: true,
         target: "es2022",
     },
+    optimizeDeps: {
+        // Fixes error in vite dev server about `debug` module, a transitive
+        // dependency of `solid-markdown`.
+        include: [
+            "solid-markdown > unified",
+            "solid-markdown > remark-parse",
+            "solid-markdown > remark-rehype",
+        ],
+    },
     // Vitest runs with node resolve conditions, which select solid-js's
     // non-reactive server build. vite-plugin-solid only fixes this when
     // vitest runs in mode "test", but our tests run in mode "development",
