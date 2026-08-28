@@ -17,9 +17,6 @@ pub use crate::stdlib::analyses::ode::mass_action::v1::{balanced::*, per_place::
 mod v0;
 mod v1;
 
-/// Latest version.
-pub static CURRENT_VERSION: &str = "1";
-
 // For backwards compatibility to when there was a *single* mass-action semantics with three
 // internal variants, we give here some wrappers that will be useful for migration.
 

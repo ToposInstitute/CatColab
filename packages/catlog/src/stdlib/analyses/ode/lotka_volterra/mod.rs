@@ -11,9 +11,6 @@ pub use crate::stdlib::analyses::ode::lotka_volterra::v1::lotka_volterra::*;
 mod v0;
 mod v1;
 
-/// Latest version.
-pub static CURRENT_VERSION: &str = "1";
-
 /// Migration for problem data for Lotka-Volterra.
 pub fn migrate_lotka_volterra_v0_to_v1(
     v0: v0::lotka_volterra::LotkaVolterraProblemData,
