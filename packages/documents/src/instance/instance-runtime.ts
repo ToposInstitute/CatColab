@@ -1,7 +1,7 @@
 import type { InstanceDocument } from "catcolab-document-methods";
 import type { DocumentStore } from "../document-store";
 import type { ModelDocument } from "../model/document";
-import type { ElaboratedModel } from "../model/elaborated-model";
+import type { ElaboratedModel, ModelValidation } from "../model/elaborated-model";
 import type { Notebook } from "../model/notebook";
 import type { Issue, Result } from "../result";
 import type { InstanceCapableShape, Shape } from "../shape";
@@ -39,12 +39,12 @@ async function withValidatedSchema<
     schema: Notebook<S, ModelDocument, Handle>,
     operation: (schemaModel: ElaboratedModel<S>) => Result<T, E>,
 ): Promise<Result<T, E>> {
-    const schemaResult = await schema.validate();
-    if (schemaResult.tag === "Err") {
-        return schemaResult as Result<T, E>;
+    const schemaValidation = await schema.validate();
+    if (schemaValidation.issues.length > 0) {
+        return { tag: "Err", content: schemaValidation.issues as E };
     }
 
-    return operation(schemaResult.content);
+    return operation(schemaValidation.model);
 }
 
 export function createTablesMethod<Handle, S extends Shape>(
@@ -184,19 +184,17 @@ export function createSchemaResultValidator<Handle, S extends Shape>(
     schema: Notebook<S, ModelDocument, Handle>,
     store: DocumentStore<Handle>,
     handle: Handle,
-): (
-    schemaResult: Result<ElaboratedModel<S>>,
-) => Result<void, ReadonlyArray<Issue | TableFieldIssue>> {
-    return (schemaResult) => {
-        if (schemaResult.tag === "Err") {
-            return schemaResult;
+): (schemaValidation: ModelValidation<S>) => Result<void, ReadonlyArray<Issue | TableFieldIssue>> {
+    return (schemaValidation) => {
+        if (schemaValidation.issues.length > 0) {
+            return { tag: "Err", content: schemaValidation.issues };
         }
 
         const tables = instanceTablesFromModel(
             instanceCapableShape(schema),
             store,
             handle,
-            schemaResult.content,
+            schemaValidation.model,
         );
         const issues: TableFieldIssue[] = validateTableFields(
             store.getDocumentView(handle) as Readonly<InstanceDocument>,

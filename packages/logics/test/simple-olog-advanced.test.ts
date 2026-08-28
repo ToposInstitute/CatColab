@@ -16,12 +16,9 @@ describe.skip("the simple-olog logic (advanced)", () => {
         notebook.add(Aspect, { label: "has", from: a, to: b });
 
         const result = await notebook.validate();
-        expect(result.tag).toBe("Ok");
-        if (result.tag !== "Ok") {
-            return;
-        }
-        expect(result.content.obGenerators().length).toBe(2);
-        expect(result.content.morGenerators().length).toBe(1);
+        expect(result.issues).toEqual([]);
+        expect(result.model.judgmentsOf(Type).length).toBe(2);
+        expect(result.model.judgmentsOf(Aspect).length).toBe(1);
     });
 
     test("the shape supports rich text and path equations", async () => {
@@ -79,6 +76,6 @@ describe.skip("the simple-olog logic (advanced)", () => {
             return;
         }
         expect(migration.content.document.theory).toBe("simple-schema");
-        expect((await migration.content.validate()).tag).toBe("Ok");
+        expect((await migration.content.validate()).issues).toEqual([]);
     });
 });

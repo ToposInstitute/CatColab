@@ -129,7 +129,7 @@ describe("editing valid models from a Next database dump", () => {
                 continue;
             }
 
-            if ((await opened.notebook.validate()).tag !== "Ok") {
+            if ((await opened.notebook.validate()).issues.length > 0) {
                 semanticallyInvalid += 1;
                 continue;
             }
@@ -174,7 +174,7 @@ async function checkFixture(
                 for (const edit of edits) {
                     applySemanticPreservingEdit(opened.notebook, edit);
                     assertNotebookStructureIsConsistent(opened.notebook);
-                    expect((await opened.notebook.validate()).tag).toBe("Ok");
+                    expect((await opened.notebook.validate()).issues).toEqual([]);
                 }
             }),
             { numRuns, seed: seedFromRef(fixture.refId) },
@@ -189,7 +189,7 @@ async function checkFixture(
 
                 const { notebook, storeHarness } = opened;
                 assertNotebookStructureIsConsistent(notebook);
-                expect((await notebook.validate()).tag).toBe("Ok");
+                expect((await notebook.validate()).issues).toEqual([]);
 
                 const baseline = structuredClone(notebook.dump());
                 const dependencies = storeHarness.snapshotLoadedExcept(fixture.refId);
@@ -202,12 +202,12 @@ async function checkFixture(
 
                 const commit = transaction.commit();
                 assertNotebookStructureIsConsistent(notebook);
-                expect(["Err", "Ok"]).toContain((await notebook.validate()).tag);
+                expect((await notebook.validate()).model).toBeDefined();
 
                 notebook.revertCommit(commit);
                 assertNotebookStructureIsConsistent(notebook);
                 expect(notebook.dump()).toEqual(baseline);
-                expect((await notebook.validate()).tag).toBe("Ok");
+                expect((await notebook.validate()).issues).toEqual([]);
                 expect(storeHarness.snapshotLoadedExcept(fixture.refId)).toEqual(dependencies);
             }),
             { numRuns, seed: seedFromRef(fixture.refId) },

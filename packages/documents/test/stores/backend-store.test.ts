@@ -106,6 +106,6 @@ describe.skip("backend binder", () => {
         notebook.add(Instantiation, { label: "ImportedOlog", model: imported });
 
         const result = await notebook.validate();
-        expect(result.tag).toBe("Ok");
+        expect(result.issues).toEqual([]);
     });
 });

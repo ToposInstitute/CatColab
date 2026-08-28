@@ -32,6 +32,6 @@ describe.skip("path equations", () => {
         expect(notebook.cellsOf(PathEquation).length).toBe(1);
 
         const result = await notebook.validate();
-        expect(result.tag).toBe("Ok");
+        expect(result.issues).toEqual([]);
     });
 });

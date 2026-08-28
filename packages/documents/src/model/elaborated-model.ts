@@ -49,22 +49,27 @@ export interface ElaboratedModel<out S extends Shape> {
     judgmentsOf(typeOrShape: AnyCellType | Shape): ReadonlyArray<JudgmentOf<S>>;
 }
 
-/** A live view of a notebook's validation state.
-
-While the view is active, the notebook revalidates whenever its document
-changes; `model` and `issues` reflect the latest outcome. The caller must
-dispose the view when it is no longer needed.
+/** The result of elaborating and validating a notebook.
 
 Elaboration and validation are separate steps, so `model` is always available:
-it reflects the latest elaboration even when validation fails. It is empty
-only before the first elaboration completes or when elaboration itself fails. 
-
-In the case of an empty model the `model.judgments` and `model.judgementsOf` methods 
-return empty arrays. */
-export interface ValidationView<out S extends Shape> {
+it contains the elaborated judgments even when validation fails. The model is
+empty only when elaboration itself fails. */
+export interface ModelValidation<out S extends Shape> {
     readonly model: ElaboratedModel<S>;
     /** Validation issues; empty when the notebook is valid. */
     readonly issues: ReadonlyArray<Issue>;
+}
+
+/** A live view of a notebook's validation state.
+
+While the view is active, the notebook revalidates whenever its document
+changes; `model` and `issues` reflect the latest outcome. Before the first
+elaboration completes, `model` is empty and `issues` reports that validation is
+pending. The caller must dispose the view when it is no longer needed.
+
+In the case of an empty model the `model.judgments` and `model.judgmentsOf`
+methods return empty arrays. */
+export interface ModelValidationView<out S extends Shape> extends ModelValidation<S> {
     dispose(): void;
 }
 

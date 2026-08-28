@@ -24,11 +24,10 @@ import {
     defineObject,
     defineShape,
     type DocumentStore,
-    type ModelValidationResult,
+    type ModelValidation,
     type Notebook,
     type NotebookCell,
     RichText,
-    type ValidatableNotebook,
 } from "catcolab-documents";
 import type { DblModel, ObType, QualifiedName } from "catlog-wasm";
 import { selfResolving } from "./helpers/self_resolving";
@@ -186,20 +185,16 @@ function MyCellEditor(props: { cell: NotebookCell<typeof MyShape>; text: Accesso
 // Globals for testing
 let testCurrentModel!: () => DblModel | undefined;
 
-function MyNotebookEditor(props: {
-    notebook: MyNotebook & ValidatableNotebook;
-    text: Accessor<string>;
-}) {
+function MyNotebookEditor(props: { notebook: MyNotebook; text: Accessor<string> }) {
     // `onValidate` delivers an initial result and then re-validates whenever
     // anything the validation depends on changes, notifying only when the
     // result actually changed.
-    const [validation, setValidation] = createSignal<ModelValidationResult>();
+    const [validation, setValidation] = createSignal<ModelValidation<typeof MyShape>>();
     const unsubscribe = props.notebook.onValidate(setValidation);
     onCleanup(unsubscribe);
 
     const model = () => {
-        const result = validation();
-        return result?.tag === "Ok" ? result.content : undefined;
+        return validation()?.model;
     };
 
     testCurrentModel = model;
