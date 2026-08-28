@@ -1,30 +1,35 @@
 import type { FieldPath } from "./errors";
 
 /** Path relative to the document's `tables` map. */
-export type InstancePath = [string, ...string[]];
+export type InstancePath = [string] | [string, "rows", string] | FieldPath;
 
 export type LiteralValue = boolean | number | string | null;
 export type LiteralType = "Bool" | "Int" | "Float" | "String";
 
 export interface InstanceTable {
-    /** The table's id: the same as the schema entity's id. */
+    /** The stored table id; when the schema entity exists (non-orphaned) then
+     * this is that entity's id. */
     readonly id: string;
-    /** The schema entity's display label; `""` when unlabeled. */
-    readonly label: string;
+    /** The schema entity's display label; `""` when unlabeled, `null` when the
+    table has no entity in the schema. */
+    readonly label: string | null;
     /** The table's rows, in stored order. */
     readonly rows: ReadonlyArray<TableRow>;
-    /** The table's headers: the schema morphisms out of its entity. */
+    /** The table's headers: the schema morphisms out of its entity, followed
+    by `Unknown`-typed headers for any orphaned stored fields. */
     readonly headers: ReadonlyArray<TableHeader>;
 }
 
 export interface TableHeader {
-    /** The schema morphism's id. */
+    /** The schema morphism id, or the stored field id when the header is unknown. */
     readonly id: string;
-    /** Dot-joined qualified label; empty when unlabeled. */
-    readonly label: string;
+    /** Dot-joined qualified label; `""` when unlabeled, `null` when the header
+    has no morphism in the schema. */
+    readonly label: string | null;
     readonly type:
         | { readonly tag: LiteralType }
-        | { readonly tag: "RowRef"; readonly content: { readonly id: string } };
+        | { readonly tag: "RowRef"; readonly content: { readonly id: string } }
+        | { readonly tag: "Unknown" };
 }
 
 export interface TableRow {
@@ -32,7 +37,7 @@ export interface TableRow {
     readonly id: string;
     /** The row's zero-based position in the table. */
     readonly index: number;
-    /** The row's schema-interpreted fields. */
+    /** The row's decoded fields, in header order. */
     readonly fields: ReadonlyArray<FieldValue>;
 }
 

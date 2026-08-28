@@ -3,18 +3,19 @@ import type { DocumentStore } from "../document-store";
 import type { ModelDocument } from "../model/document";
 import type { ElaboratedModel, ModelValidation } from "../model/elaborated-model";
 import type { Notebook } from "../model/notebook";
-import type { Issue, Result } from "../result";
+import type { Result } from "../result";
 import type { InstanceCapableShape, Shape } from "../shape";
-import type { TableFieldIssue } from "./errors";
+import type { InstanceValidation } from "./instance";
 import {
     addInstanceRowsToStore,
     instanceTablesFromModel,
-    readInstancePathFromStore,
+    readInstancePath,
+    tablesWithOrphanedData,
     updateInstanceFieldByIdInStore,
     updateInstanceFieldsByLabelInStore,
 } from "./table-methods";
-import type { FieldValue, InstancePath, InstanceTable, LiteralValue, TableRow } from "./tables";
-import { validateTableFields } from "./validation";
+import type { InstanceTable, LiteralValue, TableRow } from "./tables";
+import { validateInstanceTables } from "./validation";
 
 function instanceCapableShape<Handle, S extends Shape>(
     schema: Notebook<S, ModelDocument, Handle>,
@@ -30,58 +31,16 @@ function instanceCapableShape<Handle, S extends Shape>(
 
 `operation` is expected to report its own failures as a `Result`; this does not
 catch exceptions, so an operation that throws lets that exception propagate. */
-async function withValidatedSchema<
-    Handle,
-    S extends Shape,
-    T,
-    E extends ReadonlyArray<Issue> = ReadonlyArray<Issue>,
->(
+async function withValidatedSchema<Handle, S extends Shape, T>(
     schema: Notebook<S, ModelDocument, Handle>,
-    operation: (schemaModel: ElaboratedModel<S>) => Result<T, E>,
-): Promise<Result<T, E>> {
+    operation: (schemaModel: ElaboratedModel<S>) => Result<T>,
+): Promise<Result<T>> {
     const schemaValidation = await schema.validate();
     if (schemaValidation.issues.length > 0) {
-        return { tag: "Err", content: schemaValidation.issues as E };
+        return { tag: "Err", content: schemaValidation.issues };
     }
 
     return operation(schemaValidation.model);
-}
-
-export function createTablesMethod<Handle, S extends Shape>(
-    schema: Notebook<S, ModelDocument, Handle>,
-    store: DocumentStore<Handle>,
-    handle: Handle,
-): () => Promise<Result<ReadonlyArray<InstanceTable>>> {
-    return () =>
-        withValidatedSchema(
-            schema,
-            (schemaModel): Result<ReadonlyArray<InstanceTable>> => ({
-                tag: "Ok",
-                content: instanceTablesFromModel(
-                    instanceCapableShape(schema),
-                    store,
-                    handle,
-                    schemaModel,
-                ),
-            }),
-        );
-}
-
-export function createGetMethod<Handle, S extends Shape>(
-    schema: Notebook<S, ModelDocument, Handle>,
-    store: DocumentStore<Handle>,
-    handle: Handle,
-): (path: InstancePath) => Promise<Result<InstanceTable | TableRow | FieldValue>> {
-    return (path) =>
-        withValidatedSchema(schema, (schemaModel) =>
-            readInstancePathFromStore(
-                instanceCapableShape(schema),
-                store,
-                handle,
-                schemaModel,
-                path,
-            ),
-        );
 }
 
 export function createAddRowsMethod<Handle, S extends Shape>(
@@ -133,7 +92,7 @@ export function createUpdateRowsMethod<Handle, S extends Shape>(
         row: TableRow;
         values: ReadonlyArray<Record<string, LiteralValue | TableRow>>;
     }>,
-) => Promise<Result<undefined, ReadonlyArray<Issue | TableFieldIssue>>> {
+) => Promise<Result<void>> {
     return (updates) =>
         withValidatedSchema(schema, (schemaModel) =>
             updateInstanceFieldsByLabelInStore(
@@ -148,10 +107,7 @@ export function createUpdateRowsMethod<Handle, S extends Shape>(
 
 export function createUpdateRowMethod(
     updateRows: ReturnType<typeof createUpdateRowsMethod>,
-): (
-    row: TableRow,
-    values: Record<string, LiteralValue | TableRow>,
-) => Promise<Result<undefined, ReadonlyArray<Issue | TableFieldIssue>>> {
+): (row: TableRow, values: Record<string, LiteralValue | TableRow>) => Promise<Result<void>> {
     return (row, values) => updateRows([{ row, values: [values] }]);
 }
 
@@ -163,7 +119,7 @@ export function createSetMethod<Handle, S extends Shape>(
     row: TableRow,
     morphism: { id: string },
     value: LiteralValue | TableRow,
-) => Promise<Result<undefined, ReadonlyArray<Issue | TableFieldIssue>>> {
+) => Promise<Result<void>> {
     return (row, morphism, value) =>
         withValidatedSchema(schema, (schemaModel) =>
             updateInstanceFieldByIdInStore(
@@ -178,30 +134,29 @@ export function createSetMethod<Handle, S extends Shape>(
         );
 }
 
-/** Build a validator that combines schema validation with instance-content
-validation. */
-export function createSchemaResultValidator<Handle, S extends Shape>(
+/** Build a validator that combines schema and instance validation. */
+export function createInstanceValidator<Handle, S extends Shape>(
     schema: Notebook<S, ModelDocument, Handle>,
     store: DocumentStore<Handle>,
     handle: Handle,
-): (schemaValidation: ModelValidation<S>) => Result<void, ReadonlyArray<Issue | TableFieldIssue>> {
+): (schemaValidation: ModelValidation<S>) => InstanceValidation<S> {
     return (schemaValidation) => {
-        if (schemaValidation.issues.length > 0) {
-            return { tag: "Err", content: schemaValidation.issues };
-        }
-
-        const tables = instanceTablesFromModel(
+        const schemaTables = instanceTablesFromModel(
             instanceCapableShape(schema),
             store,
             handle,
             schemaValidation.model,
         );
-        const issues: TableFieldIssue[] = validateTableFields(
+        const issues = validateInstanceTables(
             store.getDocumentView(handle) as Readonly<InstanceDocument>,
-            tables,
+            schemaTables,
         );
-        return issues.length === 0
-            ? { tag: "Ok", content: undefined }
-            : { tag: "Err", content: issues };
+        const tables = tablesWithOrphanedData(store, handle, schemaTables);
+        return {
+            modelValidation: schemaValidation,
+            tables,
+            issues,
+            get: (path) => readInstancePath(store, handle, tables, path),
+        };
     };
 }

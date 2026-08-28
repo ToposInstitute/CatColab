@@ -8,9 +8,7 @@ import {
     defineShape,
     type DocumentRef,
     type DocumentStore,
-    type Issue,
     type Result,
-    type TableFieldIssue,
 } from "catcolab-documents";
 
 function refOf<Handle>(store: DocumentStore<Handle>, handle: Handle): DocumentRef {
@@ -166,9 +164,11 @@ describe("instance schema validation", () => {
                 await binder.createInstance(schema, { title: "Company instance" }),
             );
 
-            const tables = expectOk(await instance.tables());
-            expect(tables.map((table) => table.label)).toEqual(["Person", "Company"]);
-            expect(await instance.validate()).toEqual({ tag: "Ok", content: undefined });
+            const validation = await instance.validate();
+            expect(validation.tables.map((table) => table.label)).toEqual(["Person", "Company"]);
+            expect(validation.issues).toEqual([]);
+            expect(validation.modelValidation.issues).toEqual([]);
+            expect(validation.modelValidation.model.judgmentsOf(Entity)).toHaveLength(2);
         },
     );
 
@@ -195,23 +195,28 @@ describe("instance schema validation", () => {
         const unsubscribeChanges = instance.onChange(() => {
             changes += 1;
         });
-        const validations: Result<void, ReadonlyArray<Issue | TableFieldIssue>>[] = [];
-        const unsubscribeValidation = instance.onValidate((result) => {
-            validations.push(result);
+        const validations: Awaited<ReturnType<typeof instance.validate>>[] = [];
+        const unsubscribeValidation = instance.onValidate((validation) => {
+            validations.push(validation);
         });
 
         await expect.poll(() => validations.length).toBe(1);
-        expectOk(validations[0]!);
-        expect(expectOk(await instance.tables()).map((table) => table.label)).toEqual(["Person"]);
+        const validation = validations[0]!;
+        expect(validation.tables.map((table) => table.label)).toEqual(["Person"]);
 
         schema.add(Mapping, { label: "invalid", from: null, to: null });
         await expect.poll(() => changes).toBe(1);
-        await expect.poll(() => validations.at(-1)?.tag).toBe("Err");
+        await expect.poll(() => validations.length).toBe(2);
+        await expect
+            .poll(() => validations.at(-1)?.modelValidation.issues.length)
+            .toBeGreaterThan(0);
+        expect(validations.at(-1)?.issues).toEqual([]);
+        expect(validations.at(-1)?.tables.map((table) => table.label)).toEqual(["Person"]);
 
         instance.update({ title: "Renamed instance" });
         await expect.poll(() => changes).toBe(2);
-        await expect.poll(() => validations.length).toBeGreaterThanOrEqual(3);
-        expect(validations.at(-1)?.tag).toBe("Err");
+        await expect.poll(() => validations.length).toBe(3);
+        expect(validations.at(-1)?.modelValidation.issues.length).toBeGreaterThan(0);
 
         unsubscribeChanges();
         unsubscribeValidation();
@@ -238,8 +243,9 @@ describe("tabular instances", () => {
             await binder.createInstance(schema, { title: "Company instance" }),
         );
 
-        expect((await instance.validate()).tag).toBe("Ok");
-        const tables = expectOk(await instance.tables());
+        const validation = await instance.validate();
+        expect(validation.issues).toEqual([]);
+        const tables = validation.tables;
         const personTable = tables.find((table) => table.label === "Person");
         const companyTable = tables.find((table) => table.label === "Company");
         expect(personTable).toBeDefined();
@@ -270,11 +276,11 @@ describe("tabular instances", () => {
         });
         expect(nameHeader.type).toEqual({ tag: "String" });
 
-        expect(await instance.get([personTable.id])).toMatchObject({
+        expect(validation.get([personTable.id])).toMatchObject({
             tag: "Ok",
             content: { id: personTable.id },
         });
-        const missingIssues = expectErr(await instance.get(["missing-table"]));
+        const missingIssues = expectErr(validation.get(["missing-table"]));
         expect(missingIssues[0]?.message).toMatch(/does not exist/);
 
         const acme = expectOk(await instance.addRow(companyTable, { companyName: "Acme" }));
@@ -287,7 +293,7 @@ describe("tabular instances", () => {
         expect(alice.index).toBe(0);
         expect(alice.fields.map((field) => field.tag)).toEqual(["RowRef", "String"]);
 
-        const nameResult = await instance.get([
+        const nameResult = validation.get([
             personTable.id,
             "rows",
             alice.id,
@@ -368,10 +374,10 @@ describe("tabular instances", () => {
             const instance = expectOk(
                 await binder.createInstance(schema, { title: "Company instance" }),
             );
-            expect((await instance.validate()).tag).toBe("Ok");
-            const tables = expectOk(await instance.tables());
-            const personTable = tables.find((table) => table.label === "Person");
-            const companyTable = tables.find((table) => table.label === "Company");
+            const validation = await instance.validate();
+            expect(validation.issues).toEqual([]);
+            const personTable = validation.tables.find((table) => table.label === "Person");
+            const companyTable = validation.tables.find((table) => table.label === "Company");
             if (personTable === undefined || companyTable === undefined) {
                 return;
             }
@@ -403,12 +409,8 @@ describe("tabular instances", () => {
                 row.fields[nameHeader.id] = { Int: 42 };
             });
 
-            const result = await instance.validate();
-            expect(result.tag).toBe("Err");
-            if (result.tag !== "Err") {
-                return;
-            }
-            expect(result.content).toEqual(
+            const revalidation = await instance.validate();
+            expect(revalidation.issues).toEqual(
                 expect.arrayContaining([
                     expect.objectContaining({
                         path: [personTable.id, "rows", alice.id, "fields", employerHeader.id],
@@ -430,7 +432,7 @@ describe("tabular instances", () => {
         const instance = expectOk(
             await binder.createInstance(schema, { title: "Company instance" }),
         );
-        const personTable = expectOk(await instance.tables()).find(
+        const personTable = (await instance.validate()).tables.find(
             (table) => table.label === "Person",
         );
         if (personTable === undefined) {
@@ -439,7 +441,10 @@ describe("tabular instances", () => {
         const row = expectOk(await instance.addRow(personTable));
 
         schema.add(Mapping, { label: "invalid", from: null, to: null });
-        expect((await instance.validate()).tag).toBe("Err");
+        const validation = await instance.validate();
+        expect(validation.modelValidation.issues.length).toBeGreaterThan(0);
+        expect(validation.issues).toEqual([]);
+        expect(validation.tables.map((table) => table.label)).toEqual(["Person"]);
 
         instance.deleteRow(personTable.id, row.id);
         expect(instance.document.tables[personTable.id]?.rows[row.id]).toBeUndefined();
@@ -463,10 +468,10 @@ describe("tabular instances", () => {
             const instance = expectOk(
                 await binder.createInstance(schema, { title: "Company instance" }),
             );
-            expect((await instance.validate()).tag).toBe("Ok");
-            const tables = expectOk(await instance.tables());
-            const personTable = tables.find((table) => table.label === "Person");
-            const companyTable = tables.find((table) => table.label === "Company");
+            const validation = await instance.validate();
+            expect(validation.issues).toEqual([]);
+            const personTable = validation.tables.find((table) => table.label === "Person");
+            const companyTable = validation.tables.find((table) => table.label === "Company");
             if (personTable === undefined || companyTable === undefined) {
                 return;
             }
@@ -481,15 +486,125 @@ describe("tabular instances", () => {
             const alice = expectOk(await instance.addRow(personTable, { employer: acme }));
             instance.deleteRow(companyTable.id, acme.id);
 
-            const result = await instance.validate();
-            expect(result.tag).toBe("Err");
-            if (result.tag !== "Err") {
-                return;
-            }
-            expect(result.content).toContainEqual({
+            const revalidation = await instance.validate();
+            expect(revalidation.issues).toContainEqual({
                 message: "`employer` refers to a row that no longer exists",
                 path: [personTable.id, "rows", alice.id, "fields", employerHeader.id],
                 issueType: "DanglingRowRef",
+            });
+        },
+    );
+
+    test(
+        "schema and instance issues are reported with usable partial tables",
+        { timeout: 20_000 },
+        async () => {
+            const binder = createBinder();
+            const schema = await binder.createNotebook(SimpleSchema, {
+                title: "Company schema",
+            });
+            const person = schema.add(Entity, { label: "Person" });
+            const string = schema.add(AttrType, { label: "String" });
+            schema.add(Attr, { label: "name", from: person, to: string });
+            const instance = expectOk(
+                await binder.createInstance(schema, { title: "Company instance" }),
+            );
+            const validation = await instance.validate();
+            const personTable = validation.tables.find((table) => table.label === "Person");
+            if (personTable === undefined) {
+                throw new Error("Person table was not derived");
+            }
+            const alice = expectOk(await instance.addRow(personTable, { name: "Alice" }));
+
+            binder.store.changeDocument(instance.document as Document, (document) => {
+                const stored = document as unknown as StoredInstanceForTest;
+                const row = stored.tables[personTable.id]?.rows[alice.id];
+                if (row === undefined) {
+                    throw new Error("Alice row is missing from the stored instance");
+                }
+                row.fields["unexpected"] = { String: "stray" };
+            });
+            schema.add(Mapping, { label: "invalid", from: null, to: null });
+
+            const revalidation = await instance.validate();
+            expect(revalidation.modelValidation.issues.length).toBeGreaterThan(0);
+            expect(revalidation.modelValidation.model.judgmentsOf(Entity)).toHaveLength(1);
+            expect(revalidation.issues).toEqual([
+                {
+                    message: "Field `unexpected` in table `Person` does not exist in the schema",
+                    path: [personTable.id, "rows", alice.id, "fields", "unexpected"],
+                    issueType: "OrphanedField",
+                },
+            ]);
+
+            const augmentedTable = revalidation.tables.find((table) => table.id === personTable.id);
+            expect(augmentedTable?.headers.at(-1)).toEqual({
+                id: "unexpected",
+                label: null,
+                type: { tag: "Unknown" },
+            });
+            expect(
+                revalidation.get([personTable.id, "rows", alice.id, "fields", "unexpected"]),
+            ).toEqual({
+                tag: "Ok",
+                content: {
+                    tag: "String",
+                    content: {
+                        path: [personTable.id, "rows", alice.id, "fields", "unexpected"],
+                        value: "stray",
+                    },
+                },
+            });
+        },
+    );
+
+    test(
+        "an orphaned stored table is reported and derived from its stored fields",
+        { timeout: 20_000 },
+        async () => {
+            const binder = createBinder();
+            const schema = await binder.createNotebook(SimpleSchema, {
+                title: "Company schema",
+            });
+            schema.add(Entity, { label: "Person" });
+            const instance = expectOk(
+                await binder.createInstance(schema, { title: "Company instance" }),
+            );
+
+            binder.store.changeDocument(instance.document as Document, (document) => {
+                const stored = document as unknown as StoredInstanceForTest;
+                stored.tables["ghost-table"] = {
+                    rows: { "ghost-row": { fields: { mystery: { Int: 3 } } } },
+                    rowOrder: ["ghost-row"],
+                };
+            });
+
+            const validation = await instance.validate();
+            expect(validation.issues).toEqual([
+                {
+                    message: "Table `ghost-table` does not exist in the schema",
+                    path: ["ghost-table"],
+                    issueType: "OrphanedTable",
+                },
+            ]);
+
+            const ghostTable = validation.tables.find((table) => table.id === "ghost-table");
+            expect(ghostTable).toMatchObject({
+                label: null,
+                headers: [{ id: "mystery", label: null, type: { tag: "Unknown" } }],
+            });
+            expect(ghostTable?.rows.map((row) => row.id)).toEqual(["ghost-row"]);
+            expect(
+                validation.get(["ghost-table", "rows", "ghost-row", "fields", "mystery"]),
+            ).toEqual({
+                tag: "Ok",
+                content: {
+                    tag: "Int",
+                    content: {
+                        path: ["ghost-table", "rows", "ghost-row", "fields", "mystery"],
+                        value: 3,
+                    },
+                },
             });
         },
     );

@@ -2,8 +2,8 @@ import { Aspect, SimpleOlog, Type } from "catcolab-logics/simple-olog";
 import { describe, expect, test } from "vitest";
 
 // RFC-0006 "Model validation": the asynchronous `validate` method, subscribing
-// to validation changes with `onValidate`, and validation failures.
-import { createBinder, Instantiation, type ModelValidation } from "catcolab-documents";
+// to validation changes with `onValidate`, and validation issues.
+import { createBinder, defineShape, Instantiation, type ModelValidation } from "catcolab-documents";
 
 async function wellFormedOlog() {
     const binder = createBinder();
@@ -45,6 +45,18 @@ describe("validate", { timeout: 10000 }, () => {
         expect(result.model.judgmentsOf(Aspect).map((judgment) => judgment.label)).toEqual([
             ["has"],
         ]);
+    });
+
+    test("a missing core theory reports issues with an empty model", async () => {
+        const binder = createBinder();
+        const notebook = await binder.createNotebook(defineShape({ theory: "bare" }), {
+            title: "Bare notebook",
+        });
+
+        const result = await notebook.validate();
+
+        expect(result.issues).toEqual([{ message: "Shape `bare` has no core theory" }]);
+        expect(result.model.judgments()).toEqual([]);
     });
 });
 
@@ -93,8 +105,8 @@ describe("onValidate", { timeout: 10000 }, () => {
     });
 });
 
-describe.skip("validation result", () => {
-    test("an ill-formed notebook results in an Err carrying issues", async () => {
+describe.skip("validation issues", () => {
+    test("an ill-formed notebook reports issues", async () => {
         const binder = createBinder();
 
         const first = await binder.createNotebook(SimpleOlog, { title: "First" });

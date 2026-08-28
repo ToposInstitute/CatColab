@@ -1,12 +1,20 @@
 import type { Document } from "catcolab-document-types";
-import { type DocumentStore, type Issue, type Result } from "catcolab-documents";
+import type {
+    DocumentStore,
+    InstanceValidation,
+    Issue,
+    ModelValidation,
+    Shape,
+} from "catcolab-documents";
 import { createDocumentTransaction } from "./document_transaction";
 
-export type DocumentBinding<Handle = unknown, E extends Issue = Issue> = {
+type DocumentValidation = ModelValidation<Shape> | InstanceValidation<Shape>;
+
+type DocumentBinding<Handle = unknown> = {
     readonly document: Readonly<Document>;
     readonly handle: Handle;
     readonly title: string;
-    validate(): Promise<Result<unknown, ReadonlyArray<E>> | { issues: ReadonlyArray<E> }>;
+    validate(): Promise<DocumentValidation>;
 };
 
 export type ScopedDocumentLink = {
@@ -32,8 +40,8 @@ export type ScopedDocument = {
 };
 
 /** Create and stage the execution-scope representation of one document. */
-export function createScopedDocument<Handle, E extends Issue>(options: {
-    binding: DocumentBinding<Document, E>;
+export function createScopedDocument<Handle>(options: {
+    binding: DocumentBinding<Document>;
     bindingStore: DocumentStore<Document>;
     sourceHandle: Handle;
     sourceStore: DocumentStore<Handle>;
@@ -66,16 +74,23 @@ export function createScopedDocument<Handle, E extends Issue>(options: {
     };
 }
 
-async function validateScopedDocument<E extends Issue>(
-    document: DocumentBinding<Document, E>,
+async function validateScopedDocument(
+    document: DocumentBinding<Document>,
     binding: string,
 ): Promise<ReadonlyArray<string>> {
-    const result = await document.validate();
-    const issues = "issues" in result ? result.issues : result.tag === "Err" ? result.content : [];
+    const validation = await document.validate();
+    const issues = validationIssues(validation);
     if (issues.length > 0) {
         return [`${binding}: ${JSON.stringify(issues)}`];
     }
     return [];
+}
+
+function validationIssues(validation: DocumentValidation): ReadonlyArray<Issue> {
+    if ("modelValidation" in validation) {
+        return [...validation.modelValidation.issues, ...validation.issues];
+    }
+    return validation.issues;
 }
 
 function describeScopedDocument(description: ScopedDocumentDescription): string {

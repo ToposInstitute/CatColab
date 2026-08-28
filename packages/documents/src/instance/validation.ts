@@ -3,7 +3,7 @@
 import type { InstanceDocument } from "catcolab-document-methods";
 import type * as DocumentTypes from "catcolab-document-types";
 import type { QualifiedLabel } from "catlog-wasm";
-import type { FieldPath, TableFieldIssue } from "./errors";
+import type { FieldPath, TableFieldIssue, TableIssue } from "./errors";
 import type { InstanceTable, LiteralType, TableHeader } from "./tables";
 
 /** Decide which concrete atomic type an attribute type's qualified label
@@ -23,11 +23,14 @@ export function atomicTypeOfAttributeType(label: QualifiedLabel): LiteralType {
     }
 }
 
-/** Compare stored fields with tables derived from a validated schema model. */
-export function validateTableFields(
+/** Compare stored data with tables derived from an elaborated schema model.
+
+Stored tables without a schema entity report a single `OrphanedTable` issue;
+their rows are not validated further. */
+export function validateInstanceTables(
     document: Readonly<InstanceDocument>,
     tables: ReadonlyArray<InstanceTable>,
-): TableFieldIssue[] {
+): TableIssue[] {
     const tableById = new Map(tables.map((table) => [table.id, table]));
     const rowTables = new Map<string, Set<string>>();
 
@@ -39,15 +42,23 @@ export function validateTableFields(
         }
     }
 
-    const issues: TableFieldIssue[] = [];
+    const issues: TableIssue[] = [];
     for (const [tableId, storedTable] of Object.entries(document.tables)) {
         const table = tableById.get(tableId);
         if (table === undefined) {
+            issues.push({
+                message: `Table \`${tableId}\` does not exist in the schema`,
+                path: [tableId],
+                issueType: "OrphanedTable",
+            });
             continue;
         }
         const headerById = new Map(table.headers.map((header) => [header.id, header]));
         for (const [rowId, row] of Object.entries(storedTable.rows)) {
             for (const header of table.headers) {
+                if (header.type.tag === "Unknown") {
+                    continue;
+                }
                 const fieldId = header.id;
                 const path = fieldPath(tableId, rowId, fieldId);
                 const value = row.fields[fieldId] ?? "Null";
@@ -92,13 +103,14 @@ export function validateTableFields(
                 }
             }
             for (const fieldId of Object.keys(row.fields)) {
-                if (headerById.has(fieldId)) {
+                const header = headerById.get(fieldId);
+                if (header !== undefined && header.type.tag !== "Unknown") {
                     continue;
                 }
                 issues.push({
-                    message: `Field \`${fieldId}\` is not a typed column of table \`${table.label}\``,
+                    message: `Field \`${fieldId}\` in table \`${table.label}\` does not exist in the schema`,
                     path: fieldPath(tableId, rowId, fieldId),
-                    issueType: "MistypedLiteral",
+                    issueType: "OrphanedField",
                 });
             }
         }

@@ -147,9 +147,6 @@ export interface NotebookValidator<S extends Shape> {
     createValidationView(): ModelValidationView<S>;
 }
 
-/** The state shared by all validation consumers of a notebook. */
-type ValidationState = ModelValidationState;
-
 /** Create the validation machinery for a notebook over a document store.
 
 All consumers share one code path and one source of truth: the document is
@@ -201,14 +198,14 @@ export function createNotebookValidator<Handle, S extends Shape>(
         };
     }
 
-    let latestValidationState: ValidationState = {
+    let latestValidationState: ModelValidationState = {
         issues: [{ message: "The notebook has not been validated yet." }],
     };
-    const validationStateListeners = new Set<(state: ValidationState) => void>();
+    const validationStateListeners = new Set<(state: ModelValidationState) => void>();
     let unsubscribeValidationSource: (() => void) | undefined;
     let revalidationCounter = 0;
 
-    function publishValidationState(state: ValidationState): void {
+    function publishValidationState(state: ModelValidationState): void {
         latestValidationState = state;
         for (const listener of validationStateListeners) {
             listener(state);
@@ -229,7 +226,9 @@ export function createNotebookValidator<Handle, S extends Shape>(
 
     /** Subscribe to validation state, revalidating on every document change.
     The listener receives an initial publish once revalidation completes. */
-    function subscribeToValidationState(listener: (state: ValidationState) => void): () => void {
+    function subscribeToValidationState(
+        listener: (state: ModelValidationState) => void,
+    ): () => void {
         validationStateListeners.add(listener);
         if (unsubscribeValidationSource === undefined) {
             unsubscribeValidationSource = store.subscribe(handle, () => {

@@ -1,4 +1,4 @@
-import { Entity, SimpleSchema } from "catcolab-logics/simple-schema";
+import { Entity, Mapping, SimpleSchema } from "catcolab-logics/simple-schema";
 import { assert, beforeEach, describe, test, vi } from "vitest";
 
 import type { Document } from "catcolab-document-types";
@@ -42,7 +42,7 @@ async function makeInvalidInstance(fixture: Fixture) {
     const instance = fixture.instance;
     assert(instance);
     fixture.schema.add(Entity, { label: "Person" });
-    const table = expectOk(await instance.tables())[0];
+    const table = (await instance.validate()).tables[0];
     assert(table);
     const row = expectOk(await instance.addRow(table));
     fixture.binder.store.changeDocument(instance.handle, (document) => {
@@ -114,6 +114,47 @@ describe("LLM conversation turns", { timeout: 30_000 }, () => {
         );
     });
 
+    test("blocks notebook commits until schema issues are repaired", async () => {
+        const fixture = await makeFixture();
+        inference.runChatTurn.mockImplementation(
+            async (
+                _client,
+                _transcript,
+                scope,
+                _onContent,
+                _model,
+                _systemPromptSuffix,
+                onSuccessHook,
+            ) => {
+                const schema = schemaBinding(scope);
+                const invalid = schema.add(Mapping, {
+                    label: "invalid",
+                    from: null,
+                    to: null,
+                });
+                assert(onSuccessHook);
+
+                let validationError: unknown;
+                try {
+                    await onSuccessHook();
+                } catch (error) {
+                    validationError = error;
+                }
+                assert(validationError instanceof Error);
+                assert.match(validationError.message, /document_Company_schema: .*"message"/s);
+
+                invalid.delete();
+                await onSuccessHook();
+                return response("Repaired.");
+            },
+        );
+
+        assert.deepStrictEqual(await runTurn(fixture), {
+            tag: "Completed",
+            content: "Repaired.",
+        });
+    });
+
     test("persists complete validation feedback from linked document tools", async () => {
         const fixture = await makeFixture(true);
         const { table, row } = await makeInvalidInstance(fixture);
@@ -143,7 +184,7 @@ describe("LLM conversation turns", { timeout: 30_000 }, () => {
                 }
                 assert(validationError instanceof Error);
                 const feedback = validationError.message;
-                assert.match(feedback, /"issueType":"MistypedLiteral"/);
+                assert.match(feedback, /"issueType":"OrphanedField"/);
                 assert.ok(
                     feedback.includes(
                         JSON.stringify([table.id, "rows", row.id, "fields", "unexpected"]),
@@ -195,7 +236,7 @@ describe("LLM conversation turns", { timeout: 30_000 }, () => {
         assert(execution?.tag === "llm-code-execution");
         assert.strictEqual(execution.result.tag, "Err");
         if (execution.result.tag === "Err") {
-            assert.match(execution.result.error, /"issueType":"MistypedLiteral"/);
+            assert.match(execution.result.error, /"issueType":"OrphanedField"/);
         }
     });
 

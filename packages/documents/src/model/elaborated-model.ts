@@ -53,7 +53,7 @@ export interface ElaboratedModel<out S extends Shape> {
 
 Elaboration and validation are separate steps, so `model` is always available:
 it contains the elaborated judgments even when validation fails. The model is
-empty only when elaboration itself fails. */
+empty when elaboration fails or the core theory cannot be loaded. */
 export interface ModelValidation<out S extends Shape> {
     readonly model: ElaboratedModel<S>;
     /** Validation issues; empty when the notebook is valid. */
