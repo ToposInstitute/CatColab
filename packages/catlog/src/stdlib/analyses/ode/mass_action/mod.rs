@@ -1,50 +1,77 @@
-//! Migrations from v0 to v1 for analyses.
+//! Mass-action ODE analysis of models.
+//!
+//! Such ODEs are based on the *law of mass action* familiar from chemistry and
+//! mathematical epidemiology. Here, however, we also consider a generalised version
+//! where we do not require that mass be preserved. This allows the construction
+//! of systems of arbitrary polynomial (first-order) ODEs.
 
-use crate::stdlib::analyses::ode::*;
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
+#[cfg(feature = "serde-wasm")]
+use tsify::Tsify;
 
-/// Migration for problem data for linear ODE.
-pub fn migrate_linear_ode_v0_to_v1(
-    v0: v0::linear_ode::LinearODEProblemData,
-) -> LinearODEProblemData {
-    LinearODEProblemData {
-        general_data: ODESemanticsGeneralProblemData {
-            initial_values: v0.initial_values,
-            duration: v0.duration,
-        },
-        parameter_data: LinearODEParameterData { coefficients: v0.coefficients },
-    }
+use crate::stdlib::analyses::ode::ODESemanticsGeneralProblemData;
+pub use crate::stdlib::analyses::ode::mass_action::v1::{balanced::*, per_place::*, unbalanced::*};
+
+#[allow(dead_code)]
+mod v0;
+mod v1;
+
+/// Latest version.
+pub static CURRENT_VERSION: &str = "1";
+
+// For backwards compatibility to when there was a *single* mass-action semantics with three
+// internal variants, we give here some wrappers that will be useful for migration.
+
+/// The variants of mass-action.
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde-wasm", derive(Tsify))]
+#[cfg_attr(feature = "serde-wasm", tsify(into_wasm_abi, from_wasm_abi))]
+#[derive(PartialEq, Eq, Hash, Clone)]
+pub enum MassActionVariant {
+    /// The balanced (i.e. classical) case.
+    Balanced,
+    /// The unbalanced ("per-flow"/"per-transition") case.
+    Unbalanced,
+    /// The per-place case.
+    PerPlace,
 }
 
-/// Migration for problem data for Lotka-Volterra.
-pub fn migrate_lotka_volterra_v0_to_v1(
-    v0: v0::lotka_volterra::LotkaVolterraProblemData,
-) -> LotkaVolterraProblemData {
-    LotkaVolterraProblemData {
-        general_data: ODESemanticsGeneralProblemData {
-            initial_values: v0.initial_values,
-            duration: v0.duration,
-        },
-        parameter_data: LotkaVolterraParameterData {
-            interaction_coeffs: v0.interaction_coeffs,
-            growth_rates: v0.growth_rates,
-        },
-    }
+/// For `migrate_stock_flow_mass_action_v0_to_v1` to have a well-defined return type, we unify both
+/// balanced and unbalanced mass-action semantics into a single struct.
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde-wasm", derive(Tsify))]
+#[cfg_attr(feature = "serde-wasm", tsify(into_wasm_abi, from_wasm_abi))]
+#[derive(Clone)]
+pub struct RestrictedMassActionProblemData {
+    /// The mass-action variant of interest, which may be switched at any point.
+    pub variant: MassActionVariant,
+    /// Problem data for balanced mass-action.
+    pub balanced: BalancedMassActionProblemData,
+    /// Problem data for unbalanced mass-action.
+    pub unbalanced: UnbalancedMassActionProblemData,
 }
 
-/// Migration for problem data for polynomial ODE.
-pub fn migrate_polynomial_ode_v0_to_v1(
-    v0: v0::polynomial_ode::PolynomialODEProblemData,
-) -> PolynomialODEProblemData {
-    PolynomialODEProblemData {
-        general_data: ODESemanticsGeneralProblemData {
-            initial_values: v0.initial_values,
-            duration: v0.duration,
-        },
-        parameter_data: PolynomialODEParameterData { coefficients: v0.coefficients },
-    }
+/// For `migrate_petri_net_mass_action_v0_to_v1` to have a well-defined return type, we unify the
+/// all three mass-action semantics into a single struct.
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde-wasm", derive(Tsify))]
+#[cfg_attr(feature = "serde-wasm", tsify(into_wasm_abi, from_wasm_abi))]
+#[derive(Clone)]
+pub struct MassActionProblemData {
+    /// The mass-action variant of interest, which may be switched at any point.
+    pub variant: MassActionVariant,
+    /// Problem data for balanced mass-action.
+    pub balanced: BalancedMassActionProblemData,
+    /// Problem data for unbalanced mass-action.
+    pub unbalanced: UnbalancedMassActionProblemData,
+    /// Problem data for per-place mass-action.
+    #[cfg_attr(feature = "serde", serde(rename = "perPlace"))]
+    pub per_place: PerPlaceMassActionProblemData,
 }
 
-fn migrate_mass_action_variant(v0: v0::mass_action::MassConservationType) -> MassActionVariant {
+/// Migration for part of the problem data for mass-action equations.
+pub fn migrate_mass_action_variant(v0: v0::mass_action::MassConservationType) -> MassActionVariant {
     match v0 {
         v0::mass_action::MassConservationType::Balanced => MassActionVariant::Balanced,
         v0::mass_action::MassConservationType::Unbalanced(rate_granularity) => {
@@ -132,100 +159,16 @@ mod test {
     use crate::{
         stdlib::{
             analyses::ode::{
-                LinearODEAnalysis, LotkaVolterraAnalysis, ODESemanticsAnalysis,
+                ODESemanticsAnalysis, ODESemanticsScalarExtension,
                 PetriNetBalancedMassActionAnalysis, PetriNetPerPlaceMassActionAnalysis,
-                PetriNetUnbalancedMassActionAnalysis, PolynomialODEAnalysis,
-                StockFlowBalancedMassActionAnalysis, StockFlowUnbalancedMassActionAnalysis,
+                PetriNetUnbalancedMassActionAnalysis, StockFlowBalancedMassActionAnalysis,
+                StockFlowUnbalancedMassActionAnalysis,
             },
-            backward_link, catalyzed_reaction, negative_feedback, th_category_links,
-            th_polynomial_ode_system, th_signed_category, th_sym_monoidal_category,
-            unsigned_lotka_volterra_dynamics,
+            backward_link, catalyzed_reaction, th_category_links, th_sym_monoidal_category,
         },
         zero::name,
     };
     use expect_test::expect;
-
-    #[test]
-    fn linear_ode_v0_to_v1_migration() {
-        let th = Rc::new(th_signed_category());
-        let model = negative_feedback(th);
-
-        let v0_data = v0::linear_ode::LinearODEProblemData {
-            coefficients: [(name("positive"), 3.0), (name("negative"), 2.0)].into_iter().collect(),
-            initial_values: [(name("x"), 1.0), (name("y"), 1.0)].into_iter().collect(),
-            duration: 10.0,
-        };
-
-        let v1_data = migrate_linear_ode_v0_to_v1(v0_data);
-
-        let system = LinearODEAnalysis::default().build_system(&model);
-        let analysis = v1_data.parameter_data.extend_scalars(system);
-        let expected = expect!([r#"
-            dx = -2 y
-            dy = 3 x
-        "#]);
-        expected.assert_eq(&analysis.to_string());
-    }
-
-    #[test]
-    fn lotka_volterra_v0_to_v1_migration() {
-        let th = Rc::new(th_signed_category());
-        let model = negative_feedback(th);
-
-        let v0_data = v0::lotka_volterra::LotkaVolterraProblemData {
-            interaction_coeffs: [(name("positive"), 1.0), (name("negative"), 1.0)]
-                .into_iter()
-                .collect(),
-            growth_rates: [(name("x"), 2.0), (name("y"), -1.0)].into_iter().collect(),
-            initial_values: [(name("x"), 1.0), (name("y"), 1.0)].into_iter().collect(),
-            duration: 10.0,
-        };
-
-        let v1_data = migrate_lotka_volterra_v0_to_v1(v0_data);
-
-        let system = LotkaVolterraAnalysis::default().build_system(&model);
-        let analysis = v1_data.parameter_data.extend_scalars(system);
-        let expected = expect!([r#"
-            dx = 2 x - x y
-            dy = x y - y
-        "#]);
-        expected.assert_eq(&analysis.to_string());
-    }
-
-    #[test]
-    fn polynomial_ode_v0_to_v1_migration() {
-        let th = Rc::new(th_polynomial_ode_system());
-        let model = unsigned_lotka_volterra_dynamics(th);
-
-        let v0_data = v0::polynomial_ode::PolynomialODEProblemData {
-            coefficients: [
-                (name("A_growth"), 1.0),
-                (name("B_growth"), 2.0),
-                (name("C_growth"), -2.0),
-                (name("AB_interaction"), 1.5),
-                (name("BA_interaction"), -2.0),
-                (name("BC_interaction"), 3.0),
-                (name("CB_interaction"), -3.0),
-            ]
-            .into_iter()
-            .collect(),
-            initial_values: [(name("a"), 1.0), (name("b"), 1.0), (name("c"), 1.0)]
-                .into_iter()
-                .collect(),
-            duration: 10.0,
-        };
-
-        let v1_data = migrate_polynomial_ode_v0_to_v1(v0_data);
-
-        let system = PolynomialODEAnalysis::default().build_system(&model);
-        let analysis = v1_data.parameter_data.extend_scalars(system);
-        let expected = expect!([r#"
-            dA = A - 2 A B
-            dB = 1.5 A B + 2 B - 3 B C
-            dC = 3 B C - 2 C
-        "#]);
-        expected.assert_eq(&analysis.to_string());
-    }
 
     #[test]
     fn petri_net_mass_action_v0_to_v1_migration() {
@@ -298,8 +241,7 @@ mod test {
             initial_values: [(name("x"), 1.0), (name("y"), 1.0)].into_iter().collect(),
             duration: 10.0,
             equations_data: v0::mass_action::MassActionEquationsData {
-                mass_conservation_type:
-                    crate::stdlib::analyses::ode::v0::mass_action::MassConservationType::Balanced,
+                mass_conservation_type: v0::mass_action::MassConservationType::Balanced,
             },
             transition_rates: [(name("f"), 3.0)].into_iter().collect(),
             transition_consumption_rates: [(name("f"), 1.5)].into_iter().collect(),
