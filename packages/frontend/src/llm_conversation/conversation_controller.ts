@@ -29,7 +29,10 @@ const newLLMTurnState = () => ({
     streamingContent: "",
 });
 
-/** TODO */
+/** Controller for an LLM conversation, intermediating between UI and harness.
+
+Handles events and exposes ephemeral state during turns of the LLM.
+ */
 export type LLMConversationController = {
     /** Reactive store for ephemeral turn state. */
     state: LLMTurnState;
@@ -104,13 +107,15 @@ export function createLLMConversationController<
 
         setStore(newLLMTurnState());
         try {
-            return await runLLMConversationTurn(
+            const result = await runLLMConversationTurn(
                 conversation(),
                 documentStore(),
                 key,
                 userInput,
                 handleTurnEvent,
             );
+            setStore("liveInteractions", result.tag === "Retryable" ? result.attempts : []);
+            return result;
         } finally {
             setStore("streamingContent", "");
         }
