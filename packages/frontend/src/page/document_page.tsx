@@ -49,7 +49,7 @@ import { InstanceInfo } from "../instance/instance_info";
 import { getLiveInstance, type LiveInstanceDoc } from "../instance/live_doc_compatibility";
 import {
     getLiveLLMConversation,
-    LLMConversationEditorStub,
+    LLMConversationEditor,
     type LiveLLMConversationDoc,
 } from "../llm_conversation";
 import { type LiveModelDoc, type ModelLibrary, ModelLibraryContext } from "../model";
@@ -584,8 +584,13 @@ export function DocumentPane(props: {
                                     <InstanceEditor instance={liveInstance.instance} />
                                 )}
                             </Match>
-                            <Match when={props.doc.type === "llmconversation"}>
-                                <LLMConversationEditorStub />
+                            <Match keyed when={props.doc.type === "llmconversation" && props.doc}>
+                                {(liveConversation) => (
+                                    <LLMConversationEditor
+                                        conversation={liveConversation.conversation}
+                                        documentStore={liveConversation.store}
+                                    />
+                                )}
                             </Match>
                         </Switch>
                     </div>
