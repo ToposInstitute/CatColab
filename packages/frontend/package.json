@@ -43,6 +43,8 @@
         "@solid-primitives/destructure": "^0.2.1",
         "@solid-primitives/event-listener": "^2.4.3",
         "@solid-primitives/map": "^0.7.2",
+        "@solid-primitives/resize-observer": "^2.2.0",
+        "@solid-primitives/scroll": "^2.1.6",
         "@solid-primitives/timer": "^1.4.1",
         "@solidjs/meta": "^0.29.4",
         "@solidjs/router": "^0.15.3",

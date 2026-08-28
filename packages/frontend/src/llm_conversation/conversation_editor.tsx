@@ -1,6 +1,8 @@
 import { createForm, getValue, reset, type SubmitHandler } from "@modular-forms/solid";
+import { createResizeObserver } from "@solid-primitives/resize-observer";
+import { createScrollPosition, getScrollParent } from "@solid-primitives/scroll";
 import Send from "lucide-solid/icons/send";
-import { For, lazy, Match, Suspense, Switch, Show, JSX } from "solid-js";
+import { createMemo, For, lazy, Match, onMount, Suspense, Switch, Show, JSX } from "solid-js";
 
 import { LLMInteraction } from "catcolab-document-types";
 import { Button, CodeView, Foldable, IconButton } from "catcolab-ui-components";
@@ -45,8 +47,11 @@ export function LLMConversationEditor(props: {
         return controller.runTurn({ content: values.message, files: [] });
     };
 
+    let conversation!: HTMLDivElement;
+    onMount(() => autoscroll(conversation));
+
     return (
-        <div class={styles.conversation}>
+        <div class={styles.conversation} ref={conversation}>
             <div class={styles.transcript}>
                 <Suspense>
                     <For each={props.conversation.interactions()}>
@@ -89,6 +94,24 @@ export function LLMConversationEditor(props: {
             </Form>
         </div>
     );
+}
+
+/** Keep the pane scrolled to the bottom as the conversation grows. */
+function autoscroll(content: HTMLElement) {
+    const SCROLL_SLACK = 32;
+    const pane = getScrollParent(content);
+    const scroll = createScrollPosition(pane);
+
+    /** Is the pane at the bottom, as of the last time that it was scrolled? */
+    const following = createMemo(
+        () => pane.scrollHeight - scroll.y - pane.clientHeight <= SCROLL_SLACK,
+    );
+
+    createResizeObserver(content, () => {
+        if (following()) {
+            pane.scrollTop = pane.scrollHeight;
+        }
+    });
 }
 
 type RequestResolver = (requestId: string, resolution: "approved" | "rejected") => void;
