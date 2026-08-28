@@ -1,5 +1,6 @@
-import { getBackend, getObjectId } from "@automerge/automerge";
 import type { DocHandle } from "@automerge/automerge-repo";
+import { makeDocumentProjection } from "@automerge/automerge-repo-solid-primitives";
+import { unwrap } from "solid-js/store";
 
 import type { Document } from "catcolab-document-types";
 import {
@@ -13,6 +14,10 @@ import type { Api } from "./types";
 
 export type ApiDocumentHandle = {
     automergeHandle: DocHandle<Document>;
+
+    /** Fine-grained reactive view of the document, for use in SolidJS contexts. */
+    docView: Document;
+
     ref: DocumentRef;
 };
 
@@ -41,7 +46,7 @@ export function createApiDocumentStore(api: Api): ApiDocumentStore {
             existing.ref = ref;
             return existing;
         }
-        const handle = { automergeHandle, ref };
+        const handle = { automergeHandle, docView: makeDocumentProjection(automergeHandle), ref };
         handles.set(ref.id, handle);
         return handle;
     };
@@ -55,22 +60,13 @@ export function createApiDocumentStore(api: Api): ApiDocumentStore {
                 automergeHandle,
             );
         },
-        getDocumentView: (handle) => handle.automergeHandle.doc(),
+        getDocumentView: (handle) => handle.docView,
         changeDocument: (handle, fn) => handle.automergeHandle.change(fn),
         subscribe: (handle, callback) => {
             handle.automergeHandle.on("change", callback);
             return () => handle.automergeHandle.off("change", callback);
         },
-        copyValue: (handle, value) => {
-            if (typeof value !== "object" || value === null) {
-                return value;
-            }
-            const objectId = getObjectId(value);
-            if (!objectId) {
-                return structuredClone(value);
-            }
-            return getBackend(handle.automergeHandle.doc()).materialize(objectId) as typeof value;
-        },
+        copyValue: (_handle, value) => structuredClone(unwrap(value)),
         getDocumentRef: (handle) => handle.ref,
         async getHandle(ref: DocumentRef): Promise<Result<ApiDocumentHandle>> {
             if (ref.version !== null) {

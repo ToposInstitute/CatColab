@@ -2,6 +2,7 @@ import { monorepoDedupe } from "@catcolab-dev-tools/vite-plugin-monorepo-dedupe"
 import mdx from "@mdx-js/rollup";
 import rehypeKatex from "rehype-katex";
 import remarkMath from "remark-math";
+import { defaultServerConditions } from "vite";
 import solid from "vite-plugin-solid";
 import wasm from "vite-plugin-wasm";
 import { defineConfig } from "vitest/config";
@@ -24,10 +25,22 @@ export default defineConfig({
         sourcemap: true,
         target: "es2022",
     },
+    // Vitest runs with node resolve conditions, which select solid-js's
+    // non-reactive server build. vite-plugin-solid only fixes this when
+    // vitest runs in mode "test", but our tests run in mode "development",
+    // so prefer browser builds ourselves when running under vitest.
+    resolve: process.env.VITEST ? { conditions: ["browser", ...defaultServerConditions] } : {},
     test: {
         // Run test files sequentially to prevent cross-test contamination via
         // the server's shared user state.
         fileParallelism: false,
+        server: {
+            deps: {
+                // Process solid through vite so that a single, consistent
+                // build of the reactive runtime is used everywhere.
+                inline: [/solid-js/, /automerge-repo-solid-primitives/],
+            },
+        },
     },
     server: {
         proxy: {

@@ -23,6 +23,9 @@ importers:
       '@automerge/automerge-repo-network-websocket':
         specifier: ^2.5.6
         version: 2.5.6
+      '@automerge/automerge-repo-solid-primitives':
+        specifier: ^2.5.6
+        version: 2.5.6(@automerge/automerge@3.4.1)(solid-js@1.9.10)
       '@automerge/automerge-repo-storage-indexeddb':
         specifier: ^2.5.6
         version: 2.5.6
@@ -192,6 +195,9 @@ importers:
       eslint-plugin-solid:
         specifier: ^0.14.5
         version: 0.14.5(eslint@9.39.4)(typescript@6.0.3)
+      happy-dom:
+        specifier: ^20.0.0
+        version: 20.11.2
       rehype-katex:
         specifier: ^7.0.1
         version: 7.0.1
@@ -224,7 +230,7 @@ importers:
         version: 3.5.0(vite@7.2.2(@types/node@24.10.0)(yaml@2.5.1))
       vitest:
         specifier: 4.1.10
-        version: 4.1.10(@types/node@24.10.0)(vite@7.2.2(@types/node@24.10.0)(yaml@2.5.1))
+        version: 4.1.10(@types/node@24.10.0)(happy-dom@20.11.2)(vite@7.2.2(@types/node@24.10.0)(yaml@2.5.1))
       wasm-pack:
         specifier: ^0.15.0
         version: 0.15.0
@@ -246,6 +252,12 @@ packages:
 
   '@automerge/automerge-repo-network-websocket@2.5.6':
     resolution: {integrity: sha512-xs/xzOCTf5ZuqhDUtBO1VQ3QOnunEobjtgEqGNu7UcoD2uYWET1ANHVfS+ZzSV8IOA1O9jFAPXxzc4FXoSL0hQ==}
+
+  '@automerge/automerge-repo-solid-primitives@2.5.6':
+    resolution: {integrity: sha512-jwxktGP36AhxpPc9d3qi/k9WS7lIRqjfdWhn6i/Mzc6qe47COHe2QBvdDrDo6FTbFBoRz7+H5fyx3e2tfBIXfA==}
+    peerDependencies:
+      '@automerge/automerge': ^3.0.0
+      solid-js: ^1.9.4
 
   '@automerge/automerge-repo-storage-indexeddb@2.5.6':
     resolution: {integrity: sha512-3349orECq2Mj3mo9q6f9ZeXwDkP3lAm6KaivP5+znUpv6Ze+IraE36DdL5GVdzIm+cXej0yWSOCQOalnTMPcQg==}
@@ -1241,6 +1253,12 @@ packages:
   '@types/unist@3.0.3':
     resolution: {integrity: sha512-ko/gIFJRv177XgZsZcBwnqJN5x/Gien8qNOn0D5bQU/zAzVf9Zt3BlcUiLqhV9y4ARk0GbT3tnUiPNgnTXzc/Q==}
 
+  '@types/whatwg-mimetype@3.0.2':
+    resolution: {integrity: sha512-c2AKvDT8ToxLIOUlN51gTiHXflsfIFisS4pO7pDPoKouJCESkhZnEy623gwP9laCy5lnLDAw1vAzu2vM2YLOrA==}
+
+  '@types/ws@8.18.1':
+    resolution: {integrity: sha512-ThVF6DCVhA8kUGy+aazFQ4kXQ7E1Ty7A3ypFOe0IcJV8O/M511G99AW24irKrW56Wt44yG9+ij8FaqoBGkuBXg==}
+
   '@typescript-eslint/project-service@8.57.0':
     resolution: {integrity: sha512-pR+dK0BlxCLxtWfaKQWtYr7MhKmzqZxuii+ZjuFlZlIGRZm22HnXFqa2eY+90MUz8/i80YJmzFGDUsi8dMOV5w==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
@@ -1421,6 +1439,10 @@ packages:
   bs58check@3.0.1:
     resolution: {integrity: sha512-hjuuJvoWEybo7Hn/0xOrczQKKEKD63WguEjlhLExYs2wUBcebDC1jDNK17eEAD2lYfw82d5ASC1d7K3SWszjaQ==}
 
+  buffer-image-size@0.6.4:
+    resolution: {integrity: sha512-nEh+kZOPY1w+gcCMobZ6ETUp9WfibndnosbpwB1iJk/8Gt5ZF2bhS6+B6bPYz424KtwsR6Rflc3tCz1/ghX2dQ==}
+    engines: {node: '>=4.0'}
+
   callsites@3.1.0:
     resolution: {integrity: sha512-P8BjAsXvZS+VIDUI11hHCQEv74YT67YUi5JJFNWIqL235sBmjX4+qx9Muvls5ivyNENctx46xQLQ3aTuE7ssaQ==}
     engines: {node: '>=6'}
@@ -1585,6 +1607,10 @@ packages:
 
   entities@4.5.0:
     resolution: {integrity: sha512-V0hjH4dGPh9Ao5p0MoRY6BVqtwCjhz6vI5LT8AJ55H+4g9/4vbHx1I54fS0XuclLhDHArPQCiMjDxjaL8fPxhw==}
+    engines: {node: '>=0.12'}
+
+  entities@7.0.1:
+    resolution: {integrity: sha512-TWrgLOFUQTH994YUyl1yT4uyavY5nNB5muff+RtWaqNVCAK408b5ZnnbNAUEWLTCpum9w6arT70i1XdQ4UeOPA==}
     engines: {node: '>=0.12'}
 
   es-module-lexer@2.3.1:
@@ -1805,6 +1831,10 @@ packages:
   globals@14.0.0:
     resolution: {integrity: sha512-oahGvuMGQlPw/ivIYBjVSrWAfWLBeku5tpPE2fOPLi+WHffIWbuh2tCjhyQhTBPMf5E9jDEH4FOmTYgYwbKwtQ==}
     engines: {node: '>=18'}
+
+  happy-dom@20.11.2:
+    resolution: {integrity: sha512-7MB+bJLkxu3SowAfBJbjW+c55kNz5tkR45gu2qzrxznezhLeN5YIlJbwUgSzlGc+qWoZ8Ykg71H5ezz69xixrw==}
+    engines: {node: '>=20.0.0'}
 
   has-flag@3.0.0:
     resolution: {integrity: sha512-sKJf1+ceQBr4SMkvQnBDNDtf4TXpVhVGateu0t918bl30FnbE2m4vNLX+VWe/dpjlb+HugGYzW7uQXH98HPEYw==}
@@ -3092,6 +3122,10 @@ packages:
     resolution: {integrity: sha512-OqedPIGOfsDlo31UNwYbCFMSaO9m9G/0faIHj5/dZFDMFqPTcx6UwqyOy3COEaEOg/9VsGIpdqn62W5KhoKSpg==}
     engines: {node: '>=0.8.0'}
 
+  whatwg-mimetype@3.0.0:
+    resolution: {integrity: sha512-nt+N2dzIutVRxARx1nghPKGv1xHikU7HKdfafKkLNLindmPU/ch3U31NOCGGA/dmPcmb1VlofO0vnKAcsm0o/Q==}
+    engines: {node: '>=12'}
+
   which@2.0.2:
     resolution: {integrity: sha512-BLI3Tl1TW3Pvl70l3yq3Y64i+awpwXqsGBYWkkqMtnbXgrMD+yj7rhW0kuEDxzJaYXGjEW5ogapKNMEKNMjibA==}
     engines: {node: '>= 8'}
@@ -3116,6 +3150,18 @@ packages:
 
   ws@8.18.3:
     resolution: {integrity: sha512-PEIGCY5tSlUt50cqyMXfCzX+oOPqN0vuGqWzbcJ2xvnkzkq46oOpz7dQaTDBdfICb4N14+GARUDw2XV2N4tvzg==}
+    engines: {node: '>=10.0.0'}
+    peerDependencies:
+      bufferutil: ^4.0.1
+      utf-8-validate: '>=5.0.2'
+    peerDependenciesMeta:
+      bufferutil:
+        optional: true
+      utf-8-validate:
+        optional: true
+
+  ws@8.21.3:
+    resolution: {integrity: sha512-201TZ/kPWxoPr/OKWjquZR1SWKXcvxdH+e1xrx89b3YbmzLMFCLfnaG1HFIgWzJOEWZ7MvpK++odZufgYR50Rw==}
     engines: {node: '>=10.0.0'}
     peerDependencies:
       bufferutil: ^4.0.1
@@ -3193,6 +3239,11 @@ snapshots:
       - bufferutil
       - supports-color
       - utf-8-validate
+
+  '@automerge/automerge-repo-solid-primitives@2.5.6(@automerge/automerge@3.4.1)(solid-js@1.9.10)':
+    dependencies:
+      '@automerge/automerge': 3.4.1
+      solid-js: 1.9.10
 
   '@automerge/automerge-repo-storage-indexeddb@2.5.6':
     dependencies:
@@ -4310,6 +4361,12 @@ snapshots:
 
   '@types/unist@3.0.3': {}
 
+  '@types/whatwg-mimetype@3.0.2': {}
+
+  '@types/ws@8.18.1':
+    dependencies:
+      '@types/node': 24.10.0
+
   '@typescript-eslint/project-service@8.57.0(typescript@6.0.3)':
     dependencies:
       '@typescript-eslint/tsconfig-utils': 8.57.0(typescript@6.0.3)
@@ -4511,6 +4568,10 @@ snapshots:
       '@noble/hashes': 1.8.0
       bs58: 5.0.0
 
+  buffer-image-size@0.6.4:
+    dependencies:
+      '@types/node': 24.10.0
+
   callsites@3.1.0: {}
 
   camelcase@6.3.0: {}
@@ -4660,6 +4721,8 @@ snapshots:
   emoji-regex@9.2.2: {}
 
   entities@4.5.0: {}
+
+  entities@7.0.1: {}
 
   es-module-lexer@2.3.1: {}
 
@@ -4962,6 +5025,19 @@ snapshots:
   globals@11.12.0: {}
 
   globals@14.0.0: {}
+
+  happy-dom@20.11.2:
+    dependencies:
+      '@types/node': 24.10.0
+      '@types/whatwg-mimetype': 3.0.2
+      '@types/ws': 8.18.1
+      buffer-image-size: 0.6.4
+      entities: 7.0.1
+      whatwg-mimetype: 3.0.0
+      ws: 8.21.3
+    transitivePeerDependencies:
+      - bufferutil
+      - utf-8-validate
 
   has-flag@3.0.0: {}
 
@@ -6748,7 +6824,7 @@ snapshots:
     optionalDependencies:
       vite: 7.2.2(@types/node@24.10.0)(yaml@2.5.1)
 
-  vitest@4.1.10(@types/node@24.10.0)(vite@7.2.2(@types/node@24.10.0)(yaml@2.5.1)):
+  vitest@4.1.10(@types/node@24.10.0)(happy-dom@20.11.2)(vite@7.2.2(@types/node@24.10.0)(yaml@2.5.1)):
     dependencies:
       '@vitest/expect': 4.1.10
       '@vitest/mocker': 4.1.10(vite@7.2.2(@types/node@24.10.0)(yaml@2.5.1))
@@ -6772,6 +6848,7 @@ snapshots:
       why-is-node-running: 2.3.0
     optionalDependencies:
       '@types/node': 24.10.0
+      happy-dom: 20.11.2
     transitivePeerDependencies:
       - msw
 
@@ -6792,6 +6869,8 @@ snapshots:
       websocket-extensions: 0.1.4
 
   websocket-extensions@0.1.4: {}
+
+  whatwg-mimetype@3.0.0: {}
 
   which@2.0.2:
     dependencies:
@@ -6817,6 +6896,8 @@ snapshots:
       strip-ansi: 7.1.0
 
   ws@8.18.3: {}
+
+  ws@8.21.3: {}
 
   xstate@5.20.1: {}
 
