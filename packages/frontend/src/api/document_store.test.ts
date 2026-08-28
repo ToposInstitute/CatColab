@@ -1,8 +1,14 @@
+// @vitest-environment happy-dom
+// The happy-dom environment makes solid-js resolve to its reactive client
+// build, which the reactive projection tests depend on.
+import { getObjectId } from "@automerge/automerge";
 import { Repo } from "@automerge/automerge-repo";
 import { SimpleOlog, Type } from "catcolab-logics/simple-olog";
+import { createRenderEffect, createRoot } from "solid-js";
+import { unwrap } from "solid-js/store";
 import { describe, expect, test } from "vitest";
 
-import { Instance as LegacyInstance, Model } from "catcolab-document-methods";
+import { Instance as LegacyInstance, Model, type ModelDocument } from "catcolab-document-methods";
 import { createBinder, defineShape, type InstanceDocument } from "catcolab-documents";
 import { makeLiveDoc } from "./document";
 import { createApiDocumentStore } from "./document_store";
@@ -126,6 +132,32 @@ describe("API document store", () => {
         expect(unsupported).toMatchObject({ tag: "Err" });
     });
 
+    test("document views are reactive projections", async () => {
+        const { schema, store } = await createFixtureWithSchema();
+
+        const handle = await store.getHandle({ id: schemaRef, version: null });
+        expect(handle.tag).toBe("Ok");
+        if (handle.tag === "Err") {
+            throw new Error("expected local ref to resolve");
+        }
+
+        const names: string[] = [];
+        const dispose = createRoot((dispose) => {
+            createRenderEffect(() => {
+                names.push(store.getDocumentView(handle.content).name);
+            });
+            return dispose;
+        });
+
+        store.changeDocument(handle.content, (doc) => {
+            doc.name = "Renamed";
+        });
+        dispose();
+
+        expect(names).toEqual(["", "Renamed"]);
+        expect(schema.title).toBe("Renamed");
+    });
+
     test("resolves local refs to canonical cached handles", async () => {
         const { schemaAutomergeHandle, store } = createFixture();
 
@@ -136,5 +168,93 @@ describe("API document store", () => {
         }
         expect(local.content.automergeHandle).toBe(schemaAutomergeHandle);
         expect(local.content.ref.server).toBe(server);
+    });
+
+    test("copyValue detaches Solid projection values", async () => {
+        const { store } = createFixture();
+
+        const local = await store.getHandle({ id: schemaRef, version: null });
+        expect(local.tag).toBe("Ok");
+        if (local.tag === "Err") {
+            throw new Error("expected local ref to resolve");
+        }
+        const handle = local.content;
+
+        const view = store.getDocumentView(handle) as ModelDocument;
+        const copy = store.copyValue(handle, view);
+
+        // A genuine deep copy: neither the store proxy nor its raw target.
+        expect(copy).not.toBe(view);
+        expect(copy).not.toBe(unwrap(view));
+        expect(copy).toEqual(unwrap(view));
+        expect(copy.notebook).not.toBe(unwrap(view).notebook);
+
+        // Mutating the copy leaves the document untouched.
+        copy.name = "mutated copy";
+        expect(store.getDocumentView(handle).name).toBe("");
+
+        // Mutating the document leaves the copy stale.
+        store.changeDocument(handle, (doc) => {
+            doc.name = "changed";
+        });
+        expect(copy.name).toBe("mutated copy");
+    });
+
+    test("copyValue detaches Automerge proxy values", async () => {
+        const { schemaAutomergeHandle, store } = createFixture();
+
+        const local = await store.getHandle({ id: schemaRef, version: null });
+        expect(local.tag).toBe("Ok");
+        if (local.tag === "Err") {
+            throw new Error("expected local ref to resolve");
+        }
+        const handle = local.content;
+
+        const notebook = (schemaAutomergeHandle.doc() as ModelDocument).notebook;
+        expect(getObjectId(notebook)).not.toBeNull();
+
+        const copy = store.copyValue(handle, notebook);
+        expect(copy).not.toBe(notebook);
+        expect(copy).toEqual(notebook);
+
+        // Mutating the copy succeeds (an Automerge proxy would throw outside a
+        // change context) and does not touch the document.
+        copy.cellOrder.push("bogus-cell");
+        expect((schemaAutomergeHandle.doc() as ModelDocument).notebook.cellOrder).toHaveLength(0);
+    });
+
+    test("copyValue passes primitives through", async () => {
+        const { store } = createFixture();
+
+        const local = await store.getHandle({ id: schemaRef, version: null });
+        expect(local.tag).toBe("Ok");
+        if (local.tag === "Err") {
+            throw new Error("expected local ref to resolve");
+        }
+        const handle = local.content;
+
+        expect(store.copyValue(handle, 42)).toBe(42);
+        expect(store.copyValue(handle, "x")).toBe("x");
+        expect(store.copyValue(handle, null)).toBeNull();
+    });
+
+    test("notebook dump returns a detached plain document", async () => {
+        const { schema, store } = await createFixtureWithSchema();
+        schema.add(Type, { label: "Person" });
+
+        const local = await store.getHandle({ id: schemaRef, version: null });
+        expect(local.tag).toBe("Ok");
+        if (local.tag === "Err") {
+            throw new Error("expected local ref to resolve");
+        }
+        const handle = local.content;
+
+        const dumped = schema.dump();
+        expect(dumped).not.toBe(store.getDocumentView(handle));
+        expect(dumped).toEqual(unwrap(store.getDocumentView(handle)));
+
+        // Mutating the dump does not write back to the notebook.
+        dumped.name = "mutated dump";
+        expect(schema.title).toBe("");
     });
 });
