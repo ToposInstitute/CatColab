@@ -70,13 +70,15 @@ impl<Sys> ODEAnalysis<Sys> {
 }
 
 pub mod kuramoto;
+pub mod linear_ode;
+pub mod lotka_volterra;
+pub mod mass_action;
 pub mod ode_semantics;
-pub mod v0;
-pub mod v1;
+pub mod polynomial_ode;
 
 pub use kuramoto::*;
+pub use linear_ode::*;
+pub use lotka_volterra::*;
+pub use mass_action::*;
 pub use ode_semantics::*;
-pub use v1::linear_ode::*;
-pub use v1::lotka_volterra::*;
-pub use v1::mass_action::*;
-pub use v1::polynomial_ode::*;
+pub use polynomial_ode::*;

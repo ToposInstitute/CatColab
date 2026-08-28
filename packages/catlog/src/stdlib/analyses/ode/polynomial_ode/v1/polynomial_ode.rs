@@ -1,15 +1,4 @@
-//! ODE analysis of models of the logic of systems of polynomial ODEs.
-//!
-//! This is used for the the simulation and equations analyses for models in the theory of
-//! systems of polynomial ODEs [`th_polynomial_ode_system()`]. However, *all* ODE analyses
-//! now factor through this by implementing [`ode::ode_semantics::ODESemantics`]; for further
-//! documentation, see there.
-//!
-//! The interpretation of multicategories as systems of polynomial ODEs is explained in [RFC-0001].
-//!
-//! [`th_polynomial_ode_system()`]: crate::stdlib::theories
-//! [`ode::ode_semantics::ODESemantics`]: crate::stdlib::analyses::ode::ode_semantics::ODESemantics
-//! [RFC-0001]: https://next.catcolab.org/rfc/0001
+//! Version 1 of `polynomial_ode`, with `ode_semantics`.
 
 use std::{collections::HashMap, fmt};
 
