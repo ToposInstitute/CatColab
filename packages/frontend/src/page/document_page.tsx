@@ -522,78 +522,80 @@ export function DocumentPane(props: {
                             be listed in your documents.
                         </WarningBanner>
                     </Show>
-                    <div class="notebook-container">
-                        <Switch>
-                            <Match keyed when={props.doc.type === "model" && props.doc}>
-                                {(liveModel) => <ModelDocumentHead liveModel={liveModel} />}
-                            </Match>
-                            <Match keyed when={props.doc.type === "diagram" && props.doc}>
-                                {(liveDiagram) => (
-                                    <DocumentHead liveDoc={liveDiagram.liveDoc}>
-                                        <DiagramInfo liveDiagram={liveDiagram} />
-                                    </DocumentHead>
-                                )}
-                            </Match>
-                            <Match keyed when={props.doc.type === "analysis" && props.doc}>
-                                {(liveAnalysis) => (
-                                    <DocumentHead liveDoc={liveAnalysis.liveDoc}>
-                                        <AnalysisInfo liveAnalysis={liveAnalysis} />
-                                    </DocumentHead>
-                                )}
-                            </Match>
-                            <Match keyed when={props.doc.type === "instance" && props.doc}>
-                                {(liveInstance) => (
-                                    <DocumentHead liveDoc={liveInstance.liveDoc}>
-                                        <InstanceInfo liveInstance={liveInstance} />
-                                    </DocumentHead>
-                                )}
-                            </Match>
-                            <Match keyed when={props.doc.type === "llmconversation" && props.doc}>
-                                {(liveConversation) => (
-                                    <DocumentHead liveDoc={liveConversation.liveDoc} />
-                                )}
-                            </Match>
-                        </Switch>
-                        <Switch>
-                            <Match keyed when={props.doc.type === "model" && props.doc}>
-                                {(liveModel) => (
+                    <Switch>
+                        <Match keyed when={props.doc.type === "model" && props.doc}>
+                            {(liveModel) => <ModelDocumentHead liveModel={liveModel} />}
+                        </Match>
+                        <Match keyed when={props.doc.type === "diagram" && props.doc}>
+                            {(liveDiagram) => (
+                                <DocumentHead liveDoc={liveDiagram.liveDoc}>
+                                    <DiagramInfo liveDiagram={liveDiagram} />
+                                </DocumentHead>
+                            )}
+                        </Match>
+                        <Match keyed when={props.doc.type === "analysis" && props.doc}>
+                            {(liveAnalysis) => (
+                                <DocumentHead liveDoc={liveAnalysis.liveDoc}>
+                                    <AnalysisInfo liveAnalysis={liveAnalysis} />
+                                </DocumentHead>
+                            )}
+                        </Match>
+                        <Match keyed when={props.doc.type === "instance" && props.doc}>
+                            {(liveInstance) => (
+                                <DocumentHead liveDoc={liveInstance.liveDoc}>
+                                    <InstanceInfo liveInstance={liveInstance} />
+                                </DocumentHead>
+                            )}
+                        </Match>
+                        <Match keyed when={props.doc.type === "llmconversation" && props.doc}>
+                            {(liveConversation) => (
+                                <DocumentHead liveDoc={liveConversation.liveDoc} />
+                            )}
+                        </Match>
+                    </Switch>
+                    <Switch>
+                        <Match keyed when={props.doc.type === "model" && props.doc}>
+                            {(liveModel) => (
+                                <div class="notebook-container">
                                     <ModelNotebookEditor
                                         liveModel={liveModel}
                                         focus={props.focus}
                                     />
-                                )}
-                            </Match>
-                            <Match keyed when={props.doc.type === "diagram" && props.doc}>
-                                {(liveDiagram) => (
+                                </div>
+                            )}
+                        </Match>
+                        <Match keyed when={props.doc.type === "diagram" && props.doc}>
+                            {(liveDiagram) => (
+                                <div class="notebook-container">
                                     <DiagramNotebookEditor
                                         liveDiagram={liveDiagram}
                                         focus={props.focus}
                                     />
-                                )}
-                            </Match>
-                            <Match keyed when={props.doc.type === "analysis" && props.doc}>
-                                {(liveAnalysis) => (
+                                </div>
+                            )}
+                        </Match>
+                        <Match keyed when={props.doc.type === "analysis" && props.doc}>
+                            {(liveAnalysis) => (
+                                <div class="notebook-container">
                                     <AnalysisNotebookEditor
                                         liveAnalysis={liveAnalysis}
                                         focus={props.focus}
                                     />
-                                )}
-                            </Match>
-                            <Match keyed when={props.doc.type === "instance" && props.doc}>
-                                {(liveInstance) => (
-                                    <InstanceEditor instance={liveInstance.instance} />
-                                )}
-                            </Match>
-                            <Match keyed when={props.doc.type === "llmconversation" && props.doc}>
-                                {(liveConversation) => (
-                                    <LLMConversationEditor
-                                        conversation={liveConversation.conversation}
-                                        documentStore={liveConversation.store}
-                                    />
-                                )}
-                            </Match>
-                        </Switch>
-                    </div>
+                                </div>
+                            )}
+                        </Match>
+                        <Match keyed when={props.doc.type === "instance" && props.doc}>
+                            {(liveInstance) => <InstanceEditor instance={liveInstance.instance} />}
+                        </Match>
+                        <Match keyed when={props.doc.type === "llmconversation" && props.doc}>
+                            {(liveConversation) => (
+                                <LLMConversationEditor
+                                    conversation={liveConversation.conversation}
+                                    documentStore={liveConversation.store}
+                                />
+                            )}
+                        </Match>
+                    </Switch>
                 </div>
                 <Show when={props.historySidebarOpen && props.docRef.refId}>
                     <div class="history-sidebar">

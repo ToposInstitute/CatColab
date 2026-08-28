@@ -1,0 +1,40 @@
+.conversation {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    padding-bottom: 1rem;
+}
+
+.transcript {
+    --message-inset: 0.75rem;
+    --markdown-paragraph-gap: 0.75em;
+
+    display: flex;
+    flex-direction: column;
+    gap: var(--markdown-paragraph-gap);
+}
+
+.userMessage {
+    padding: 0.5rem var(--message-inset);
+    border-radius: 5px;
+    background: var(--color-gray-100);
+}
+
+.llmMessage {
+    padding-inline: var(--message-inset);
+}
+
+.form {
+    display: flex;
+    align-items: flex-end;
+    gap: 0.5rem;
+
+    & textarea {
+        flex: 1;
+        field-sizing: content;
+        min-height: 0;
+        max-height: 40vh;
+        resize: vertical;
+        outline: none;
+    }
+}

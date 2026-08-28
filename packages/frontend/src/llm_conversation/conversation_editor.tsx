@@ -3,11 +3,13 @@ import Send from "lucide-solid/icons/send";
 import { For, lazy, Match, Suspense, Switch, Show, JSX } from "solid-js";
 
 import { LLMInteraction } from "catcolab-document-types";
-import { Button, Foldable, CodeView } from "catcolab-ui-components";
+import { Button, CodeView, Foldable, IconButton } from "catcolab-ui-components";
 import type { ApiDocumentStore } from "../api";
 import { useInferenceKey } from "../user/inference_key_context";
 import { createLLMConversationController } from "./conversation_controller";
 import type { ApiLLMConversation } from "./live_doc_compatibility";
+
+import styles from "./conversation_editor.module.css";
 
 const MarkdownMessage = lazy(() => import("./markdown_message"));
 
@@ -44,8 +46,8 @@ export function LLMConversationEditor(props: {
     };
 
     return (
-        <div class="llm-conversation">
-            <div class="llm-transcript">
+        <div class={styles.conversation}>
+            <div class={styles.transcript}>
                 <Suspense>
                     <For each={props.conversation.interactions()}>
                         {(interaction) => (
@@ -64,24 +66,26 @@ export function LLMConversationEditor(props: {
                         )}
                     </For>
                     <Show when={controller.state.streamingContent}>
-                        <MarkdownMessage content={controller.state.streamingContent} />
+                        <div class={styles.llmMessage}>
+                            <MarkdownMessage content={controller.state.streamingContent} />
+                        </div>
                     </Show>
                 </Suspense>
             </div>
-            <Form onSubmit={onSubmit}>
+            <Form class={styles.form} onSubmit={onSubmit}>
                 <Field name="message">
                     {(field, fieldProps) => (
                         <textarea
                             {...fieldProps}
+                            rows={1}
                             value={field.value ?? ""}
                             placeholder="Type a message to the LLM"
                         />
                     )}
                 </Field>
-                <Button type="submit" variant="positive" disabled={!canSubmit()}>
-                    <Send size={16} />
-                    Send
-                </Button>
+                <IconButton type="submit" disabled={!canSubmit()} tooltip="Send message">
+                    <Send size={24} />
+                </IconButton>
             </Form>
         </div>
     );
@@ -96,11 +100,15 @@ export const LLMInteractionView = (props: {
 }) => (
     <Switch>
         <Match when={props.interaction.tag === "user-message" && props.interaction}>
-            {(message) => <div class="user-message">{message().content}</div>}
+            {(message) => (
+                <div class={styles.userMessage}>
+                    <MarkdownMessage content={message().content} />
+                </div>
+            )}
         </Match>
         <Match when={props.interaction.tag === "llm-message" && props.interaction}>
             {(message) => (
-                <div class="llm-message">
+                <div class={styles.llmMessage}>
                     <MarkdownMessage content={message().content} />
                 </div>
             )}
@@ -135,8 +143,8 @@ const CodeExecution = (props: { execution: LLMInteraction & { tag: "llm-code-exe
 );
 
 const CodeSection = (props: { label: string; children: JSX.Element }) => (
-    <div class="llm-code-section">
-        <div class="llm-code-section-label">{props.label}</div>
+    <div>
+        <div>{props.label}</div>
         {props.children}
     </div>
 );
@@ -145,14 +153,14 @@ const FeedbackRequest = (props: {
     request: LLMInteraction & { tag: "user-feedback-request" };
     resolveRequest: RequestResolver;
 }) => (
-    <div class="llm-feedback-request">
-        <div class="llm-message-label">Approval requested</div>
-        <div class="llm-message-content">{props.request.content}</div>
+    <div>
+        <div>Approval requested</div>
+        <div>{props.request.content}</div>
         <Show
             when={props.request.resolution === "unresolved"}
-            fallback={<div class="llm-feedback-resolution">{props.request.resolution}</div>}
+            fallback={<div>{props.request.resolution}</div>}
         >
-            <div class="llm-feedback-actions">
+            <div>
                 <Button
                     variant="utility"
                     onClick={() => props.resolveRequest(props.request.id, "rejected")}
