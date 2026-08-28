@@ -2,17 +2,16 @@ import type { InstanceDocument } from "catcolab-document-methods";
 import type { Document } from "catcolab-document-types";
 import type { DocumentStore } from "../document-store";
 import type { ModelDocument } from "../model/document";
+import type { ModelValidation } from "../model/elaborated-model";
 import type { Notebook } from "../model/notebook";
-import type { Issue, Result } from "../result";
+import type { Result } from "../result";
 import type { Shape } from "../shape";
-import type { TableFieldIssue } from "./errors";
+import type { TableIssue } from "./errors";
 import {
     createAddRowsMethod,
     createAddRowMethod,
-    createGetMethod,
-    createSchemaResultValidator,
+    createInstanceValidator,
     createSetMethod,
-    createTablesMethod,
     createUpdateRowsMethod,
     createUpdateRowMethod,
 } from "./instance-runtime";
@@ -26,9 +25,6 @@ export interface Instance<H, S extends Shape> {
     readonly shape: S;
     readonly document: Readonly<InstanceDocument>;
     readonly title: string;
-
-    tables(): Promise<Result<ReadonlyArray<InstanceTable>>>;
-    get(path: InstancePath): Promise<Result<InstanceTable | TableRow | FieldValue>>;
 
     update(patch: Partial<{ title: string }>): void;
     dump(): InstanceDocument;
@@ -46,31 +42,42 @@ export interface Instance<H, S extends Shape> {
     updateRow(
         row: TableRow,
         values: Record<string, LiteralValue | TableRow>,
-    ): Promise<Result<void, ReadonlyArray<Issue | TableFieldIssue>>>;
+    ): Promise<Result<void>>;
     updateRows(
         updates: ReadonlyArray<{
             row: TableRow;
             values: ReadonlyArray<Record<string, LiteralValue | TableRow>>;
         }>,
-    ): Promise<Result<void, ReadonlyArray<Issue | TableFieldIssue>>>;
+    ): Promise<Result<void>>;
     set(
         row: TableRow,
         morphism: { id: string },
         value: LiteralValue | TableRow,
-    ): Promise<Result<void, ReadonlyArray<Issue | TableFieldIssue>>>;
+    ): Promise<Result<void>>;
 
     /** Delete stored rows without requiring a valid schema. */
     deleteRow(tableId: string, rowId: string): void;
     deleteRows(rows: ReadonlyArray<{ tableId: string; rowId: string }>): void;
 
-    /* Validate both the schema and then the instance */
-    validate(): Promise<Result<void, ReadonlyArray<Issue | TableFieldIssue>>>;
+    /** Validate the schema and instance data. Schema issues are reported by
+    `modelValidation`; instance-data issues are reported by `issues`. */
+    validate(): Promise<InstanceValidation<S>>;
     /** Subscribe to changes to either the instance document or its schema. */
     onChange(callback: () => void): () => void;
     /** Revalidate initially and whenever either the instance or its schema changes. */
-    onValidate(
-        callback: (result: Result<void, ReadonlyArray<Issue | TableFieldIssue>>) => void,
-    ): () => void;
+    onValidate(callback: (validation: InstanceValidation<S>) => void): () => void;
+}
+
+/** The result of validating an instance and its schema. */
+export interface InstanceValidation<out S extends Shape> {
+    /** The result of elaborating and validating the instance's schema. */
+    readonly modelValidation: ModelValidation<S>;
+    /** The instance's tables, including any orphaned stored data. */
+    readonly tables: ReadonlyArray<InstanceTable>;
+    /** Problems with the instance data; empty when the data is valid. */
+    readonly issues: ReadonlyArray<TableIssue>;
+    /** Read one table, row, or field from the validated tables. */
+    get(path: InstancePath): Result<InstanceTable | TableRow | FieldValue>;
 }
 
 /** Create a store-backed instance. Schema-derived operations validate the schema on demand. */
@@ -84,19 +91,15 @@ export function instanceFromStore<Handle, S extends Shape>(
         return store.getDocumentView(handle) as Readonly<InstanceDocument>;
     }
 
-    const tables = createTablesMethod(schema, store, handle);
-    const get = createGetMethod(schema, store, handle);
     const addRows = createAddRowsMethod(schema, store, handle);
     const addRow = createAddRowMethod(addRows);
     const updateRows = createUpdateRowsMethod(schema, store, handle);
     const updateRow = createUpdateRowMethod(updateRows);
     const set = createSetMethod(schema, store, handle);
-    const validateSchemaResult = createSchemaResultValidator(schema, store, handle);
+    const validateInstance = createInstanceValidator(schema, store, handle);
 
-    async function validateCurrentDocument(): Promise<
-        Result<void, ReadonlyArray<Issue | TableFieldIssue>>
-    > {
-        return validateSchemaResult(await schema.validate());
+    async function validateCurrentDocument(): Promise<InstanceValidation<S>> {
+        return validateInstance(await schema.validate());
     }
 
     function deleteStoredRows(rows: ReadonlyArray<{ tableId: string; rowId: string }>): void {
@@ -125,8 +128,6 @@ export function instanceFromStore<Handle, S extends Shape>(
         get title(): string {
             return currentDocument().name;
         },
-        tables,
-        get,
         update(patch: Partial<{ title: string }>): void {
             if (patch.title !== undefined) {
                 store.changeDocument(handle, (document: Document): void => {
@@ -148,7 +149,7 @@ export function instanceFromStore<Handle, S extends Shape>(
         deleteRows(rows: ReadonlyArray<{ tableId: string; rowId: string }>): void {
             deleteStoredRows(rows);
         },
-        validate(): Promise<Result<void, ReadonlyArray<Issue | TableFieldIssue>>> {
+        validate(): Promise<InstanceValidation<S>> {
             return validateCurrentDocument();
         },
         onChange(callback: () => void): () => void {
@@ -159,26 +160,24 @@ export function instanceFromStore<Handle, S extends Shape>(
                 unsubscribeSchema();
             };
         },
-        onValidate(
-            callback: (result: Result<void, ReadonlyArray<Issue | TableFieldIssue>>) => void,
-        ): () => void {
+        onValidate(callback: (validation: InstanceValidation<S>) => void): () => void {
             let active: boolean = true;
+            let latestModelValidation: ModelValidation<S> | undefined;
 
-            function notify(result: Result<void, ReadonlyArray<Issue | TableFieldIssue>>): void {
+            function notify(validation: InstanceValidation<S>): void {
                 if (active) {
-                    callback(result);
+                    callback(validation);
                 }
             }
 
-            async function validateAndNotify(): Promise<void> {
-                notify(await validateCurrentDocument());
-            }
-
             const unsubscribeInstance: () => void = store.subscribe(handle, (): void => {
-                void validateAndNotify();
+                if (latestModelValidation !== undefined) {
+                    notify(validateInstance(latestModelValidation));
+                }
             });
-            const unsubscribeSchema: () => void = schema.onValidate((result): void => {
-                notify(validateSchemaResult(result));
+            const unsubscribeSchema: () => void = schema.onValidate((modelValidation): void => {
+                latestModelValidation = modelValidation;
+                notify(validateInstance(modelValidation));
             });
 
             return (): void => {
