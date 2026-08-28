@@ -81,12 +81,9 @@ describe("API document store", () => {
             throw new Error("expected instance to load");
         }
 
-        const tables = await instance.content.tables();
-        expect(tables.tag).toBe("Ok");
-        if (tables.tag !== "Ok") {
-            throw new Error("expected tables to load");
-        }
-        const table = tables.content.find((table) => table.label === "Person");
+        const validation = await instance.content.validate();
+        expect(validation.issues).toEqual([]);
+        const table = validation.tables.find((table) => table.label === "Person");
         expect(table).toBeDefined();
         if (!table) {
             throw new Error("expected entity table");

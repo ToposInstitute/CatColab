@@ -5,9 +5,9 @@ export type { DocumentStore, DocumentRef, ReactiveView } from "./document-store"
 export type { Issue, PathSegment, Result } from "./result";
 export { createInMemoryStore } from "./document-store";
 export { atomicTypeOfAttributeType } from "./instance/validation";
-export type { FieldPath, TableFieldIssue } from "./instance/errors";
+export type { FieldPath, OrphanedTableIssue, TableFieldIssue, TableIssue } from "./instance/errors";
 export { instanceFromStore } from "./instance/instance";
-export type { Instance, InstanceDocument } from "./instance/instance";
+export type { Instance, InstanceDocument, InstanceValidation } from "./instance/instance";
 export { llmConversationFromStore } from "./llm-conversation";
 export type {
     LLMConversation,

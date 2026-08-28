@@ -18,28 +18,24 @@ import type {
 } from "./tables";
 import { atomicTypeOfAttributeType } from "./validation";
 
-/** Read one table, row, or field using a validated schema model.
+/** Read one table, row, or field from prepared tables.
 
 Addressing failures are reported as issues. */
-export function readInstancePathFromStore<Handle>(
-    shape: InstanceCapableShape,
+export function readInstancePath<Handle>(
     store: DocumentStore<Handle>,
     handle: Handle,
-    schemaModel: ElaboratedModel<Shape>,
+    tables: ReadonlyArray<InstanceTable>,
     path: InstancePath,
 ): Result<InstanceTable | TableRow | FieldValue> {
-    const schemaTables = instanceTablesFromModel(shape, store, handle, schemaModel);
-    const schemaTableById = new Map(
-        schemaTables.map((schemaTable) => [schemaTable.id, schemaTable]),
-    );
+    const tableById = new Map(tables.map((table) => [table.id, table]));
     const document = store.getDocumentView(handle) as Readonly<InstanceDocument>;
     const [tableId, rowsSegment, rowId, fieldsSegment, fieldId, ...rest] = path;
-    const schemaTable = schemaTableById.get(tableId);
-    if (schemaTable === undefined) {
+    const table = tableById.get(tableId);
+    if (table === undefined) {
         return pathError(`Table \`${tableId}\` does not exist`);
     }
     if (path.length === 1) {
-        return { tag: "Ok", content: schemaTable };
+        return { tag: "Ok", content: table };
     }
     if (rowsSegment !== "rows" || rowId === undefined) {
         return pathError("An instance path after a table must address a row");
@@ -48,14 +44,14 @@ export function readInstancePathFromStore<Handle>(
     if (storedRow === undefined) {
         return pathError(`Row \`${rowId}\` does not exist in table \`${tableId}\``);
     }
-    const row = makeRow(store, handle, schemaTable, rowId);
+    const row = makeRow(store, handle, table, rowId);
     if (path.length === 3) {
         return { tag: "Ok", content: row };
     }
     if (fieldsSegment !== "fields" || fieldId === undefined || rest.length > 0) {
         return pathError("An instance path after a row must address a field");
     }
-    if (!schemaTable.headers.some((header) => header.id === fieldId)) {
+    if (!table.headers.some((header) => header.id === fieldId)) {
         return pathError(`Field \`${fieldId}\` does not exist in table \`${tableId}\``);
     }
     const stored = storedRow.fields[fieldId] ?? "Null";
@@ -137,7 +133,7 @@ export function updateInstanceFieldsByLabelInStore<Handle>(
         row: TableRow;
         values: ReadonlyArray<Record<string, LiteralValue | TableRow>>;
     }>,
-): Result<undefined> {
+): Result<void> {
     const schemaTables = instanceTablesFromModel(shape, store, handle, schemaModel);
 
     const issues: Issue[] = [];
@@ -176,7 +172,7 @@ export function updateInstanceFieldByIdInStore<Handle>(
     row: TableRow,
     field: { id: string },
     value: LiteralValue | TableRow,
-): Result<undefined> {
+): Result<void> {
     const schemaTables = instanceTablesFromModel(shape, store, handle, schemaModel);
 
     const issues: Issue[] = [];
@@ -315,7 +311,28 @@ function makeRow<Handle>(
     };
 }
 
-/** Read the tables using a validated schema model. */
+function makeTable<Handle>(
+    store: DocumentStore<Handle>,
+    handle: Handle,
+    id: string,
+    label: string | null,
+    headers: ReadonlyArray<TableHeader>,
+): InstanceTable {
+    const table: InstanceTable = {
+        id,
+        label,
+        headers,
+        get rows() {
+            const document = store.getDocumentView(handle) as Readonly<InstanceDocument>;
+            return orderedRowIds(document.tables[id]).map((rowId) =>
+                makeRow(store, handle, table, rowId),
+            );
+        },
+    };
+    return table;
+}
+
+/** Read the tables using an elaborated schema model. */
 export function instanceTablesFromModel<Handle>(
     shape: InstanceCapableShape,
     store: DocumentStore<Handle>,
@@ -356,19 +373,72 @@ export function instanceTablesFromModel<Handle>(
                 type: { tag: literalType },
             });
         }
-        const table: InstanceTable = {
-            id: tableObject.id,
-            label: displayLabel(tableObject.label),
-            headers,
-            get rows() {
-                const document = store.getDocumentView(handle) as Readonly<InstanceDocument>;
-                return orderedRowIds(document.tables[tableObject.id]).map((rowId) =>
-                    makeRow(store, handle, table, rowId),
-                );
-            },
-        };
-        return table;
+        return makeTable(store, handle, tableObject.id, displayLabel(tableObject.label), headers);
     });
+}
+
+/** Extend schema-derived tables with any orphaned stored data.
+
+Orphaned stored fields are appended to their table's headers as `Unknown`-typed
+headers, and stored tables without a schema entity become tables with `null`
+labels whose headers are derived from the stored field ids. */
+export function tablesWithOrphanedData<Handle>(
+    store: DocumentStore<Handle>,
+    handle: Handle,
+    schemaTables: ReadonlyArray<InstanceTable>,
+): ReadonlyArray<InstanceTable> {
+    const document = store.getDocumentView(handle) as Readonly<InstanceDocument>;
+    const schemaTableIds = new Set(schemaTables.map((table) => table.id));
+
+    const tables = schemaTables.map((table) => {
+        const orphanedFieldIds = storedFieldIds(
+            document.tables[table.id],
+            new Set(table.headers.map((header) => header.id)),
+        );
+        if (orphanedFieldIds.length === 0) {
+            return table;
+        }
+        return makeTable(store, handle, table.id, table.label, [
+            ...table.headers,
+            ...orphanedFieldIds.map(unknownHeader),
+        ]);
+    });
+
+    const orphanedTables = Object.keys(document.tables)
+        .filter((tableId) => !schemaTableIds.has(tableId))
+        .map((tableId) =>
+            makeTable(
+                store,
+                handle,
+                tableId,
+                null,
+                storedFieldIds(document.tables[tableId], new Set()).map(unknownHeader),
+            ),
+        );
+
+    return [...tables, ...orphanedTables];
+}
+
+/** Collect stored field ids not in `knownIds`, in first-seen row order. */
+function storedFieldIds(
+    table: Readonly<DocumentTypes.Table> | undefined,
+    knownIds: ReadonlySet<string>,
+): string[] {
+    const fieldIds: string[] = [];
+    const seen = new Set(knownIds);
+    for (const rowId of orderedRowIds(table)) {
+        for (const fieldId of Object.keys(table?.rows[rowId]?.fields ?? {})) {
+            if (!seen.has(fieldId)) {
+                seen.add(fieldId);
+                fieldIds.push(fieldId);
+            }
+        }
+    }
+    return fieldIds;
+}
+
+function unknownHeader(fieldId: string): TableHeader {
+    return { id: fieldId, label: null, type: { tag: "Unknown" } };
 }
 
 function displayLabel(label: QualifiedLabel): string {
