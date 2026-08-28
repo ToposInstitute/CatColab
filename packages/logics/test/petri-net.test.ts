@@ -74,11 +74,8 @@ describe("The petri-net logic", () => {
         });
 
         const result = await notebook.validate();
-        expect(result.tag).toBe("Ok");
-        if (result.tag !== "Ok") {
-            return;
-        }
-        expect(result.content.obGenerators().length).toBe(3);
-        expect(result.content.morGenerators().length).toBe(1);
+        expect(result.issues).toEqual([]);
+        expect(result.model.judgmentsOf(Place).length).toBe(3);
+        expect(result.model.judgmentsOf(Transition).length).toBe(1);
     });
 });

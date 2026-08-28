@@ -6,7 +6,7 @@ export type DocumentBinding<Handle = unknown, E extends Issue = Issue> = {
     readonly document: Readonly<Document>;
     readonly handle: Handle;
     readonly title: string;
-    validate(): Promise<Result<unknown, ReadonlyArray<E>>>;
+    validate(): Promise<Result<unknown, ReadonlyArray<E>> | { issues: ReadonlyArray<E> }>;
 };
 
 export type ScopedDocumentLink = {
@@ -71,8 +71,9 @@ async function validateScopedDocument<E extends Issue>(
     binding: string,
 ): Promise<ReadonlyArray<string>> {
     const result = await document.validate();
-    if (result.tag === "Err") {
-        return [`${binding}: ${JSON.stringify(result.content)}`];
+    const issues = "issues" in result ? result.issues : result.tag === "Err" ? result.content : [];
+    if (issues.length > 0) {
+        return [`${binding}: ${JSON.stringify(issues)}`];
     }
     return [];
 }

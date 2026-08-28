@@ -136,9 +136,9 @@ function binderFromStore<Handle>(store: DocumentStore<Handle>): Binder<Handle> {
                 };
             }
 
-            const schemaResult = await schema.validate();
-            if (schemaResult.tag === "Err") {
-                return schemaResult;
+            const schemaValidation = await schema.validate();
+            if (schemaValidation.issues.length > 0) {
+                return { tag: "Err", content: schemaValidation.issues };
             }
 
             const schemaRef = store.getDocumentRef(schema.handle);
