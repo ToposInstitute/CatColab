@@ -17,9 +17,6 @@ pub use crate::stdlib::analyses::ode::polynomial_ode::v1::polynomial_ode::*;
 mod v0;
 mod v1;
 
-/// Latest version.
-pub static CURRENT_VERSION: &str = "1";
-
 /// Migration for problem data for polynomial ODE.
 pub fn migrate_polynomial_ode_v0_to_v1(
     v0: v0::polynomial_ode::PolynomialODEProblemData,

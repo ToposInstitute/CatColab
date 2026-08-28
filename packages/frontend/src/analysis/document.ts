@@ -8,6 +8,7 @@ import {
     type Document,
     type StableRef,
     type Uuid,
+    migrateLinearODEToCurrentVersion,
 } from "catlog-wasm";
 import { type Api, type DocRef, findAndMigrate, type LiveDoc, makeLiveDoc } from "../api";
 import { getLiveDiagram, getLiveDiagramFromRepo, type LiveDiagramDoc } from "../diagram";
@@ -164,7 +165,6 @@ the set of fields changes. It allow new fields to be added. Renaming or removing
 existing fields is *not* supported.
  */
 function migrateAnalysis(liveAnalysis: LiveAnalysisDoc) {
-    // TODO: use `catlog::src::stdlib::analyses::ode::v1::migrate`
     const theory = theoryForLiveAnalysis(liveAnalysis);
 
     const getAnalysisMeta = (analysisId: string) => {
@@ -191,6 +191,34 @@ function migrateAnalysis(liveAnalysis: LiveAnalysisDoc) {
                     });
                 });
             }
+        }
+
+        // FIXME: For now we statically list all analyses that have breaking version changes and
+        //        manually migrate the data. We should change this once we have refactored out
+        //        analyses into their own crate and implemented their frontend components with the
+        //        new API.
+
+        switch (cell.content.id) {
+            case "linear-ode":
+                liveAnalysis.liveDoc.changeDoc((doc) => {
+                    Nb.mutateCellContentById(doc.notebook, cell.id, (content) => {
+                        // @ts-expect-error The types of analysis content are too vague: Record<string, unknown>
+                        content.content = migrateLinearODEToCurrentVersion(content.content);
+                    });
+                });
+                break;
+            case "lotka-volterra":
+                // TODO: update cell.content.content
+                break;
+            case "mass-action":
+                // TODO: update cell.content.content
+                break;
+            case "mass-action-equations":
+                // TODO: update cell.content.content
+                break;
+            case "polynomial-ode":
+                // TODO: update cell.content.content
+                break;
         }
     }
 }
