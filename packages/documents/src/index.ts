@@ -32,7 +32,8 @@ export type {
     MorphismJudgment,
     ObjectJudgment,
     ElaboratedModel,
-    ValidationView,
+    ModelValidation,
+    ModelValidationView,
 } from "./model/elaborated-model";
 export type { NotebookDocument } from "./notebook-document";
 export type { RichTextCell } from "./rich-text";

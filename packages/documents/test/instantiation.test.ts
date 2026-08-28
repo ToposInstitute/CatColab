@@ -30,6 +30,6 @@ describe.skip("instantiation", () => {
 
         // Instantiating a valid notebook keeps this notebook valid.
         const result = await notebook.validate();
-        expect(result.tag).toBe("Ok");
+        expect(result.issues).toEqual([]);
     });
 });

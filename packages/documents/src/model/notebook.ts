@@ -2,7 +2,6 @@ import { Model, Nb } from "catcolab-document-methods";
 import type { ModelJudgment } from "catcolab-document-types";
 import type { DocumentStore } from "../document-store";
 import type { NotebookDocument } from "../notebook-document";
-import type { Result } from "../result";
 import { getRichTextCell, type RichTextCell } from "../rich-text";
 import type {
     AnyCellType,
@@ -26,7 +25,7 @@ import {
     type ObjectCell,
 } from "./cell";
 import type { ModelDocument } from "./document";
-import type { ElaboratedModel, ValidationView } from "./elaborated-model";
+import type { ModelValidation, ModelValidationView } from "./elaborated-model";
 import { morphismTypesEqual, objectTypesEqual } from "./equality";
 import { createNotebookValidator } from "./validation";
 
@@ -179,11 +178,11 @@ export interface Notebook<
     update(patch: Partial<{ title: string }>): void;
     dump(): D;
     onChange(callback: () => void): () => void;
-    validate(): Promise<Result<ElaboratedModel<S>>>;
-    onValidate(callback: (result: Result<ElaboratedModel<S>>) => void): () => void;
+    validate(): Promise<ModelValidation<S>>;
+    onValidate(callback: (result: ModelValidation<S>) => void): () => void;
     /** Create a live, reactive view of the notebook's validation state. The
      * caller must dispose the view when it is no longer needed. */
-    createValidationView(): ValidationView<S>;
+    createValidationView(): ModelValidationView<S>;
 }
 
 export function modelNotebookFromStore<Handle, S extends Shape>(

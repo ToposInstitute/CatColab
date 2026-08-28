@@ -2,12 +2,12 @@ import type { FormalCell, ModelDocument } from "catcolab-document-methods";
 import type { ModelJudgment, Notebook } from "catcolab-document-types";
 import type { DblModel, DblTheory, InvalidDblModel, ModelPresentation } from "catlog-wasm";
 import { createReactiveView, type DocumentStore } from "../document-store";
-import type { Issue, Result } from "../result";
+import type { Issue } from "../result";
 import type { Shape } from "../shape";
 import {
     elaboratedModelFromPresentation,
-    type ElaboratedModel,
-    type ValidationView,
+    type ModelValidation,
+    type ModelValidationView,
 } from "./elaborated-model";
 
 function formalCellForGenerator(
@@ -99,7 +99,7 @@ function invalidModelIssue(notebook: Notebook<ModelJudgment>, error: InvalidDblM
 
 Elaboration and validation are separate steps: even an invalid model has a
 presentation, so `presentation` is absent only when elaboration itself fails. */
-export interface ModelValidation {
+interface ModelValidationState {
     /** Presentation of the elaborated model; absent if elaboration failed. */
     readonly presentation?: ModelPresentation;
     /** Validation issues; empty when the document is valid. */
@@ -112,7 +112,7 @@ export async function validateModelDocument(
     document: Readonly<ModelDocument>,
     theory: DblTheory,
     refId: string,
-): Promise<ModelValidation> {
+): Promise<ModelValidationState> {
     const { DblModelMap, elaborateModel } = await import("catlog-wasm");
     const instantiatedModels = new DblModelMap();
     let model: DblModel;
@@ -142,13 +142,13 @@ export async function validateModelDocument(
 /** The validation surface of a notebook: one-shot validation, validation
 callbacks, and live validation views. */
 export interface NotebookValidator<S extends Shape> {
-    validate(): Promise<Result<ElaboratedModel<S>>>;
-    onValidate(callback: (result: Result<ElaboratedModel<S>>) => void): () => void;
-    createValidationView(): ValidationView<S>;
+    validate(): Promise<ModelValidation<S>>;
+    onValidate(callback: (result: ModelValidation<S>) => void): () => void;
+    createValidationView(): ModelValidationView<S>;
 }
 
 /** The state shared by all validation consumers of a notebook. */
-type ValidationState = ModelValidation;
+type ValidationState = ModelValidationState;
 
 /** Create the validation machinery for a notebook over a document store.
 
@@ -163,7 +163,7 @@ export function createNotebookValidator<Handle, S extends Shape>(
     let coreTheory: Promise<DblTheory> | undefined;
 
     /** Elaborate and validate the current document. */
-    async function elaborateAndValidate(): Promise<ModelValidation> {
+    async function elaborateAndValidate(): Promise<ModelValidationState> {
         if (!shape.getCoreTheory) {
             let shapeName = "unnamed";
             if (shape.theory) {
@@ -190,18 +190,14 @@ export function createNotebookValidator<Handle, S extends Shape>(
         }
     }
 
-    /** Convert a validation state into the `Result` exposed by `validate` and
-    `onValidate`. Ok only when elaboration succeeded and there are no issues. */
-    function resultFromValidation({
+    /** Convert internal validation state into the public snapshot. */
+    function modelValidationFromState({
         presentation,
         issues,
-    }: ModelValidation): Result<ElaboratedModel<S>> {
-        if (issues.length > 0 || presentation === undefined) {
-            return { tag: "Err", content: issues };
-        }
+    }: ModelValidationState): ModelValidation<S> {
         return {
-            tag: "Ok",
-            content: elaboratedModelFromPresentation(shape, () => presentation),
+            model: elaboratedModelFromPresentation(shape, () => presentation),
+            issues,
         };
     }
 
@@ -222,7 +218,7 @@ export function createNotebookValidator<Handle, S extends Shape>(
     /** Revalidate the document and publish the outcome to listeners. When
     revalidations overlap, only the latest-started one publishes, so listeners
     never observe stale state; every caller still receives its own outcome. */
-    async function revalidate(): Promise<ModelValidation> {
+    async function revalidate(): Promise<ModelValidationState> {
         const ticket = ++revalidationCounter;
         const state = await elaborateAndValidate();
         if (ticket === revalidationCounter) {
@@ -255,14 +251,14 @@ export function createNotebookValidator<Handle, S extends Shape>(
 
     return {
         async validate() {
-            return resultFromValidation(await revalidate());
+            return modelValidationFromState(await revalidate());
         },
         onValidate(callback) {
             return subscribeToValidationState((state) => {
-                callback(resultFromValidation(state));
+                callback(modelValidationFromState(state));
             });
         },
-        createValidationView(): ValidationView<S> {
+        createValidationView(): ModelValidationView<S> {
             const reactiveView = createReactiveView(store, latestValidationState);
             const dispose = subscribeToValidationState((state) => {
                 reactiveView.replace(state);
