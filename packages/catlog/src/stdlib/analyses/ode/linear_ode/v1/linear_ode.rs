@@ -1,9 +1,4 @@
-//! Linear constant-coefficient first-order ODE analysis of models.
-//!
-//! This follows the structure of [`ode::ode_semantics`], implementing `ODESemantics` for the struct
-//! `LinearODESemantics`.
-//!
-//! [`ode::ode_semantics`]: crate::stdlib::analyses::ode::ode_semantics
+//! Version 1 of `linear_ode`, using `ode_semantics`.
 
 use std::collections::HashMap;
 use std::fmt;

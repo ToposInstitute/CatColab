@@ -1,9 +1,4 @@
-//! Lotka-Volterra ODE analysis of models.
-//!
-//! This follows the structure of [`ode::ode_semantics`], implementing `ODESemantics` for
-//! the struct `LotkaVolterraSemantics`.
-//!
-//! [`ode::ode_semantics`]: crate::stdlib::analyses::ode::ode_semantics
+//! Version 1 of `lotka_volterra`, using `ode_semantics`.
 
 use std::collections::HashMap;
 use std::fmt;
