@@ -1,11 +1,13 @@
-import { createForm, getValue, reset, type SubmitHandler } from "@modular-forms/solid";
+import * as Forms from "@modular-forms/solid";
+import type { SubmitHandler } from "@modular-forms/solid";
+import { makeEventListener } from "@solid-primitives/event-listener";
 import { createResizeObserver } from "@solid-primitives/resize-observer";
 import { createScrollPosition, getScrollParent } from "@solid-primitives/scroll";
 import Send from "lucide-solid/icons/send";
 import { createMemo, For, lazy, Match, onMount, Suspense, Switch, Show, JSX } from "solid-js";
 
 import { LLMInteraction } from "catcolab-document-types";
-import { Button, CodeView, Foldable, IconButton } from "catcolab-ui-components";
+import { Button, CodeView, Foldable, type FocusHandle, IconButton } from "catcolab-ui-components";
 import type { ApiDocumentStore } from "../api";
 import { useInferenceKey } from "../user/inference_key_context";
 import { createLLMConversationController } from "./conversation_controller";
@@ -21,6 +23,7 @@ type LLMMessageForm = {
 export function LLMConversationEditor(props: {
     conversation: ApiLLMConversation;
     documentStore: ApiDocumentStore;
+    focus: FocusHandle;
 }) {
     void LazyMarkdownMessage.preload();
 
@@ -40,17 +43,29 @@ export function LLMConversationEditor(props: {
     ]);
 
     // Set up form for user to send messages.
-    const [form, { Form, Field }] = createForm<LLMMessageForm>();
+    const [form, { Form, Field }] = Forms.createForm<LLMMessageForm>();
 
     const canSubmit = (): boolean => {
-        const hasMessage = Boolean(getValue(form, "message")?.trim());
+        const hasMessage = Boolean(Forms.getValue(form, "message")?.trim());
         return inferenceKey()?.tag === "Ready" && !form.submitting && hasMessage;
     };
 
     const onSubmit: SubmitHandler<LLMMessageForm> = (values) => {
-        reset(form, "message");
+        Forms.reset(form, "message");
+        Forms.focus(form, "message");
         return controller.runTurn({ content: values.message, files: [] });
     };
+
+    // Set up `Shift + Enter` shortcut to send message.
+    makeEventListener(window, "keydown", (evt) => {
+        if (!props.focus.hasFocus()) {
+            return;
+        }
+        if (evt.shiftKey && evt.key === "Enter" && canSubmit()) {
+            Forms.submit(form);
+            evt.preventDefault();
+        }
+    });
 
     // Set up autoscrolling to bottom of content.
     let conversation!: HTMLDivElement;
@@ -80,7 +95,7 @@ export function LLMConversationEditor(props: {
                             {...fieldProps}
                             rows={1}
                             value={field.value ?? ""}
-                            placeholder="Type a message to the LLM"
+                            placeholder="Type a message, then press Shift-Enter to send"
                         />
                     )}
                 </Field>
