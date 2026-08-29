@@ -9,7 +9,7 @@ import { createMemo, For, lazy, Match, onMount, Suspense, Switch, Show, JSX } fr
 import { LLMInteraction } from "catcolab-document-types";
 import { Button, CodeView, Foldable, type FocusHandle, IconButton } from "catcolab-ui-components";
 import { useInferenceKey } from "../user/inference_key_context";
-import { createLLMConversationController } from "./conversation_controller";
+import { createLLMConversationController, type LLMTurnNotice } from "./conversation_controller";
 import type { ApiLLMConversation } from "./live_doc_compatibility";
 
 import styles from "./conversation_editor.module.css";
@@ -69,12 +69,12 @@ export function LLMConversationEditor(props: {
         autoscroll(conversation, scrollSentinel);
     });
 
-    const status = (): string => {
+    const statusText = (): string => {
         if (inferenceKey()?.tag !== "Ready") {
             return "Loading inference key...";
         }
         return controller.state.isRunning ? "Running..." : "Idle";
-    }
+    };
 
     return (
         <div class={styles.conversation} ref={conversation}>
@@ -95,7 +95,15 @@ export function LLMConversationEditor(props: {
             </div>
             <div class={styles.composer}>
                 <div class={styles.status}>
-                    {status()}
+                    {statusText()}
+                    <Show when={controller.state.notice}>
+                        {(notice) => (
+                            <>
+                                {" • "}
+                                <LLMTurnNoticeView notice={notice()} />
+                            </>
+                        )}
+                    </Show>
                 </div>
                 <Form class={styles.form} onSubmit={onSubmit}>
                     <Field name="message">
@@ -223,4 +231,13 @@ const MarkdownMessage = (props: { content: string }) => (
     <Suspense fallback={<div class={styles.plainMessage}>{props.content}</div>}>
         <LazyMarkdownMessage content={props.content} />
     </Suspense>
+);
+
+const LLMTurnNoticeView = (props: { notice: LLMTurnNotice }) => (
+    <>
+        <span class={props.notice.kind === "error" ? styles.error : styles.note}>
+            {props.notice.kind === "error" ? "Error" : "Note"}
+        </span>
+        {`: ${props.notice.message}`}
+    </>
 );

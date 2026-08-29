@@ -47,7 +47,16 @@
 
 .status {
     color: var(--color-text-secondary);
-    font-size: 0.85em;
+    font-size: smaller;
+    overflow-wrap: break-word;
+}
+
+.note {
+    color: var(--color-alert-note);
+}
+
+.error {
+    color: var(--color-alert-danger);
 }
 
 .form {
@@ -55,6 +64,7 @@
     align-items: flex-end;
 
     & textarea {
+        font: inherit;
         flex: 1;
         field-sizing: content;
         min-height: 0;
@@ -65,5 +75,6 @@
 
     & button {
         padding-inline: 0.25rem;
+        margin-bottom: 6px;
     }
 }

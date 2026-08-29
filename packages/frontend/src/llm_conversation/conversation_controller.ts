@@ -121,6 +121,7 @@ export function createLLMConversationController(
                 userInput,
                 handleTurnEvent,
             );
+            setStore("notice", turnResultToNotice(result));
             setStore("liveInteractions", result.tag === "Retryable" ? result.attempts : []);
             return result;
         } finally {
@@ -133,4 +134,21 @@ export function createLLMConversationController(
         state: store,
         runTurn,
     };
+}
+
+function turnResultToNotice(result: LLMConversationTurnResult): LLMTurnNotice | null {
+    switch (result.tag) {
+        case "Completed":
+            return null;
+        case "Incomplete":
+            // The turn stopped without a final response, but the conversation
+            // state is coherent.
+            return { kind: "note", message: result.reason, retryable: false };
+        case "Failed":
+            return { kind: "error", message: result.error, retryable: false };
+        case "Retryable":
+            return { kind: "error", message: result.error, retryable: true };
+        default:
+            assertExhaustive(result);
+    }
 }
