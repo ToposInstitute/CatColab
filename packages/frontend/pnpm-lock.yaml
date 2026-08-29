@@ -132,8 +132,8 @@ importers:
         specifier: ^0.16.22
         version: 0.16.22
       lucide-solid:
-        specifier: ^0.471.0
-        version: 0.471.0(solid-js@1.9.10)
+        specifier: ^0.577.0
+        version: 0.577.0(solid-js@1.9.10)
       openai:
         specifier: ^6.45.0
         version: 6.45.0(ws@8.18.3)
@@ -2053,8 +2053,8 @@ packages:
   lru-cache@5.1.1:
     resolution: {integrity: sha512-KpNARQA3Iwv+jTA0utUVVbrh+Jlrr1Fv0e56GGzAFOXN7dk/FviaDW8LHmK52DlcH4WP2n6gI8vN1aesBFgo9w==}
 
-  lucide-solid@0.471.0:
-    resolution: {integrity: sha512-QkoM5j49z6O6Ek7k6XtMfQtIwCFbBJeyUw98bF1F3fWC9+oIVKfGZRNdweBnW6IaLPKvSE2cyTU4gkGaKZ+iNA==}
+  lucide-solid@0.577.0:
+    resolution: {integrity: sha512-r/rsauBlyNjFlUhXCkD544tOH1GgcFFupw9oP2zZT4BiFkHoO3MTr12QfKBrS5zCRIhktc/qY2tRr925hFlNuQ==}
     peerDependencies:
       solid-js: ^1.4.7
 
@@ -5108,7 +5108,7 @@ snapshots:
     dependencies:
       yallist: 3.1.1
 
-  lucide-solid@0.471.0(solid-js@1.9.10):
+  lucide-solid@0.577.0(solid-js@1.9.10):
     dependencies:
       solid-js: 1.9.10
 
