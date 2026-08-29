@@ -24,6 +24,11 @@
     padding-inline: var(--message-inset);
 }
 
+/* Placeholder shown while the Markdown-rendering pipeline loads. */
+.plainMessage {
+    white-space: pre-wrap;
+}
+
 .form {
     display: flex;
     align-items: flex-end;

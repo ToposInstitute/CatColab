@@ -13,8 +13,6 @@ import type { ApiLLMConversation } from "./live_doc_compatibility";
 
 import styles from "./conversation_editor.module.css";
 
-const MarkdownMessage = lazy(() => import("./markdown_message"));
-
 /** Form data for a message to send to the LLM. */
 type LLMMessageForm = {
     message: string;
@@ -24,7 +22,7 @@ export function LLMConversationEditor(props: {
     conversation: ApiLLMConversation;
     documentStore: ApiDocumentStore;
 }) {
-    void MarkdownMessage.preload();
+    void LazyMarkdownMessage.preload();
 
     const inferenceKey = useInferenceKey();
     const controller = createLLMConversationController(
@@ -35,6 +33,13 @@ export function LLMConversationEditor(props: {
     const resolveRequest: RequestResolver = (id, resolution) =>
         props.conversation.resolveFeedbackRequest(id, resolution);
 
+    // Memoize complete list of interactions, persisted and ephemeral.
+    const interactions = createMemo(() => [
+        ...props.conversation.interactions(),
+        ...controller.state.liveInteractions,
+    ]);
+
+    // Set up form for user to send messages.
     const [form, { Form, Field }] = createForm<LLMMessageForm>();
 
     const canSubmit = (): boolean => {
@@ -47,35 +52,26 @@ export function LLMConversationEditor(props: {
         return controller.runTurn({ content: values.message, files: [] });
     };
 
+    // Set up autoscrolling to bottom of content.
     let conversation!: HTMLDivElement;
     onMount(() => autoscroll(conversation));
 
     return (
         <div class={styles.conversation} ref={conversation}>
             <div class={styles.transcript}>
-                <Suspense>
-                    <For each={props.conversation.interactions()}>
-                        {(interaction) => (
-                            <LLMInteractionView
-                                interaction={interaction}
-                                resolveRequest={resolveRequest}
-                            />
-                        )}
-                    </For>
-                    <For each={controller.state.liveInteractions}>
-                        {(interaction) => (
-                            <LLMInteractionView
-                                interaction={interaction}
-                                resolveRequest={resolveRequest}
-                            />
-                        )}
-                    </For>
-                    <Show when={controller.state.streamingContent}>
-                        <div class={styles.llmMessage}>
-                            <MarkdownMessage content={controller.state.streamingContent} />
-                        </div>
-                    </Show>
-                </Suspense>
+                <For each={interactions()}>
+                    {(interaction) => (
+                        <LLMInteractionView
+                            interaction={interaction}
+                            resolveRequest={resolveRequest}
+                        />
+                    )}
+                </For>
+                <Show when={controller.state.streamingContent}>
+                    <div class={styles.llmMessage}>
+                        <MarkdownMessage content={controller.state.streamingContent} />
+                    </div>
+                </Show>
             </div>
             <Form class={styles.form} onSubmit={onSubmit}>
                 <Field name="message">
@@ -199,4 +195,12 @@ const FeedbackRequest = (props: {
             </div>
         </Show>
     </div>
+);
+
+const LazyMarkdownMessage = lazy(() => import("./markdown_message"));
+
+const MarkdownMessage = (props: { content: string }) => (
+    <Suspense fallback={<div class={styles.plainMessage}>{props.content}</div>}>
+        <LazyMarkdownMessage content={props.content} />
+    </Suspense>
 );

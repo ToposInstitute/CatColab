@@ -166,15 +166,14 @@ async function generateLLMConversationResponse<
             };
         }
 
-        for (const interaction of generated.content) {
-            conversation.appendInteraction(interaction);
-        }
+        const interactions = [...generated.content];
         if (
-            !generated.content.some((interaction) => interaction.tag === "llm-message") &&
+            !interactions.some((interaction) => interaction.tag === "llm-message") &&
             result.content.trim().length > 0
         ) {
-            conversation.appendInteraction(LLMConversation.newLLMMessage(result.content));
+            interactions.push(LLMConversation.newLLMMessage(result.content));
         }
+        conversation.appendInteractions(interactions);
         executionScope.commit();
 
         if (result.termination.tag === "ProviderRequestLimit") {
