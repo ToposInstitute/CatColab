@@ -3,12 +3,7 @@ import { createStore } from "solid-js/store";
 
 import { LLMConversation } from "catcolab-document-methods";
 import { LLMInteraction } from "catcolab-document-types";
-import type {
-    DocumentStore,
-    LLMConversation as LLMConversationAPI,
-    Shape,
-    LLMConversationAttachment,
-} from "catcolab-documents";
+import { useBinder } from "../api";
 import { ChatTurnEvent } from "../inference/chat";
 import { InferenceKeyResult } from "../user/inference_key_context";
 import { assertExhaustive } from "../util/assert_exhaustive";
@@ -17,6 +12,7 @@ import {
     LLMConversationUserInput,
     runLLMConversationTurn,
 } from "./document";
+import type { ApiLLMConversation } from "./live_doc_compatibility";
 
 /** Ephemeral state for an LLM turn. */
 export type LLMTurnState = {
@@ -31,7 +27,8 @@ const newLLMTurnState = () => ({
 
 /** Controller for an LLM conversation, intermediating between UI and harness.
 
-Handles events and exposes ephemeral state during turns of the LLM.
+Handles events and exposes ephemeral state during turns of the LLM. Must be
+created within a component with the binder provided as context.
  */
 export type LLMConversationController = {
     /** Reactive store for ephemeral turn state. */
@@ -41,14 +38,11 @@ export type LLMConversationController = {
     runTurn: (userInput: LLMConversationUserInput) => Promise<LLMConversationTurnResult>;
 };
 
-export function createLLMConversationController<
-    Handle,
-    Attachment extends LLMConversationAttachment<Shape, Handle>,
->(
-    conversation: Accessor<LLMConversationAPI<Attachment, Handle>>,
-    documentStore: Accessor<DocumentStore<Handle>>,
+export function createLLMConversationController(
+    conversation: Accessor<ApiLLMConversation>,
     inferenceKey: Accessor<InferenceKeyResult | undefined>,
 ): LLMConversationController {
+    const binder = useBinder();
     const [store, setStore] = createStore<LLMTurnState>(newLLMTurnState());
 
     const pushLiveInteraction = (interaction: LLMInteraction) => {
@@ -109,7 +103,7 @@ export function createLLMConversationController<
         try {
             const result = await runLLMConversationTurn(
                 conversation(),
-                documentStore(),
+                binder.store,
                 key,
                 userInput,
                 handleTurnEvent,

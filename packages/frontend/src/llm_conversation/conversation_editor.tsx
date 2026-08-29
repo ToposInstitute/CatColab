@@ -8,7 +8,6 @@ import { createMemo, For, lazy, Match, onMount, Suspense, Switch, Show, JSX } fr
 
 import { LLMInteraction } from "catcolab-document-types";
 import { Button, CodeView, Foldable, type FocusHandle, IconButton } from "catcolab-ui-components";
-import type { ApiDocumentStore } from "../api";
 import { useInferenceKey } from "../user/inference_key_context";
 import { createLLMConversationController } from "./conversation_controller";
 import type { ApiLLMConversation } from "./live_doc_compatibility";
@@ -22,17 +21,12 @@ type LLMMessageForm = {
 
 export function LLMConversationEditor(props: {
     conversation: ApiLLMConversation;
-    documentStore: ApiDocumentStore;
     focus: FocusHandle;
 }) {
     void LazyMarkdownMessage.preload();
 
     const inferenceKey = useInferenceKey();
-    const controller = createLLMConversationController(
-        () => props.conversation,
-        () => props.documentStore,
-        inferenceKey,
-    );
+    const controller = createLLMConversationController(() => props.conversation, inferenceKey);
     const resolveRequest: RequestResolver = (id, resolution) =>
         props.conversation.resolveFeedbackRequest(id, resolution);
 

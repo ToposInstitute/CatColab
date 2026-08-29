@@ -591,7 +591,6 @@ export function DocumentPane(props: {
                             {(liveConversation) => (
                                 <LLMConversationEditor
                                     conversation={liveConversation.conversation}
-                                    documentStore={liveConversation.store}
                                     focus={props.focus}
                                 />
                             )}

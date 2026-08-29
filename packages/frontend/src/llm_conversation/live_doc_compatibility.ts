@@ -7,7 +7,7 @@ import type {
     Shape,
 } from "catcolab-documents";
 import { llmConversationFromStore } from "catcolab-documents";
-import type { Api, ApiBinder, ApiDocumentHandle, ApiDocumentStore, DocRef, LiveDoc } from "../api";
+import type { Api, ApiBinder, ApiDocumentHandle, DocRef, LiveDoc } from "../api";
 import type { LiveModelDoc, ModelLibrary } from "../model";
 import { notebookShapes, shapeForTheory } from "../model/shapes";
 
@@ -15,8 +15,8 @@ import { notebookShapes, shapeForTheory } from "../model/shapes";
  * Live*Doc compatibility and binder loading for LLM conversations, following
  * `instance/live_doc_compatibility.ts`; see that module for the details of the
  * pattern. Differences: the attachment may be a model notebook or a data
- * instance, and the facade carries the conversation object and its backing
- * store, the seam used by the conversation editor.
+ * instance, and the facade carries the conversation object for use by the
+ * conversation editor.
  */
 
 export type ApiLLMConversationAttachment = LLMConversationAttachment<Shape, ApiDocumentHandle>;
@@ -31,7 +31,6 @@ export type LiveLLMConversationDoc = {
     liveDoc: LiveDoc<LLMConversationDocument>;
     conversation: ApiLLMConversation;
     attachment: ApiLLMConversationAttachment;
-    store: ApiDocumentStore;
     modelLiveDoc: LiveModelDoc["liveDoc"];
 };
 
@@ -116,7 +115,6 @@ export async function getLiveLLMConversation(
             liveDoc,
             conversation,
             attachment,
-            store: binder.store,
             modelLiveDoc: liveModel.liveDoc,
         },
         docRef,
