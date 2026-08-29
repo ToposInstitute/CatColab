@@ -62,15 +62,15 @@ importers:
       '@solid-primitives/event-listener':
         specifier: ^2.4.3
         version: 2.4.3(solid-js@1.9.10)
+      '@solid-primitives/intersection-observer':
+        specifier: ^2.2.5
+        version: 2.2.5(solid-js@1.9.10)
       '@solid-primitives/map':
         specifier: ^0.7.2
         version: 0.7.2(solid-js@1.9.10)
       '@solid-primitives/resize-observer':
         specifier: ^2.2.0
         version: 2.2.0(solid-js@1.9.10)
-      '@solid-primitives/scroll':
-        specifier: ^2.1.6
-        version: 2.1.6(solid-js@1.9.10)
       '@solid-primitives/timer':
         specifier: ^1.4.1
         version: 1.4.2(solid-js@1.9.10)
@@ -1129,6 +1129,11 @@ packages:
     peerDependencies:
       solid-js: ^1.6.12
 
+  '@solid-primitives/intersection-observer@2.2.5':
+    resolution: {integrity: sha512-mhlQETWaS4jjVBBmfFUsUSih5eSqVdYD7bDAjwmhxEAy1bydKTiaCn8g3ARQB1jM/92qyxTcOvTCpPoMIOkaPA==}
+    peerDependencies:
+      solid-js: ^1.6.12
+
   '@solid-primitives/map@0.7.2':
     resolution: {integrity: sha512-sXK/rS68B4oq3XXNyLrzVhLtT1pnimmMUahd2FqhtYUuyQsCfnW058ptO1s+lWc2k8F/3zQSNVkZ2ifJjlcNbQ==}
     peerDependencies:
@@ -1146,11 +1151,6 @@ packages:
 
   '@solid-primitives/rootless@1.5.4':
     resolution: {integrity: sha512-TOIZa1VUfVJ+9nkCcRajw3U4t9vBOP1HxX1WHNTbXq32mXwlqTvUnC4CRIilohcryBkT9u2ZkhUDSHRTaGp55g==}
-    peerDependencies:
-      solid-js: ^1.6.12
-
-  '@solid-primitives/scroll@2.1.6':
-    resolution: {integrity: sha512-0qXgveGKtmwLee4SxkEZhTxgGVu8p7Utpe1f1Y4zSKaJoIsIc+PqPFMMy3HjIvjfVOGeAtuVwHn+kxMkF+5VEg==}
     peerDependencies:
       solid-js: ^1.6.12
 
@@ -4055,6 +4055,11 @@ snapshots:
       '@solid-primitives/utils': 6.4.1(solid-js@1.9.10)
       solid-js: 1.9.10
 
+  '@solid-primitives/intersection-observer@2.2.5(solid-js@1.9.10)':
+    dependencies:
+      '@solid-primitives/utils': 6.4.1(solid-js@1.9.10)
+      solid-js: 1.9.10
+
   '@solid-primitives/map@0.7.2(solid-js@1.9.10)':
     dependencies:
       '@solid-primitives/trigger': 1.2.2(solid-js@1.9.10)
@@ -4076,13 +4081,6 @@ snapshots:
   '@solid-primitives/rootless@1.5.4(solid-js@1.9.10)':
     dependencies:
       '@solid-primitives/utils': 6.4.1(solid-js@1.9.10)
-      solid-js: 1.9.10
-
-  '@solid-primitives/scroll@2.1.6(solid-js@1.9.10)':
-    dependencies:
-      '@solid-primitives/event-listener': 2.4.6(solid-js@1.9.10)
-      '@solid-primitives/rootless': 1.5.4(solid-js@1.9.10)
-      '@solid-primitives/static-store': 0.1.4(solid-js@1.9.10)
       solid-js: 1.9.10
 
   '@solid-primitives/static-store@0.1.4(solid-js@1.9.10)':

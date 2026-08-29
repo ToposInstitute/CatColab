@@ -1,8 +1,8 @@
 import * as Forms from "@modular-forms/solid";
 import type { SubmitHandler } from "@modular-forms/solid";
 import { makeEventListener } from "@solid-primitives/event-listener";
+import { createVisibilityObserver } from "@solid-primitives/intersection-observer";
 import { createResizeObserver } from "@solid-primitives/resize-observer";
-import { createScrollPosition, getScrollParent } from "@solid-primitives/scroll";
 import Send from "lucide-solid/icons/send";
 import { createMemo, For, lazy, Match, onMount, Suspense, Switch, Show, JSX } from "solid-js";
 
@@ -67,9 +67,13 @@ export function LLMConversationEditor(props: {
         }
     });
 
-    // Set up autoscrolling to bottom of content.
+    // Open pane scrolled to bottom, and set up autoscroll.
     let conversation!: HTMLDivElement;
-    onMount(() => autoscroll(conversation));
+    let scrollSentinel!: HTMLDivElement;
+    onMount(() => {
+        scrollSentinel.scrollIntoView({ block: "end" });
+        autoscroll(conversation, scrollSentinel);
+    });
 
     return (
         <div class={styles.conversation} ref={conversation}>
@@ -103,24 +107,19 @@ export function LLMConversationEditor(props: {
                     <Send size={24} />
                 </IconButton>
             </Form>
+            <div class={styles.scrollSentinel} ref={scrollSentinel} />
         </div>
     );
 }
 
 /** Keep the pane scrolled to the bottom as the conversation grows. */
-function autoscroll(content: HTMLElement) {
-    const SCROLL_SLACK = 32;
-    const pane = getScrollParent(content);
-    const scroll = createScrollPosition(pane);
-
-    /** Is the pane at the bottom, as of the last time that it was scrolled? */
-    const following = createMemo(
-        () => pane.scrollHeight - scroll.y - pane.clientHeight <= SCROLL_SLACK,
-    );
+function autoscroll(content: HTMLElement, sentinel: HTMLElement) {
+    const useVisibilityObserver = createVisibilityObserver({ initialValue: true });
+    const following = useVisibilityObserver(() => sentinel);
 
     createResizeObserver(content, () => {
         if (following()) {
-            pane.scrollTop = pane.scrollHeight;
+            sentinel.scrollIntoView({ block: "end" });
         }
     });
 }

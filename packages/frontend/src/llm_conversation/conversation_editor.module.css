@@ -1,8 +1,18 @@
 .conversation {
+    position: relative;
     display: flex;
     flex-direction: column;
     gap: 1rem;
     padding-bottom: 1rem;
+}
+
+.scrollSentinel {
+    position: absolute;
+    bottom: 0;
+    pointer-events: none;
+
+    /* Scroll slack: autoscroll stays engaged within this height of the bottom. */
+    height: 32px;
 }
 
 .transcript {
