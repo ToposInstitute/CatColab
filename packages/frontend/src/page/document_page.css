@@ -16,6 +16,12 @@
         font-size: var(--h4-font-size);
     }
 
+    & .info-fields {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+    }
+
     & .lucide {
         color: var(--color-gray-800);
     }

@@ -50,6 +50,7 @@ import { getLiveInstance, type LiveInstanceDoc } from "../instance/live_doc_comp
 import {
     getLiveLLMConversation,
     LLMConversationEditor,
+    LLMConversationInfo,
     type LiveLLMConversationDoc,
 } from "../llm_conversation";
 import { type LiveModelDoc, type ModelLibrary, ModelLibraryContext } from "../model";
@@ -549,7 +550,9 @@ export function DocumentPane(props: {
                         </Match>
                         <Match keyed when={props.doc.type === "llmconversation" && props.doc}>
                             {(liveConversation) => (
-                                <DocumentHead liveDoc={liveConversation.liveDoc} />
+                                <DocumentHead liveDoc={liveConversation.liveDoc}>
+                                    <LLMConversationInfo liveConversation={liveConversation} />
+                                </DocumentHead>
                             )}
                         </Match>
                     </Switch>
