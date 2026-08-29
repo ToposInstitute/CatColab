@@ -69,6 +69,13 @@ export function LLMConversationEditor(props: {
         autoscroll(conversation, scrollSentinel);
     });
 
+    const status = (): string => {
+        if (inferenceKey()?.tag !== "Ready") {
+            return "Loading inference key...";
+        }
+        return controller.state.isRunning ? "Running..." : "Idle";
+    }
+
     return (
         <div class={styles.conversation} ref={conversation}>
             <div class={styles.transcript}>
@@ -86,21 +93,26 @@ export function LLMConversationEditor(props: {
                     </div>
                 </Show>
             </div>
-            <Form class={styles.form} onSubmit={onSubmit}>
-                <Field name="message">
-                    {(field, fieldProps) => (
-                        <textarea
-                            {...fieldProps}
-                            rows={1}
-                            value={field.value ?? ""}
-                            placeholder="Type a message, then press Shift-Enter to send"
-                        />
-                    )}
-                </Field>
-                <IconButton type="submit" disabled={!canSubmit()} tooltip="Send message">
-                    <Send size={24} />
-                </IconButton>
-            </Form>
+            <div class={styles.composer}>
+                <div class={styles.status}>
+                    {status()}
+                </div>
+                <Form class={styles.form} onSubmit={onSubmit}>
+                    <Field name="message">
+                        {(field, fieldProps) => (
+                            <textarea
+                                {...fieldProps}
+                                rows={1}
+                                value={field.value ?? ""}
+                                placeholder="Type a message, then press Shift-Enter to send"
+                            />
+                        )}
+                    </Field>
+                    <IconButton type="submit" disabled={!canSubmit()} tooltip="Send message">
+                        <Send size={20} />
+                    </IconButton>
+                </Form>
+            </div>
             <div class={styles.scrollSentinel} ref={scrollSentinel} />
         </div>
     );

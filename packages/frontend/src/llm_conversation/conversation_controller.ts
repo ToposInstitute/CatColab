@@ -18,11 +18,24 @@ import type { ApiLLMConversation } from "./live_doc_compatibility";
 export type LLMTurnState = {
     liveInteractions: LLMInteraction[];
     streamingContent: string;
+    isRunning: boolean;
+    notice: LLMTurnNotice | null;
 };
 
-const newLLMTurnState = () => ({
+/** A notice presented to user after an LLM conversation turn. */
+export type LLMTurnNotice = {
+    kind: "error" | "note";
+    message: string;
+    /** Whether the turn can be retried without resubmitting the user message. */
+    retryable: boolean;
+};
+
+const newLLMTurnState = (overrides?: Partial<LLMTurnState>) => ({
     liveInteractions: [],
     streamingContent: "",
+    isRunning: false,
+    notice: null,
+    ...overrides,
 });
 
 /** Controller for an LLM conversation, intermediating between UI and harness.
@@ -99,7 +112,7 @@ export function createLLMConversationController(
             return { tag: "Failed", error: "Inference key is missing. It might still be loading" };
         }
 
-        setStore(newLLMTurnState());
+        setStore(newLLMTurnState({ isRunning: true }));
         try {
             const result = await runLLMConversationTurn(
                 conversation(),
@@ -111,6 +124,7 @@ export function createLLMConversationController(
             setStore("liveInteractions", result.tag === "Retryable" ? result.attempts : []);
             return result;
         } finally {
+            setStore("isRunning", false);
             setStore("streamingContent", "");
         }
     };

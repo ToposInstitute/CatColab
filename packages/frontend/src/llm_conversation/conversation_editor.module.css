@@ -39,10 +39,20 @@
     white-space: pre-wrap;
 }
 
+.composer {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.status {
+    color: var(--color-text-secondary);
+    font-size: 0.85em;
+}
+
 .form {
     display: flex;
     align-items: flex-end;
-    gap: 0.5rem;
 
     & textarea {
         flex: 1;
@@ -51,5 +61,9 @@
         max-height: 40vh;
         resize: vertical;
         outline: none;
+    }
+
+    & button {
+        padding-inline: 0.25rem;
     }
 }
