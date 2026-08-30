@@ -1,8 +1,11 @@
 .conversation {
+    --gutter-width: 1.75rem;
+
     position: relative;
     display: flex;
     flex-direction: column;
     gap: 1rem;
+    padding-left: var(--gutter-width);
     padding-bottom: 1rem;
 }
 
@@ -17,6 +20,7 @@
 
 .transcript {
     --message-inset: 0.75rem;
+    --message-radius: 5px;
     --markdown-paragraph-gap: 0.75em;
 
     display: flex;
@@ -26,17 +30,79 @@
 
 .userMessage {
     padding: 0.5rem var(--message-inset);
-    border-radius: 5px;
+    border-radius: var(--message-radius);
     background: var(--color-gray-100);
 }
 
 .llmMessage {
+    position: relative;
     padding-inline: var(--message-inset);
 }
 
 /* Placeholder shown while the Markdown-rendering pipeline loads. */
 .plainMessage {
     white-space: pre-wrap;
+}
+
+.codeExecution {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding-inline: var(--message-inset);
+
+    & pre {
+        margin: 0;
+    }
+}
+
+.executionSummary {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    color: var(--color-text-secondary);
+}
+
+.executedCode {
+    border: 1px solid var(--color-gray-400);
+    border-radius: var(--message-radius);
+    overflow-x: auto;
+
+    & pre {
+        padding: 0.5rem var(--message-inset);
+    }
+}
+
+.executionResult {
+    overflow-x: auto;
+    font-size: smaller;
+}
+
+.gutter {
+    position: absolute;
+    top: 0;
+    left: 0;
+    transform: translateX(-100%);
+
+    display: flex;
+    align-items: center;
+    height: 1lh;
+
+    & :global(.lucide) {
+        color: var(--color-gray-600);
+    }
+}
+
+.collapsedMessage {
+    max-height: 1lh;
+    overflow: hidden;
+    mask-image: linear-gradient(to right, black calc(100% - 4rem), transparent 100%);
+
+    /* Render the visible block as ordinary body text, flush with the top. */
+    & > * > :first-child {
+        margin-block-start: 0;
+        font-size: inherit;
+    }
 }
 
 .composer {
