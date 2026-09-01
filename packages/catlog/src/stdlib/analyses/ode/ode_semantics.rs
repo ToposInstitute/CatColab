@@ -320,7 +320,21 @@ pub struct ODESemanticsGeneralProblemData {
     pub duration: f32,
 }
 
+impl Default for ODESemanticsGeneralProblemData {
+    fn default() -> Self {
+        Self {
+            initial_values: HashMap::new(),
+            duration: 10.0,
+        }
+    }
+}
+
 impl ODESemanticsGeneralProblemData {
+    /// Default values for ODE semantics general problem data.
+    pub fn new() -> Self {
+        Self::default()
+    }
+
     /// Converting the polynomial system into a system ready for use in numerical solvers. The default
     /// implementation here should essentially always be the desired one.
     pub fn build_analysis(

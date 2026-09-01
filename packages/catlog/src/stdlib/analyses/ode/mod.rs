@@ -77,8 +77,8 @@ pub mod ode_semantics;
 pub mod polynomial_ode;
 
 pub use kuramoto::*;
-pub use linear_ode::*;
-pub use lotka_volterra::*;
-pub use mass_action::*;
+pub use linear_ode::current::*;
+pub use lotka_volterra::current::*;
+pub use mass_action::current::*;
 pub use ode_semantics::*;
-pub use polynomial_ode::*;
+pub use polynomial_ode::current::*;

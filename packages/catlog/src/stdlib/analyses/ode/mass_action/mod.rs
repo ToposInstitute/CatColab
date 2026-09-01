@@ -5,148 +5,164 @@
 //! where we do not require that mass be preserved. This allows the construction
 //! of systems of arbitrary polynomial (first-order) ODEs.
 
-#[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
-#[cfg(feature = "serde-wasm")]
-use tsify::Tsify;
-
-use crate::stdlib::analyses::ode::ODESemanticsGeneralProblemData;
-pub use crate::stdlib::analyses::ode::mass_action::v1::{balanced::*, per_place::*, unbalanced::*};
+use serde_json::Value;
+use serde_wasm_bindgen::{Serializer, from_value};
+use wasm_bindgen::prelude::*;
 
 #[allow(dead_code)]
 mod v0;
 mod v1;
 
-// For backwards compatibility to when there was a *single* mass-action semantics with three
-// internal variants, we give here some wrappers that will be useful for migration.
-
-/// The variants of mass-action.
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "serde-wasm", derive(Tsify))]
-#[cfg_attr(feature = "serde-wasm", tsify(into_wasm_abi, from_wasm_abi))]
-#[derive(PartialEq, Eq, Hash, Clone)]
-pub enum MassActionVariant {
-    /// The balanced (i.e. classical) case.
-    Balanced,
-    /// The unbalanced ("per-flow"/"per-transition") case.
-    Unbalanced,
-    /// The per-place case.
-    PerPlace,
+/// The current version number.
+#[wasm_bindgen(js_name = "versionNumberMassAction")]
+pub fn current_version() -> String {
+    "1".to_string()
 }
 
-/// For `migrate_stock_flow_mass_action_v0_to_v1` to have a well-defined return type, we unify both
-/// balanced and unbalanced mass-action semantics into a single struct.
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "serde-wasm", derive(Tsify))]
-#[cfg_attr(feature = "serde-wasm", tsify(into_wasm_abi, from_wasm_abi))]
-#[derive(Clone)]
-pub struct RestrictedMassActionProblemData {
-    /// The mass-action variant of interest, which may be switched at any point.
-    pub variant: MassActionVariant,
-    /// Problem data for balanced mass-action.
-    pub balanced: BalancedMassActionProblemData,
-    /// Problem data for unbalanced mass-action.
-    pub unbalanced: UnbalancedMassActionProblemData,
+/// The current version of mass-action.
+pub mod current {
+    // This should always track the latest version, and is the only version that is exported.
+    pub use crate::stdlib::analyses::ode::mass_action::v1::*;
 }
 
-/// For `migrate_petri_net_mass_action_v0_to_v1` to have a well-defined return type, we unify the
-/// all three mass-action semantics into a single struct.
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "serde-wasm", derive(Tsify))]
-#[cfg_attr(feature = "serde-wasm", tsify(into_wasm_abi, from_wasm_abi))]
-#[derive(Clone)]
-pub struct MassActionProblemData {
-    /// The mass-action variant of interest, which may be switched at any point.
-    pub variant: MassActionVariant,
-    /// Problem data for balanced mass-action.
-    pub balanced: BalancedMassActionProblemData,
-    /// Problem data for unbalanced mass-action.
-    pub unbalanced: UnbalancedMassActionProblemData,
-    /// Problem data for per-place mass-action.
-    #[cfg_attr(feature = "serde", serde(rename = "perPlace"))]
-    pub per_place: PerPlaceMassActionProblemData,
+// ┌--------------┐
+// | PROBLEM DATA |
+// └--------------┘
+
+/// Versioned mass-action problem data.
+pub enum VersionedMassActionProblemData {
+    /// Version 0 problem data.
+    V0(v0::MassActionProblemData),
+    /// Version 1 problem data.
+    V1(v1::MassActionProblemData),
 }
 
-/// Migration for part of the problem data for mass-action equations.
-pub fn migrate_mass_action_variant(v0: v0::mass_action::MassConservationType) -> MassActionVariant {
-    match v0 {
-        v0::mass_action::MassConservationType::Balanced => MassActionVariant::Balanced,
-        v0::mass_action::MassConservationType::Unbalanced(rate_granularity) => {
-            match rate_granularity {
-                v0::mass_action::RateGranularity::PerTransition => MassActionVariant::Unbalanced,
-                v0::mass_action::RateGranularity::PerPlace => MassActionVariant::PerPlace,
+impl<'de> Deserialize<'de> for VersionedMassActionProblemData {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let value = Value::deserialize(deserializer)?;
+        let version = value.get("version").and_then(Value::as_str).unwrap_or("0");
+
+        match version {
+            "0" => {
+                let data: v0::MassActionProblemData =
+                    serde_json::from_value(value).map_err(serde::de::Error::custom)?;
+                Ok(VersionedMassActionProblemData::V0(data))
             }
+            "1" => {
+                let data: v1::MassActionProblemData =
+                    serde_json::from_value(value).map_err(serde::de::Error::custom)?;
+                Ok(VersionedMassActionProblemData::V1(data))
+            }
+            other => Err(serde::de::Error::custom(format!("unsupported version {other}"))),
         }
     }
 }
 
-/// Migration for problem data for mass-action on a Petri net.
-pub fn migrate_petri_net_mass_action_v0_to_v1(
-    v0: v0::mass_action::MassActionProblemData,
-) -> MassActionProblemData {
-    let balanced = BalancedMassActionProblemData {
-        general_data: ODESemanticsGeneralProblemData {
-            initial_values: v0.initial_values.clone(),
-            duration: v0.duration,
-        },
-        parameter_data: BalancedMassActionParameterData { rates: v0.transition_rates },
-    };
-    let unbalanced = UnbalancedMassActionProblemData {
-        general_data: ODESemanticsGeneralProblemData {
-            initial_values: v0.initial_values.clone(),
-            duration: v0.duration,
-        },
-        parameter_data: UnbalancedMassActionParameterData {
-            consumption_rates: v0.transition_consumption_rates,
-            production_rates: v0.transition_production_rates,
-        },
-    };
-    let per_place = PerPlaceMassActionProblemData {
-        general_data: ODESemanticsGeneralProblemData {
-            initial_values: v0.initial_values,
-            duration: v0.duration,
-        },
-        parameter_data: PerPlaceMassActionParameterData {
-            consumption_rates: v0.place_consumption_rates,
-            production_rates: v0.place_production_rates,
-        },
-    };
+impl VersionedMassActionProblemData {
+    /// Update any versioned mass-action problem data to the current version.
+    pub fn to_current(self) -> current::MassActionProblemData {
+        match self {
+            VersionedMassActionProblemData::V0(v0) => {
+                VersionedMassActionProblemData::V1(v1::migrate_problem_data_v0_to_v1(v0))
+                    .to_current()
+            }
 
-    MassActionProblemData {
-        variant: migrate_mass_action_variant(v0.equations_data.mass_conservation_type),
-        balanced,
-        unbalanced,
-        per_place,
+            VersionedMassActionProblemData::V1(v1) => v1,
+        }
     }
 }
 
-/// Migration for problem data for mass-action on a stock-flow diagram.
-pub fn migrate_stock_flow_mass_action_v0_to_v1(
-    v0: v0::mass_action::MassActionProblemData,
-) -> RestrictedMassActionProblemData {
-    let balanced = BalancedMassActionProblemData {
-        general_data: ODESemanticsGeneralProblemData {
-            initial_values: v0.initial_values.clone(),
-            duration: v0.duration,
-        },
-        parameter_data: BalancedMassActionParameterData { rates: v0.transition_rates },
-    };
-    let unbalanced = UnbalancedMassActionProblemData {
-        general_data: ODESemanticsGeneralProblemData {
-            initial_values: v0.initial_values.clone(),
-            duration: v0.duration,
-        },
-        parameter_data: UnbalancedMassActionParameterData {
-            consumption_rates: v0.transition_consumption_rates,
-            production_rates: v0.transition_production_rates,
-        },
-    };
-    RestrictedMassActionProblemData {
-        variant: migrate_mass_action_variant(v0.equations_data.mass_conservation_type),
-        balanced,
-        unbalanced,
+#[wasm_bindgen(js_name = "latestVersionMassActionProblemData")]
+/// Take a JSON object, try to deserialise it as mass-action problem data, and then bring it to the
+/// current version.
+pub fn latest_version_mass_action_problem_data(input: JsValue) -> Result<JsValue, JsValue> {
+    let data: VersionedMassActionProblemData = from_value(input)
+        .map_err(|error| JsValue::from_str(&format!("deserialize error: {error}")))?;
+    let current_data = data.to_current();
+    let serializer = Serializer::json_compatible();
+    let output = current_data
+        .serialize(&serializer)
+        .map_err(|e| JsValue::from_str(&format!("serialize error: {e}")))?;
+
+    Ok(output)
+}
+
+// ┌----------------┐
+// | EQUATIONS DATA |
+// └----------------┘
+
+/// Versioned mass-action equations data.
+///
+/// Note that future plans are to incorporate the equations analysis directly into the main analysis
+/// so we temporarily ignore the variation in sizes between these enum variants.
+#[allow(clippy::large_enum_variant)]
+pub enum VersionedMassActionEquationsData {
+    /// Version 0 equations data.
+    V0(v0::MassActionEquationsData),
+    /// Version 1 equations data.
+    V1(v1::MassActionProblemData),
+}
+
+impl<'de> Deserialize<'de> for VersionedMassActionEquationsData {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let value = Value::deserialize(deserializer)?;
+        let version = value.get("version").and_then(Value::as_str).unwrap_or("0");
+
+        match version {
+            "0" => {
+                let data: v0::MassActionEquationsData =
+                    serde_json::from_value(value).map_err(serde::de::Error::custom)?;
+                Ok(VersionedMassActionEquationsData::V0(data))
+            }
+            "1" => {
+                let data: v1::MassActionProblemData =
+                    serde_json::from_value(value).map_err(serde::de::Error::custom)?;
+                Ok(VersionedMassActionEquationsData::V1(data))
+            }
+            other => Err(serde::de::Error::custom(format!("unsupported version {other}"))),
+        }
     }
 }
+
+impl VersionedMassActionEquationsData {
+    /// Update any versioned mass-action problem data to the current version.
+    pub fn to_current(self) -> current::MassActionProblemData {
+        match self {
+            VersionedMassActionEquationsData::V0(v0) => {
+                VersionedMassActionEquationsData::V1(v1::migrate_equations_data_v0_to_v1(v0))
+                    .to_current()
+            }
+
+            VersionedMassActionEquationsData::V1(v1) => v1,
+        }
+    }
+}
+
+#[wasm_bindgen(js_name = "latestVersionMassActionEquationsData")]
+/// Take a JSON object, try to deserialise it as mass-action equations data, and then bring it to the
+/// current version (which is really just `MassActionProblemData`).
+pub fn latest_version_mass_action_equations_data(input: JsValue) -> Result<JsValue, JsValue> {
+    let data: VersionedMassActionEquationsData = from_value(input)
+        .map_err(|error| JsValue::from_str(&format!("deserialize error: {error}")))?;
+    let current_data = data.to_current();
+    let serializer = Serializer::json_compatible();
+    let output = current_data
+        .serialize(&serializer)
+        .map_err(|e| JsValue::from_str(&format!("serialize error: {e}")))?;
+
+    Ok(output)
+}
+
+// ┌-------┐
+// | TESTS |
+// └-------┘
 
 #[cfg(test)]
 mod test {
@@ -156,10 +172,7 @@ mod test {
     use crate::{
         stdlib::{
             analyses::ode::{
-                ODESemanticsAnalysis, ODESemanticsScalarExtension,
-                PetriNetBalancedMassActionAnalysis, PetriNetPerPlaceMassActionAnalysis,
-                PetriNetUnbalancedMassActionAnalysis, StockFlowBalancedMassActionAnalysis,
-                StockFlowUnbalancedMassActionAnalysis,
+                ODESemanticsAnalysis, ODESemanticsScalarExtension, mass_action::current::*,
             },
             backward_link, catalyzed_reaction, th_category_links, th_sym_monoidal_category,
         },
@@ -197,7 +210,7 @@ mod test {
             .collect(),
         };
 
-        let v1_data = migrate_petri_net_mass_action_v0_to_v1(v0_data);
+        let v1_data = VersionedMassActionProblemData::V0(v0_data).to_current();
 
         let balanced_system = PetriNetBalancedMassActionAnalysis::default().build_system(&model);
         let balanced_analysis = v1_data.balanced.parameter_data.extend_scalars(balanced_system);
@@ -247,7 +260,7 @@ mod test {
             place_production_rates: HashMap::new(),
         };
 
-        let v1_data = migrate_stock_flow_mass_action_v0_to_v1(v0_data);
+        let v1_data = VersionedMassActionProblemData::V0(v0_data).to_current();
 
         let balanced_system = StockFlowBalancedMassActionAnalysis::default().build_system(&model);
         let balanced_analysis = v1_data.balanced.parameter_data.extend_scalars(balanced_system);
