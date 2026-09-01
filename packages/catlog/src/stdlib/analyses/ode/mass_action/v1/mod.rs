@@ -31,6 +31,119 @@
 // cases are analogous to those for Petri nets (by thinking of a flow as a single-input and
 // single-output transition).
 
-pub(crate) mod balanced;
-pub(crate) mod per_place;
-pub(crate) mod unbalanced;
+use std::collections::HashMap;
+
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
+#[cfg(feature = "serde-wasm")]
+use tsify::Tsify;
+
+use crate::stdlib::analyses::ode::{ODESemanticsGeneralProblemData, mass_action::v0};
+
+pub mod balanced;
+pub mod per_place;
+pub mod unbalanced;
+
+pub use balanced::*;
+pub use per_place::*;
+pub use unbalanced::*;
+
+/// Data for a numerical mass-action system, consisting of all three possible variants along with a
+/// (changeable) toggle (`variant`) to record which variant to use in any analysis.
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde-wasm", derive(Tsify))]
+#[cfg_attr(feature = "serde-wasm", tsify(into_wasm_abi, from_wasm_abi))]
+#[derive(Clone)]
+pub struct MassActionProblemData {
+    /// The mass-action variant of interest, which may be switched at any point.
+    pub variant: MassActionVariant,
+    /// Problem data for balanced mass-action.
+    pub balanced: BalancedMassActionProblemData,
+    /// Problem data for unbalanced mass-action.
+    pub unbalanced: UnbalancedMassActionProblemData,
+    /// Problem data for per-place mass-action.
+    #[cfg_attr(feature = "serde", serde(rename = "perPlace"))]
+    pub per_place: PerPlaceMassActionProblemData,
+}
+
+/// The variants of mass-action.
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde-wasm", derive(Tsify))]
+#[cfg_attr(feature = "serde-wasm", tsify(into_wasm_abi, from_wasm_abi))]
+#[derive(PartialEq, Eq, Hash, Clone)]
+pub enum MassActionVariant {
+    /// The balanced (i.e. classical) case.
+    Balanced,
+    /// The unbalanced ("per-flow"/"per-transition") case.
+    Unbalanced,
+    /// The per-place case.
+    PerPlace,
+}
+
+/// Migration for problem data for mass-action.
+pub fn migrate_problem_data_v0_to_v1(v0: v0::MassActionProblemData) -> MassActionProblemData {
+    let general_data = ODESemanticsGeneralProblemData {
+        initial_values: v0.initial_values,
+        duration: v0.duration,
+    };
+    let balanced = BalancedMassActionProblemData {
+        general_data: general_data.clone(),
+        parameter_data: BalancedMassActionParameterData { rates: v0.transition_rates },
+    };
+    let unbalanced = UnbalancedMassActionProblemData {
+        general_data: general_data.clone(),
+        parameter_data: UnbalancedMassActionParameterData {
+            consumption_rates: v0.transition_consumption_rates,
+            production_rates: v0.transition_production_rates,
+        },
+    };
+    let per_place = PerPlaceMassActionProblemData {
+        general_data: general_data.clone(),
+        parameter_data: PerPlaceMassActionParameterData {
+            consumption_rates: v0.place_consumption_rates,
+            production_rates: v0.place_production_rates,
+        },
+    };
+    MassActionProblemData {
+        variant: migrate_variant_v0_to_v1(v0.equations_data.mass_conservation_type),
+        balanced,
+        unbalanced,
+        per_place,
+    }
+}
+
+/// Migration for equations data for mass-action.
+pub fn migrate_equations_data_v0_to_v1(v0: v0::MassActionEquationsData) -> MassActionProblemData {
+    MassActionProblemData {
+        variant: migrate_variant_v0_to_v1(v0.mass_conservation_type),
+        balanced: BalancedMassActionProblemData {
+            general_data: ODESemanticsGeneralProblemData::new(),
+            parameter_data: BalancedMassActionParameterData { rates: HashMap::new() },
+        },
+        unbalanced: UnbalancedMassActionProblemData {
+            general_data: ODESemanticsGeneralProblemData::new(),
+            parameter_data: UnbalancedMassActionParameterData {
+                consumption_rates: HashMap::new(),
+                production_rates: HashMap::new(),
+            },
+        },
+        per_place: PerPlaceMassActionProblemData {
+            general_data: ODESemanticsGeneralProblemData::new(),
+            parameter_data: PerPlaceMassActionParameterData {
+                consumption_rates: HashMap::new(),
+                production_rates: HashMap::new(),
+            },
+        },
+    }
+}
+
+/// Migration for part of the problem data for mass-action equations.
+pub fn migrate_variant_v0_to_v1(v0: v0::MassConservationType) -> MassActionVariant {
+    match v0 {
+        v0::MassConservationType::Balanced => MassActionVariant::Balanced,
+        v0::MassConservationType::Unbalanced(rate_granularity) => match rate_granularity {
+            v0::RateGranularity::PerTransition => MassActionVariant::Unbalanced,
+            v0::RateGranularity::PerPlace => MassActionVariant::PerPlace,
+        },
+    }
+}

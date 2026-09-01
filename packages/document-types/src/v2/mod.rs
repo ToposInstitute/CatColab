@@ -1,7 +1,9 @@
 use crate::v1;
 
-pub use v1::{analysis, api, diagram_judgment, model, model_judgment, path, theory};
+pub use v1::{api, diagram_judgment, model, model_judgment, path, theory};
 
+/// Analyses in a notebook.
+pub mod analysis;
 /// Cells in a notebook.
 pub mod cell;
 /// Model documents, containing a notebook along with metadata.

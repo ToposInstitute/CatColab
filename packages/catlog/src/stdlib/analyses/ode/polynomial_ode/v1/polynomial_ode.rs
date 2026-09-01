@@ -1,5 +1,3 @@
-//! Version 1 of `polynomial_ode`, with `ode_semantics`.
-
 use std::{collections::HashMap, fmt};
 
 use num_traits::Zero;

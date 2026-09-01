@@ -139,7 +139,13 @@ impl Document {
                 name: old.name,
                 analysis_type: old.analysis_type,
                 analysis_of: old.analysis_of,
-                notebook: Notebook::migrate_from_v1(old.notebook),
+                // Since we are migrating from `Notebook<v0::Analysis>` to `Notebook<v2::Analysis>`,
+                // we cannot simply use `Notebook::migrate_from_v1` as the value of the generic `T`
+                // changes.
+                notebook: Notebook::migrate_from_v1_with_generic(
+                    old.notebook,
+                    Analysis::migrate_from_v0,
+                ),
                 version: "2".to_string(),
             }),
         }
