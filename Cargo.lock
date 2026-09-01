@@ -569,6 +569,7 @@ dependencies = [
  "scopeguard",
  "sea-query",
  "serde",
+ "serde-wasm-bindgen",
  "serde_json",
  "similar",
  "sqlformat",

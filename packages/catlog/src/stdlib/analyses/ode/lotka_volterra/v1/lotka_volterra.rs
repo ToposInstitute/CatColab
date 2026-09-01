@@ -1,5 +1,3 @@
-//! Version 1 of `lotka_volterra`, using `ode_semantics`.
-
 use std::collections::HashMap;
 use std::fmt;
 

@@ -7,11 +7,13 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "serde-wasm")]
 use tsify::Tsify;
 
+use crate::dbl::model::DiscreteTabModel;
 use crate::latex::{Latex, ToLatexWithMap};
 use crate::simulate::ode::PolynomialSystem;
-use crate::stdlib::analyses::ode::Parameter;
 use crate::stdlib::analyses::ode::ode_semantics::*;
+use crate::stdlib::analyses::ode::{Parameter, UnbalancedMassActionParameterData};
 use crate::stdlib::analyses::petri::transition_interface;
+use crate::stdlib::analyses::stock_flow::flow_interface;
 use crate::zero::{QualifiedName, name};
 use crate::{
     dbl::{
@@ -245,6 +247,50 @@ impl ODESemanticsProblemData<PetriNetPerPlaceMassActionSemantics>
     }
     fn parameter_data(self) -> Self::ParameterData {
         self.parameter_data
+    }
+}
+
+// ┌-----------┐
+// | UTILITIES |
+// └-----------┘
+
+impl UnbalancedMassActionParameterData {
+    /// Given a stock-flow diagram (or any discrete tabulator model) we can consider any unbalanced
+    /// problem as a per-place problem, just in a trivial way (since each morphism can only have a
+    /// single input and single output, noting that flows do not receive any consumption term).
+    pub fn to_per_place(
+        &self,
+        stock_flow_model: &DiscreteTabModel,
+    ) -> PerPlaceMassActionParameterData {
+        let consumption_rates = self
+            .production_rates
+            .clone()
+            .into_iter()
+            .map(|(flow_name, value)| {
+                let interface = flow_interface(stock_flow_model, &flow_name);
+                (
+                    flow_name,
+                    vec![(interface.input_stock, value)]
+                        .into_iter()
+                        .collect::<HashMap<QualifiedName, f32>>(),
+                )
+            })
+            .collect::<HashMap<QualifiedName, HashMap<QualifiedName, f32>>>();
+        let production_rates = self
+            .production_rates
+            .clone()
+            .into_iter()
+            .map(|(flow_name, value)| {
+                let interface = flow_interface(stock_flow_model, &flow_name);
+                (
+                    flow_name,
+                    vec![(interface.output_stock, value)]
+                        .into_iter()
+                        .collect::<HashMap<QualifiedName, f32>>(),
+                )
+            })
+            .collect::<HashMap<QualifiedName, HashMap<QualifiedName, f32>>>();
+        PerPlaceMassActionParameterData { consumption_rates, production_rates }
     }
 }
 

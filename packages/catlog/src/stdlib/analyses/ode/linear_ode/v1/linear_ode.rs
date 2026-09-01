@@ -1,5 +1,3 @@
-//! Version 1 of `linear_ode`, using `ode_semantics`.
-
 use std::collections::HashMap;
 use std::fmt;
 

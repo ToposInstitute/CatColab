@@ -34,13 +34,28 @@ impl<T> NotebookCell<T> {
     ///
     /// Stem cells are no longer representable, so attempting to migrate one
     /// returns `None`. Callers are expected to drop such cells from the
-    /// containing notebook.
+    /// containing notebook. Note that this is implemented as a special case of
+    /// `migrate_from_v1_with_generic`.
     pub fn migrate_from_v1(old: v1::NotebookCell<T>) -> Option<Self> {
+        Self::migrate_from_v1_with_generic(old, |t| t)
+    }
+
+    /// Migrate a [`v1::NotebookCell`] to v2 by updating formal cell contents.
+    ///
+    /// Stem cells are no longer representable, so attempting to migrate one
+    /// returns `None`. Callers are expected to drop such cells from the
+    /// containing notebook.
+    pub fn migrate_from_v1_with_generic<S>(
+        old: v1::NotebookCell<S>,
+        update_cell: impl Fn(S) -> T,
+    ) -> Option<Self> {
         match old {
             v1::NotebookCell::RichText { id, content } => {
                 Some(NotebookCell::RichText { id, content: content.into() })
             }
-            v1::NotebookCell::Formal { id, content } => Some(NotebookCell::Formal { id, content }),
+            v1::NotebookCell::Formal { id, content } => {
+                Some(NotebookCell::Formal { id, content: update_cell(content) })
+            }
             v1::NotebookCell::Stem { .. } => None,
         }
     }
