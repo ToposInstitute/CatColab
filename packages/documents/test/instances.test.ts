@@ -172,15 +172,20 @@ describe("instance schema validation", () => {
         },
     );
 
-    test("an invalid schema does not create an instance", async () => {
+    test("an instance can be created from a partially valid schema", async () => {
         const binder = createBinder();
         const schema = await binder.createNotebook(SimpleSchema, { title: "Invalid schema" });
+        schema.add(Entity, { label: "Person" });
         schema.add(Mapping, { label: "invalid", from: null, to: null });
 
-        const issues = expectErr(
+        const instance = expectOk(
             await binder.createInstance(schema, { title: "Company instance" }),
         );
-        expect(issues.length).toBeGreaterThan(0);
+        const validation = await instance.validate();
+
+        expect(validation.modelValidation.issues.length).toBeGreaterThan(0);
+        expect(validation.tables.map((table) => table.label)).toEqual(["Person"]);
+        expect(validation.issues).toEqual([]);
     });
 
     test("change and validation subscriptions combine the schema and instance", async () => {
