@@ -221,6 +221,41 @@ describe("instance schema validation", () => {
         unsubscribeChanges();
         unsubscribeValidation();
     });
+
+    test("a validation view tracks schema and instance changes", async () => {
+        const binder = createBinder();
+        const schema = await binder.createNotebook(SimpleSchema, { title: "Company schema" });
+        schema.add(Entity, { label: "Person" });
+        const instance = expectOk(
+            await binder.createInstance(schema, { title: "Company instance" }),
+        );
+        const view = instance.createValidationView();
+
+        await expect.poll(() => view.modelValidation.issues).toEqual([]);
+        expect(view.tables.map((table) => table.label)).toEqual(["Person"]);
+
+        schema.add(Entity, { label: "Company" });
+        await expect
+            .poll(() => view.tables.map((table) => table.label))
+            .toEqual(["Person", "Company"]);
+
+        binder.store.changeDocument(instance.handle, (document) => {
+            const stored = document as unknown as StoredInstanceForTest;
+            stored.tables["ghost-table"] = {
+                rows: { "ghost-row": { fields: { mystery: { Int: 3 } } } },
+                rowOrder: ["ghost-row"],
+            };
+        });
+        await expect
+            .poll(() => view.issues.map((issue) => issue.issueType))
+            .toEqual(["OrphanedTable"]);
+        expect(view.get(["ghost-table", "rows", "ghost-row", "fields", "mystery"])).toMatchObject({
+            tag: "Ok",
+            content: { tag: "Int", content: { value: 3 } },
+        });
+
+        view.dispose();
+    });
 });
 
 describe("tabular instances", () => {

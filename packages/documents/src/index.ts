@@ -7,7 +7,12 @@ export { createInMemoryStore } from "./document-store";
 export { atomicTypeOfAttributeType } from "./instance/validation";
 export type { FieldPath, OrphanedTableIssue, TableFieldIssue, TableIssue } from "./instance/errors";
 export { instanceFromStore } from "./instance/instance";
-export type { Instance, InstanceDocument, InstanceValidation } from "./instance/instance";
+export type {
+    Instance,
+    InstanceDocument,
+    InstanceValidation,
+    InstanceValidationView,
+} from "./instance/instance";
 export { llmConversationFromStore } from "./llm-conversation";
 export type {
     LLMConversation,
