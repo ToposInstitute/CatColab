@@ -10,4 +10,37 @@
     & > p:last-child {
         margin-bottom: 0;
     }
+
+    & table {
+        border-collapse: collapse;
+        margin-block: var(--markdown-paragraph-gap, 1em);
+
+        & th,
+        & td {
+            padding: 0.25em 0.5em;
+        }
+
+        & td {
+            vertical-align: top;
+        }
+
+        & th {
+            font-weight: 500;
+        }
+
+        /* Thick horizontal rules around header row. */
+        & thead tr {
+            border-top: 2px solid var(--color-gray-700);
+            border-bottom: 2px solid var(--color-gray-700);
+        }
+
+        & tbody tr + tr {
+            border-top: 1px solid var(--color-gray-300);
+        }
+
+        /* Thick horizontal rule after last row. */
+        & tbody tr:last-child {
+            border-bottom: 2px solid var(--color-gray-700);
+        }
+    }
 }
