@@ -3,21 +3,19 @@
 //! Inspired by schema migration, we define the data of an ODE semantics on models in a theory to
 //! consist of (in particular) a `PolynomialODESystemBuilder`, which constructs a model of the
 //! theory of multicategories (viewed as polynomial ODE systems with abstract coefficients). This
-//! is then passed to [`ode::v1::polynomial_ode::PolynomialODEAnalysis`] which constructs from this
-//! a `PolynomialSystem`, using `build_system_custom_parameters()`.
+//! is then used to construct a `PolynomialSystem`, by `build_system_custom_parameters()`.
 
-//! In short, this module constructs multicategories from models, and [`ode::v1::polynomial_ode`]
+//! In short, this module constructs multicategories from models, and [`ode::polynomial_ode`]
 //! then constructs `PolynomialSystem` from multicategories.
 //!
 //! To implement a new ODE semantics for models in some theory, one essentially needs to create an
 //! empty struct and implement `ODESemantics`, and then follow the compiler. For more documentation,
-//! see [`ode::v1::polynomial_ode`]; for a simple example see [`ode::v1::lotka_volterra`], and for a
-//! more complicated example see [`ode::v1::mass_action`].
+//! see [`ode::polynomial_ode`]; for a simple example see [`ode::lotka_volterra`], and for a
+//! more complicated example see [`ode::mass_action`].
 //!
-//! [`ode::v1::polynomial_ode`]: crate::stdlib::analyses::ode::v1::polynomial_ode
-//! [`ode::v1::polynomial_ode::PolynomialODEAnalysis`]: crate::stdlib::analyses::ode::v1::polynomial_ode::PolynomialODEAnalysis
-//! [`ode::v1::lotka_volterra`]: crate::stdlib::analyses::ode::v1::lotka_volterra
-//! [`ode::v1::mass_action`]: crate::stdlib::analyses::ode::v1::mass_action
+//! [`ode::polynomial_ode`]: crate::stdlib::analyses::ode::polynomial_ode
+//! [`ode::lotka_volterra`]: crate::stdlib::analyses::ode::lotka_volterra
+//! [`ode::mass_action`]: crate::stdlib::analyses::ode::mass_action
 
 use indexmap::IndexMap;
 use nalgebra::DVector;
