@@ -1,4 +1,10 @@
-import { defineMorphism, defineObject, defineShape, RichText } from "catcolab-documents";
+import {
+    defineMorphism,
+    defineObject,
+    defineShape,
+    PathEquation,
+    RichText,
+} from "catcolab-documents";
 
 export const Entity = defineObject({ tag: "Basic", content: "Entity" });
 export const AttrType = defineObject({ tag: "Basic", content: "AttrType" });
@@ -18,6 +24,7 @@ export const SimpleSchema = defineShape({
     objects: [Entity, AttrType],
     morphisms: [Mapping, Attr],
     informal: [RichText],
+    supportsEquations: true,
     supportsInstances: {
         tableObjects: [Entity],
     },
@@ -29,4 +36,5 @@ export const simpleSchemaCellTypes = {
     Mapping,
     Attr,
     RichText,
+    PathEquation,
 };
