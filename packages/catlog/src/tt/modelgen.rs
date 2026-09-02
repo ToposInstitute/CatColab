@@ -172,10 +172,14 @@ impl Model {
     }
 
     /// Adds an equation between two morphisms to the model.
-    fn add_equation(&mut self, lhs: Mor, rhs: Mor) {
+    fn add_equation(&mut self, name: QualifiedName, lhs: Mor, rhs: Mor) {
         match self {
             Model::Discrete(model) => {
-                model.add_equation(PathEq::new(lhs.try_into().unwrap(), rhs.try_into().unwrap()));
+                model.add_equation(PathEq::named(
+                    name,
+                    lhs.try_into().unwrap(),
+                    rhs.try_into().unwrap(),
+                ));
             }
             Model::DiscreteTab(_) => {
                 // Discrete tabulator models currently do not support equations, so we ignore them.
@@ -392,7 +396,7 @@ impl<'a> ModelGenerator<'a> {
                     return None;
                 };
                 if let (Some(lhs), Some(rhs)) = (self.make_mor(lhs, mt), self.make_mor(rhs, mt)) {
-                    self.model.add_equation(lhs, rhs);
+                    self.model.add_equation(prefix.into(), lhs, rhs);
                 }
                 None
             }
