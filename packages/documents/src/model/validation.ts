@@ -1,6 +1,12 @@
 import type { FormalCell, ModelDocument } from "catcolab-document-methods";
 import type { ModelJudgment, Notebook } from "catcolab-document-types";
-import type { DblModel, DblTheory, InvalidDblModel, ModelPresentation } from "catlog-wasm";
+import type {
+    DblModel,
+    DblTheory,
+    InvalidDblModel,
+    InvalidModelEqn,
+    ModelPresentation,
+} from "catlog-wasm";
 import { createReactiveView, type DocumentStore } from "../document-store";
 import type { Issue } from "../result";
 import type { Shape } from "../shape";
@@ -47,6 +53,22 @@ function generatorPath(
     return path;
 }
 
+/** A failure of an equation in a model of a double theory to be well defined. */
+function eqnErrorMessage(error: InvalidModelEqn): string {
+    switch (error.tag) {
+        case "Lhs":
+            return "left-hand side fails to synthesize";
+        case "Rhs":
+            return "right-hand side fails to synthesize";
+        case "Src":
+            return "sources of the sides don't coincide";
+        case "Tgt":
+            return "targets of the sides don't coincide";
+        case "MorType":
+            return "sides have different types";
+    }
+}
+
 function invalidModelIssue(notebook: Notebook<ModelJudgment>, error: InvalidDblModel): Issue {
     switch (error.tag) {
         case "Dom":
@@ -79,14 +101,17 @@ function invalidModelIssue(notebook: Notebook<ModelJudgment>, error: InvalidDblM
                 message: `Morphism \`${generatorName(notebook, error.content)}\` has a mistyped codomain`,
                 path: generatorPath(notebook, error.content, "cod"),
             };
-        case "Eqn":
-            return {
-                message: "An equation in the model is invalid",
-            };
-        case "UnsupportedFeature":
-            return {
-                message: `The model uses an unsupported feature: ${error.content.tag}`,
-            };
+        case "Eqn": {
+            const errors = error.content[1] ?? [];
+            const details = errors.map(eqnErrorMessage).join("; ");
+            return { message: `An equation in the model is invalid: ${details}` };
+        }
+        case "UnsupportedFeature": {
+            if (error.content.tag === "PartialEquation") {
+                return { message: "An equation in the model is missing a side" };
+            }
+            return { message: `The model uses an unsupported feature: ${error.content.tag}` };
+        }
         case "InvalidLink":
             return {
                 message: `Instantiation \`${generatorName(notebook, error.content)}\` is invalid`,

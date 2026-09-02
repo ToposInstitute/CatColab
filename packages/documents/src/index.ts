@@ -30,6 +30,7 @@ export type {
 } from "./instance/tables";
 export type { CellOf as NotebookCell, MorphismCell, ObjectCell } from "./model/cell";
 export type { ModelDocument } from "./model/document";
+export type { EquationCell, EquationSide } from "./model/equation";
 export { modelNotebookFromStore } from "./model/notebook";
 export type { Notebook } from "./model/notebook";
 export type {
@@ -42,8 +43,9 @@ export type {
 } from "./model/elaborated-model";
 export type { NotebookDocument } from "./notebook-document";
 export type { RichTextCell } from "./rich-text";
-export { defineMorphism, defineObject, defineShape, RichText } from "./shape";
+export { defineMorphism, defineObject, defineShape, PathEquation, RichText } from "./shape";
 export type {
+    EquationType,
     InstanceCapableShape,
     MorphismEndpoint,
     MorphismEndpoints,

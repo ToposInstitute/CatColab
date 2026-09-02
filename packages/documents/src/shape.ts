@@ -14,6 +14,8 @@ export interface MorphismType<M extends MorType = MorType> {
 
 export const RichText = { kind: "rich-text" } as const;
 
+export const PathEquation = { kind: "path-equation" } as const;
+
 export interface Shape {
     readonly theory?: string;
     readonly getCoreTheory?: () => Promise<DblTheory>;
@@ -23,6 +25,7 @@ export interface Shape {
     readonly supportsInstances?: {
         readonly tableObjects: readonly ObjectType[];
     };
+    readonly supportsEquations?: boolean;
 }
 
 export type MorphismEndpoint =
@@ -77,10 +80,15 @@ export type InstanceCapableShape = Shape & {
 };
 
 export type RichTextType = typeof RichText;
+export type EquationType = typeof PathEquation;
 export type ObjectTypesOf<S extends Shape> = NonNullable<S["objects"]>[number];
 export type MorphismTypesOf<S extends Shape> = NonNullable<S["morphisms"]>[number];
-export type AnyCellType = RichTextType | ObjectType | MorphismType;
-export type CellTypeOf<S extends Shape> = RichTextType | ObjectTypesOf<S> | MorphismTypesOf<S>;
+export type AnyCellType = RichTextType | ObjectType | MorphismType | EquationType;
+export type CellTypeOf<S extends Shape> =
+    | RichTextType
+    | ObjectTypesOf<S>
+    | MorphismTypesOf<S>
+    | EquationType;
 
 type MatchingObjectTypesOf<O, EndpointObType> = O extends ObjectType
     ? O["obType"] extends EndpointObType

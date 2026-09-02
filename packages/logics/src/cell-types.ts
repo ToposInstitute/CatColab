@@ -1,10 +1,10 @@
-import type { MorphismType, ObjectType } from "catcolab-documents";
+import type { EquationType, MorphismType, ObjectType } from "catcolab-documents";
 import { RichText } from "catcolab-documents";
 import { PetriNet, petriNetCellTypes } from "./petri-net";
 import { SimpleOlog, simpleOlogCellTypes } from "./simple-olog";
 import { SimpleSchema, simpleSchemaCellTypes } from "./simple-schema";
 
-export type CellType = ObjectType | MorphismType | typeof RichText;
+export type CellType = ObjectType | MorphismType | typeof RichText | EquationType;
 
 export type CellTypeVocabulary = Readonly<Record<string, CellType>>;
 

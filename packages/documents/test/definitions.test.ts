@@ -59,6 +59,7 @@ describe("defining notebook shapes", () => {
             getCoreTheory: expect.any(Function),
             objects: [Type],
             morphisms: [Aspect],
+            supportsEquations: true,
             supportsInstances: { tableObjects: [Type] },
         });
         expectTypeOf(SimpleOlog.theory).toEqualTypeOf<"simple-olog">();
