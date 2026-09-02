@@ -18,7 +18,9 @@ function compositeLabels(side: EquationSide<typeof SimpleOlog>): Array<string | 
     return side.map((mor) => mor?.label);
 }
 
-describe("path equations", { timeout: 10000 }, () => {
+// The first test run pays the cost of loading the catlog-wasm bundle, so these
+// tests have a longer timeout (as in validation.test.ts).
+describe("path equations", { timeout: 30000 }, () => {
     test("a path equation cell relates two paths of morphisms", async () => {
         const binder = createBinder();
         const notebook = await binder.createNotebook(SimpleSchema, { title: "Example schema" });
@@ -163,5 +165,38 @@ describe("path equations", { timeout: 10000 }, () => {
 
         const result = await notebook.validate();
         expect(result.issues[0]?.message).toContain("sources of the sides don't coincide");
+    });
+
+    test("validated models expose equation judgments", async () => {
+        const binder = createBinder();
+        const notebook = await binder.createNotebook(SimpleOlog, { title: "An Olog" });
+
+        const a = notebook.add(Type, { label: "A" });
+        const f = notebook.add(Aspect, { label: "f", from: a, to: a });
+        const equation = notebook.add(PathEquation, { label: "inverse", lhs: [f], rhs: a });
+
+        const result = await notebook.validate();
+        expect(result.issues).toEqual([]);
+        const judgments = result.model.judgmentsOf(PathEquation);
+        expect(judgments.length).toBe(1);
+        const judgment = judgments[0];
+        if (!judgment || judgment.kind !== "path-equation") {
+            throw new Error("Expected an equation judgment.");
+        }
+        const cell = notebook.document.notebook.cellContents[equation.id];
+        if (!cell || cell.tag !== "formal" || cell.content.tag !== "equation") {
+            throw new Error("Expected an equation cell.");
+        }
+        expect(judgment.id).toBe(cell.content.id);
+        expect(judgment.label).toEqual(["inverse"]);
+        if (judgment.lhs.kind !== "composite") {
+            throw new Error("Expected the left-hand side to be a composite.");
+        }
+        expect(judgment.lhs.morphisms.map((mor) => mor?.label)).toEqual([["f"]]);
+        const rhs = judgment.rhs;
+        if (rhs.kind !== "object") {
+            throw new Error("Expected the right-hand side to be an identity.");
+        }
+        expect(rhs.label).toEqual(["A"]);
     });
 });

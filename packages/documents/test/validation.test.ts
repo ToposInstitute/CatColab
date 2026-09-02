@@ -18,7 +18,7 @@ async function wellFormedOlog() {
 
 // the first time tests run we incur the cost of loading the catlog-wasm bundle,
 // so these tests have longer timeouts
-describe("validate", { timeout: 10000 }, () => {
+describe("validate", { timeout: 20000 }, () => {
     test("a well-formed notebook validates without issues", async () => {
         const notebook = await wellFormedOlog();
 
@@ -60,7 +60,7 @@ describe("validate", { timeout: 10000 }, () => {
     });
 });
 
-describe("onValidate", { timeout: 10000 }, () => {
+describe("onValidate", { timeout: 20000 }, () => {
     test("always calls the callback at least once with the current validation", async () => {
         const notebook = await wellFormedOlog();
 

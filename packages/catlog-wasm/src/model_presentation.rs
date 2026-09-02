@@ -8,12 +8,10 @@
 use serde::{Deserialize, Serialize};
 use tsify::Tsify;
 
-use catcolab_document_types::current::{MorType, Ob, ObType};
+use catcolab_document_types::current::{Mor, MorType, Ob, ObType};
 use catlog::zero::{QualifiedLabel, QualifiedName};
 
 /// Presentation of a model of a double theory.
-///
-/// TODO: Include equations between morphisms.
 #[derive(Serialize, Deserialize, Tsify)]
 #[tsify(into_wasm_abi, from_wasm_abi)]
 pub struct ModelPresentation {
@@ -24,6 +22,26 @@ pub struct ModelPresentation {
     /// Generating morphisms.
     #[serde(rename = "morGenerators")]
     pub mor_generators: Vec<MorGenerator>,
+
+    /// Equations between morphisms.
+    pub equations: Vec<EquationGenerator>,
+}
+
+/// Equation in a model of a double theory.
+#[derive(Serialize, Deserialize, Tsify)]
+#[tsify(into_wasm_abi, from_wasm_abi)]
+pub struct EquationGenerator {
+    /// Unique identifier of equation.
+    pub id: QualifiedName,
+
+    /// Human-readable label for equation.
+    pub label: Option<QualifiedLabel>,
+
+    /// Left-hand side of the equation.
+    pub lhs: Mor,
+
+    /// Right-hand side of the equation.
+    pub rhs: Mor,
 }
 
 /// Object generator in a model of a double theory.

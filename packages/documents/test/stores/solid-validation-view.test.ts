@@ -28,7 +28,7 @@ describe("reactive validation view", { timeout: 20000 }, () => {
             return dispose;
         });
 
-        await expect.poll(() => issueCount, { timeout: 10000 }).toBe(0);
+        await expect.poll(() => issueCount, { timeout: 20000 }).toBe(0);
         expect(labels).toEqual(["A", "B", "has"]);
 
         // Adding an object updates the judgments through the reactive view.
@@ -83,7 +83,7 @@ describe("reactive validation view", { timeout: 20000 }, () => {
             return dispose;
         });
 
-        await expect.poll(() => schemaIssueCount, { timeout: 10000 }).toBe(0);
+        await expect.poll(() => schemaIssueCount, { timeout: 20000 }).toBe(0);
         expect(tableLabels).toEqual(["Person"]);
         expect(headerLabels).toEqual(["name"]);
         expect(rowCount).toBe(0);
