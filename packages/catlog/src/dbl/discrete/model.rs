@@ -53,13 +53,23 @@ impl DiscreteDblModel {
         self.category.add_equation(eq);
     }
 
+    /// Iterates over equations between morphisms, with their names.
+    pub fn named_equations(
+        &self,
+    ) -> impl Iterator<Item = (Option<&QualifiedName>, &QualifiedPath, &QualifiedPath)> {
+        self.category.equations().map(|eq| (eq.name.as_ref(), &eq.lhs, &eq.rhs))
+    }
+
     /// Iterates over failures of model to be well defined.
     pub fn iter_invalid(&self) -> impl Iterator<Item = InvalidDblModel> + '_ {
         type Invalid = InvalidDblModel;
         let category_errors = self.category.iter_invalid().map(|err| match err {
             InvalidFpCategory::Dom(e) => Invalid::Dom(e),
             InvalidFpCategory::Cod(e) => Invalid::Cod(e),
-            InvalidFpCategory::Eqn(eq, errs) => Invalid::Eqn(Some(eq), errs.map(|e| e.into())),
+            InvalidFpCategory::Eqn(i, errs) => {
+                let name = self.category.equations().nth(i).and_then(|eq| eq.name.clone());
+                Invalid::Eqn(name, errs.map(|e| e.into()))
+            }
         });
         let ob_type_errors = self.category.ob_generators().filter_map(|x| {
             if self.theory.has_ob_type(&self.ob_type(&x)) {
@@ -209,7 +219,9 @@ impl FpDblModel for DiscreteDblModel {
     }
 
     fn equations(&self) -> impl Iterator<Item = (Self::Mor, Self::Mor)> {
-        self.category.equations().map(|PathEq { lhs, rhs }| (lhs.clone(), rhs.clone()))
+        self.category
+            .equations()
+            .map(|PathEq { lhs, rhs, .. }| (lhs.clone(), rhs.clone()))
     }
 }
 

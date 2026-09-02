@@ -7,7 +7,7 @@
 use std::ops::Range;
 use std::{collections::HashSet, hash::Hash};
 
-use derive_more::{Constructor, From};
+use derive_more::From;
 use itertools::{Either, Itertools};
 use nonempty::{NonEmpty, nonempty};
 
@@ -537,8 +537,11 @@ impl<V, E> ShortPath<V, E> {
 }
 
 /// Assertion of an equation between the composites of two paths in a category.
-#[derive(Clone, Debug, PartialEq, Eq, Constructor)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PathEq<V, E> {
+    /// Optional name of the equation, identifying it within a model.
+    pub name: Option<QualifiedName>,
+
     /// Left hand side of equation.
     pub lhs: Path<V, E>,
 
@@ -547,6 +550,16 @@ pub struct PathEq<V, E> {
 }
 
 impl<V, E> PathEq<V, E> {
+    /// Creates an unnamed path equation.
+    pub fn new(lhs: Path<V, E>, rhs: Path<V, E>) -> Self {
+        Self { name: None, lhs, rhs }
+    }
+
+    /// Creates a named path equation.
+    pub fn named(name: QualifiedName, lhs: Path<V, E>, rhs: Path<V, E>) -> Self {
+        Self { name: Some(name), lhs, rhs }
+    }
+
     /// Source of the path equation in the given graph.
     ///
     /// Panics if the two sides of the path equation have different sources.

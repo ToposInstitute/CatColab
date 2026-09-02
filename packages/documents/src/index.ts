@@ -40,6 +40,8 @@ export type {
     ElaboratedModel,
     ModelValidation,
     ModelValidationView,
+    EquationJudgment,
+    EquationJudgmentSide,
 } from "./model/elaborated-model";
 export type { NotebookDocument } from "./notebook-document";
 export type { RichTextCell } from "./rich-text";

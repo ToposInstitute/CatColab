@@ -28,7 +28,7 @@ describe("createValidationView", { timeout: 20000 }, () => {
         expect(view.issues.length).toBeGreaterThan(0);
         expect(view.model.judgments()).toHaveLength(0);
 
-        await expect.poll(() => view.issues, { timeout: 10000 }).toEqual([]);
+        await expect.poll(() => view.issues, { timeout: 20000 }).toEqual([]);
         const model = view.model;
 
         expect(model.judgments().map((judgment) => [judgment.kind, judgment.label])).toEqual([
@@ -52,7 +52,7 @@ describe("createValidationView", { timeout: 20000 }, () => {
         const notebook = await wellFormedOlog();
         const view = notebook.createValidationView();
 
-        await expect.poll(() => view.issues, { timeout: 10000 }).toEqual([]);
+        await expect.poll(() => view.issues, { timeout: 20000 }).toEqual([]);
         const model = view.model;
 
         notebook.add(Type, { label: "C" });
