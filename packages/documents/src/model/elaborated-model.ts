@@ -160,6 +160,8 @@ function judgmentMatchesFilter<S extends Shape>(
                     judgment.kind === "morphism" &&
                     morphismTypesEqual(judgment.type.morType, filter.morType)
                 );
+            case "path-equation":
+                return false;
         }
     }
 
