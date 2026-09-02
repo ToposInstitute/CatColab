@@ -207,6 +207,10 @@ function migrateAnalysis(liveAnalysis: LiveAnalysisDoc) {
                     Nb.mutateCellContentById(doc.notebook, cell.id, (content) => {
                         // @ts-expect-error The types of analysis content are too vague: Record<string, unknown>
                         content.content = latestVersionLinearODEProblemData(content.content);
+                    });
+                });
+                liveAnalysis.liveDoc.changeDoc((doc) => {
+                    Nb.mutateCellContentById(doc.notebook, cell.id, (content) => {
                         content.version = versionNumberLinearODE();
                     });
                 });
@@ -216,6 +220,10 @@ function migrateAnalysis(liveAnalysis: LiveAnalysisDoc) {
                     Nb.mutateCellContentById(doc.notebook, cell.id, (content) => {
                         // @ts-expect-error The types of analysis content are too vague: Record<string, unknown>
                         content.content = latestVersionLotkaVolterraProblemData(content.content);
+                    });
+                });
+                liveAnalysis.liveDoc.changeDoc((doc) => {
+                    Nb.mutateCellContentById(doc.notebook, cell.id, (content) => {
                         content.version = versionNumberLotkaVolterra();
                     });
                 });
@@ -225,6 +233,10 @@ function migrateAnalysis(liveAnalysis: LiveAnalysisDoc) {
                     Nb.mutateCellContentById(doc.notebook, cell.id, (content) => {
                         // @ts-expect-error The types of analysis content are too vague: Record<string, unknown>
                         content.content = latestVersionMassActionProblemData(content.content);
+                    });
+                });
+                liveAnalysis.liveDoc.changeDoc((doc) => {
+                    Nb.mutateCellContentById(doc.notebook, cell.id, (content) => {
                         content.version = versionNumberMassAction();
                     });
                 });
@@ -234,6 +246,10 @@ function migrateAnalysis(liveAnalysis: LiveAnalysisDoc) {
                     Nb.mutateCellContentById(doc.notebook, cell.id, (content) => {
                         // @ts-expect-error The types of analysis content are too vague: Record<string, unknown>
                         content.content = latestVersionMassActionEquationsData(content.content);
+                    });
+                });
+                liveAnalysis.liveDoc.changeDoc((doc) => {
+                    Nb.mutateCellContentById(doc.notebook, cell.id, (content) => {
                         content.version = versionNumberMassAction();
                     });
                 });
@@ -243,6 +259,10 @@ function migrateAnalysis(liveAnalysis: LiveAnalysisDoc) {
                     Nb.mutateCellContentById(doc.notebook, cell.id, (content) => {
                         // @ts-expect-error The types of analysis content are too vague: Record<string, unknown>
                         content.content = latestVersionPolynomialODEProblemData(content.content);
+                    });
+                });
+                liveAnalysis.liveDoc.changeDoc((doc) => {
+                    Nb.mutateCellContentById(doc.notebook, cell.id, (content) => {
                         content.version = versionNumberPolynomialODE();
                     });
                 });
