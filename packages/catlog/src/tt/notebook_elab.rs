@@ -181,7 +181,11 @@ impl<'a> Elaborator<'a> {
                 nb::path::Path::Id(ob) => {
                     let (stx, val, ob_type) = self.ob_syn(ob)?;
                     let mor_type = self.theory().hom_type(ob_type)?;
-                    Some((stx, val.clone(), TyV::morphism(mor_type, val.clone(), val.clone())))
+                    Some((
+                        stx,
+                        TmV::id(val.clone()),
+                        TyV::morphism(mor_type, val.clone(), val.clone()),
+                    ))
                 }
                 nb::path::Path::Seq(ms) => match ms.as_slice() {
                     [] => None,

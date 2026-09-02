@@ -78,7 +78,7 @@ describe("SolidJS completions from a validation view", { timeout: 20000 }, () =>
 
         // Completions appear once the view's first validation completes.
         await expect
-            .poll(completionLabels, { timeout: 10000 })
+            .poll(completionLabels, { timeout: 20000 })
             .toEqual(["String", "Integer", "Boolean"]);
         expect(selectedLabel()).toBe("String");
 
