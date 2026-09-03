@@ -75,10 +75,18 @@ function toFieldValue(
 }
 
 /** Renders editable table editors backed by in-memory table specs. */
-function EditableTables(props: { initialSpecs: TableSpec[]; issues?: TableIssue[] }) {
+function EditableTables(props: {
+    initialSpecs: TableSpec[];
+    issues?: TableIssue[];
+    hideable?: boolean;
+}) {
     // Initial story data, intentionally captured on mount.
     const [specs, setSpecs] = createSignal(props.initialSpecs);
+    const [hidden, setHidden] = createSignal<ReadonlySet<string>>(new Set());
     const tables = () => specs().map(toInstanceTable);
+    const visibleTables = () => tables().filter((table) => !hidden().has(table.id));
+
+    const hide = (tableId: string) => setHidden((ids) => new Set([...ids, tableId]));
 
     const updateSpec = (tableId: string, update: (spec: TableSpec) => TableSpec) =>
         setSpecs((specs) => specs.map((spec) => (spec.id === tableId ? update(spec) : spec)));
@@ -114,7 +122,7 @@ function EditableTables(props: { initialSpecs: TableSpec[]; issues?: TableIssue[
 
     return (
         <div style={{ display: "flex", "flex-wrap": "wrap", gap: "1.5rem" }}>
-            <Index each={tables()}>
+            <Index each={visibleTables()}>
                 {(table) => (
                     <TableEditor
                         table={table()}
@@ -125,6 +133,7 @@ function EditableTables(props: { initialSpecs: TableSpec[]; issues?: TableIssue[
                         }
                         onAddRow={() => addRow(table().id)}
                         onDeleteRow={(row) => deleteRow(table().id, row)}
+                        onHide={props.hideable ? () => hide(table().id) : undefined}
                     />
                 )}
             </Index>
@@ -187,6 +196,20 @@ const personSpec: TableSpec = {
 export const Summary: Story = {
     render: () => <EditableTables initialSpecs={[teamSpec, personSpec]} />,
     tags: ["!autodocs", "!dev"],
+};
+
+export const HideTable: Story = {
+    render: () => <EditableTables initialSpecs={[teamSpec, personSpec]} hideable />,
+    play: async ({ canvasElement }: { canvasElement: HTMLElement }) => {
+        const canvas = within(canvasElement);
+        await expect(canvas.getAllByRole("grid")).toHaveLength(2);
+
+        await userEvent.click(canvas.getAllByRole("button", { name: "Hide table" })[0]!);
+
+        await waitFor(() => expect(canvas.getAllByRole("grid")).toHaveLength(1));
+        await expect(canvas.queryByText("Team")).not.toBeInTheDocument();
+        await expect(canvas.getByText("Person")).toBeInTheDocument();
+    },
 };
 
 export const DoubleClickBooleanCell: Story = {
