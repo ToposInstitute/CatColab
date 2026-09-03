@@ -12,6 +12,11 @@ import {
     versionNumberLotkaVolterra,
     versionNumberMassAction,
     versionNumberPolynomialODE,
+    latestVersionLinearODEProblemData,
+    latestVersionLotkaVolterraProblemData,
+    latestVersionMassActionProblemData,
+    latestVersionMassActionEquationsData,
+    latestVersionPolynomialODEProblemData,
 } from "catlog-wasm";
 import { type Api, type DocRef, findAndMigrate, type LiveDoc, makeLiveDoc } from "../api";
 import { getLiveDiagram, getLiveDiagramFromRepo, type LiveDiagramDoc } from "../diagram";
@@ -202,15 +207,20 @@ function migrateAnalysis(liveAnalysis: LiveAnalysisDoc) {
         //        new API.
 
         switch (cell.content.id) {
+            // TODO: all equations have changed from having content
+            //
+            //          "trivialData": true
+            //
+            //      to having content
+            //
+            //          content: null
+            //
+            //      so you also have to do migrations for these!
             case "linear-ode":
                 liveAnalysis.liveDoc.changeDoc((doc) => {
                     Nb.mutateCellContentById(doc.notebook, cell.id, (content) => {
                         // @ts-expect-error The types of analysis content are too vague: Record<string, unknown>
                         content.content = latestVersionLinearODEProblemData(content.content);
-                    });
-                });
-                liveAnalysis.liveDoc.changeDoc((doc) => {
-                    Nb.mutateCellContentById(doc.notebook, cell.id, (content) => {
                         content.version = versionNumberLinearODE();
                     });
                 });
@@ -220,10 +230,6 @@ function migrateAnalysis(liveAnalysis: LiveAnalysisDoc) {
                     Nb.mutateCellContentById(doc.notebook, cell.id, (content) => {
                         // @ts-expect-error The types of analysis content are too vague: Record<string, unknown>
                         content.content = latestVersionLotkaVolterraProblemData(content.content);
-                    });
-                });
-                liveAnalysis.liveDoc.changeDoc((doc) => {
-                    Nb.mutateCellContentById(doc.notebook, cell.id, (content) => {
                         content.version = versionNumberLotkaVolterra();
                     });
                 });
@@ -233,10 +239,6 @@ function migrateAnalysis(liveAnalysis: LiveAnalysisDoc) {
                     Nb.mutateCellContentById(doc.notebook, cell.id, (content) => {
                         // @ts-expect-error The types of analysis content are too vague: Record<string, unknown>
                         content.content = latestVersionMassActionProblemData(content.content);
-                    });
-                });
-                liveAnalysis.liveDoc.changeDoc((doc) => {
-                    Nb.mutateCellContentById(doc.notebook, cell.id, (content) => {
                         content.version = versionNumberMassAction();
                     });
                 });
@@ -246,10 +248,6 @@ function migrateAnalysis(liveAnalysis: LiveAnalysisDoc) {
                     Nb.mutateCellContentById(doc.notebook, cell.id, (content) => {
                         // @ts-expect-error The types of analysis content are too vague: Record<string, unknown>
                         content.content = latestVersionMassActionEquationsData(content.content);
-                    });
-                });
-                liveAnalysis.liveDoc.changeDoc((doc) => {
-                    Nb.mutateCellContentById(doc.notebook, cell.id, (content) => {
                         content.version = versionNumberMassAction();
                     });
                 });
@@ -259,10 +257,6 @@ function migrateAnalysis(liveAnalysis: LiveAnalysisDoc) {
                     Nb.mutateCellContentById(doc.notebook, cell.id, (content) => {
                         // @ts-expect-error The types of analysis content are too vague: Record<string, unknown>
                         content.content = latestVersionPolynomialODEProblemData(content.content);
-                    });
-                });
-                liveAnalysis.liveDoc.changeDoc((doc) => {
-                    Nb.mutateCellContentById(doc.notebook, cell.id, (content) => {
                         content.version = versionNumberPolynomialODE();
                     });
                 });

@@ -1,10 +1,10 @@
-use crate::current::instance::Table;
 use crate::v0::AnalysisType;
 use crate::v1;
 use std::{collections::HashMap, str::FromStr};
 
 use super::analysis::Analysis;
 use super::api::Link;
+use super::instance::Table;
 use super::llm_conversation::LLMConversationDocumentContent;
 use super::notebook::Notebook;
 
@@ -139,13 +139,7 @@ impl Document {
                 name: old.name,
                 analysis_type: old.analysis_type,
                 analysis_of: old.analysis_of,
-                // Since we are migrating from `Notebook<v0::Analysis>` to `Notebook<v2::Analysis>`,
-                // we cannot simply use `Notebook::migrate_from_v1` as the value of the generic `T`
-                // changes.
-                notebook: Notebook::migrate_from_v1_with_generic(
-                    old.notebook,
-                    Analysis::migrate_from_v0,
-                ),
+                notebook: Notebook::migrate_from_v1(old.notebook),
                 version: "2".to_string(),
             }),
         }

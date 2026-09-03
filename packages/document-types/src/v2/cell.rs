@@ -1,5 +1,4 @@
 use serde::{Deserialize, Serialize};
-use tsify::{Tsify, declare};
 use uuid::Uuid;
 
 use super::rich_text::RichTextContent;
@@ -9,9 +8,8 @@ use crate::v1;
 ///
 /// Unlike [`v1::NotebookCell`], stem cells (placeholders awaiting a chosen
 /// type) are no longer part of the data model.
-#[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Tsify)]
+#[derive(PartialEq, Eq, Debug, Serialize, Deserialize)]
 #[serde(tag = "tag")]
-#[tsify(into_wasm_abi, from_wasm_abi)]
 pub enum NotebookCell<T> {
     /// A rich-text cell.
     #[serde(rename = "rich-text")]
@@ -26,7 +24,6 @@ pub enum NotebookCell<T> {
 }
 
 /// Short-hand declaration for readability.
-#[declare]
 pub type Cell<T> = NotebookCell<T>;
 
 impl<T> NotebookCell<T> {
@@ -34,28 +31,13 @@ impl<T> NotebookCell<T> {
     ///
     /// Stem cells are no longer representable, so attempting to migrate one
     /// returns `None`. Callers are expected to drop such cells from the
-    /// containing notebook. Note that this is implemented as a special case of
-    /// `migrate_from_v1_with_generic`.
-    pub fn migrate_from_v1(old: v1::NotebookCell<T>) -> Option<Self> {
-        Self::migrate_from_v1_with_generic(old, |t| t)
-    }
-
-    /// Migrate a [`v1::NotebookCell`] to v2 by updating formal cell contents.
-    ///
-    /// Stem cells are no longer representable, so attempting to migrate one
-    /// returns `None`. Callers are expected to drop such cells from the
     /// containing notebook.
-    pub fn migrate_from_v1_with_generic<S>(
-        old: v1::NotebookCell<S>,
-        update_cell: impl Fn(S) -> T,
-    ) -> Option<Self> {
+    pub fn migrate_from_v1(old: v1::NotebookCell<T>) -> Option<Self> {
         match old {
             v1::NotebookCell::RichText { id, content } => {
                 Some(NotebookCell::RichText { id, content: content.into() })
             }
-            v1::NotebookCell::Formal { id, content } => {
-                Some(NotebookCell::Formal { id, content: update_cell(content) })
-            }
+            v1::NotebookCell::Formal { id, content } => Some(NotebookCell::Formal { id, content }),
             v1::NotebookCell::Stem { .. } => None,
         }
     }

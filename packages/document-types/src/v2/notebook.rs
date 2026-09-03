@@ -4,11 +4,9 @@ use super::cell::NotebookCell;
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use tsify::Tsify;
 use uuid::Uuid;
 
-#[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Tsify)]
-#[tsify(into_wasm_abi, from_wasm_abi, hashmap_as_object)]
+#[derive(PartialEq, Eq, Debug, Serialize, Deserialize)]
 pub struct Notebook<T> {
     #[serde(rename = "cellContents")]
     pub cell_contents: HashMap<Uuid, NotebookCell<T>>,
@@ -16,12 +14,10 @@ pub struct Notebook<T> {
     pub cell_order: Vec<Uuid>,
 }
 
-#[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Tsify)]
-#[tsify(into_wasm_abi, from_wasm_abi)]
+#[derive(PartialEq, Eq, Debug, Serialize, Deserialize)]
 pub struct ModelNotebook(pub Notebook<super::model_judgment::ModelJudgment>);
 
-#[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Tsify)]
-#[tsify(into_wasm_abi, from_wasm_abi)]
+#[derive(PartialEq, Eq, Debug, Serialize, Deserialize)]
 pub struct DiagramNotebook(pub Notebook<super::diagram_judgment::DiagramJudgment>);
 
 /// Arbitrary instances for property-based testing.
@@ -92,27 +88,13 @@ impl<T> Notebook<T> {
     /// Migrate a [`v1::Notebook`] to v2 by dropping stem cells.
     ///
     /// Both the cell contents map and the cell order are filtered to remove
-    /// stem cells; non-stem cells preserve their UUIDs and ordering. Note that this
-    /// is implemented as a special case of `migrate_from_v1_with_generic`.
+    /// stem cells; non-stem cells preserve their UUIDs and ordering.
     pub fn migrate_from_v1(old: v1::Notebook<T>) -> Self {
-        Self::migrate_from_v1_with_generic(old, |t| t)
-    }
-
-    /// Migrate a [`v1::Notebook`] to v2 by dropping stem cells and updating formal cell contents.
-    ///
-    /// Both the cell contents map and the cell order are filtered to remove
-    /// stem cells; non-stem cells preserve their UUIDs and ordering. To accommodate for notebooks
-    /// with cells whose content type has changed, we implement the migration in the general case of
-    /// also having an update function on the generic type.
-    pub fn migrate_from_v1_with_generic<S>(
-        old: v1::Notebook<S>,
-        update_cell: impl Fn(S) -> T,
-    ) -> Self {
         let v1::Notebook { cell_contents, cell_order } = old;
 
         let mut new_contents = HashMap::with_capacity(cell_contents.len());
         for (id, cell) in cell_contents {
-            if let Some(new_cell) = NotebookCell::migrate_from_v1_with_generic(cell, &update_cell) {
+            if let Some(new_cell) = NotebookCell::migrate_from_v1(cell) {
                 new_contents.insert(id, new_cell);
             }
         }
