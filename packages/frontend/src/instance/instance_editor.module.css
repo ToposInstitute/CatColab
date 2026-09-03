@@ -1,3 +1,18 @@
 .editor {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
     padding: 1rem;
+}
+
+.tables {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 1.5rem;
+}
+
+.empty {
+    margin: 0;
+    color: var(--color-text-secondary);
 }

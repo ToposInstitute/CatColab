@@ -588,7 +588,12 @@ export function DocumentPane(props: {
                             )}
                         </Match>
                         <Match keyed when={props.doc.type === "instance" && props.doc}>
-                            {(liveInstance) => <InstanceEditor instance={liveInstance.instance} />}
+                            {(liveInstance) => (
+                                <InstanceEditor
+                                    instance={liveInstance.instance}
+                                    focus={props.focus}
+                                />
+                            )}
                         </Match>
                         <Match keyed when={props.doc.type === "llmconversation" && props.doc}>
                             {(liveConversation) => (
