@@ -27,19 +27,20 @@ function instanceCapableShape<Handle, S extends Shape>(
     return shape as InstanceCapableShape;
 }
 
-/** Validate the schema and run an operation against the resulting model.
+/** Elaborate the schema and run an operation against the resulting model.
+
+The schema may be only partially valid: the operation runs against whatever
+judgments elaborate, so instance data can be edited alongside a schema that is
+being worked on. Tables or fields the partial model does not contain are
+reported by the operation as addressing failures.
 
 `operation` is expected to report its own failures as a `Result`; this does not
 catch exceptions, so an operation that throws lets that exception propagate. */
-async function withValidatedSchema<Handle, S extends Shape, T>(
+async function withElaboratedSchema<Handle, S extends Shape, T>(
     schema: Notebook<S, ModelDocument, Handle>,
     operation: (schemaModel: ElaboratedModel<S>) => Result<T>,
 ): Promise<Result<T>> {
     const schemaValidation = await schema.validate();
-    if (schemaValidation.issues.length > 0) {
-        return { tag: "Err", content: schemaValidation.issues };
-    }
-
     return operation(schemaValidation.model);
 }
 
@@ -54,7 +55,7 @@ export function createAddRowsMethod<Handle, S extends Shape>(
     }>,
 ) => Promise<Result<ReadonlyArray<TableRow>>> {
     return (additions) =>
-        withValidatedSchema(schema, (schemaModel) =>
+        withElaboratedSchema(schema, (schemaModel) =>
             addInstanceRowsToStore(
                 instanceCapableShape(schema),
                 store,
@@ -94,7 +95,7 @@ export function createUpdateRowsMethod<Handle, S extends Shape>(
     }>,
 ) => Promise<Result<void>> {
     return (updates) =>
-        withValidatedSchema(schema, (schemaModel) =>
+        withElaboratedSchema(schema, (schemaModel) =>
             updateInstanceFieldsByLabelInStore(
                 instanceCapableShape(schema),
                 store,
@@ -121,7 +122,7 @@ export function createSetMethod<Handle, S extends Shape>(
     value: LiteralValue | TableRow,
 ) => Promise<Result<void>> {
     return (row, morphism, value) =>
-        withValidatedSchema(schema, (schemaModel) =>
+        withElaboratedSchema(schema, (schemaModel) =>
             updateInstanceFieldByIdInStore(
                 instanceCapableShape(schema),
                 store,

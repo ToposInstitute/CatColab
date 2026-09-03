@@ -490,6 +490,34 @@ describe("tabular instances", () => {
         expect(instance.document.tables[personTable.id]?.rows[row.id]).toBeUndefined();
     });
 
+    test("rows can be added and edited while the schema is partially valid", async () => {
+        const binder = createBinder();
+        const schema = await binder.createNotebook(SimpleSchema, { title: "Company schema" });
+        const person = schema.add(Entity, { label: "Person" });
+        const string = schema.add(AttrType, { label: "String" });
+        schema.add(Attr, { label: "name", from: person, to: string });
+        const instance = expectOk(
+            await binder.createInstance(schema, { title: "Company instance" }),
+        );
+
+        schema.add(Mapping, { label: "invalid", from: null, to: null });
+        const validation = await instance.validate();
+        expect(validation.modelValidation.issues.length).toBeGreaterThan(0);
+        const personTable = validation.tables.find((table) => table.label === "Person");
+        const nameHeader = personTable?.headers.find((header) => header.label === "name");
+        if (personTable === undefined || nameHeader === undefined) {
+            throw new Error("Person table was not derived");
+        }
+
+        const alice = expectOk(await instance.addRow(personTable, { name: "Alice" }));
+        expectOk(await instance.set(alice, nameHeader, "Alicia"));
+        expect(
+            instance.document.tables[personTable.id]?.rows[alice.id]?.fields[nameHeader.id],
+        ).toEqual({
+            String: "Alicia",
+        });
+    });
+
     test(
         "deleting a referenced row reports a dangling field path",
         { timeout: 20_000 },
