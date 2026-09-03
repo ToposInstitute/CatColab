@@ -5,7 +5,13 @@ export type { DocumentChange, DocumentRef, DocumentStore, ReactiveView } from ".
 export type { Issue, PathSegment, Result } from "./result";
 export { createInMemoryStore } from "./document-store";
 export { atomicTypeOfAttributeType } from "./instance/validation";
-export type { FieldPath, OrphanedTableIssue, TableFieldIssue, TableIssue } from "./instance/errors";
+export type {
+    FieldPath,
+    OrphanedTableIssue,
+    EquationViolationIssue,
+    TableFieldIssue,
+    TableIssue,
+} from "./instance/errors";
 export { instanceFromStore } from "./instance/instance";
 export type {
     Instance,

@@ -5,6 +5,7 @@ import type { ElaboratedModel, ModelValidation } from "../model/elaborated-model
 import type { Notebook } from "../model/notebook";
 import type { Result } from "../result";
 import type { InstanceCapableShape, Shape } from "../shape";
+import { validatePathEquations } from "./equation-validation";
 import type { InstanceValidation } from "./instance";
 import {
     addInstanceRowsToStore,
@@ -147,11 +148,12 @@ export function createInstanceValidator<Handle, S extends Shape, Version>(
             handle,
             schemaValidation.model,
         );
-        const issues = validateInstanceTables(
-            store.getDocumentView(handle) as Readonly<InstanceDocument>,
-            schemaTables,
-        );
+        const document = store.getDocumentView(handle) as Readonly<InstanceDocument>;
         const tables = tablesWithOrphanedData(store, handle, schemaTables);
+        const issues = [
+            ...validateInstanceTables(document, schemaTables),
+            ...validatePathEquations(tables, schemaValidation.model),
+        ];
         return {
             modelValidation: schemaValidation,
             tables,
