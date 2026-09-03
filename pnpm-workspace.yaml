@@ -14,3 +14,13 @@ packages:
   - "packages/gaios"
   - "tools/oxlint-plugin-catcolab"
   - "tools/vite-plugin-monorepo-dedupe"
+# Fix Automerge's `applyPatches` failing on map key deletions, which breaks
+# `makeDocumentProjection`. The solid-primitives package bundles its own copy of
+# `applyPatches`, so it needs patching too. Both patches apply the changes from
+# https://github.com/automerge/automerge/pull/1308 and can be removed once that
+# is merged and released.
+patchedDependencies:
+  "@automerge/automerge@3.4.1": patches/@automerge__automerge@3.4.1.patch
+  "@automerge/automerge-repo-solid-primitives@2.5.6": patches/@automerge__automerge-repo-solid-primitives@2.5.6.patch
+# Not every workspace package depends on the patched packages.
+allowUnusedPatches: true
