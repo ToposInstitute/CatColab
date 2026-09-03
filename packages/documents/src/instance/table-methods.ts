@@ -61,7 +61,7 @@ export function readInstancePath<Handle>(
     };
 }
 
-/** Add rows using a validated schema model.
+/** Add rows using an elaborated schema model.
 
 Only addressing failures are reported as issues. Every update that fails to
 address is skipped and the rest are still applied. */
@@ -120,7 +120,7 @@ export function addInstanceRowsToStore<Handle>(
     };
 }
 
-/** Update fields by header label using a validated schema model.
+/** Update fields by header label using an elaborated schema model.
 
 Only addressing failures are reported as issues. Every update that fails to
 address is skipped and the rest are still applied. */
@@ -160,7 +160,7 @@ export function updateInstanceFieldsByLabelInStore<Handle>(
     return issues.length > 0 ? { tag: "Err", content: issues } : { tag: "Ok", content: undefined };
 }
 
-/** Update one field by header id using a validated schema model.
+/** Update one field by header id using an elaborated schema model.
 
 Only addressing failures (an unknown row or an unknown field) are reported as
 issues. */
