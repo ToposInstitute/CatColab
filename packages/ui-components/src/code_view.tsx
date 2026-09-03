@@ -1,5 +1,5 @@
 import { type BundledLanguage, type BundledTheme, codeToHtml } from "shiki";
-import { createResource } from "solid-js";
+import { createResource, Suspense } from "solid-js";
 
 export type CodeViewProps = {
     text: string;
@@ -18,9 +18,11 @@ export const CodeView = (props: CodeViewProps) => {
     );
 
     return (
-        // shiki uses hast-util-to-html which escapes html entities so no need
-        // for extra sanitization and setting innerHTML should be safe
-        // oxlint-disable-next-line solid/no-innerhtml
-        <div innerHTML={html()} />
+        <Suspense fallback={<pre>{props.text}</pre>}>
+            {/* shiki uses hast-util-to-html which escapes html entities so no need
+            for extra sanitization and setting innerHTML should be safe */}
+            {/* oxlint-disable-next-line solid/no-innerhtml */}
+            <div innerHTML={html()} />
+        </Suspense>
     );
 };

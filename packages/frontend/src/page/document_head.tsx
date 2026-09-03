@@ -37,7 +37,7 @@ export function DocumentHead(props: {
                         />
                     </div>
                     <div class="info">
-                        {props.children}
+                        <div class="info-fields">{props.children}</div>
                         {trigger}
                     </div>
                 </div>

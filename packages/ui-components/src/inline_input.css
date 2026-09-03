@@ -1,6 +1,8 @@
 .inline-input-container {
     display: inline-block;
     position: relative;
+    max-width: 100%;
+    overflow: clip;
 }
 
 .inline-input-filler,
@@ -22,6 +24,7 @@
     display: inline-block;
     visibility: hidden;
     white-space-collapse: preserve;
+    text-wrap-mode: nowrap;
     padding-left: 5px;
     padding-right: 5px;
     min-width: 1ex;

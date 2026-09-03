@@ -142,7 +142,7 @@ export function DocumentMenu(props: {
                     <Show when={canCreateLLMConversation()}>
                         <MenuItem onSelect={() => onNewLLMConversation()}>
                             <DocumentTypeIcon documentType="llmconversation" />
-                            <MenuItemLabel>New LLM Conversation</MenuItemLabel>
+                            <MenuItemLabel>{`New LLM conversation on this ${docType()}`}</MenuItemLabel>
                         </MenuItem>
                     </Show>
                     <Show when={showSeparator()}>

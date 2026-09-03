@@ -28,7 +28,7 @@
         "@solid-primitives/destructure": "^0.2.1",
         "handsontable-mit": "^6.2.4",
         "katex": "^0.16.22",
-        "lucide-solid": "^0.471.0",
+        "lucide-solid": "^0.577.0",
         "shiki": "^4.0.2",
         "solid-js": "^1.9.10"
     },

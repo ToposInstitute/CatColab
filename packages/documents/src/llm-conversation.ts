@@ -23,6 +23,7 @@ export interface LLMConversation<A = LLMConversationAttachment, H = unknown> {
 
     interactions(): readonly LLMInteraction[];
     appendInteraction(interaction: LLMInteraction): void;
+    appendInteractions(interactions: readonly LLMInteraction[]): void;
     rejectPendingFeedbackRequests(): void;
     resolveFeedbackRequest(
         requestId: Uuid,
@@ -46,6 +47,20 @@ export function llmConversationFromStore<
         return store.getDocumentView(handle) as Readonly<LLMConversationDocument>;
     }
 
+    function appendInteractions(interactions: readonly LLMInteraction[]): void {
+        if (interactions.length === 0) {
+            return;
+        }
+        store.changeDocument(handle, (document) => {
+            for (const interaction of interactions) {
+                LLMConversationMethods.appendLLMInteraction(
+                    document as LLMConversationDocument,
+                    interaction,
+                );
+            }
+        });
+    }
+
     return {
         handle,
         attachment,
@@ -59,13 +74,9 @@ export function llmConversationFromStore<
             return currentDocument().interactions;
         },
         appendInteraction(interaction: LLMInteraction): void {
-            store.changeDocument(handle, (document) => {
-                LLMConversationMethods.appendLLMInteraction(
-                    document as LLMConversationDocument,
-                    interaction,
-                );
-            });
+            appendInteractions([interaction]);
         },
+        appendInteractions,
         rejectPendingFeedbackRequests(): void {
             store.changeDocument(handle, (document) => {
                 LLMConversationMethods.rejectPendingFeedbackRequests(
