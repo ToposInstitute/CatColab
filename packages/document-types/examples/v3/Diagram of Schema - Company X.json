@@ -1,0 +1,235 @@
+{
+    "diagramIn": {
+        "_id": "019eb624-e678-79f0-b877-3088a1a78909",
+        "_server": "backend-next.catcolab.org",
+        "_version": null,
+        "type": "diagram-in"
+    },
+    "name": "Company X",
+    "notebook": {
+        "cellContents": {
+            "019eb628-1fc9-70aa-a7b0-1082de8fc7d3": {
+                "content": {
+                    "id": "019eb628-1fc9-70aa-a7b0-0c71f87001a7",
+                    "name": "Kaspar",
+                    "obType": {
+                        "content": "Entity",
+                        "tag": "Basic"
+                    },
+                    "over": {
+                        "content": "019eb625-a3b2-77da-a6de-5bccfb206eb7",
+                        "tag": "Basic"
+                    },
+                    "tag": "object"
+                },
+                "id": "019eb628-1fc9-70aa-a7b0-1082de8fc7d3",
+                "tag": "formal"
+            },
+            "019eb628-3d4d-7059-b598-461179d7e796": {
+                "content": {
+                    "id": "019eb628-3d4d-7059-b598-4051d03a8c30",
+                    "name": "Tim",
+                    "obType": {
+                        "content": "Entity",
+                        "tag": "Basic"
+                    },
+                    "over": {
+                        "content": "019eb625-a3b2-77da-a6de-5bccfb206eb7",
+                        "tag": "Basic"
+                    },
+                    "tag": "object"
+                },
+                "id": "019eb628-3d4d-7059-b598-461179d7e796",
+                "tag": "formal"
+            },
+            "019eb628-52fb-76df-b526-390ad631a22d": {
+                "content": {
+                    "cod": {
+                        "content": "019eb62c-58c0-759c-9005-2ba0b3ddffc9",
+                        "tag": "Basic"
+                    },
+                    "dom": {
+                        "content": "019eb628-1fc9-70aa-a7b0-0c71f87001a7",
+                        "tag": "Basic"
+                    },
+                    "id": "019eb628-52fb-76df-b526-3692bdaf465f",
+                    "morType": {
+                        "content": {
+                            "content": "Entity",
+                            "tag": "Basic"
+                        },
+                        "tag": "Hom"
+                    },
+                    "name": "",
+                    "over": {
+                        "content": "019eb626-561b-70e8-9604-a4e28f5af151",
+                        "tag": "Basic"
+                    },
+                    "tag": "morphism"
+                },
+                "id": "019eb628-52fb-76df-b526-390ad631a22d",
+                "tag": "formal"
+            },
+            "019eb628-6e91-725c-b343-5e91028679b3": {
+                "content": {
+                    "cod": {
+                        "content": "019eb628-c5e3-779e-a8de-d712e6c83d4b",
+                        "tag": "Basic"
+                    },
+                    "dom": {
+                        "content": "019eb628-1fc9-70aa-a7b0-0c71f87001a7",
+                        "tag": "Basic"
+                    },
+                    "id": "019eb628-6e91-725c-b343-599ce5360409",
+                    "morType": {
+                        "content": "Attr",
+                        "tag": "Basic"
+                    },
+                    "name": "",
+                    "over": {
+                        "content": "019eb626-9e40-7237-88cd-fad1dc30494c",
+                        "tag": "Basic"
+                    },
+                    "tag": "morphism"
+                },
+                "id": "019eb628-6e91-725c-b343-5e91028679b3",
+                "tag": "formal"
+            },
+            "019eb628-c5e3-779e-a8de-d9e81a694b91": {
+                "content": {
+                    "id": "019eb628-c5e3-779e-a8de-d712e6c83d4b",
+                    "name": "nice tea",
+                    "obType": {
+                        "content": "AttrType",
+                        "tag": "Basic"
+                    },
+                    "over": {
+                        "content": "019eb626-a6a8-742d-b2a0-e90358f0f3a3",
+                        "tag": "Basic"
+                    },
+                    "tag": "object"
+                },
+                "id": "019eb628-c5e3-779e-a8de-d9e81a694b91",
+                "tag": "formal"
+            },
+            "019eb62c-58c0-759c-9005-2e1034aa7bbc": {
+                "content": {
+                    "id": "019eb62c-58c0-759c-9005-2ba0b3ddffc9",
+                    "name": "Software",
+                    "obType": {
+                        "content": "Entity",
+                        "tag": "Basic"
+                    },
+                    "over": {
+                        "content": "019eb626-0903-771a-89af-134874a0e958",
+                        "tag": "Basic"
+                    },
+                    "tag": "object"
+                },
+                "id": "019eb62c-58c0-759c-9005-2e1034aa7bbc",
+                "tag": "formal"
+            },
+            "019eb62e-a1a9-7128-8b52-cf67586abe9c": {
+                "content": {
+                    "cod": {
+                        "content": "019eb62e-b46e-7797-a67c-734de902b5a2",
+                        "tag": "Basic"
+                    },
+                    "dom": {
+                        "content": "019eb628-3d4d-7059-b598-4051d03a8c30",
+                        "tag": "Basic"
+                    },
+                    "id": "019eb62e-a1a9-7128-8b52-cb7b2fc83f75",
+                    "morType": {
+                        "content": {
+                            "content": "Entity",
+                            "tag": "Basic"
+                        },
+                        "tag": "Hom"
+                    },
+                    "name": "",
+                    "over": {
+                        "content": "019eb626-561b-70e8-9604-a4e28f5af151",
+                        "tag": "Basic"
+                    },
+                    "tag": "morphism"
+                },
+                "id": "019eb62e-a1a9-7128-8b52-cf67586abe9c",
+                "tag": "formal"
+            },
+            "019eb62e-b46e-7797-a67c-740d242aa4ab": {
+                "content": {
+                    "id": "019eb62e-b46e-7797-a67c-734de902b5a2",
+                    "name": "Vibes",
+                    "obType": {
+                        "content": "Entity",
+                        "tag": "Basic"
+                    },
+                    "over": {
+                        "content": "019eb626-0903-771a-89af-134874a0e958",
+                        "tag": "Basic"
+                    },
+                    "tag": "object"
+                },
+                "id": "019eb62e-b46e-7797-a67c-740d242aa4ab",
+                "tag": "formal"
+            },
+            "019eb62e-e98e-71dc-adea-6921020bcb4d": {
+                "content": {
+                    "cod": {
+                        "content": "019eb62f-038b-77eb-965b-bac5dc25493a",
+                        "tag": "Basic"
+                    },
+                    "dom": {
+                        "content": "019eb628-3d4d-7059-b598-4051d03a8c30",
+                        "tag": "Basic"
+                    },
+                    "id": "019eb62e-e98e-71dc-adea-6640c126bb04",
+                    "morType": {
+                        "content": "Attr",
+                        "tag": "Basic"
+                    },
+                    "name": "",
+                    "over": {
+                        "content": "019eb626-9e40-7237-88cd-fad1dc30494c",
+                        "tag": "Basic"
+                    },
+                    "tag": "morphism"
+                },
+                "id": "019eb62e-e98e-71dc-adea-6921020bcb4d",
+                "tag": "formal"
+            },
+            "019eb62f-038c-75dc-b074-00501440ffc8": {
+                "content": {
+                    "id": "019eb62f-038b-77eb-965b-bac5dc25493a",
+                    "name": "little coffee",
+                    "obType": {
+                        "content": "AttrType",
+                        "tag": "Basic"
+                    },
+                    "over": {
+                        "content": "019eb626-a6a8-742d-b2a0-e90358f0f3a3",
+                        "tag": "Basic"
+                    },
+                    "tag": "object"
+                },
+                "id": "019eb62f-038c-75dc-b074-00501440ffc8",
+                "tag": "formal"
+            }
+        },
+        "cellOrder": [
+            "019eb628-1fc9-70aa-a7b0-1082de8fc7d3",
+            "019eb628-3d4d-7059-b598-461179d7e796",
+            "019eb628-52fb-76df-b526-390ad631a22d",
+            "019eb628-6e91-725c-b343-5e91028679b3",
+            "019eb628-c5e3-779e-a8de-d9e81a694b91",
+            "019eb62c-58c0-759c-9005-2e1034aa7bbc",
+            "019eb62e-a1a9-7128-8b52-cf67586abe9c",
+            "019eb62e-b46e-7797-a67c-740d242aa4ab",
+            "019eb62e-e98e-71dc-adea-6921020bcb4d",
+            "019eb62f-038c-75dc-b074-00501440ffc8"
+        ]
+    },
+    "type": "diagram",
+    "version": "2"
+}

@@ -1,10 +1,3 @@
-//! Lotka-Volterra ODE analysis of models.
-//!
-//! This follows the structure of [`ode::ode_semantics`], implementing `ODESemantics` for
-//! the struct `LotkaVolterraSemantics`.
-//!
-//! [`ode::ode_semantics`]: crate::stdlib::analyses::ode::ode_semantics
-
 use std::collections::HashMap;
 use std::fmt;
 
@@ -27,66 +20,56 @@ use crate::stdlib::analyses::ode::{
 use crate::zero::name;
 use crate::{dbl::model::DiscreteDblModel, one::QualifiedPath, zero::QualifiedName};
 
-/// Implementing Lotka-Volterra as an ODE semantics for models of type `DiscreteDblModel`.
-pub struct LotkaVolterraSemantics;
+/// Implementing LinearODE as an ODE semantics for models of type `DiscreteDblModel`.
+pub struct LinearODESemantics;
 
-impl ODESemantics for LotkaVolterraSemantics {
+impl ODESemantics for LinearODESemantics {
     type ModelType = DiscreteDblModel;
-    type ParameterType = LotkaVolterraParameter;
-    type AnalysisType = LotkaVolterraAnalysis;
-    type ParameterData = LotkaVolterraParameterData;
+    type ParameterType = LinearODEParameter;
+    type AnalysisType = LinearODEAnalysis;
+    type ParameterData = LinearODEParameterData;
 }
 
 // ┌------------------┐
 // | 1. ParameterType |
 // └------------------┘
 
-/// Parameters in the Lotka-Volterra equations come in two flavours, corresponding to
-/// either variables or links.
+/// Parameters in the linear equations correspond only to morphisms.
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone)]
-pub enum LotkaVolterraParameter {
-    /// The parameter associated to a variable.
-    Growth {
-        /// The variable.
-        variable: QualifiedName,
-    },
-    /// The parameter associated to a link.
-    Interaction {
-        /// The link.
-        link: QualifiedName,
+pub enum LinearODEParameter {
+    /// The parameter associated to a morphism.
+    Parameter {
+        /// The morphism.
+        morphism: QualifiedName,
     },
 }
 
-impl fmt::Display for LotkaVolterraParameter {
+impl fmt::Display for LinearODEParameter {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match &self {
-            Self::Growth { variable } => {
-                write!(f, "Growth({})", variable)
-            }
-            Self::Interaction { link } => {
-                write!(f, "Interaction({})", link)
+        match self {
+            Self::Parameter { morphism } => {
+                write!(f, "Parameter({})", morphism)
             }
         }
     }
 }
 
-impl ToLatexWithMap for LotkaVolterraParameter {
+impl ToLatexWithMap for LinearODEParameter {
     fn to_latex_with_map<T: Fn(&QualifiedName) -> String>(&self, f: T) -> Latex {
         match self {
-            Self::Growth { variable } => Latex(format!("g_{{{}}}", f(variable))),
-            Self::Interaction { link } => Latex(format!("k_{{{}}}", f(link))),
+            Self::Parameter { morphism } => Latex(format!("\\lambda_{{{}}}", f(morphism))),
         }
     }
 }
 
-impl ODEParameterType for LotkaVolterraParameter {}
+impl ODEParameterType for LinearODEParameter {}
 
 // ┌-----------------┐
 // | 2. AnalysisType |
 // └-----------------┘
 
-/// This Lotka-Volterra ODE analysis is intended for application to CLDs.
-pub struct LotkaVolterraAnalysis {
+/// Linear ODE analysis for causal loop diagrams (CLDs).
+pub struct LinearODEAnalysis {
     /// Object type for variables.
     pub var_ob_type: QualifiedName,
     /// Morphism type for positive links.
@@ -95,7 +78,7 @@ pub struct LotkaVolterraAnalysis {
     pub neg_link_type: QualifiedPath,
 }
 
-impl Default for LotkaVolterraAnalysis {
+impl Default for LinearODEAnalysis {
     fn default() -> Self {
         let ob_type = name("Object");
         Self {
@@ -108,37 +91,22 @@ impl Default for LotkaVolterraAnalysis {
 
 impl
     ODESemanticsAnalysis<
-        <LotkaVolterraSemantics as ODESemantics>::ModelType,
-        <LotkaVolterraSemantics as ODESemantics>::ParameterType,
-    > for LotkaVolterraAnalysis
+        <LinearODESemantics as ODESemantics>::ModelType,
+        <LinearODESemantics as ODESemantics>::ParameterType,
+    > for LinearODEAnalysis
 {
-    /// Creates a Lotka-Volterra system with symbolic rate coefficients.
+    /// Creates a linear system with symbolic rate coefficients.
     ///
-    /// A system of ODEs that is affine in its *logarithmic* derivative. These are
-    /// sometimes called the "generalized Lotka-Volterra equations." For more, see
-    /// [Wikipedia](https://en.wikipedia.org/wiki/Generalized_Lotka%E2%80%93Volterra_equation)
-    /// and [our paper on regulatory networks](crate::refs::RegNets).
+    /// A system of ODEs for building arbitrary LinearODE ODEs from CLDs.
     fn build_system_builder(
         &self,
         model: &DiscreteDblModel,
-    ) -> PolynomialODESystemBuilder<LotkaVolterraParameter> {
+    ) -> PolynomialODESystemBuilder<LinearODEParameter> {
         let mut builder = PolynomialODESystemBuilder::new();
 
         for var in model.ob_generators_with_type(&self.var_ob_type) {
             // For each object, we create a variable.
             builder.add_variable(var.clone());
-
-            // The object
-            //   x
-            // becomes the contribution
-            //   \dot{x} += Growth_x \cdot x
-            builder.add_contribution(
-                var.clone(),
-                var.clone(),
-                ContributionSign::Positive,
-                LotkaVolterraParameter::Growth { variable: var.clone() },
-                [var],
-            );
         }
 
         for mor in model.mor_generators_with_type(&self.pos_link_type) {
@@ -149,13 +117,13 @@ impl
             // The morphism
             //   f: x -> y
             // becomes the contribution
-            //   \dot{y} += Interaction_f \cdot xy
+            //   \dot{y} += Parameter_f x
             builder.add_contribution(
                 mor.clone(),
                 cod.clone(),
                 ContributionSign::Positive,
-                LotkaVolterraParameter::Interaction { link: mor },
-                [dom.clone(), cod.clone()],
+                LinearODEParameter::Parameter { morphism: mor },
+                [dom.clone()],
             );
         }
 
@@ -167,13 +135,13 @@ impl
             // The morphism
             //   f: x -> y
             // becomes the contribution
-            //   \dot{y} -= Interaction_f \cdot xy
+            //   \dot{y} -= Parameter_f x
             builder.add_contribution(
                 mor.clone(),
                 cod.clone(),
                 ContributionSign::Negative,
-                LotkaVolterraParameter::Interaction { link: mor },
-                [dom.clone(), cod.clone()],
+                LinearODEParameter::Parameter { morphism: mor },
+                [dom.clone()],
             );
         }
 
@@ -185,7 +153,7 @@ impl
 // | 3. ParameterData |
 // └------------------┘
 
-/// Data defining a Lotka-Volterra ODE problem for a model.
+/// Data input by the user to fill in the parameters numerically.
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde-wasm", derive(Tsify))]
 #[cfg_attr(
@@ -193,30 +161,22 @@ impl
     tsify(into_wasm_abi, from_wasm_abi, hashmap_as_object)
 )]
 #[derive(Clone)]
-pub struct LotkaVolterraParameterData {
-    /// Map from morphism IDs to interaction coefficients (nonnegative reals).
-    #[cfg_attr(feature = "serde", serde(rename = "interactionCoefficients"))]
-    pub(crate) interaction_coeffs: HashMap<QualifiedName, f32>,
-
-    /// Map from object IDs to growth rates (arbitrary real numbers).
-    #[cfg_attr(feature = "serde", serde(rename = "growthRates"))]
-    pub(crate) growth_rates: HashMap<QualifiedName, f32>,
+pub struct LinearODEParameterData {
+    /// Map from morphism IDs to interaction coefficients (non-negative reals).
+    pub(crate) coefficients: HashMap<QualifiedName, f32>,
 }
 
-impl ODESemanticsScalarExtension<<LotkaVolterraSemantics as ODESemantics>::ParameterType>
-    for LotkaVolterraParameterData
+impl ODESemanticsScalarExtension<<LinearODESemantics as ODESemantics>::ParameterType>
+    for LinearODEParameterData
 {
     fn extend_scalars(
         &self,
-        sys: PolynomialSystem<QualifiedName, Parameter<LotkaVolterraParameter>, i8>,
+        sys: PolynomialSystem<QualifiedName, Parameter<LinearODEParameter>, i8>,
     ) -> PolynomialSystem<QualifiedName, f32, i8> {
         let sys = sys.extend_scalars(|poly| {
             poly.eval(|param| match param {
-                LotkaVolterraParameter::Growth { variable } => {
-                    self.growth_rates.get(variable).cloned().unwrap_or_default()
-                }
-                LotkaVolterraParameter::Interaction { link } => {
-                    self.interaction_coeffs.get(link).cloned().unwrap_or_default()
+                LinearODEParameter::Parameter { morphism } => {
+                    self.coefficients.get(morphism).cloned().unwrap_or_default()
                 }
             })
         });
@@ -225,7 +185,7 @@ impl ODESemanticsScalarExtension<<LotkaVolterraSemantics as ODESemantics>::Param
     }
 }
 
-/// Data for a numerical Lotka-Volterra system.
+/// Data for a numerical linear ODE system.
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde-wasm", derive(Tsify))]
 #[cfg_attr(
@@ -233,17 +193,17 @@ impl ODESemanticsScalarExtension<<LotkaVolterraSemantics as ODESemantics>::Param
     tsify(into_wasm_abi, from_wasm_abi, hashmap_as_object)
 )]
 #[derive(Clone)]
-pub struct LotkaVolterraProblemData {
+pub struct LinearODEProblemData {
     /// Data common to all ODE problems.
     #[cfg_attr(feature = "serde", serde(rename = "generalData"))]
     pub general_data: ODESemanticsGeneralProblemData,
-    /// Data specific to Lotka-Volterra problems.
+    /// Data specific to linear ODE problems.
     #[cfg_attr(feature = "serde", serde(rename = "parameterData"))]
-    pub parameter_data: LotkaVolterraParameterData,
+    pub parameter_data: LinearODEParameterData,
 }
 
-impl ODESemanticsProblemData<LotkaVolterraSemantics> for LotkaVolterraProblemData {
-    type ParameterData = LotkaVolterraParameterData;
+impl ODESemanticsProblemData<LinearODESemantics> for LinearODEProblemData {
+    type ParameterData = LinearODEParameterData;
     fn general_data(self) -> ODESemanticsGeneralProblemData {
         self.general_data
     }
@@ -273,10 +233,10 @@ mod test {
     fn predator_prey_symbolic() {
         let th = Rc::new(th_signed_category());
         let model = negative_feedback(th);
-        let sys = LotkaVolterraAnalysis::default().build_system(&model);
+        let sys = LinearODEAnalysis::default().build_system(&model);
         let expected = expect!([r#"
-            dx = Growth(x) x - Interaction(negative) x y
-            dy = Interaction(positive) x y + Growth(y) y
+            dx = -Parameter(negative) y
+            dy = Parameter(positive) x
         "#]);
         expected.assert_eq(&sys.to_string());
     }
@@ -295,12 +255,12 @@ mod test {
         model.add_mor(name("i"), name("a"), name("c"), name("Negative").into());
         model.add_mor(name("j"), name("c"), name("d"), Path::Id(name("Object")));
         model.add_mor(name("k"), name("d"), name("b"), name("Negative").into());
-        let sys = LotkaVolterraAnalysis::default().build_system(&model);
+        let sys = LinearODEAnalysis::default().build_system(&model);
         let expected = expect!([r#"
-            da = Growth(a) a + (Interaction(g) - Interaction(h)) a b
-            db = Interaction(f) a b + Growth(b) b - Interaction(k) b d
-            dc = -Interaction(i) a c + Growth(c) c
-            dd = Interaction(j) c d + Growth(d) d
+            da = (Parameter(g) - Parameter(h)) b
+            db = Parameter(f) a - Parameter(k) d
+            dc = -Parameter(i) a
+            dd = Parameter(j) c
         "#]);
         expected.assert_eq(&sys.to_string());
     }
@@ -310,23 +270,22 @@ mod test {
     fn predator_prey_numerical() {
         let th = Rc::new(th_signed_category());
         let model = negative_feedback(th);
-        let data = LotkaVolterraProblemData {
+        let data = LinearODEProblemData {
             general_data: ODESemanticsGeneralProblemData {
                 initial_values: [(name("x"), 1.0), (name("y"), 1.0)].into_iter().collect(),
                 duration: 10.0,
             },
-            parameter_data: LotkaVolterraParameterData {
-                interaction_coeffs: [(name("positive"), 1.0), (name("negative"), 1.0)]
+            parameter_data: LinearODEParameterData {
+                coefficients: [(name("positive"), 3.0), (name("negative"), 2.0)]
                     .into_iter()
                     .collect(),
-                growth_rates: [(name("x"), 2.0), (name("y"), -1.0)].into_iter().collect(),
             },
         };
-        let sys = LotkaVolterraAnalysis::default().build_system(&model);
+        let sys = LinearODEAnalysis::default().build_system(&model);
         let analysis = data.parameter_data.extend_scalars(sys);
         let expected = expect!([r#"
-            dx = 2 x - x y
-            dy = x y - y
+            dx = -2 y
+            dy = 3 x
         "#]);
         expected.assert_eq(&analysis.to_string());
     }
@@ -336,17 +295,17 @@ mod test {
     fn to_latex() {
         let th = Rc::new(th_signed_category());
         let model = negative_feedback(th);
-        let system = LotkaVolterraAnalysis::default().build_system(&model);
+        let system = LinearODEAnalysis::default().build_system(&model);
         let equations =
             system.to_latex_equations_with_map(|name| wrap_with_backslash_text(name.to_string()));
         let expected = LatexEquations(vec![
             LatexEquation {
                 lhs: Latex("\\frac{\\mathrm{d}}{\\mathrm{d}t} x".to_string()),
-                rhs: Latex("g_{x} \\cdot x - k_{\\text{negative}} \\cdot x \\cdot y".to_string()),
+                rhs: Latex("-\\lambda_{\\text{negative}} \\cdot y".to_string()),
             },
             LatexEquation {
                 lhs: Latex("\\frac{\\mathrm{d}}{\\mathrm{d}t} y".to_string()),
-                rhs: Latex("k_{\\text{positive}} \\cdot x \\cdot y + g_{y} \\cdot y".to_string()),
+                rhs: Latex("\\lambda_{\\text{positive}} \\cdot x".to_string()),
             },
         ]);
         assert_eq!(expected, equations);
