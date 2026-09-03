@@ -1,10 +1,12 @@
 import { useNavigate } from "@solidjs/router";
+import Table from "lucide-solid/icons/table";
 import { createMemo, createResource, For, Show, useContext } from "solid-js";
 import { stringify as uuidStringify } from "uuid";
 
 import { DocumentTypeIcon, type FocusHandle } from "catcolab-ui-components";
 import type { Document, Link } from "catlog-wasm";
 import { type Api, type LiveDocWithRef, useApi } from "../api";
+import { useInstanceTables } from "../instance/instance_tables_state";
 import { TheoryLibraryContext } from "../theory";
 import { isDocumentVisible, useUserSettings } from "../user/user_settings";
 import { useUserState } from "../user/user_state_context";
@@ -198,6 +200,20 @@ function DocumentsTreeNode(props: {
                 refetchPrimaryDoc={props.refetchPrimaryDoc}
                 refetchSecondaryDoc={props.refetchSecondaryDoc}
             />
+            <Show when={props.doc.liveDoc.doc.type === "instance" && props.doc.docRef.refId}>
+                {(refId) => (
+                    <InstanceTablesList
+                        refId={refId()}
+                        indent={props.indent + 1}
+                        isFocused={
+                            (refId() === props.primaryDoc.docRef.refId &&
+                                props.primaryPaneFocus.hasFocus()) ||
+                            (refId() === props.secondaryDoc?.docRef.refId &&
+                                props.secondaryPaneFocus.hasFocus())
+                        }
+                    />
+                )}
+            </Show>
             <For each={visibleChildDocs()}>
                 {(child) => (
                     <DocumentsTreeNode
@@ -323,6 +339,34 @@ function DocumentsTreeLeaf(props: {
                 />
             </div>
         </div>
+    );
+}
+
+/** Tables of an open instance document. Clicking a row shows the table. */
+function InstanceTablesList(props: { refId: string; indent: number; isFocused: boolean }) {
+    const tablesState = useInstanceTables();
+
+    return (
+        <For each={tablesState.tables(props.refId)}>
+            {(table) => {
+                const isVisible = () => tablesState.isVisible(props.refId, table.id);
+                return (
+                    <div
+                        class="related-table"
+                        classList={{
+                            active: isVisible(),
+                            focused: isVisible() && props.isFocused,
+                            unnamed: !table.label,
+                        }}
+                        style={{ "padding-left": `${props.indent * 16}px` }}
+                        onClick={() => tablesState.show(props.refId, table.id)}
+                    >
+                        <Table />
+                        <div class="document-name">{table.label || "Unnamed table"}</div>
+                    </div>
+                );
+            }}
+        </For>
     );
 }
 
