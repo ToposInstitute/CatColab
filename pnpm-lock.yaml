@@ -4,6 +4,14 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+patchedDependencies:
+  '@automerge/automerge-repo-solid-primitives@2.5.6':
+    hash: a07fedccb0b2226ec9a51ec389778cd28a65a604bbba6ed81fb5f340c6769242
+    path: patches/@automerge__automerge-repo-solid-primitives@2.5.6.patch
+  '@automerge/automerge@3.4.1':
+    hash: 421bb3f42dbae7aaa70fc1a073ea4dcf18b871e7990b8cc721b42da8829e4718
+    path: patches/@automerge__automerge@3.4.1.patch
+
 importers:
 
   .:
