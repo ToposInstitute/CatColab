@@ -90,7 +90,10 @@ export interface InstanceValidationView<out S extends Shape> extends InstanceVal
     dispose(): void;
 }
 
-/** Create a store-backed instance. Schema-derived operations validate the schema on demand. */
+/** Create a store-backed instance.
+
+Schema-derived operations elaborate the schema on demand and work against the
+resulting model even when the schema is only partially valid. */
 export function instanceFromStore<Handle, S extends Shape>(
     shape: S,
     schema: Notebook<S, ModelDocument, Handle>,
