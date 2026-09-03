@@ -98,6 +98,35 @@ describe("API document store", () => {
         expect(Object.keys(storedTable?.rows ?? {})).toHaveLength(1);
     });
 
+    test("document views apply map key deletions", async () => {
+        const { binder, schema, store } = await createFixtureWithSchema();
+        schema.add(Type, { label: "Person" });
+
+        const instance = await binder.loadInstanceFromRef(schema, {
+            id: instanceRef,
+            version: null,
+            server,
+        });
+        if (instance.tag !== "Ok") {
+            throw new Error("expected instance to load");
+        }
+        const table = (await instance.content.validate()).tables[0];
+        if (!table) {
+            throw new Error("expected entity table");
+        }
+        const added = await instance.content.addRow(table);
+        if (added.tag !== "Ok") {
+            throw new Error("expected row to be added");
+        }
+
+        const view = store.getDocumentView(instance.content.handle) as InstanceDocument;
+        expect(Object.keys(view.tables[table.id]?.rows ?? {})).toEqual([added.content.id]);
+
+        instance.content.deleteRow(table.id, added.content.id);
+        expect(view.tables[table.id]?.rows).toEqual({});
+        expect(view.tables[table.id]?.rowOrder).toEqual([]);
+    });
+
     test("rejects a document with the wrong type", async () => {
         const { binder, schema } = await createFixtureWithSchema();
 
