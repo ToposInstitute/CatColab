@@ -28,5 +28,15 @@ export interface OrphanedTableIssue extends Issue {
     readonly issueType: "OrphanedTable";
 }
 
+/** A violation of a path equation in the schema by a row of an instance
+ * table, or a summary of further such violations. */
+export interface EquationViolationIssue extends Issue {
+    /** Path to the violating row, or to its table for a summary issue. */
+    readonly path: [string] | [string, "rows", string];
+    readonly issueType: "EquationViolation";
+    /** Id of the violated equation in the schema. */
+    readonly equationId: string;
+}
+
 /** A problem found while validating an instance's tables. */
-export type TableIssue = TableFieldIssue | OrphanedTableIssue;
+export type TableIssue = TableFieldIssue | OrphanedTableIssue | EquationViolationIssue;
