@@ -1,0 +1,253 @@
+{
+    "name": "SEIR Petri net",
+    "notebook": {
+        "cellContents": {
+            "0199627d-ce48-7468-845b-505201c80ea6": {
+                "content": {
+                    "id": "0199627d-ce48-7468-845b-4f12dfdeb5da",
+                    "name": "Susceptible",
+                    "obType": {
+                        "content": "Object",
+                        "tag": "Basic"
+                    },
+                    "tag": "object"
+                },
+                "id": "0199627d-ce48-7468-845b-505201c80ea6",
+                "tag": "formal"
+            },
+            "0199627d-f42e-74e8-89bd-b3f2ad862617": {
+                "content": {
+                    "id": "0199627d-f42e-74e8-89bd-ae7dc44a3d93",
+                    "name": "Exposed",
+                    "obType": {
+                        "content": "Object",
+                        "tag": "Basic"
+                    },
+                    "tag": "object"
+                },
+                "id": "0199627d-f42e-74e8-89bd-b3f2ad862617",
+                "tag": "formal"
+            },
+            "0199627e-070b-731e-8ca7-0bad0cf5dbae": {
+                "content": {
+                    "id": "0199627e-070b-731e-8ca7-0799a031a084",
+                    "name": "Infected",
+                    "obType": {
+                        "content": "Object",
+                        "tag": "Basic"
+                    },
+                    "tag": "object"
+                },
+                "id": "0199627e-070b-731e-8ca7-0bad0cf5dbae",
+                "tag": "formal"
+            },
+            "0199627e-1ee6-7034-9f4f-7e031477e44d": {
+                "content": {
+                    "id": "0199627e-1ee6-7034-9f4f-78ac147dd01f",
+                    "name": "Recovered",
+                    "obType": {
+                        "content": "Object",
+                        "tag": "Basic"
+                    },
+                    "tag": "object"
+                },
+                "id": "0199627e-1ee6-7034-9f4f-7e031477e44d",
+                "tag": "formal"
+            },
+            "0199627e-363f-708d-8683-bbd84429ddd3": {
+                "content": {
+                    "cod": {
+                        "content": {
+                            "ob": {
+                                "content": {
+                                    "modality": "SymmetricList",
+                                    "objects": [
+                                        {
+                                            "content": "0199627d-f42e-74e8-89bd-ae7dc44a3d93",
+                                            "tag": "Basic"
+                                        },
+                                        {
+                                            "content": "0199627e-070b-731e-8ca7-0799a031a084",
+                                            "tag": "Basic"
+                                        }
+                                    ]
+                                },
+                                "tag": "List"
+                            },
+                            "op": {
+                                "content": "tensor",
+                                "tag": "Basic"
+                            }
+                        },
+                        "tag": "App"
+                    },
+                    "dom": {
+                        "content": {
+                            "ob": {
+                                "content": {
+                                    "modality": "SymmetricList",
+                                    "objects": [
+                                        {
+                                            "content": "0199627d-ce48-7468-845b-4f12dfdeb5da",
+                                            "tag": "Basic"
+                                        },
+                                        {
+                                            "content": "0199627e-070b-731e-8ca7-0799a031a084",
+                                            "tag": "Basic"
+                                        }
+                                    ]
+                                },
+                                "tag": "List"
+                            },
+                            "op": {
+                                "content": "tensor",
+                                "tag": "Basic"
+                            }
+                        },
+                        "tag": "App"
+                    },
+                    "id": "0199627e-363f-708d-8683-b51142e5fcc1",
+                    "morType": {
+                        "content": {
+                            "content": "Object",
+                            "tag": "Basic"
+                        },
+                        "tag": "Hom"
+                    },
+                    "name": "Exposure",
+                    "tag": "morphism"
+                },
+                "id": "0199627e-363f-708d-8683-bbd84429ddd3",
+                "tag": "formal"
+            },
+            "0199627e-77cd-75c0-a07b-40f3322c25cb": {
+                "content": {
+                    "cod": {
+                        "content": {
+                            "ob": {
+                                "content": {
+                                    "modality": "SymmetricList",
+                                    "objects": [
+                                        {
+                                            "content": "0199627e-070b-731e-8ca7-0799a031a084",
+                                            "tag": "Basic"
+                                        }
+                                    ]
+                                },
+                                "tag": "List"
+                            },
+                            "op": {
+                                "content": "tensor",
+                                "tag": "Basic"
+                            }
+                        },
+                        "tag": "App"
+                    },
+                    "dom": {
+                        "content": {
+                            "ob": {
+                                "content": {
+                                    "modality": "SymmetricList",
+                                    "objects": [
+                                        {
+                                            "content": "0199627d-f42e-74e8-89bd-ae7dc44a3d93",
+                                            "tag": "Basic"
+                                        }
+                                    ]
+                                },
+                                "tag": "List"
+                            },
+                            "op": {
+                                "content": "tensor",
+                                "tag": "Basic"
+                            }
+                        },
+                        "tag": "App"
+                    },
+                    "id": "0199627e-77cd-75c0-a07b-3c5ff3863716",
+                    "morType": {
+                        "content": {
+                            "content": "Object",
+                            "tag": "Basic"
+                        },
+                        "tag": "Hom"
+                    },
+                    "name": "Incubation",
+                    "tag": "morphism"
+                },
+                "id": "0199627e-77cd-75c0-a07b-40f3322c25cb",
+                "tag": "formal"
+            },
+            "0199627e-a1eb-76aa-949d-8aaf8188ffd3": {
+                "content": {
+                    "cod": {
+                        "content": {
+                            "ob": {
+                                "content": {
+                                    "modality": "SymmetricList",
+                                    "objects": [
+                                        {
+                                            "content": "0199627e-1ee6-7034-9f4f-78ac147dd01f",
+                                            "tag": "Basic"
+                                        }
+                                    ]
+                                },
+                                "tag": "List"
+                            },
+                            "op": {
+                                "content": "tensor",
+                                "tag": "Basic"
+                            }
+                        },
+                        "tag": "App"
+                    },
+                    "dom": {
+                        "content": {
+                            "ob": {
+                                "content": {
+                                    "modality": "SymmetricList",
+                                    "objects": [
+                                        {
+                                            "content": "0199627e-070b-731e-8ca7-0799a031a084",
+                                            "tag": "Basic"
+                                        }
+                                    ]
+                                },
+                                "tag": "List"
+                            },
+                            "op": {
+                                "content": "tensor",
+                                "tag": "Basic"
+                            }
+                        },
+                        "tag": "App"
+                    },
+                    "id": "0199627e-a1eb-76aa-949d-87312dfd25ba",
+                    "morType": {
+                        "content": {
+                            "content": "Object",
+                            "tag": "Basic"
+                        },
+                        "tag": "Hom"
+                    },
+                    "name": "Recovery",
+                    "tag": "morphism"
+                },
+                "id": "0199627e-a1eb-76aa-949d-8aaf8188ffd3",
+                "tag": "formal"
+            }
+        },
+        "cellOrder": [
+            "0199627d-ce48-7468-845b-505201c80ea6",
+            "0199627d-f42e-74e8-89bd-b3f2ad862617",
+            "0199627e-070b-731e-8ca7-0bad0cf5dbae",
+            "0199627e-1ee6-7034-9f4f-7e031477e44d",
+            "0199627e-363f-708d-8683-bbd84429ddd3",
+            "0199627e-77cd-75c0-a07b-40f3322c25cb",
+            "0199627e-a1eb-76aa-949d-8aaf8188ffd3"
+        ]
+    },
+    "theory": "petri-net",
+    "type": "model",
+    "version": "2"
+}

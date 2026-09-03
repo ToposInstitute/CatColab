@@ -1,12 +1,14 @@
-use crate::v1;
+use crate::v2;
 
 use super::cell::NotebookCell;
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use tsify::Tsify;
 use uuid::Uuid;
 
-#[derive(PartialEq, Eq, Debug, Serialize, Deserialize)]
+#[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Tsify)]
+#[tsify(into_wasm_abi, from_wasm_abi, hashmap_as_object)]
 pub struct Notebook<T> {
     #[serde(rename = "cellContents")]
     pub cell_contents: HashMap<Uuid, NotebookCell<T>>,
@@ -14,17 +16,19 @@ pub struct Notebook<T> {
     pub cell_order: Vec<Uuid>,
 }
 
-#[derive(PartialEq, Eq, Debug, Serialize, Deserialize)]
+#[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Tsify)]
+#[tsify(into_wasm_abi, from_wasm_abi)]
 pub struct ModelNotebook(pub Notebook<super::model_judgment::ModelJudgment>);
 
-#[derive(PartialEq, Eq, Debug, Serialize, Deserialize)]
+#[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Tsify)]
+#[tsify(into_wasm_abi, from_wasm_abi)]
 pub struct DiagramNotebook(pub Notebook<super::diagram_judgment::DiagramJudgment>);
 
 /// Arbitrary instances for property-based testing.
 #[cfg(feature = "property-tests")]
 pub(crate) mod arbitrary {
     use super::*;
-    use crate::v2::cell::arbitrary::arb_notebook_cell;
+    use crate::v3::cell::arbitrary::arb_notebook_cell;
     use proptest::prelude::*;
 
     fn arb_uuid() -> BoxedStrategy<Uuid> {
@@ -85,16 +89,28 @@ impl<T> Notebook<T> {
         })
     }
 
-    /// Migrate a [`v1::Notebook`] to v2 by dropping stem cells.
+    /// Migrate a [`v2::Notebook`] to v3.
+    ///
+    /// Note that this is implemented as a special case of `migrate_from_v2_with_generic`.
+    pub fn migrate_from_v2(old: v2::Notebook<T>) -> Self {
+        Self::migrate_from_v2_with_generic(old, |t| t)
+    }
+
+    /// Migrate a [`v2::Notebook`] to v3 by updating formal cell contents.
     ///
     /// Both the cell contents map and the cell order are filtered to remove
-    /// stem cells; non-stem cells preserve their UUIDs and ordering.
-    pub fn migrate_from_v1(old: v1::Notebook<T>) -> Self {
-        let v1::Notebook { cell_contents, cell_order } = old;
+    /// stem cells; non-stem cells preserve their UUIDs and ordering. To accommodate for notebooks
+    /// with cells whose content type has changed, we implement the migration in the general case of
+    /// also having an update function on the generic type.
+    pub fn migrate_from_v2_with_generic<S>(
+        old: v2::Notebook<S>,
+        update_cell: impl Fn(S) -> T,
+    ) -> Self {
+        let v2::Notebook { cell_contents, cell_order } = old;
 
         let mut new_contents = HashMap::with_capacity(cell_contents.len());
         for (id, cell) in cell_contents {
-            if let Some(new_cell) = NotebookCell::migrate_from_v1(cell) {
+            if let Some(new_cell) = NotebookCell::migrate_from_v2_with_generic(cell, &update_cell) {
                 new_contents.insert(id, new_cell);
             }
         }

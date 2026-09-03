@@ -153,7 +153,7 @@ export function linearODEEquations(
         component: (props) => (
             <ODESemanticsEquationsDisplay title={name} {...otherOptions} {...props} />
         ),
-        initialContent: () => ({ content: undefined }),
+        initialContent: () => ({ content: null }),
     };
 }
 
@@ -210,7 +210,7 @@ export function lotkaVolterraEquations(
         component: (props) => (
             <ODESemanticsEquationsDisplay title={name} {...otherOptions} {...props} />
         ),
-        initialContent: () => ({ content: undefined }),
+        initialContent: () => ({ content: null }),
     };
 }
 
@@ -491,7 +491,7 @@ export function polynomialODEEquations(
         component: (props) => (
             <ODESemanticsEquationsDisplay title={name} {...otherOptions} {...props} />
         ),
-        initialContent: () => ({ content: undefined }),
+        initialContent: () => ({ content: null }),
     };
 }
 
