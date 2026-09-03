@@ -60,7 +60,7 @@ pub(crate) fn ode_semantics_equations<S: ODESemantics>(
 /// be an entire JavaScript object, so we can't simply work with `ModelAnalysisMeta<null>`
 /// and set `initialContent: () => null`.
 #[derive(Serialize, Deserialize, Tsify)]
-#[tsify(into_wasm_abi, from_wasm_abi)]
+#[tsify(into_wasm_abi, from_wasm_abi, missing_as_null)]
 pub struct NullWrapper {
     /// Trivial data.
     pub content: (),

@@ -1,0 +1,89 @@
+{
+    "analysisOf": {
+        "_id": "019b98c7-de51-7a71-8962-64b081b2dfde",
+        "_server": "backend-next.catcolab.org",
+        "_version": null,
+        "type": "analysis-of"
+    },
+    "analysisType": "model",
+    "name": "Fox–Rabbit–Grass",
+    "notebook": {
+        "cellContents": {
+            "019b98c9-02dd-72ce-a72c-7d40af746e7b": {
+                "content": {
+                    "content": {
+                        "direction": "vertical",
+                        "layout": "elk"
+                    },
+                    "id": "diagram",
+                    "version": "0"
+                },
+                "id": "019b98c9-02dd-72ce-a72c-7d40af746e7b",
+                "tag": "formal"
+            },
+            "019bb3b3-c923-742f-b32e-3df32be3a2d3": {
+                "content": {
+                    "content": {
+                        "generalData": {
+                            "duration": 10,
+                            "initialValues": {
+                                "019b98c8-1dab-7397-af84-99a66662d113": 10,
+                                "019b98c8-2de3-7310-bd58-75dec05eb7c0": 5,
+                                "019b98c8-3b0f-74a9-8e63-3bf24aa44f47": 1,
+                                "019c2917-d059-734c-97c2-fdfaa839f767": 0
+                            }
+                        },
+                        "parameterData": {
+                            "growthRates": {
+                                "019b98c8-1dab-7397-af84-99a66662d113": 1,
+                                "019b98c8-2de3-7310-bd58-75dec05eb7c0": -0.5,
+                                "019b98c8-3b0f-74a9-8e63-3bf24aa44f47": -1,
+                                "019c2917-d059-734c-97c2-fdfaa839f767": 0
+                            },
+                            "interactionCoefficients": {
+                                "019b98c8-4591-705d-b6c7-c1106c7b7042.019b98c4-bf91-742a-802d-1e2e80d2fb0f": 1,
+                                "019b98c8-4591-705d-b6c7-c1106c7b7042.019b98c4-c664-7339-97cb-f0d6ce8b603c": 1,
+                                "019b98c9-d129-75be-88dd-fc3af095542a.019b98c4-bf91-742a-802d-1e2e80d2fb0f": 1,
+                                "019b98c9-d129-75be-88dd-fc3af095542a.019b98c4-c664-7339-97cb-f0d6ce8b603c": 1
+                            }
+                        }
+                    },
+                    "id": "lotka-volterra",
+                    "version": "1"
+                },
+                "id": "019bb3b3-c923-742f-b32e-3df32be3a2d3",
+                "tag": "formal"
+            },
+            "019d4966-5c2b-71ef-bed7-c8a7eaa449cb": {
+                "content": {
+                    "content": {},
+                    "id": "composition-pattern",
+                    "version": "0"
+                },
+                "id": "019d4966-5c2b-71ef-bed7-c8a7eaa449cb",
+                "tag": "formal"
+            },
+            "019e2bd6-0f84-7658-b617-c76fd92e085a": {
+                "content": {
+                    "content": {
+                        "content": null
+                    },
+                    "id": "lotka-volterra-equations",
+                    "version": "1"
+                },
+                "id": "019e2bd6-0f84-7658-b617-c76fd92e085a",
+                "tag": "formal"
+            }
+        },
+        "cellOrder": [
+            "019b98c9-02dd-72ce-a72c-7d40af746e7b",
+            "019d4966-5c2b-71ef-bed7-c8a7eaa449cb",
+            "019bb3b3-c923-742f-b32e-3df32be3a2d3",
+            "019e2bd6-0f84-7658-b617-c76fd92e085a",
+            "019e2c54-c037-76bb-ac56-8aec150f371e",
+            "019e2c54-f0a5-7029-bc8d-e699a7d8202c"
+        ]
+    },
+    "type": "analysis",
+    "version": "2"
+}
