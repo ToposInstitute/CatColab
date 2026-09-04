@@ -30,6 +30,7 @@
         "katex": "^0.16.22",
         "lucide-solid": "^1.34.0",
         "shiki": "^4.0.2",
+        "simple-icons": "^16.28.0",
         "solid-js": "^1.9.10"
     },
     "devDependencies": {
