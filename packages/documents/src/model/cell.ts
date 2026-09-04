@@ -14,12 +14,14 @@ import type {
     Shape,
 } from "../shape";
 import { tryGetModelJudgment, type ModelDocument } from "./document";
+import { getEquationCell, type EquationCell } from "./equation";
 
 /** Runtime names for the discriminants on notebook cell handles. */
 export const CellKind = {
     RichText: "rich-text" satisfies RichTextCell["kind"],
     Object: "object" satisfies ObjectCell<ObjectType>["kind"],
     Morphism: "morphism" satisfies MorphismCell<Shape, MorphismType>["kind"],
+    PathEquation: "path-equation" satisfies EquationCell<Shape>["kind"],
 } as const;
 
 export interface ObjectCell<O extends ObjectType> {
@@ -53,7 +55,8 @@ export interface MorphismCell<S extends Shape, M extends MorphismType> {
 export type CellOf<S extends Shape> =
     | RichTextCell
     | ObjectCell<ObjectTypesOf<S>>
-    | MorphismCell<S, MorphismTypesOf<S>>;
+    | MorphismCell<S, MorphismTypesOf<S>>
+    | EquationCell<S>;
 
 export function getObjectCell<Handle, O extends ObjectType, Version>(
     store: DocumentStore<Handle, Version>,
@@ -102,7 +105,7 @@ export function getObjectCell<Handle, O extends ObjectType, Version>(
     };
 }
 
-function objectCellFromOb<Handle, S extends Shape, Version>(
+export function objectCellFromOb<Handle, S extends Shape, Version>(
     shape: S,
     store: DocumentStore<Handle, Version>,
     handle: Handle,
@@ -259,6 +262,8 @@ export function getModelCell<Handle, S extends Shape, Version>(
             }
             return getMorphismCell(shape, store, handle, cellId, type);
         }
+        case "equation":
+            return getEquationCell(shape, store, handle, cellId);
         default:
             throw new Error(`Formal cell ${cellId} is not supported yet.`);
     }
