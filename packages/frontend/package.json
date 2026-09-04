@@ -65,7 +65,7 @@
         "html-escaper": "^3.0.3",
         "js-file-download": "^0.4.12",
         "katex": "^0.16.22",
-        "lucide-solid": "^0.577.0",
+        "lucide-solid": "^1.34.0",
         "openai": "^6.45.0",
         "prosemirror-commands": "^1.7.1",
         "prosemirror-inputrules": "^1.5.0",
