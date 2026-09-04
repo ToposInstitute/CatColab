@@ -6,7 +6,6 @@ import Bird from "lucide-solid/icons/bird";
 import ExternalLink from "lucide-solid/icons/external-link";
 import FilePlus from "lucide-solid/icons/file-plus";
 import Files from "lucide-solid/icons/files";
-import Github from "lucide-solid/icons/github";
 import InfoIcon from "lucide-solid/icons/info";
 import LogInIcon from "lucide-solid/icons/log-in";
 import { useAuth, useFirebaseApp } from "solid-firebase";
@@ -138,7 +137,11 @@ export default function HomePage() {
                                             rel="noopener"
                                         >
                                             <span class="resource-icon">
-                                                <Github />
+                                                <img
+                                                    width="24"
+                                                    height="24"
+                                                    src="https://cdn.jsdelivr.net/npm/simple-icons@latest/icons/github.svg"
+                                                />
                                             </span>
                                             <span>Source code</span>
                                             <span class="external-link-icon">
