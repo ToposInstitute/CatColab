@@ -11,7 +11,10 @@ import {
     type Result,
 } from "catcolab-documents";
 
-function refOf<Handle>(store: DocumentStore<Handle>, handle: Handle): DocumentRef {
+function refOf<Handle, Version>(
+    store: DocumentStore<Handle, Version>,
+    handle: Handle,
+): DocumentRef {
     return store.getDocumentRef(handle);
 }
 

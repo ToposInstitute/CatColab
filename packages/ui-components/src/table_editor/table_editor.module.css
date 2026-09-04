@@ -20,6 +20,8 @@
 
 .hideTable {
     display: inline-grid;
+    flex-shrink: 0;
+    margin-left: auto;
     place-items: center;
     width: 20px;
     height: 20px;

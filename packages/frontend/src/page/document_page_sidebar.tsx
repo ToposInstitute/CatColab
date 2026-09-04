@@ -357,12 +357,17 @@ function InstanceTablesList(props: { refId: string; indent: number; isFocused: b
                             active: isVisible(),
                             focused: isVisible() && props.isFocused,
                             unnamed: !table.label,
+                            unknown: table.label === null,
                         }}
                         style={{ "padding-left": `${props.indent * 16}px` }}
                         onClick={() => tablesState.show(props.refId, table.id)}
                     >
                         <Table />
-                        <div class="document-name">{table.label || "Unnamed table"}</div>
+                        <div class="document-name">
+                            {table.label === null
+                                ? "Unknown table"
+                                : table.label || "Unnamed table"}
+                        </div>
                     </div>
                 );
             }}

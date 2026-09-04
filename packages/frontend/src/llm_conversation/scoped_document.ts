@@ -1,18 +1,13 @@
 import type { Document } from "catcolab-document-types";
-import type {
-    DocumentStore,
-    InstanceValidation,
-    Issue,
-    ModelValidation,
-    Shape,
-} from "catcolab-documents";
-import { createDocumentTransaction } from "./document_transaction";
+import type { InstanceValidation, Issue, ModelValidation, Shape } from "catcolab-documents";
 
 type DocumentValidation = ModelValidation<Shape> | InstanceValidation<Shape>;
 
-type DocumentBinding<Handle = unknown> = {
+/**
+ * A draft document staged in the execution scope of an LLM conversation.
+ */
+export type DocumentDraft = {
     readonly document: Readonly<Document>;
-    readonly handle: Handle;
     readonly title: string;
     validate(): Promise<DocumentValidation>;
 };
@@ -36,30 +31,16 @@ export type ScopedDocument = {
     value: unknown;
     description: string;
     validate(): Promise<ReadonlyArray<string>>;
-    commit(): void;
 };
 
-/** Create and stage the execution-scope representation of one document. */
-export function createScopedDocument<Handle>(options: {
-    binding: DocumentBinding<Document>;
-    bindingStore: DocumentStore<Document>;
-    sourceHandle: Handle;
-    sourceStore: DocumentStore<Handle>;
+/** Create the execution-scope representation of one staged draft document. */
+export function createScopedDocument(options: {
+    binding: DocumentDraft;
     role: ScopedDocumentRole;
     links?: ReadonlyArray<ScopedDocumentLink>;
-    preservedKeys?: ReadonlyArray<string>;
     usedBindings: Set<string>;
 }): ScopedDocument {
     const bindingName = uniqueBinding(options.binding.title, options.usedBindings);
-    const transaction = createDocumentTransaction({
-        copyStore: options.bindingStore,
-        copyHandle: options.binding.handle,
-        commitStore: options.sourceStore,
-        commitHandle: options.sourceHandle,
-        preservedKeys: options.preservedKeys,
-    });
-    transaction.stage();
-
     return {
         binding: bindingName,
         value: options.binding,
@@ -70,12 +51,11 @@ export function createScopedDocument<Handle>(options: {
             links: options.links,
         }),
         validate: () => validateScopedDocument(options.binding, bindingName),
-        commit: () => transaction.commit(),
     };
 }
 
 async function validateScopedDocument(
-    document: DocumentBinding<Document>,
+    document: DocumentDraft,
     binding: string,
 ): Promise<ReadonlyArray<string>> {
     const validation = await document.validate();

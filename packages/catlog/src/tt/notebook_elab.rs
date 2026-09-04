@@ -181,7 +181,11 @@ impl<'a> Elaborator<'a> {
                 nb::path::Path::Id(ob) => {
                     let (stx, val, ob_type) = self.ob_syn(ob)?;
                     let mor_type = self.theory().hom_type(ob_type)?;
-                    Some((stx, val.clone(), TyV::morphism(mor_type, val.clone(), val.clone())))
+                    Some((
+                        stx,
+                        TmV::id(val.clone()),
+                        TyV::morphism(mor_type, val.clone(), val.clone()),
+                    ))
                 }
                 nb::path::Path::Seq(ms) => match ms.as_slice() {
                     [] => None,
@@ -336,11 +340,12 @@ impl<'a> Elaborator<'a> {
                 (ty_s, ty_v)
             }
             (Some(errors), _, _) => {
-                // FIXME: The assumption in InvalidDblModel that we should already have the vector of equations
-                // built up, so as to give the index in the first argument here, doesn't hold in this case.
-                // It would be best not to use InvalidDblModel here before we've begun
-                // to build a DblModel.
-                self.ty_error(InvalidDblModel::Eqn(None, errors))
+                // FIXME: It would be best not to use `InvalidDblModel` here before
+                // we've begun to build a model.
+                self.ty_error(InvalidDblModel::Eqn(
+                    Some(QualifiedName::single(NameSegment::Uuid(eqn_decl.id))),
+                    errors,
+                ))
             }
             _ => unreachable!(),
         }

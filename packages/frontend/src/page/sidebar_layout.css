@@ -3,17 +3,17 @@
     height: 100vh;
     width: 100vw;
 
-    & > .content {
+    &>.content {
         display: flex;
         flex-direction: column;
         flex: 1;
         overflow: hidden;
 
-        & > header {
+        &>header {
             flex-shrink: 0;
         }
 
-        & > main {
+        &>main {
             flex: 1;
             display: flex;
             flex-direction: column;
@@ -215,6 +215,10 @@
 
     &.focused {
         border-left-color: var(--color-indicator);
+    }
+
+    &.unknown {
+        color: #d27979;
     }
 }
 

@@ -8,6 +8,7 @@ import type {
     CellTypeOf,
     CodomainObjectTypesOf,
     DomainObjectTypesOf,
+    EquationType,
     MorphismType,
     MorphismTypesOf,
     ObjectType,
@@ -15,6 +16,7 @@ import type {
     RichTextType,
     Shape,
 } from "../shape";
+import type { Commit } from "../transaction";
 import {
     getModelCell,
     getMorphismCell,
@@ -27,6 +29,8 @@ import {
 import type { ModelDocument } from "./document";
 import type { ModelValidation, ModelValidationView } from "./elaborated-model";
 import { morphismTypesEqual, objectTypesEqual } from "./equality";
+import { getEquationCell, type EquationCell, type EquationSide } from "./equation";
+import { morFromSide } from "./equation-translate";
 import { createNotebookValidator } from "./validation";
 
 /**
@@ -42,7 +46,9 @@ type CellValuesOf<S extends Shape, T extends CellTypeOf<S>> = T extends RichText
               from: ObjectCell<DomainObjectTypesOf<S, T>> | null;
               to: ObjectCell<CodomainObjectTypesOf<S, T>> | null;
           }
-        : never;
+        : T extends EquationType
+          ? { label: string | null; lhs?: EquationSide<S>; rhs?: EquationSide<S> }
+          : never;
 /**
  * The type of a cell after being added to a notebook. This resolves to a
  * [`CellOf`] switched by the [`T`] [`CellTypeOf`] passed to it.
@@ -53,7 +59,9 @@ type AddedCellOf<S extends Shape, T extends CellTypeOf<S>> = T extends RichTextT
       ? ObjectCell<T>
       : T extends MorphismType
         ? MorphismCell<S, T>
-        : never;
+        : T extends EquationType
+          ? EquationCell<S>
+          : never;
 
 function isCellType(value: AnyCellType | Shape): value is AnyCellType {
     return "kind" in value;
@@ -83,6 +91,8 @@ function shapeSupportsCell(shape: Shape, type: AnyCellType): boolean {
                 }
             }
             return false;
+        case "path-equation":
+            return shape.supportsEquations === true;
     }
 }
 
@@ -129,6 +139,8 @@ function cellMatchesFilter<S extends Shape>(cell: CellOf<S>, filter: AnyCellType
                     return false;
                 }
                 return morphismTypesEqual(cell.type.morType, filter.morType);
+            case "path-equation":
+                return cell.kind === "path-equation";
         }
     }
 
@@ -158,6 +170,8 @@ function cellMatchesFilter<S extends Shape>(cell: CellOf<S>, filter: AnyCellType
                 }
             }
             return false;
+        case "path-equation":
+            return filter.supportsEquations === true;
     }
 }
 
@@ -165,6 +179,7 @@ export interface Notebook<
     S extends Shape,
     D extends NotebookDocument = NotebookDocument,
     H = unknown,
+    V = unknown,
 > {
     readonly shape: S;
     readonly document: Readonly<D>;
@@ -183,13 +198,16 @@ export interface Notebook<
     /** Create a live, reactive view of the notebook's validation state. The
      * caller must dispose the view when it is no longer needed. */
     createValidationView(): ModelValidationView<S>;
+
+    /** Undo the changes this notebook's document received in a commit. */
+    revert(commit: Commit<H, V>): void;
 }
 
-export function modelNotebookFromStore<Handle, S extends Shape>(
+export function modelNotebookFromStore<Handle, S extends Shape, Version>(
     shape: S,
-    store: DocumentStore<Handle>,
+    store: DocumentStore<Handle, Version>,
     handle: Handle,
-): Notebook<S, ModelDocument, Handle> {
+): Notebook<S, ModelDocument, Handle, Version> {
     const validator = createNotebookValidator(shape, store, handle);
 
     function appendCell(
@@ -229,6 +247,23 @@ export function modelNotebookFromStore<Handle, S extends Shape>(
                     cell.id,
                     type as ObjectTypesOf<S>,
                 ) as AddedCellOf<S, T>;
+            }
+
+            if (type.kind === "path-equation") {
+                if (!shape.supportsEquations) {
+                    throw new Error(
+                        `Shape \`${shape.theory ?? "unnamed"}\` does not support path equations`,
+                    );
+                }
+                const equation = values as CellValuesOf<S, EquationType>;
+                const decl = Model.newEquationDecl();
+                decl.name = equation.label ?? "";
+                const document = store.getDocumentView(handle) as Readonly<ModelDocument>;
+                decl.lhs = morFromSide(document, equation.lhs ?? []);
+                decl.rhs = morFromSide(document, equation.rhs ?? []);
+                const cell = Nb.newFormalCell<ModelJudgment>(decl);
+                appendCell(cell);
+                return getEquationCell(shape, store, handle, cell.id) as AddedCellOf<S, T>;
             }
 
             const morphism = values as CellValuesOf<S, MorphismTypesOf<S>>;
@@ -279,5 +314,12 @@ export function modelNotebookFromStore<Handle, S extends Shape>(
         validate: validator.validate,
         onValidate: validator.onValidate,
         createValidationView: validator.createValidationView,
+        revert(commit) {
+            const change = commit.documents.get(handle);
+            if (change === undefined) {
+                throw new Error("The notebook's document was not part of the commit.");
+            }
+            store.revertCommit(handle, change);
+        },
     };
 }

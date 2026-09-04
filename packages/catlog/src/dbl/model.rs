@@ -298,10 +298,11 @@ pub enum InvalidDblModel {
     /// Codomain of morphism generator has type incompatible with morphism type.
     CodType(QualifiedName),
 
-    /// Equation between morphisms has one or more errors.
+    /// Equation between morphisms has one or more errors. The equation is
+    /// identified by name, when it has one.
     ///
     /// FIXME: should not really be an Option, fix after issue 1017 is resolved..
-    Eqn(Option<usize>, NonEmpty<InvalidModelEqn>),
+    Eqn(Option<QualifiedName>, NonEmpty<InvalidModelEqn>),
 
     /// Tried to us a feature not yet supported by the elaborator.
     UnsupportedFeature(Feature),

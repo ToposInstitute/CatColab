@@ -522,6 +522,9 @@ export function TableEditor(props: TableEditorProps) {
             }}
         >
             <div class={styles.header}>
+                <h3 class={styles.label} classList={{ [styles.unnamed]: !props.table.label }}>
+                    {tableDisplayName(props.table)}
+                </h3>
                 <Show when={props.onHide}>
                     {(onHide) => (
                         <button
@@ -535,9 +538,6 @@ export function TableEditor(props: TableEditorProps) {
                         </button>
                     )}
                 </Show>
-                <h3 class={styles.label} classList={{ [styles.unnamed]: !props.table.label }}>
-                    {tableDisplayName(props.table)}
-                </h3>
             </div>
             <table class={styles.grid} role="grid">
                 <colgroup>

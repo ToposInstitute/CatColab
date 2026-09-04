@@ -1,6 +1,7 @@
 import { cellTypesForTheory } from "catcolab-logics/cell-types";
 
 import {
+    type Binder,
     createBinder,
     type Instance,
     type LLMConversation,
@@ -10,25 +11,20 @@ import {
     type Notebook,
     type DocumentStore,
     type Shape,
+    type Transaction,
 } from "catcolab-documents";
 import type { ContextExecScope } from "../inference/context_exec";
-import {
-    createScopedDocument,
-    type ScopedDocument,
-    type ScopedDocumentRole,
-} from "./scoped_document";
+import { createScopedDocument, type ScopedDocument } from "./scoped_document";
 
-const API_PROMPT = `The document bindings expose the CatColab document API. A notebook binding has \`title\`, \`cells()\`, \`cellsOf(type)\`, \`add(type, values)\`, \`update(patch)\`, and \`validate()\`; \`validate()\` returns the elaborated \`model\` and any \`issues\`. The \`type\` argument of a notebook's \`add\` method must be one of the cell-type bindings in scope; the \`values\` argument is an object: \`{ label }\` to add an object cell, \`{ label, from, to }\` to add a morphism cell (\`from\`/\`to\` are existing object cells), or \`{ content }\` to add an informal text cell. A tabular document binding has \`title\`, row editing methods, \`update(patch)\`, and \`validate()\`; \`validate()\` returns the \`tables\`, instance-data \`issues\`, the schema's \`modelValidation\`, and \`get(path)\`. These APIs mutate in-memory working copies; changes are applied to the user's documents only after every document validates without issues.`;
-
-type SourceDocuments<Handle> =
+type SourceDocuments<Handle, Version> =
     | {
           tag: "SingleDocument";
-          attachment: Notebook<Shape, ModelDocument, Handle>;
+          attachment: Notebook<Shape, ModelDocument, Handle, Version>;
       }
     | {
           tag: "DocumentWithParent";
-          attachment: Instance<Handle, Shape>;
-          parent: Notebook<Shape, ModelDocument, Handle>;
+          attachment: Instance<Handle, Shape, Version>;
+          parent: Notebook<Shape, ModelDocument, Handle, Version>;
       };
 
 export type LLMConversationExecutionScope = {
@@ -36,16 +32,19 @@ export type LLMConversationExecutionScope = {
     systemPromptSuffix: string;
     validate(): Promise<ReadonlyArray<string>>;
     commit(): void;
+    abort(): void;
 };
 
 export async function createLLMConversationExecutionScope<
     Handle,
-    Attachment extends LLMConversationAttachment<Shape, Handle>,
+    Version,
+    Attachment extends LLMConversationAttachment<Shape, Handle, Version>,
 >(
     conversation: LLMConversation<Attachment, Handle>,
-    store: DocumentStore<Handle>,
+    store: DocumentStore<Handle, Version>,
 ): Promise<LLMConversationExecutionScope> {
-    const { documents, theory } = await createScopedDocuments(conversation.attachment, store);
+    const binder = createBinder(store);
+    const { documents, theory, tx } = await createScopedDocuments(conversation.attachment, binder);
     const descriptions = documents.map((document) => document.description);
     const cellTypes = cellTypesForTheory(theory);
     const vocabularyDescription = cellTypes
@@ -62,7 +61,6 @@ export async function createLLMConversationExecutionScope<
             ...cellTypes,
         }),
         systemPromptSuffix: [
-            API_PROMPT,
             `The following documents are in scope:\n${descriptions.join("\n")}`,
             vocabularyDescription,
         ]
@@ -76,70 +74,69 @@ export async function createLLMConversationExecutionScope<
             return problems;
         },
         commit() {
-            for (const document of documents) {
-                document.commit();
-            }
+            void tx.commit();
+        },
+        abort() {
+            tx.abort();
         },
     };
 }
 
-async function createScopedDocuments<Handle>(
-    attachment: LLMConversationAttachment<Shape, Handle>,
-    store: DocumentStore<Handle>,
-): Promise<{ documents: ReadonlyArray<ScopedDocument>; theory?: string }> {
-    const sources = await resolveSourceDocuments(attachment, store);
+async function createScopedDocuments<Handle, Version>(
+    attachment: LLMConversationAttachment<Shape, Handle, Version>,
+    binder: Binder<Handle, Version>,
+): Promise<{
+    documents: ReadonlyArray<ScopedDocument>;
+    theory?: string;
+    tx: Transaction<Handle, Version>;
+}> {
+    const sources = await resolveSourceDocuments(attachment, binder.store);
     const sourceNotebook = sources.tag === "SingleDocument" ? sources.attachment : sources.parent;
     if (!sourceNotebook.shape.theory) {
         throw new Error("The document shape does not identify its theory.");
     }
 
     const shape = sourceNotebook.shape as Shape & { readonly theory: string };
-    const copyBinder = createBinder();
-    const copyNotebook = await copyBinder.createNotebook(shape, {
-        title: sourceNotebook.title,
-    });
     const usedBindings = new Set<string>();
-    const scopeNotebook = (role: ScopedDocumentRole) =>
-        createScopedDocument({
-            binding: copyNotebook,
-            bindingStore: copyBinder.store,
-            sourceHandle: sourceNotebook.handle,
-            sourceStore: store,
-            role,
-            usedBindings,
-        });
 
     if (sources.tag === "SingleDocument") {
-        return { documents: [scopeNotebook("attachment")], theory: shape.theory };
+        const { tx, draftDocs } = await binder.beginTransaction({
+            document: sources.attachment,
+        });
+        const attachedDocument = createScopedDocument({
+            binding: draftDocs.document,
+            role: "attachment",
+            usedBindings,
+        });
+        return { documents: [attachedDocument], theory: shape.theory, tx };
     }
 
-    const created = await copyBinder.createInstance(copyNotebook, {
-        title: sources.attachment.title,
+    const { tx, draftDocs } = await binder.beginTransaction({
+        parent: sources.parent,
+        attachment: sources.attachment,
     });
-    if (created.tag === "Err") {
-        throw new Error(JSON.stringify(created.content));
-    }
-    const parentDocument = scopeNotebook("linked");
+    const parentDocument = createScopedDocument({
+        binding: draftDocs.parent,
+        role: "linked",
+        usedBindings,
+    });
     const attachedDocument = createScopedDocument({
-        binding: created.content,
-        bindingStore: copyBinder.store,
-        sourceHandle: sources.attachment.handle,
-        sourceStore: store,
+        binding: draftDocs.attachment,
         role: "attachment",
         links: [{ name: "instanceOf", targetBinding: parentDocument.binding }],
-        preservedKeys: ["instanceOf"],
         usedBindings,
     });
     return {
         documents: [attachedDocument, parentDocument],
         theory: shape.theory,
+        tx,
     };
 }
 
-async function resolveSourceDocuments<Handle>(
-    attachment: LLMConversationAttachment<Shape, Handle>,
-    store: DocumentStore<Handle>,
-): Promise<SourceDocuments<Handle>> {
+async function resolveSourceDocuments<Handle, Version>(
+    attachment: LLMConversationAttachment<Shape, Handle, Version>,
+    store: DocumentStore<Handle, Version>,
+): Promise<SourceDocuments<Handle, Version>> {
     if (isNotebook(attachment)) {
         return { tag: "SingleDocument", attachment };
     }
@@ -156,14 +153,14 @@ async function resolveSourceDocuments<Handle>(
     };
 }
 
-function isNotebook<Handle>(
-    document: LLMConversationAttachment<Shape, Handle>,
-): document is Notebook<Shape, ModelDocument, Handle> {
+function isNotebook<Handle, Version>(
+    document: LLMConversationAttachment<Shape, Handle, Version>,
+): document is Notebook<Shape, ModelDocument, Handle, Version> {
     return document.document.type === "model";
 }
 
-async function resolveHandle<Handle>(
-    store: DocumentStore<Handle>,
+async function resolveHandle<Handle, Version>(
+    store: DocumentStore<Handle, Version>,
     ref: { _id: string; _version: string | null; _server: string },
 ): Promise<Handle> {
     const result = await store.getHandle({

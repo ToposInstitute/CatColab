@@ -63,3 +63,7 @@ export type FieldValue =
           readonly tag: "RowRef";
           readonly content: { readonly path: FieldPath; readonly id: string };
       };
+
+export function isLiteralField(field: FieldValue): field is LiteralFieldValue {
+    return field.tag !== "Null" && field.tag !== "RowRef";
+}
