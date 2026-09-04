@@ -71,6 +71,9 @@ export type TableEditorProps = {
 
     /** Called when the user deletes a row. */
     onDeleteRow: (row: TableRow) => void;
+
+    /** Called when the user hides the table. Shows a hide button if provided. */
+    onHide?: () => void;
 };
 
 /** A spreadsheet-like editor for a tabular data instance.
@@ -519,6 +522,19 @@ export function TableEditor(props: TableEditorProps) {
             }}
         >
             <div class={styles.header}>
+                <Show when={props.onHide}>
+                    {(onHide) => (
+                        <button
+                            type="button"
+                            class={styles.hideTable}
+                            aria-label="Hide table"
+                            title="Hide table"
+                            onClick={() => onHide()()}
+                        >
+                            &minus;
+                        </button>
+                    )}
+                </Show>
                 <h3 class={styles.label} classList={{ [styles.unnamed]: !props.table.label }}>
                     {tableDisplayName(props.table)}
                 </h3>

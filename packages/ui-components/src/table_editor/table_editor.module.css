@@ -11,8 +11,32 @@
 .header {
     position: sticky;
     left: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
     padding: 0.4rem 0.75rem;
     background: var(--color-gray-50);
+}
+
+.hideTable {
+    display: inline-grid;
+    place-items: center;
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    border: 0;
+    border-radius: 4px;
+    background: transparent;
+    color: var(--color-text-secondary);
+    font-size: 1rem;
+    font-weight: 600;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.hideTable:hover {
+    background: var(--color-button-utility-hover-bg);
+    color: var(--color-foreground);
 }
 
 .label {

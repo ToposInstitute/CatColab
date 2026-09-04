@@ -179,6 +179,45 @@
     }
 }
 
+.related-table {
+    display: flex;
+    align-items: center;
+    box-sizing: border-box;
+    height: 30px;
+    padding: 5px 8px;
+    border-left: 3px solid transparent;
+    transition: background 20ms;
+
+    .document-name {
+        flex: 1;
+        overflow: hidden;
+        text-wrap-mode: nowrap;
+        text-overflow: ellipsis;
+        padding-left: 5px;
+    }
+
+    &.unnamed .document-name {
+        font-style: italic;
+    }
+
+    &:hover {
+        background: var(--color-hover-bg);
+        cursor: pointer;
+    }
+
+    &.active {
+        background: var(--color-gray-150);
+
+        &:hover {
+            background: var(--color-hover-bg-dark);
+        }
+    }
+
+    &.focused {
+        border-left-color: var(--color-indicator);
+    }
+}
+
 .resizeable-handle {
     background: none;
     border: none;
