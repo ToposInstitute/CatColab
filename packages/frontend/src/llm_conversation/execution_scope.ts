@@ -16,8 +16,6 @@ import {
 import type { ContextExecScope } from "../inference/context_exec";
 import { createScopedDocument, type ScopedDocument } from "./scoped_document";
 
-const API_PROMPT = `The document bindings expose the CatColab document API. A notebook binding has \`title\`, \`cells()\`, \`cellsOf(type)\`, \`add(type, values)\`, \`update(patch)\`, and \`validate()\`; \`validate()\` returns the elaborated \`model\` and any \`issues\`. The \`type\` argument of a notebook's \`add\` method must be one of the cell-type bindings in scope; the \`values\` argument is an object: \`{ label }\` to add an object cell, \`{ label, from, to }\` to add a morphism cell (\`from\`/\`to\` are existing object cells), \`{ label, lhs, rhs }\` to add a path equation (\`lhs\`/\`rhs\` are arrays of existing morphism cells, an existing object cell denoting the identity on it, or \`[]\` for an unspecified side), or \`{ content }\` to add an informal text cell. A tabular document binding has \`title\`, row editing methods, \`update(patch)\`, and \`validate()\`; \`validate()\` returns the \`tables\`, instance-data \`issues\`, the schema's \`modelValidation\`, and \`get(path)\`. These APIs mutate in-memory working copies; changes are applied to the user's documents only after every document validates without issues.`;
-
 type SourceDocuments<Handle, Version> =
     | {
           tag: "SingleDocument";
@@ -63,7 +61,6 @@ export async function createLLMConversationExecutionScope<
             ...cellTypes,
         }),
         systemPromptSuffix: [
-            API_PROMPT,
             `The following documents are in scope:\n${descriptions.join("\n")}`,
             vocabularyDescription,
         ]
