@@ -3,9 +3,11 @@
 // build, which the reactive projection tests depend on.
 import { getObjectId } from "@automerge/automerge";
 import { Repo } from "@automerge/automerge-repo";
+import type { UserState } from "catcolab-api/src/user_state";
 import { SimpleOlog, Type } from "catcolab-logics/simple-olog";
 import { createRenderEffect, createRoot } from "solid-js";
 import { unwrap } from "solid-js/store";
+import { parse as uuidParse } from "uuid";
 import { describe, expect, test } from "vitest";
 
 import { Instance as LegacyInstance, Model, type ModelDocument } from "catcolab-document-methods";
@@ -14,8 +16,8 @@ import { makeLiveDoc } from "./document";
 import { createApiDocumentStore } from "./document_store";
 import type { Api } from "./types";
 
-const schemaRef = "schema-ref";
-const instanceRef = "instance-ref";
+const schemaRef = crypto.randomUUID();
+const instanceRef = crypto.randomUUID();
 const server = "test.catcolab.org";
 
 function createFixture() {
@@ -29,8 +31,27 @@ function createFixture() {
         }),
     );
     const instanceLiveDoc = makeLiveDoc<InstanceDocument>(instanceAutomergeHandle);
+
+    // A user state document whose backlinks record the instance as depending
+    // on the schema, the way the backend computes `usedBy` relations.
+    const userStateDoc = repo.create({
+        documents: {
+            [schemaRef]: {
+                usedBy: [{ refId: uuidParse(instanceRef), relationType: "instance-of" }],
+                deletedAt: null,
+            },
+            [instanceRef]: { usedBy: [], deletedAt: null },
+        },
+    } as unknown as UserState);
+
     const api = {
         serverHost: server,
+        repo,
+        rpc: {
+            get_user_state_doc_id: {
+                query: async () => ({ tag: "Ok", content: userStateDoc.documentId }) as const,
+            },
+        },
         async getDocHandle(refId: string) {
             if (refId === schemaRef) {
                 return schemaAutomergeHandle;
@@ -45,6 +66,7 @@ function createFixture() {
 
     return {
         binder: createBinder(store),
+        instanceAutomergeHandle,
         instanceLiveDoc,
         schemaAutomergeHandle,
         store,
@@ -165,6 +187,30 @@ describe("API document store", () => {
         }
         expect(local.content.automergeHandle).toBe(schemaAutomergeHandle);
         expect(local.content.ref.server).toBe(server);
+    });
+
+    test("lists instances of a document through the API", async () => {
+        const { instanceAutomergeHandle, store } = createFixture();
+
+        const schema = await store.getHandle({ id: schemaRef, version: null, server });
+        expect(schema.tag).toBe("Ok");
+        if (schema.tag === "Err") {
+            throw new Error("expected schema ref to resolve");
+        }
+
+        // The backend's ref ids are resolved back into store handles.
+        const instances = await store.listInstancesOf(schema.content);
+        expect(instances).toHaveLength(1);
+        expect(instances[0]?.automergeHandle).toBe(instanceAutomergeHandle);
+        expect(store.getDocumentView(instances[0]!).type).toBe("instance");
+
+        // Documents without instances resolve to an empty list.
+        const instance = await store.getHandle({ id: instanceRef, version: null, server });
+        expect(instance.tag).toBe("Ok");
+        if (instance.tag === "Err") {
+            throw new Error("expected instance ref to resolve");
+        }
+        expect(await store.listInstancesOf(instance.content)).toEqual([]);
     });
 
     test("copyValue detaches Solid projection values", async () => {
