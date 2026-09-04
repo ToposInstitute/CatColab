@@ -35,6 +35,9 @@ export type TextInputOptions = TextInputActions & {
     /** Whether to show possible auto-completions when focus is gained. Defaults to yes. */
     showCompletionsOnFocus?: boolean;
 
+    /** Whether to filter auto-completions by the input text. Defaults to yes. */
+    filterCompletionsByText?: boolean;
+
     /** Extra CSS class to apply to the completions popup. */
     popupClass?: string;
 
@@ -119,6 +122,7 @@ const TEXT_INPUT_OPTIONS = [
     "hasBlurred",
     "completions",
     "showCompletionsOnFocus",
+    "filterCompletionsByText",
     "popupClass",
     "completionsEmptyText",
     "interceptKeyDown",
@@ -266,7 +270,7 @@ export function TextInput(allProps: TextInputProps) {
                 <Popover.Content class={`popup ${options.popupClass ?? ""}`}>
                     <Completions
                         completions={options.completions ?? []}
-                        text={props.text}
+                        text={(options.filterCompletionsByText ?? true) ? props.text : undefined}
                         emptyText={options.completionsEmptyText}
                         ref={setCompletionsRef}
                         onComplete={() => {
