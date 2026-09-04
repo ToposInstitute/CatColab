@@ -71,6 +71,20 @@ const backendStore: DocumentStore<StoreHandle> = {
         }
         return { id: refId, version: null, server: backend.serverHost };
     },
+    listInstancesOf: async (handle) => {
+        const refId = refByDocId.get(handle.docHandle.documentId);
+        if (!refId) {
+            throw new Error("handle is not registered with this store");
+        }
+        const instances: StoreHandle[] = [];
+        for (const other of handleByRefId.values()) {
+            const doc = other.docView;
+            if (other !== handle && doc.type === "instance" && doc.instanceOf._id === refId) {
+                instances.push(other);
+            }
+        }
+        return instances;
+    },
     getHandle: async (ref) => {
         const refId = ref.id;
         const cached = handleByRefId.get(refId);

@@ -4,6 +4,7 @@ import {
     type Binder,
     createBinder,
     type Instance,
+    instanceFromStore,
     type LLMConversation,
     type LLMConversationAttachment,
     modelNotebookFromStore,
@@ -11,6 +12,7 @@ import {
     type Notebook,
     type DocumentStore,
     type Shape,
+    type SupportedDocument,
     type Transaction,
 } from "catcolab-documents";
 import type { ContextExecScope } from "../inference/context_exec";
@@ -18,8 +20,10 @@ import { createScopedDocument, type ScopedDocument } from "./scoped_document";
 
 type SourceDocuments<Handle, Version> =
     | {
-          tag: "SingleDocument";
+          tag: "DocumentWithChildren";
           attachment: Notebook<Shape, ModelDocument, Handle, Version>;
+          /** Instances linking back to the attached document. */
+          children: ReadonlyArray<Instance<Handle, Shape, Version>>;
       }
     | {
           tag: "DocumentWithParent";
@@ -91,7 +95,8 @@ async function createScopedDocuments<Handle, Version>(
     tx: Transaction<Handle, Version>;
 }> {
     const sources = await resolveSourceDocuments(attachment, binder.store);
-    const sourceNotebook = sources.tag === "SingleDocument" ? sources.attachment : sources.parent;
+    const sourceNotebook =
+        sources.tag === "DocumentWithChildren" ? sources.attachment : sources.parent;
     if (!sourceNotebook.shape.theory) {
         throw new Error("The document shape does not identify its theory.");
     }
@@ -99,16 +104,35 @@ async function createScopedDocuments<Handle, Version>(
     const shape = sourceNotebook.shape as Shape & { readonly theory: string };
     const usedBindings = new Set<string>();
 
-    if (sources.tag === "SingleDocument") {
-        const { tx, draftDocs } = await binder.beginTransaction({
+    if (sources.tag === "DocumentWithChildren") {
+        // Stage the attached document together with all of its instances, so
+        // that the conversation can act on them and their edits commit
+        // atomically with the attached document's.
+        const staged: Record<string, SupportedDocument<Shape, Handle, Version>> = {
             document: sources.attachment,
-        });
+        };
+        for (const [index, child] of sources.children.entries()) {
+            staged[`instance${index}`] = child;
+        }
+        const { tx, draftDocs } = await binder.beginTransaction(staged);
         const attachedDocument = createScopedDocument({
-            binding: draftDocs.document,
+            binding: draftDocs.document!,
             role: "attachment",
             usedBindings,
         });
-        return { documents: [attachedDocument], theory: shape.theory, tx };
+        const instanceDocuments = sources.children.map((_, index) =>
+            createScopedDocument({
+                binding: draftDocs[`instance${index}`]!,
+                role: "linked",
+                links: [{ name: "instanceOf", targetBinding: attachedDocument.binding }],
+                usedBindings,
+            }),
+        );
+        return {
+            documents: [attachedDocument, ...instanceDocuments],
+            theory: shape.theory,
+            tx,
+        };
     }
 
     const { tx, draftDocs } = await binder.beginTransaction({
@@ -138,7 +162,8 @@ async function resolveSourceDocuments<Handle, Version>(
     store: DocumentStore<Handle, Version>,
 ): Promise<SourceDocuments<Handle, Version>> {
     if (isNotebook(attachment)) {
-        return { tag: "SingleDocument", attachment };
+        const children = await resolveLinkedInstances(attachment, store);
+        return { tag: "DocumentWithChildren", attachment, children };
     }
 
     const parentHandle = await resolveHandle(store, attachment.document.instanceOf);
@@ -151,6 +176,22 @@ async function resolveSourceDocuments<Handle, Version>(
         attachment,
         parent: modelNotebookFromStore(attachment.shape, store, parentHandle),
     };
+}
+
+/** Resolve all instances linking back to a notebook document. */
+async function resolveLinkedInstances<Handle, Version>(
+    notebook: Notebook<Shape, ModelDocument, Handle, Version>,
+    store: DocumentStore<Handle, Version>,
+): Promise<ReadonlyArray<Instance<Handle, Shape, Version>>> {
+    const instances: Instance<Handle, Shape, Version>[] = [];
+    for (const handle of await store.listInstancesOf(notebook.handle)) {
+        // Guard against stores reporting documents that are not instances.
+        if (store.getDocumentView(handle).type !== "instance") {
+            continue;
+        }
+        instances.push(instanceFromStore(notebook.shape, notebook, store, handle));
+    }
+    return instances;
 }
 
 function isNotebook<Handle, Version>(

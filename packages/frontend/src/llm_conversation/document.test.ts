@@ -122,6 +122,38 @@ describe("LLM conversation turns", { timeout: 30_000 }, () => {
         );
     });
 
+    test("injects the instances of an attached schema into the document scope", async () => {
+        const fixture = await makeFixture();
+        const instance = expectOk(
+            await fixture.binder.createInstance(fixture.schema, { title: "Company data" }),
+        );
+
+        inference.runChatTurn.mockImplementation(
+            async (_client, _transcript, scope, _onContent, _model, systemPromptSuffix) => {
+                const scopedSchema = schemaBinding(scope);
+                const scopedInstance = scope.document_Company_data as
+                    | Instance<unknown, typeof SimpleSchema, Document>
+                    | undefined;
+                assert(scopedInstance);
+                assert.match(systemPromptSuffix ?? "", /Company schema/);
+                assert.match(
+                    systemPromptSuffix ?? "",
+                    /`document_Company_data` is the document .*`instanceOf` link points to `document_Company_schema`\./s,
+                );
+
+                // Both documents are staged in the same transaction: edits to
+                // either commit together with the turn.
+                scopedSchema.update({ title: "Updated schema" });
+                scopedInstance.update({ title: "Updated data" });
+                return response("Done.");
+            },
+        );
+
+        assert.deepStrictEqual(await runTurn(fixture), { tag: "Completed", content: "Done." });
+        assert.strictEqual(fixture.schema.title, "Updated schema");
+        assert.strictEqual(instance.title, "Updated data");
+    });
+
     test("blocks notebook commits until schema issues are repaired", async () => {
         const fixture = await makeFixture();
         inference.runChatTurn.mockImplementation(
