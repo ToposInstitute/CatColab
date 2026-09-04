@@ -6,15 +6,12 @@ once a commitment to the mathematical account of instances has been made. */
 import type { ElaboratedModel, EquationJudgmentSide } from "../model/elaborated-model";
 import { PathEquation, type Shape } from "../shape";
 import type { EquationViolationIssue } from "./errors";
-import type { FieldValue, InstanceTable, LiteralType, TableRow } from "./tables";
+import type { LiteralFieldValue, InstanceTable, TableRow } from "./tables";
 import { isLiteralField } from "./tables";
 
 /** Maximum number of counterexamples reported per equation; any further
 violations are summarized in a single issue. */
 const MAX_COUNTEREXAMPLES_PER_EQUATION = 10;
-
-/** A field value holding a literal. */
-type LiteralFieldValue = Extract<FieldValue, { readonly tag: LiteralType }>;
 
 /** The value of one side of an equation at a row of the source table: a row
 of a table, or a literal. */

@@ -64,6 +64,8 @@ export type FieldValue =
           readonly content: { readonly path: FieldPath; readonly id: string };
       };
 
+export type LiteralFieldValue = Extract<FieldValue, { readonly tag: LiteralType }>;
+
 export function isLiteralField(field: FieldValue): field is LiteralFieldValue {
     return field.tag !== "Null" && field.tag !== "RowRef";
 }

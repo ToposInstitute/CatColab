@@ -14,7 +14,7 @@ const OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1";
 
 export type InferenceClient = OpenAI;
 /** Default LLM used for newly created CatColab conversations. */
-export const DEFAULT_LLM_MODEL = "z-ai/glm-5.2";
+export const DEFAULT_LLM_MODEL = "z-ai/glm-5.3";
 
 /** Maximum provider requests made while resolving one inference attempt. */
 const MAX_PROVIDER_REQUESTS_PER_ATTEMPT = 32;
