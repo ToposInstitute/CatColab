@@ -21,8 +21,8 @@ import { atomicTypeOfAttributeType } from "./validation";
 /** Read one table, row, or field from prepared tables.
 
 Addressing failures are reported as issues. */
-export function readInstancePath<Handle>(
-    store: DocumentStore<Handle>,
+export function readInstancePath<Handle, Version>(
+    store: DocumentStore<Handle, Version>,
     handle: Handle,
     tables: ReadonlyArray<InstanceTable>,
     path: InstancePath,
@@ -65,9 +65,9 @@ export function readInstancePath<Handle>(
 
 Only addressing failures are reported as issues. Every update that fails to
 address is skipped and the rest are still applied. */
-export function addInstanceRowsToStore<Handle>(
+export function addInstanceRowsToStore<Handle, Version>(
     shape: InstanceCapableShape,
-    store: DocumentStore<Handle>,
+    store: DocumentStore<Handle, Version>,
     handle: Handle,
     schemaModel: ElaboratedModel<Shape>,
     additions: ReadonlyArray<{
@@ -124,9 +124,9 @@ export function addInstanceRowsToStore<Handle>(
 
 Only addressing failures are reported as issues. Every update that fails to
 address is skipped and the rest are still applied. */
-export function updateInstanceFieldsByLabelInStore<Handle>(
+export function updateInstanceFieldsByLabelInStore<Handle, Version>(
     shape: InstanceCapableShape,
-    store: DocumentStore<Handle>,
+    store: DocumentStore<Handle, Version>,
     handle: Handle,
     schemaModel: ElaboratedModel<Shape>,
     updates: ReadonlyArray<{
@@ -164,9 +164,9 @@ export function updateInstanceFieldsByLabelInStore<Handle>(
 
 Only addressing failures (an unknown row or an unknown field) are reported as
 issues. */
-export function updateInstanceFieldByIdInStore<Handle>(
+export function updateInstanceFieldByIdInStore<Handle, Version>(
     shape: InstanceCapableShape,
-    store: DocumentStore<Handle>,
+    store: DocumentStore<Handle, Version>,
     handle: Handle,
     schemaModel: ElaboratedModel<Shape>,
     row: TableRow,
@@ -286,8 +286,8 @@ function requireRawRow(
     return row;
 }
 
-function makeRow<Handle>(
-    store: DocumentStore<Handle>,
+function makeRow<Handle, Version>(
+    store: DocumentStore<Handle, Version>,
     handle: Handle,
     schemaTable: InstanceTable,
     rowId: string,
@@ -311,8 +311,8 @@ function makeRow<Handle>(
     };
 }
 
-function makeTable<Handle>(
-    store: DocumentStore<Handle>,
+function makeTable<Handle, Version>(
+    store: DocumentStore<Handle, Version>,
     handle: Handle,
     id: string,
     label: string | null,
@@ -333,9 +333,9 @@ function makeTable<Handle>(
 }
 
 /** Read the tables using an elaborated schema model. */
-export function instanceTablesFromModel<Handle>(
+export function instanceTablesFromModel<Handle, Version>(
     shape: InstanceCapableShape,
-    store: DocumentStore<Handle>,
+    store: DocumentStore<Handle, Version>,
     handle: Handle,
     schemaModel: ElaboratedModel<Shape>,
 ): readonly InstanceTable[] {
@@ -382,8 +382,8 @@ export function instanceTablesFromModel<Handle>(
 Orphaned stored fields are appended to their table's headers as `Unknown`-typed
 headers, and stored tables without a schema entity become tables with `null`
 labels whose headers are derived from the stored field ids. */
-export function tablesWithOrphanedData<Handle>(
-    store: DocumentStore<Handle>,
+export function tablesWithOrphanedData<Handle, Version>(
+    store: DocumentStore<Handle, Version>,
     handle: Handle,
     schemaTables: ReadonlyArray<InstanceTable>,
 ): ReadonlyArray<InstanceTable> {

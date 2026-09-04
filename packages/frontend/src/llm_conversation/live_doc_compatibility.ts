@@ -7,7 +7,14 @@ import type {
     Shape,
 } from "catcolab-documents";
 import { llmConversationFromStore } from "catcolab-documents";
-import type { Api, ApiBinder, ApiDocumentHandle, DocRef, LiveDoc } from "../api";
+import type {
+    Api,
+    ApiBinder,
+    ApiDocumentHandle,
+    ApiDocumentVersion,
+    DocRef,
+    LiveDoc,
+} from "../api";
 import type { LiveModelDoc, ModelLibrary } from "../model";
 import { notebookShapes, shapeForTheory } from "../model/shapes";
 
@@ -19,7 +26,11 @@ import { notebookShapes, shapeForTheory } from "../model/shapes";
  * conversation editor.
  */
 
-export type ApiLLMConversationAttachment = LLMConversationAttachment<Shape, ApiDocumentHandle>;
+export type ApiLLMConversationAttachment = LLMConversationAttachment<
+    Shape,
+    ApiDocumentHandle,
+    ApiDocumentVersion
+>;
 
 export type ApiLLMConversation = LLMConversationAPI<
     ApiLLMConversationAttachment,

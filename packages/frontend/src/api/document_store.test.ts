@@ -283,4 +283,54 @@ describe("API document store", () => {
         dumped.name = "mutated dump";
         expect(schema.title).toBe("");
     });
+
+    test("drafts resolve by their own refs while sources stay committed", async () => {
+        const { store } = createFixture();
+
+        const local = await store.getHandle({ id: schemaRef, version: null });
+        expect(local.tag).toBe("Ok");
+        if (local.tag === "Err") {
+            throw new Error("expected local ref to resolve");
+        }
+        const source = local.content;
+
+        const draft = store.createDraft(source);
+        const draftRef = store.getDocumentRef(draft);
+
+        // The draft's own ref resolves to the draft, while the source's ref
+        // keeps resolving to the committed document.
+        const resolvedDraft = await store.getHandle(draftRef);
+        expect(resolvedDraft.tag).toBe("Ok");
+        if (resolvedDraft.tag === "Err") {
+            throw new Error("expected the draft's ref to resolve");
+        }
+        expect(resolvedDraft.content).toBe(draft);
+        const resolvedSource = await store.getHandle({ id: schemaRef, version: null });
+        expect(resolvedSource.tag).toBe("Ok");
+        if (resolvedSource.tag === "Err") {
+            throw new Error("expected the source's ref to resolve");
+        }
+        expect(resolvedSource.content).toBe(source);
+
+        store.commitDraft(source, draft);
+        // Once committed, the draft's ref no longer resolves.
+        expect((await store.getHandle(draftRef)).tag).toBe("Err");
+    });
+
+    test("discarded drafts stop resolving", async () => {
+        const { store } = createFixture();
+
+        const local = await store.getHandle({ id: schemaRef, version: null });
+        expect(local.tag).toBe("Ok");
+        if (local.tag === "Err") {
+            throw new Error("expected local ref to resolve");
+        }
+        const source = local.content;
+
+        const draft = store.createDraft(source);
+        const draftRef = store.getDocumentRef(draft);
+
+        store.discardDraft(draft);
+        expect((await store.getHandle(draftRef)).tag).toBe("Err");
+    });
 });

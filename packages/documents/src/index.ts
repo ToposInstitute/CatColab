@@ -1,7 +1,7 @@
 export { createBinder } from "./binder";
 export { CellKind } from "./model/cell";
 export type { Binder } from "./binder";
-export type { DocumentStore, DocumentRef, ReactiveView } from "./document-store";
+export type { DocumentChange, DocumentRef, DocumentStore, ReactiveView } from "./document-store";
 export type { Issue, PathSegment, Result } from "./result";
 export { createInMemoryStore } from "./document-store";
 export { atomicTypeOfAttributeType } from "./instance/validation";
@@ -51,3 +51,5 @@ export type {
     ObjectType,
     Shape,
 } from "./shape";
+export type { Commit, Transaction } from "./transaction";
+export type { SupportedDocument } from "./supported-document";
