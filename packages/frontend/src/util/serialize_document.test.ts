@@ -37,9 +37,7 @@ describe("serializeAutomergeDocument", () => {
             });
         });
 
-        const serialized = serializeAutomergeDocument(
-            Automerge.save(docHandle.doc()),
-        ) as ModelDocument;
+        const serialized = serializeAutomergeDocument(Automerge.save(docHandle.doc()));
 
         const cell = serialized.notebook.cellContents[cellId];
         assert(cell?.tag === "rich-text");

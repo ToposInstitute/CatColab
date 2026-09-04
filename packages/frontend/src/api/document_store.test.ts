@@ -236,7 +236,7 @@ describe("API document store", () => {
         }
         const handle = local.content;
 
-        const notebook = (schemaAutomergeHandle.doc() as ModelDocument).notebook;
+        const notebook = schemaAutomergeHandle.doc().notebook;
         expect(getObjectId(notebook)).not.toBeNull();
 
         const copy = store.copyValue(handle, notebook);
@@ -246,7 +246,7 @@ describe("API document store", () => {
         // Mutating the copy succeeds (an Automerge proxy would throw outside a
         // change context) and does not touch the document.
         copy.cellOrder.push("bogus-cell");
-        expect((schemaAutomergeHandle.doc() as ModelDocument).notebook.cellOrder).toHaveLength(0);
+        expect(schemaAutomergeHandle.doc().notebook.cellOrder).toHaveLength(0);
     });
 
     test("copyValue passes primitives through", async () => {

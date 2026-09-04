@@ -6,6 +6,7 @@ export const INITIAL_USER_STATE: UserState = {
     profile: { username: null, displayName: null },
     knownUsers: {},
     documents: {},
+    isLoadingDocuments: true,
 };
 
 export const UserStateContext = createContext<UserState>(INITIAL_USER_STATE);

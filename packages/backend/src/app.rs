@@ -4,7 +4,7 @@ use sqlx::PgPool;
 use std::collections::HashMap;
 use std::sync::Arc;
 use thiserror::Error;
-use tokio::sync::{RwLock, mpsc, oneshot};
+use tokio::sync::{Mutex, RwLock, mpsc, oneshot};
 use uuid::Uuid;
 
 /// Reply channel type used by all ref actor messages.
@@ -12,6 +12,9 @@ pub type RefReply = oneshot::Sender<Result<(), AppError>>;
 
 /// Type alias for the ref actors channel map.
 pub type RefActorsMap = Arc<RwLock<HashMap<Uuid, mpsc::Sender<(RefMsg, RefReply)>>>>;
+
+/// Type alias for the map of in-flight user state population tasks.
+pub type UserStatePopulationsMap = Arc<Mutex<HashMap<String, tokio::task::JoinHandle<()>>>>;
 
 /// Message sent to the ref actor for a document ref.
 pub enum RefMsg {
@@ -45,6 +48,9 @@ pub struct AppState {
     /// Tracks user IDs whose state docs were refreshed from DB in this process,
     /// mapped to their Automerge document IDs.
     pub initialized_user_states: Arc<RwLock<HashMap<String, DocumentId>>>,
+
+    /// In-flight background tasks populating user state documents, by user ID.
+    pub user_state_populations: UserStatePopulationsMap,
 
     /// HTTP client for outgoing requests (e.g., Julia proxy).
     pub http_client: reqwest::Client,

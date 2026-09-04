@@ -1,9 +1,12 @@
 use std::collections::HashMap;
 use std::str::FromStr;
+use std::time::Duration;
 
-use autosurgeon::{Hydrate, Reconcile, Text, reconcile};
+use automerge::transaction::Transactable;
+use automerge::{ROOT, ReadDoc};
+use autosurgeon::{Hydrate, Reconcile, Text, reconcile, reconcile_prop};
 pub use catcolab_document_types::current::DocumentType;
-use samod::DocumentId;
+use samod::{DocHandle, DocumentId};
 use serde::Deserialize;
 use sqlx::PgPool;
 use tracing::{debug, error, info, warn};
@@ -14,6 +17,9 @@ use crate::autosurgeon_datetime::{datetime_millis, option_datetime_millis};
 
 /// Default name for documents without a name.
 pub const DEFAULT_DOC_NAME: &str = "untitled";
+
+/// Delay between individual document writes during background population.
+const DOC_WRITE_DELAY: Duration = Duration::from_millis(10);
 
 /// User info for user state synchronization.
 ///
@@ -135,6 +141,11 @@ pub struct UserState {
     /// The document refs accessible to the user, keyed by ref UUID string.
     /// We cannot use the Uuid type here because Automerge requires the keys to have a `AsRef<str>` impl.
     pub documents: HashMap<String, DocInfo>,
+    /// Whether `documents` is still being written. Documents are populated
+    /// incrementally in the background after the doc is created.
+    #[autosurgeon(rename = "isLoadingDocuments")]
+    #[ts(rename = "isLoadingDocuments")]
+    pub is_loading_documents: bool,
 }
 
 impl UserState {
@@ -151,6 +162,7 @@ impl UserState {
             profile: UserInfo { username: None, display_name: None },
             known_users: HashMap::new(),
             documents: HashMap::new(),
+            is_loading_documents: true,
         }
     }
 
@@ -394,7 +406,12 @@ pub async fn read_user_state_from_db(user_id: String, db: &PgPool) -> Result<Use
         None => UserInfo { username: None, display_name: None },
     };
 
-    let mut user_state = UserState { profile, known_users, documents };
+    let mut user_state = UserState {
+        profile,
+        known_users,
+        documents,
+        is_loading_documents: false,
+    };
     user_state.recompute_used_by();
     Ok(user_state)
 }
@@ -412,6 +429,10 @@ pub async fn get_user_state_doc(state: &AppState, user_id: &str) -> Option<Docum
 }
 
 /// Gets or creates the user state document for a given user.
+///
+/// Returns as soon as the profile and known users are written. The `documents`
+/// map is populated one entry at a time by a background task; see
+/// [`await_user_state_population`].
 pub async fn get_or_create_user_state_doc(
     state: &AppState,
     user_id: &str,
@@ -426,11 +447,47 @@ pub async fn get_or_create_user_state_doc(
     }
 
     let user_state = read_user_state_from_db(user_id.to_string(), &state.db).await?;
-    let doc_id = initialize_user_state_doc(state, user_id, &user_state).await?;
+    let doc_handle = initialize_user_state_doc(state, user_id, &user_state).await?;
+    let doc_id = doc_handle.document_id().clone();
+
+    // Register the population task before marking the user as initialized, so
+    // that any subsequent `update_user_state` is guaranteed to see and abort it.
+    let task_user_id = user_id.to_string();
+    let task = tokio::spawn(async move {
+        if let Err(e) = populate_user_state_documents(&doc_handle, &user_state).await {
+            error!(user_id = %task_user_id, error = %e, "Failed to populate user state documents");
+        }
+    });
+    {
+        let mut populations = state.user_state_populations.lock().await;
+        if let Some(prev) = populations.insert(user_id.to_string(), task) {
+            prev.abort();
+        }
+    }
 
     let mut initialized = state.initialized_user_states.write().await;
     initialized.insert(user_id.to_string(), doc_id.clone());
     Ok(doc_id)
+}
+
+/// Cancels any in-flight background population of the user's documents,
+/// waiting until the task has actually stopped.
+pub async fn abort_user_state_population(state: &AppState, user_id: &str) {
+    let task = state.user_state_populations.lock().await.remove(user_id);
+    if let Some(task) = task {
+        task.abort();
+        let _ = task.await;
+    }
+}
+
+/// Waits for the background population of the user's documents to finish.
+pub async fn await_user_state_population(state: &AppState, user_id: &str) {
+    let task = state.user_state_populations.lock().await.remove(user_id);
+    if let Some(task) = task
+        && let Err(e) = task.await
+    {
+        error!(user_id = %user_id, error = %e, "User state population task failed");
+    }
 }
 
 /// Converts a `UserState` into an Automerge document.
@@ -440,12 +497,79 @@ pub fn user_state_to_automerge(state: &UserState) -> Result<automerge::Automerge
     Ok(doc)
 }
 
-/// Initializes a user state document.
+fn reconcile_err(e: impl std::fmt::Debug) -> AppError {
+    AppError::UserStateSync(format!("Failed to reconcile: {:?}", e))
+}
+
+/// Returns the object ID of the `documents` map, creating it if absent.
+fn documents_obj_id(tx: &mut impl Transactable) -> Result<automerge::ObjId, AppError> {
+    match tx.get(ROOT, "documents")? {
+        Some((automerge::Value::Object(automerge::ObjType::Map), id)) => Ok(id),
+        _ => Ok(tx.put_object(ROOT, "documents", automerge::ObjType::Map)?),
+    }
+}
+
+/// Writes everything except `documents`, and marks documents as loading.
+fn reconcile_header(
+    doc: &mut automerge::Automerge,
+    user_state: &UserState,
+) -> Result<(), AppError> {
+    doc.transact(|tx| -> Result<(), AppError> {
+        reconcile_prop(tx, ROOT, "profile", &user_state.profile).map_err(reconcile_err)?;
+        reconcile_prop(tx, ROOT, "knownUsers", &user_state.known_users).map_err(reconcile_err)?;
+        tx.put(ROOT, "isLoadingDocuments", true)?;
+        documents_obj_id(tx)?;
+        Ok(())
+    })
+    .map_err(|e| e.error)?;
+    Ok(())
+}
+
+/// Writes each entry of `user_state.documents` as a separate change, with a
+/// delay between writes, then removes stale entries and clears the loading flag.
+async fn populate_user_state_documents(
+    doc_handle: &DocHandle,
+    user_state: &UserState,
+) -> Result<(), AppError> {
+    let mut docs: Vec<(&String, &DocInfo)> = user_state.documents.iter().collect();
+    docs.sort_by_key(|(_, info)| std::cmp::Reverse(info.created_at));
+
+    for (key, info) in docs {
+        doc_handle.with_document(|doc| {
+            doc.transact(|tx| -> Result<(), AppError> {
+                let documents = documents_obj_id(tx)?;
+                reconcile_prop(tx, documents, key.as_str(), info).map_err(reconcile_err)
+            })
+            .map_err(|e| e.error)
+        })?;
+        tokio::time::sleep(DOC_WRITE_DELAY).await;
+    }
+
+    doc_handle.with_document(|doc| {
+        doc.transact(|tx| -> Result<(), AppError> {
+            let documents = documents_obj_id(tx)?;
+            let stale: Vec<String> =
+                tx.keys(&documents).filter(|k| !user_state.documents.contains_key(k)).collect();
+            for key in stale {
+                tx.delete(&documents, key.as_str())?;
+            }
+            tx.put(ROOT, "isLoadingDocuments", false)?;
+            Ok(())
+        })
+        .map_err(|e| e.error)
+    })?;
+
+    debug!(doc_id = %doc_handle.document_id(), "Finished populating user state documents");
+    Ok(())
+}
+
+/// Finds or creates the user state document and writes its header (profile,
+/// known users). Documents are not written here.
 pub async fn initialize_user_state_doc(
     state: &AppState,
     user_id: &str,
     user_state: &UserState,
-) -> Result<DocumentId, AppError> {
+) -> Result<DocHandle, AppError> {
     let persisted_doc_id: Option<(String,)> =
         sqlx::query_as("SELECT state_doc_id FROM users WHERE id = $1 AND state_doc_id IS NOT NULL")
             .bind(user_id)
@@ -457,13 +581,13 @@ pub async fn initialize_user_state_doc(
         && let Ok(doc_id) = DocumentId::from_str(doc_id_str)
     {
         if let Ok(Some(doc_handle)) = state.repo.find(doc_id.clone()).await {
-            doc_handle.with_document(|doc| user_state.reconcile_into(doc))?;
+            doc_handle.with_document(|doc| reconcile_header(doc, user_state))?;
             debug!(
                 user_id = %user_id,
                 doc_id = %doc_id,
                 "Reconciled existing user state document from DB"
             );
-            return Ok(doc_id);
+            return Ok(doc_handle);
         }
         debug!(
             user_id = %user_id,
@@ -473,7 +597,8 @@ pub async fn initialize_user_state_doc(
     }
 
     // No existing doc — create a fresh one.
-    let doc = user_state_to_automerge(user_state)?;
+    let mut doc = automerge::Automerge::new();
+    reconcile_header(&mut doc, user_state)?;
     let doc_handle = state.repo.create(doc).await?;
     let doc_id = doc_handle.document_id();
 
@@ -485,7 +610,7 @@ pub async fn initialize_user_state_doc(
 
     info!(user_id = %user_id, doc_id = %doc_id, "Initialized user state document");
 
-    Ok(doc_id.clone())
+    Ok(doc_handle)
 }
 
 /// Arbitrary instances for property-based testing.
@@ -722,6 +847,7 @@ pub mod arbitrary {
                             profile: profile.clone(),
                             known_users,
                             documents,
+                            is_loading_documents: false,
                         },
                     )
                 })

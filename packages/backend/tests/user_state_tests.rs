@@ -23,6 +23,15 @@ mod integration_tests {
     use serde_json::json;
     use std::collections::HashMap;
 
+    /// Initializes the user state doc and waits for its documents to be populated.
+    async fn init_user_state(state: &AppState, user_id: &str) -> samod::DocumentId {
+        let doc_id = backend::user_state::get_or_create_user_state_doc(state, user_id)
+            .await
+            .expect("Failed to initialize user state");
+        backend::user_state::await_user_state_population(state, user_id).await;
+        doc_id
+    }
+
     /// Helper to read user state from samod using the stored document ID.
     async fn read_user_state_from_samod(state: &AppState, user_id: &str) -> Option<UserState> {
         let doc_id = backend::user_state::get_user_state_doc(state, user_id).await?;
@@ -100,9 +109,7 @@ mod integration_tests {
         let user_id = format!("test_user_{}", Uuid::now_v7());
         ensure_user_exists(&pool, &user_id).await.expect("Failed to create user");
 
-        backend::user_state::get_or_create_user_state_doc(&state, &user_id)
-            .await
-            .expect("Failed to initialize user state");
+        init_user_state(&state, &user_id).await;
 
         let ctx = AppCtx {
             state: state.clone(),
@@ -142,9 +149,7 @@ mod integration_tests {
         let user_id = format!("test_user_{}", Uuid::now_v7());
         ensure_user_exists(&pool, &user_id).await.expect("Failed to create user");
 
-        backend::user_state::get_or_create_user_state_doc(&state, &user_id)
-            .await
-            .expect("Failed to initialize user state");
+        init_user_state(&state, &user_id).await;
 
         let ctx = AppCtx {
             state: state.clone(),
@@ -174,9 +179,7 @@ mod integration_tests {
         let user_id = format!("test_user_{}", Uuid::now_v7());
         ensure_user_exists(&pool, &user_id).await.expect("Failed to create user");
 
-        backend::user_state::get_or_create_user_state_doc(&state, &user_id)
-            .await
-            .expect("Failed to initialize user state");
+        init_user_state(&state, &user_id).await;
 
         let ctx = AppCtx {
             state: state.clone(),
@@ -221,9 +224,7 @@ mod integration_tests {
         let content = create_test_document_content("Shared Document");
         let ref_id = document::new_ref(ctx, content).await.expect("Failed to create ref");
 
-        backend::user_state::get_or_create_user_state_doc(&state, &reader_id)
-            .await
-            .expect("Failed to initialize reader user state");
+        init_user_state(&state, &reader_id).await;
 
         let mut users = HashMap::new();
         users.insert(reader_id.clone(), PermissionLevel::Read);
@@ -266,12 +267,8 @@ mod integration_tests {
         let content = create_test_document_content("Multi-user Document");
         let ref_id = document::new_ref(ctx, content).await.expect("Failed to create ref");
 
-        backend::user_state::get_or_create_user_state_doc(&state, &user1_id)
-            .await
-            .expect("Failed to initialize user1 state");
-        backend::user_state::get_or_create_user_state_doc(&state, &user2_id)
-            .await
-            .expect("Failed to initialize user2 state");
+        init_user_state(&state, &user1_id).await;
+        init_user_state(&state, &user2_id).await;
 
         let mut users = HashMap::new();
         users.insert(user1_id.clone(), PermissionLevel::Write);
@@ -321,9 +318,7 @@ mod integration_tests {
         let content = create_test_document_content("Revoke Test Document");
         let ref_id = document::new_ref(ctx, content).await.expect("Failed to create ref");
 
-        backend::user_state::get_or_create_user_state_doc(&state, &user_id)
-            .await
-            .expect("Failed to initialize user state");
+        init_user_state(&state, &user_id).await;
 
         // Grant
         let mut users = HashMap::new();
@@ -364,9 +359,7 @@ mod integration_tests {
         let user_id = format!("test_user_{}", Uuid::now_v7());
         ensure_user_exists(&pool, &user_id).await.expect("Failed to create user");
 
-        backend::user_state::get_or_create_user_state_doc(&state, &user_id)
-            .await
-            .expect("Failed to initialize user state");
+        init_user_state(&state, &user_id).await;
 
         let ctx = AppCtx {
             state: state.clone(),
@@ -411,9 +404,7 @@ mod integration_tests {
         let user_id = format!("test_user_{}", Uuid::now_v7());
         ensure_user_exists(&pool, &user_id).await.expect("Failed to create user");
 
-        backend::user_state::get_or_create_user_state_doc(&state, &user_id)
-            .await
-            .expect("Failed to initialize user state");
+        init_user_state(&state, &user_id).await;
 
         let ctx = AppCtx {
             state: state.clone(),
@@ -486,9 +477,7 @@ mod integration_tests {
         ensure_user_exists(&pool, &owner1_id).await.expect("Failed to create owner1");
         ensure_user_exists(&pool, &owner2_id).await.expect("Failed to create owner2");
 
-        backend::user_state::get_or_create_user_state_doc(&state, &owner1_id)
-            .await
-            .expect("Failed to initialize owner1 state");
+        init_user_state(&state, &owner1_id).await;
 
         let ctx = AppCtx {
             state: state.clone(),
@@ -506,9 +495,7 @@ mod integration_tests {
         .execute(&pool)
         .await?;
 
-        backend::user_state::get_or_create_user_state_doc(&state, &owner2_id)
-            .await
-            .expect("Failed to initialize owner2 state");
+        init_user_state(&state, &owner2_id).await;
 
         let updated = create_test_document_content("Updated by Autosave");
         let fake_heads: Vec<Vec<u8>> = vec![vec![0u8; 32]];
@@ -557,8 +544,6 @@ mod integration_tests {
     /// Calling `get_or_create_user_state_doc` should populate the doc from the DB.
     #[sqlx::test]
     async fn get_or_create_user_state_doc_initializes_from_db(pool: PgPool) -> sqlx::Result<()> {
-        use backend::user_state::get_or_create_user_state_doc;
-
         run_migrations(&pool).await?;
         let state = create_test_app_state(pool.clone()).await;
 
@@ -572,9 +557,7 @@ mod integration_tests {
         let content = create_test_document_content("Init Test Document");
         let ref_id = document::new_ref(ctx, content).await.expect("Failed to create ref");
 
-        let _doc_id = get_or_create_user_state_doc(&state, &user_id)
-            .await
-            .expect("Failed to get or create user state doc");
+        let _doc_id = init_user_state(&state, &user_id).await;
 
         let persisted = sqlx::query_scalar::<_, String>(
             "SELECT state_doc_id FROM users WHERE id = $1 AND state_doc_id IS NOT NULL",
@@ -595,15 +578,13 @@ mod integration_tests {
     /// A new user with no documents should get an empty state doc.
     #[sqlx::test]
     async fn get_or_create_user_state_doc_empty_for_new_user(pool: PgPool) -> sqlx::Result<()> {
-        use backend::user_state::get_or_create_user_state_doc;
-
         run_migrations(&pool).await?;
         let state = create_test_app_state(pool.clone()).await;
 
         let user_id = format!("test_user_{}", Uuid::now_v7());
         ensure_user_exists(&pool, &user_id).await.expect("Failed to create user");
 
-        get_or_create_user_state_doc(&state, &user_id).await.unwrap();
+        init_user_state(&state, &user_id).await;
 
         let us = read_user_state_from_samod(&state, &user_id).await.unwrap();
         assert_eq!(us.documents.len(), 0);
@@ -614,16 +595,14 @@ mod integration_tests {
     /// A second call should return the same document ID (cached).
     #[sqlx::test]
     async fn get_or_create_user_state_doc_returns_cached(pool: PgPool) -> sqlx::Result<()> {
-        use backend::user_state::get_or_create_user_state_doc;
-
         run_migrations(&pool).await?;
         let state = create_test_app_state(pool.clone()).await;
 
         let user_id = format!("test_user_{}", Uuid::now_v7());
         ensure_user_exists(&pool, &user_id).await.expect("Failed to create user");
 
-        let id1 = get_or_create_user_state_doc(&state, &user_id).await.unwrap();
-        let id2 = get_or_create_user_state_doc(&state, &user_id).await.unwrap();
+        let id1 = init_user_state(&state, &user_id).await;
+        let id2 = init_user_state(&state, &user_id).await;
         assert_eq!(id1, id2);
 
         Ok(())
@@ -634,8 +613,6 @@ mod integration_tests {
     async fn get_or_create_user_state_doc_persists_across_app_restart(
         pool: PgPool,
     ) -> sqlx::Result<()> {
-        use backend::user_state::get_or_create_user_state_doc;
-
         run_migrations(&pool).await?;
 
         let user_id = format!("test_user_{}", Uuid::now_v7());
@@ -643,15 +620,13 @@ mod integration_tests {
 
         let id_before = {
             let state = create_test_app_state(pool.clone()).await;
-            let id = get_or_create_user_state_doc(&state, &user_id).await.unwrap();
+            let id = init_user_state(&state, &user_id).await;
             state.repo.stop().await;
             id
         };
 
         let state2 = create_test_app_state(pool.clone()).await;
-        let id_after = backend::user_state::get_or_create_user_state_doc(&state2, &user_id)
-            .await
-            .unwrap();
+        let id_after = init_user_state(&state2, &user_id).await;
         assert_eq!(id_before, id_after);
 
         Ok(())
@@ -662,8 +637,6 @@ mod integration_tests {
     async fn get_or_create_user_state_doc_refreshes_on_first_read_after_restart(
         pool: PgPool,
     ) -> sqlx::Result<()> {
-        use backend::user_state::get_or_create_user_state_doc;
-
         run_migrations(&pool).await?;
 
         let user_id = format!("test_user_{}", Uuid::now_v7());
@@ -671,7 +644,7 @@ mod integration_tests {
 
         {
             let state = create_test_app_state(pool.clone()).await;
-            get_or_create_user_state_doc(&state, &user_id).await.unwrap();
+            init_user_state(&state, &user_id).await;
 
             // Create a ref after the state doc exists — the doc will be stale
             // after restart because the process-local cache is lost.
@@ -687,11 +660,129 @@ mod integration_tests {
         }
 
         let state2 = create_test_app_state(pool.clone()).await;
-        get_or_create_user_state_doc(&state2, &user_id).await.unwrap();
+        init_user_state(&state2, &user_id).await;
 
         let us = read_user_state_from_samod(&state2, &user_id).await.unwrap();
         assert_eq!(us.documents.len(), 1);
         assert!(us.documents.values().any(|d| d.name.as_str() == "Restart Refresh Document"));
+
+        Ok(())
+    }
+
+    // -----------------------------------------------------------------------
+    // Incremental population
+    // -----------------------------------------------------------------------
+
+    /// Documents are written in the background: the doc is flagged as loading
+    /// right after creation, and complete once population finishes.
+    #[sqlx::test]
+    async fn documents_populated_incrementally(pool: PgPool) -> sqlx::Result<()> {
+        run_migrations(&pool).await?;
+        let state = create_test_app_state(pool.clone()).await;
+
+        let user_id = format!("test_user_{}", Uuid::now_v7());
+        ensure_user_exists(&pool, &user_id).await.expect("Failed to create user");
+
+        let ctx = AppCtx {
+            state: state.clone(),
+            user: Some(create_test_firebase_user(&user_id)),
+        };
+        for i in 0..5 {
+            document::new_ref(ctx.clone(), create_test_document_content(&format!("Doc {i}")))
+                .await
+                .unwrap();
+        }
+
+        backend::user_state::get_or_create_user_state_doc(&state, &user_id)
+            .await
+            .unwrap();
+
+        let us = read_user_state_from_samod(&state, &user_id).await.unwrap();
+        assert!(us.is_loading_documents);
+        assert!(us.documents.len() < 5, "documents should not all be written synchronously");
+
+        backend::user_state::await_user_state_population(&state, &user_id).await;
+
+        let us = read_user_state_from_samod(&state, &user_id).await.unwrap();
+        assert!(!us.is_loading_documents);
+        assert_eq!(us.documents.len(), 5);
+
+        Ok(())
+    }
+
+    /// On restart, documents no longer in the DB are removed from the doc.
+    #[sqlx::test]
+    async fn stale_documents_removed_on_restart(pool: PgPool) -> sqlx::Result<()> {
+        run_migrations(&pool).await?;
+
+        let user_id = format!("test_user_{}", Uuid::now_v7());
+        ensure_user_exists(&pool, &user_id).await.expect("Failed to create user");
+
+        let ref_id = {
+            let state = create_test_app_state(pool.clone()).await;
+            let ctx = AppCtx {
+                state: state.clone(),
+                user: Some(create_test_firebase_user(&user_id)),
+            };
+            let ref_id =
+                document::new_ref(ctx, create_test_document_content("Stale Doc")).await.unwrap();
+            init_user_state(&state, &user_id).await;
+            state.repo.stop().await;
+            ref_id
+        };
+
+        // Remove the user's permission behind the app's back.
+        sqlx::query("DELETE FROM permissions WHERE object = $1 AND subject = $2")
+            .bind(ref_id)
+            .bind(&user_id)
+            .execute(&pool)
+            .await?;
+
+        let state2 = create_test_app_state(pool.clone()).await;
+        init_user_state(&state2, &user_id).await;
+
+        let us = read_user_state_from_samod(&state2, &user_id).await.unwrap();
+        assert!(!us.is_loading_documents);
+        assert!(us.documents.is_empty());
+
+        Ok(())
+    }
+
+    /// A mutation during population must not be overwritten by the stale
+    /// snapshot being written in the background.
+    #[sqlx::test]
+    async fn mutation_during_population_wins(pool: PgPool) -> sqlx::Result<()> {
+        run_migrations(&pool).await?;
+        let state = create_test_app_state(pool.clone()).await;
+
+        let user_id = format!("test_user_{}", Uuid::now_v7());
+        ensure_user_exists(&pool, &user_id).await.expect("Failed to create user");
+
+        let ctx = AppCtx {
+            state: state.clone(),
+            user: Some(create_test_firebase_user(&user_id)),
+        };
+        for i in 0..5 {
+            document::new_ref(ctx.clone(), create_test_document_content(&format!("Doc {i}")))
+                .await
+                .unwrap();
+        }
+
+        backend::user_state::get_or_create_user_state_doc(&state, &user_id)
+            .await
+            .unwrap();
+
+        // Mutate while the background task is still running.
+        let new_ref = document::new_ref(ctx, create_test_document_content("During Load"))
+            .await
+            .unwrap();
+
+        backend::user_state::await_user_state_population(&state, &user_id).await;
+
+        let us = read_user_state_from_samod(&state, &user_id).await.unwrap();
+        assert!(!us.is_loading_documents);
+        assert_eq!(us.documents.len(), 6);
+        assert!(us.documents.contains_key(&new_ref.to_string()));
 
         Ok(())
     }
@@ -703,8 +794,6 @@ mod integration_tests {
     /// Relation entries should be populated correctly on initial DB load.
     #[sqlx::test]
     async fn parent_child_populated_on_db_load(pool: PgPool) -> sqlx::Result<()> {
-        use backend::user_state::get_or_create_user_state_doc;
-
         run_migrations(&pool).await?;
         let state = create_test_app_state(pool.clone()).await;
 
@@ -732,7 +821,7 @@ mod integration_tests {
         .await
         .unwrap();
 
-        get_or_create_user_state_doc(&state, &user_id).await.unwrap();
+        init_user_state(&state, &user_id).await;
 
         let us = read_user_state_from_samod(&state, &user_id).await.unwrap();
         assert_eq!(us.documents.len(), 3);
@@ -769,9 +858,7 @@ mod integration_tests {
         let user_id = format!("test_user_{}", Uuid::now_v7());
         ensure_user_exists(&pool, &user_id).await.expect("Failed to create user");
 
-        backend::user_state::get_or_create_user_state_doc(&state, &user_id)
-            .await
-            .expect("Failed to initialize user state");
+        init_user_state(&state, &user_id).await;
 
         let ctx = AppCtx {
             state: state.clone(),
@@ -856,12 +943,8 @@ mod integration_tests {
             .await
             .unwrap();
 
-        backend::user_state::get_or_create_user_state_doc(&state, &reader_id)
-            .await
-            .unwrap();
-        backend::user_state::get_or_create_user_state_doc(&state, &owner_id)
-            .await
-            .unwrap();
+        init_user_state(&state, &reader_id).await;
+        init_user_state(&state, &owner_id).await;
 
         // Before update
         let reader_before = read_user_state_from_samod(&state, &reader_id).await.unwrap();
@@ -1170,6 +1253,7 @@ mod integration_tests {
                 repo,
                 ref_actors: Arc::new(RwLock::new(HashMap::new())),
                 initialized_user_states: Arc::new(RwLock::new(HashMap::new())),
+                user_state_populations: Arc::new(tokio::sync::Mutex::new(HashMap::new())),
                 http_client: reqwest::Client::new(),
                 julia_url: None,
                 openrouter_provisioning_key: None,
@@ -1182,9 +1266,7 @@ mod integration_tests {
                     .expect("Failed to write user state");
 
             if !expected_state.documents.is_empty() {
-                backend::user_state::get_or_create_user_state_doc(&state, &user_id)
-                    .await
-                    .expect("Failed to initialize user state");
+                init_user_state(&state, &user_id).await;
             }
 
             let automerge_state: Option<UserState> = {

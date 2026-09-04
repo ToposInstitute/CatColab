@@ -92,6 +92,7 @@ interface DocumentListProps {
 }
 
 export function DocumentList(props: DocumentListProps) {
+    const userState = useUserState();
     const [scrollHeight, setScrollHeight] = createSignal(400);
 
     const [virtualList, onScroll] = createVirtualList({
@@ -141,7 +142,9 @@ export function DocumentList(props: DocumentListProps) {
                 {props.documents().length === 0 && (
                     <div class="ref-grid-row">
                         <div style={{ "grid-column": "1 / -1", "text-align": "center" }}>
-                            No documents found.
+                            {userState.isLoadingDocuments
+                                ? "Loading documents..."
+                                : "No documents found."}
                         </div>
                     </div>
                 )}

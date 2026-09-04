@@ -47,6 +47,7 @@ pub async fn create_test_app_state(pool: PgPool) -> AppState {
         repo,
         ref_actors: Arc::new(RwLock::new(HashMap::new())),
         initialized_user_states: Arc::new(RwLock::new(HashMap::new())),
+        user_state_populations: Arc::new(tokio::sync::Mutex::new(HashMap::new())),
         http_client: reqwest::Client::new(),
         julia_url: None,
         openrouter_provisioning_key: None,

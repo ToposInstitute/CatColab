@@ -1,7 +1,7 @@
 //! User-state update helpers called from RPC handlers after mutations.
 
 use crate::app::{AppError, AppState};
-use crate::user_state::read_user_state_from_db;
+use crate::user_state::{abort_user_state_population, read_user_state_from_db};
 
 /// Re-read the full user state from the database and reconcile it into the
 /// user's Automerge doc.
@@ -22,6 +22,10 @@ pub async fn update_user_state(state: &AppState, user_id: &str) -> Result<(), Ap
         doc_id = %doc_id,
         "Updating user state for user",
     );
+
+    // A full reconcile supersedes any in-flight incremental population, which
+    // would otherwise overwrite fresh data with a stale snapshot.
+    abort_user_state_population(state, user_id).await;
 
     let user_state = read_user_state_from_db(user_id.to_string(), &state.db).await?;
 

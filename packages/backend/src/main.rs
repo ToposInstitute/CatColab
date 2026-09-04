@@ -171,6 +171,7 @@ async fn main() {
                 repo,
                 ref_actors: Arc::new(RwLock::new(HashMap::new())),
                 initialized_user_states: Arc::new(RwLock::new(HashMap::new())),
+                user_state_populations: Arc::new(tokio::sync::Mutex::new(HashMap::new())),
                 http_client,
                 julia_url,
                 openrouter_provisioning_key: dotenvy::var("OPENROUTER_PROVISIONING_KEY").ok(),
