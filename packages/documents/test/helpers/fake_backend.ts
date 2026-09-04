@@ -15,11 +15,14 @@
 //     `rpc.new_ref.mutate`, called by `Api.createDoc`.
 //   * `get_doc(refId)`: resolve a ref id to the Automerge document behind it.
 //     Analog of `rpc.get_doc.query`, whose `docId` the frontend then `find`s.
+//   * `list_instances(refId)`: ref ids of all instance documents whose
+//     `instanceOf` link points back to the given ref. Analog of
+//     `rpc.list_instances.query`.
 //
 // The backend holds its own networked `Repo` in production; here the store and
 // backend share one in-memory `Repo`, and every document is served as `Live`
 // (the store `find`s it by `docId`).
-import { type DocumentId, Repo } from "@automerge/automerge-repo";
+import { type DocHandle, type DocumentId, Repo } from "@automerge/automerge-repo";
 import { v7 } from "uuid";
 
 import type { Document } from "catcolab-document-types";
@@ -39,6 +42,9 @@ export class FakeBackend {
     /** ref id -> Automerge document id, the mapping `get_doc` serves. */
     private readonly refs = new Map<string, DocumentId>();
 
+    /** ref id -> Automerge document handle, the mapping `list_instances` scans. */
+    private readonly docs = new Map<string, DocHandle<Document>>();
+
     /**
      * Analog of `rpc.new_ref.mutate`: take document *content*, create the repo
      * document backend-side, and return a fresh ref id. This is what
@@ -48,6 +54,7 @@ export class FakeBackend {
         const handle = this.repo.create<Document>(content as Document);
         const refId = v7();
         this.refs.set(refId, handle.documentId);
+        this.docs.set(refId, handle);
         return { tag: "Ok", content: refId };
     }
 
@@ -58,5 +65,17 @@ export class FakeBackend {
             return { tag: "Err", code: 404, message: `Unknown document ${refId}` };
         }
         return { tag: "Ok", content: { tag: "Live", docId, isDeleted: false } };
+    }
+
+    /** Analog of `rpc.list_instances.query`: ref ids of the instances of a ref. */
+    async list_instances(refId: string): Promise<RpcResult<string[]>> {
+        const instances: string[] = [];
+        for (const [id, handle] of this.docs) {
+            const doc = handle.doc();
+            if (doc.type === "instance" && doc.instanceOf._id === refId) {
+                instances.push(id);
+            }
+        }
+        return { tag: "Ok", content: instances };
     }
 }

@@ -121,6 +121,18 @@ export function createInMemoryStore(): DocumentStore<Document, Document> {
             return handle;
         },
 
+        async listInstancesOf(handle: Document): Promise<ReadonlyArray<Document>> {
+            const id = requireDocumentId(handle);
+            const instances: Document[] = [];
+            for (const doc of idToDocument.values()) {
+                // Skip drafts: only committed documents answer the query.
+                if (doc.type === "instance" && !drafts.has(doc) && doc.instanceOf._id === id) {
+                    instances.push(doc);
+                }
+            }
+            return instances;
+        },
+
         createDraft(handle: Document): Document {
             requireDocumentId(handle);
             const draft = structuredClone(handle);
