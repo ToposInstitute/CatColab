@@ -8,20 +8,18 @@ import type {
 } from "openai/resources/chat/completions";
 
 import { type ContextExecScope, type EvalResult, contextExec } from "./context_exec";
+import { SYSTEM_PROMPT } from "./system_prompt";
 
 const OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1";
 
 export type InferenceClient = OpenAI;
 /** Default LLM used for newly created CatColab conversations. */
-export const DEFAULT_LLM_MODEL = "z-ai/glm-5.2";
+export const DEFAULT_LLM_MODEL = "z-ai/glm-5.3";
 
 /** Maximum provider requests made while resolving one inference attempt. */
 const MAX_PROVIDER_REQUESTS_PER_ATTEMPT = 32;
 
 const EMPTY_FILES = Object.freeze(Object.create(null)) as Readonly<Record<string, string>>;
-
-const SYSTEM_PROMPT =
-    "You are an assistant embedded in CatColab. Use `contextExec` when you need to inspect, compute with, or act on the current CatColab context. It executes JavaScript with the available context values as local bindings. The read-only `files` binding maps available filenames to their UTF-8 content; use `Object.keys(files)` to inspect its keys. Use `return` when you need to observe a value; `await` can be used directly. Only use bindings and APIs explicitly described as available. Answer the user's request clearly and concisely, using tool results when relevant.";
 
 /** Message in the transcript sent for an inference request. */
 export type ChatTranscriptMessage =
