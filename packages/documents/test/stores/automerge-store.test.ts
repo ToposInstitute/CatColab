@@ -13,9 +13,14 @@ import { createBinder, type DocumentStore } from "catcolab-documents";
 
 const repo = new Repo();
 
+// Handles minted by the store, so `listInstancesOf` can enumerate them.
+const createdHandles = new Set<DocHandle<Document>>();
+
 const automergeStore: DocumentStore<DocHandle<Document>> = {
     createHandle: async (initialDoc) => {
-        return repo.create<Document>(initialDoc as Document);
+        const handle = repo.create<Document>(initialDoc as Document);
+        createdHandles.add(handle);
+        return handle;
     },
     changeDocument: (handle, fn) => handle.change(fn),
     subscribe: (handle, callback) => {
@@ -33,6 +38,15 @@ const automergeStore: DocumentStore<DocHandle<Document>> = {
     },
     getDocumentView: (handle) => handle.doc(),
     getDocumentRef: (handle) => ({ id: handle.documentId, version: null, server: "" }),
+    listInstancesOf: async (handle) =>
+        [...createdHandles].filter((other) => {
+            const doc = other.doc();
+            return (
+                other !== handle &&
+                doc.type === "instance" &&
+                doc.instanceOf._id === handle.documentId
+            );
+        }),
     // Link resolution omitted for brevity.
     getHandle: async () => ({
         tag: "Err",
