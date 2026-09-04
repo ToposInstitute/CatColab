@@ -24,11 +24,17 @@ const solidStoreIdFor = (handle: SolidStoreHandle): string => {
     return id;
 };
 
+// Handles minted by `createHandle`, so `listInstancesOf` can enumerate them.
+// Drafts are excluded: only committed documents answer the query.
+const createdHandles = new Set<SolidStoreHandle>();
+
 export const solidStore: DocumentStore<SolidStoreHandle> = {
     async createHandle(initialDoc) {
         const draftDoc = structuredClone(initialDoc as Document);
         const [docView, setDocView] = createStore<Document>(initialDoc as Document);
-        return { draftDoc, docView, setDocView, listeners: new Set() };
+        const handle = { draftDoc, docView, setDocView, listeners: new Set<() => void>() };
+        createdHandles.add(handle);
+        return handle;
     },
     changeDocument: (handle, fn) => {
         fn(handle.draftDoc);
@@ -81,6 +87,15 @@ export const solidStore: DocumentStore<SolidStoreHandle> = {
     },
     getDocumentView: (handle) => handle.docView,
     getDocumentRef: (handle) => ({ id: solidStoreIdFor(handle), version: null, server: "" }),
+    listInstancesOf: async (handle) =>
+        [...createdHandles].filter((other) => {
+            const doc = other.docView;
+            return (
+                other !== handle &&
+                doc.type === "instance" &&
+                doc.instanceOf._id === solidStoreIdFor(handle)
+            );
+        }),
     // Link resolution omitted for brevity.
     getHandle: async () => ({
         tag: "Err",
