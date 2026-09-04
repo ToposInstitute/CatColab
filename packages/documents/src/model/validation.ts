@@ -102,9 +102,15 @@ function invalidModelIssue(notebook: Notebook<ModelJudgment>, error: InvalidDblM
                 path: generatorPath(notebook, error.content, "cod"),
             };
         case "Eqn": {
-            const errors = error.content[1] ?? [];
-            const details = errors.map(eqnErrorMessage).join("; ");
-            return { message: `An equation in the model is invalid: ${details}` };
+            const [name, errors] = error.content;
+            const details = (errors ?? []).map(eqnErrorMessage).join("; ");
+            if (name === undefined) {
+                return { message: `An equation in the model is invalid: ${details}` };
+            }
+            return {
+                message: `Equation \`${generatorName(notebook, name)}\` is invalid: ${details}`,
+                path: generatorPath(notebook, name),
+            };
         }
         case "UnsupportedFeature": {
             if (error.content.tag === "PartialEquation") {

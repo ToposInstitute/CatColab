@@ -651,6 +651,23 @@ impl DblModel {
                     },
                     mor_generators: {
                         model.mor_generators().filter_map(|id| self.mor_presentation(id)).collect()
+                    },
+                    // Unnamed equations are omitted -- they cannot arise when
+                    // elaborating a notebook.
+                    equations: match self.discrete() {
+                        Ok(model) => model
+                            .named_equations()
+                            .filter_map(|(name, lhs, rhs)| {
+                                let id = name?;
+                                Some(EquationGenerator {
+                                    id: id.clone(),
+                                    label: self.ob_namespace.label(id),
+                                    lhs: Quoter.quote(lhs),
+                                    rhs: Quoter.quote(rhs),
+                                })
+                            })
+                            .collect(),
+                        Err(_) => Vec::new(),
                     }
                 }
             }
@@ -934,5 +951,89 @@ pub(crate) mod tests {
         assert_eq!(model.ob_generators().len(), 2);
         assert_eq!(model.mor_generators().len(), 2);
         assert_eq!(model.validate().0, JsResult::Ok(()));
+    }
+
+    #[test]
+    fn model_equation_error_is_named() {
+        use catlog::dbl::model::{InvalidDblModel, InvalidModelEqn};
+        use nonempty::nonempty;
+
+        let th = ThCategory::new().theory();
+        let [a, b, f, g, eqn] = std::array::from_fn(|_| Uuid::now_v7());
+
+        let mut cells = HashMap::new();
+        for (decl, id) in [
+            (
+                ModelJudgment::Object(ObDecl {
+                    name: "A".into(),
+                    id: a,
+                    ob_type: ObType::Basic("Object".into()),
+                }),
+                a,
+            ),
+            (
+                ModelJudgment::Object(ObDecl {
+                    name: "B".into(),
+                    id: b,
+                    ob_type: ObType::Basic("Object".into()),
+                }),
+                b,
+            ),
+        ] {
+            cells.insert(id, NotebookCell::Formal { id, content: decl });
+        }
+        for (decl, id) in [
+            (
+                ModelJudgment::Morphism(MorDecl {
+                    name: "f".into(),
+                    id: f,
+                    mor_type: MorType::Hom(Box::new(ObType::Basic("Object".into()))),
+                    dom: Some(Ob::Basic(a.to_string())),
+                    cod: Some(Ob::Basic(a.to_string())),
+                }),
+                f,
+            ),
+            (
+                ModelJudgment::Morphism(MorDecl {
+                    name: "g".into(),
+                    id: g,
+                    mor_type: MorType::Hom(Box::new(ObType::Basic("Object".into()))),
+                    dom: Some(Ob::Basic(b.to_string())),
+                    cod: Some(Ob::Basic(b.to_string())),
+                }),
+                g,
+            ),
+        ] {
+            cells.insert(id, NotebookCell::Formal { id, content: decl });
+        }
+        cells.insert(
+            eqn,
+            NotebookCell::Formal {
+                id: eqn,
+                content: ModelJudgment::Equation(EqnDecl {
+                    name: "bad".into(),
+                    id: eqn,
+                    lhs: Some(Mor::Basic(f.to_string())),
+                    rhs: Some(Mor::Basic(g.to_string())),
+                }),
+            },
+        );
+        let notebook = ModelNotebook(Notebook {
+            cell_contents: cells,
+            cell_order: vec![a, b, f, g, eqn],
+        });
+
+        let instantiated = DblModelMap::new();
+        let model = elaborate_model(&notebook, &instantiated, &th, "test".into()).unwrap();
+        let JsResult::Err(errors) = model.validate().0 else {
+            panic!("Expected the model to be invalid");
+        };
+        assert_eq!(
+            errors,
+            vec![InvalidDblModel::Eqn(
+                Some(QualifiedName::single(NameSegment::Uuid(eqn))),
+                nonempty![InvalidModelEqn::Src, InvalidModelEqn::Tgt],
+            )]
+        );
     }
 }
