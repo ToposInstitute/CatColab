@@ -39,6 +39,11 @@ export interface DocumentStore<Handle, Version = unknown> {
     getDocumentRef(handle: Handle): DocumentRef;
     // Get a document view from a handle
     getDocumentView(handle: Handle): Readonly<Document>;
+    // List the handles of all instance documents that link back to the
+    // document at `handle`, that is, all instances of it. Matching is by
+    // document id, so instances of any version of the document are included.
+    // The order of the results is unspecified.
+    listInstancesOf(handle: Handle): Promise<ReadonlyArray<Handle>>;
     // Create a working copy of the document at `handle`. Changes made to the
     // draft are not visible through `handle` until it is committed.
     createDraft(handle: Handle): Handle;
