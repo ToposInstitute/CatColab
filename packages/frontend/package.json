@@ -78,6 +78,7 @@
         "rehype-katex": "^7.0.1",
         "remark-gfm": "^4.0.1",
         "remark-math": "^6.0.0",
+        "simple-icons": "^16.28.0",
         "solid-firebase": "^0.3.0",
         "solid-js": "^1.9.10",
         "solid-markdown": "^2.1.1",

@@ -22,6 +22,7 @@ export * from "./name_input";
 export * from "./panel";
 export * from "./relative_time";
 export * from "./resizable";
+export * from "./simple_icon";
 export * from "./spinner";
 export * from "./table_editor";
 export * from "./text_input";
