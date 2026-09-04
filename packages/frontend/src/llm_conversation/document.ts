@@ -31,7 +31,7 @@ export type LLMConversationUserInput = {
 };
 
 /** Project a persisted inline file into attachment policy metadata. */
-function inlineFileMetadata(file: InlineFile): ConversationAttachmentMetadata {
+export function inlineFileMetadata(file: InlineFile): ConversationAttachmentMetadata {
     return {
         filename: file.filename,
         mediaType: file.mediaType,
@@ -40,7 +40,7 @@ function inlineFileMetadata(file: InlineFile): ConversationAttachmentMetadata {
 }
 
 /** Project all persisted conversation attachments into attachment policy metadata. */
-function conversationAttachmentMetadata(
+export function conversationAttachmentMetadata(
     interactions: readonly LLMInteraction[],
 ): ConversationAttachmentMetadata[] {
     const result: ConversationAttachmentMetadata[] = [];

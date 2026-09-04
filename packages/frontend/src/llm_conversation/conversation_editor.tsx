@@ -6,6 +6,7 @@ import { createResizeObserver } from "@solid-primitives/resize-observer";
 import Check from "lucide-solid/icons/check";
 import ChevronDown from "lucide-solid/icons/chevron-down";
 import ChevronRight from "lucide-solid/icons/chevron-right";
+import Paperclip from "lucide-solid/icons/paperclip";
 import Send from "lucide-solid/icons/send";
 import X from "lucide-solid/icons/x";
 import {
@@ -31,6 +32,7 @@ import styles from "./conversation_editor.module.css";
 /** Form data for a message to send to the LLM. */
 type LLMMessageForm = {
     message: string;
+    files: { file: File }[];
 };
 
 export function LLMConversationEditor(props: {
@@ -51,17 +53,40 @@ export function LLMConversationEditor(props: {
     ]);
 
     // Set up form for user to send messages.
-    const [form, { Form, Field }] = Forms.createForm<LLMMessageForm>();
+    const [form, { Form, Field, FieldArray }] = Forms.createForm<LLMMessageForm>({
+        validateOn: "input",
+        validate: ({ files }) => {
+            const result = controller.validateAttachments(
+                (files ?? []).flatMap((item) => (item?.file ? [item.file] : [])),
+            );
+            return result.tag === "Err" ? { files: result.content } : {};
+        },
+    });
 
-    const canSubmit = (): boolean => {
-        const hasMessage = Boolean(Forms.getValue(form, "message")?.trim());
-        return inferenceKey()?.tag === "Ready" && !form.submitting && hasMessage;
+    let filePicker!: HTMLInputElement; // Hidden input used to get file picker.
+    const attachFiles = (files: FileList | null) => {
+        for (const file of files ?? []) {
+            Forms.insert(form, "files", { value: { file } });
+        }
+        filePicker.value = "";
     };
 
-    const onSubmit: SubmitHandler<LLMMessageForm> = (values) => {
-        Forms.reset(form, "message");
+    const canSubmit = (): boolean => {
+        const hasInferenceKey = inferenceKey()?.tag === "Ready";
+        const hasMessage = Boolean(Forms.getValue(form, "message")?.trim());
+        return hasInferenceKey && !form.submitting && !form.invalid && hasMessage;
+    };
+
+    const onSubmit: SubmitHandler<LLMMessageForm> = async (values) => {
+        const files = await controller.readAttachments(
+            (values.files ?? []).map((item) => item.file),
+        );
+        if (!files) {
+            return;
+        }
+        Forms.reset(form);
         Forms.focus(form, "message");
-        return controller.runTurn({ content: values.message, files: [] });
+        return controller.runTurn({ content: values.message, files });
     };
 
     // Set up `Shift + Enter` shortcut to send message.
@@ -121,19 +146,72 @@ export function LLMConversationEditor(props: {
                     </Show>
                 </div>
                 <Form class={styles.form} onSubmit={onSubmit}>
-                    <Field name="message">
-                        {(field, fieldProps) => (
-                            <textarea
-                                {...fieldProps}
-                                rows={1}
-                                value={field.value ?? ""}
-                                placeholder="Type a message & press Shift-Enter to send"
-                            />
+                    <input
+                        ref={filePicker}
+                        type="file"
+                        multiple
+                        hidden
+                        onChange={(evt) => attachFiles(evt.currentTarget.files)}
+                    />
+                    <FieldArray name="files">
+                        {(fieldArray) => (
+                            <>
+                                <Show when={fieldArray.items.length > 0}>
+                                    <div class={styles.attachments}>
+                                        <For each={fieldArray.items}>
+                                            {(_item, index) => (
+                                                <Field name={`files.${index()}.file`} type="File">
+                                                    {(field) => (
+                                                        <Attachment
+                                                            filename={field.value?.name ?? ""}
+                                                            remove={() =>
+                                                                Forms.remove(form, "files", {
+                                                                    at: index(),
+                                                                })
+                                                            }
+                                                        />
+                                                    )}
+                                                </Field>
+                                            )}
+                                        </For>
+                                    </div>
+                                </Show>
+                                <Show when={fieldArray.error}>
+                                    <div class={`${styles.attachmentError} ${styles.error}`}>
+                                        {fieldArray.error}
+                                    </div>
+                                </Show>
+                            </>
                         )}
-                    </Field>
-                    <IconButton type="submit" disabled={!canSubmit()} tooltip="Send message">
-                        <Send size={20} />
-                    </IconButton>
+                    </FieldArray>
+                    <div class={styles.formInputs}>
+                        <Field name="message">
+                            {(field, fieldProps) => (
+                                <textarea
+                                    {...fieldProps}
+                                    rows={1}
+                                    value={field.value ?? ""}
+                                    placeholder="Type a message & press Shift-Enter to send"
+                                />
+                            )}
+                        </Field>
+                        <div class={styles.formButtons}>
+                            <IconButton
+                                type="button"
+                                onClick={() => filePicker.click()}
+                                tooltip="Attach file"
+                            >
+                                <Paperclip size={20} />
+                            </IconButton>
+                            <IconButton
+                                type="submit"
+                                disabled={!canSubmit()}
+                                tooltip="Send message"
+                            >
+                                <Send size={20} />
+                            </IconButton>
+                        </div>
+                    </div>
                 </Form>
             </div>
             <div class={styles.scrollSentinel} ref={scrollSentinel} />
@@ -237,6 +315,16 @@ const CodeExecution = (props: { execution: LLMInteraction & { tag: "llm-code-exe
         </div>
     );
 };
+
+/** Display a file attached to the message being composed. */
+const Attachment = (props: { filename: string; remove: () => void }) => (
+    <div class={styles.attachment}>
+        <span>{props.filename}</span>
+        <IconButton type="button" onClick={props.remove} tooltip="Remove attachment">
+            <X size={14} />
+        </IconButton>
+    </div>
+);
 
 /** Button to collapse or expand an entry in the transcript. */
 const CollapseButton = (props: {

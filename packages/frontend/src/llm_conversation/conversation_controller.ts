@@ -2,14 +2,18 @@ import type { Accessor } from "solid-js";
 import { createStore } from "solid-js/store";
 
 import { LLMConversation } from "catcolab-document-methods";
-import { LLMInteraction } from "catcolab-document-types";
+import { type InlineFile, LLMInteraction } from "catcolab-document-types";
+import type { JsResult } from "catlog-wasm";
 import { useBinder } from "../api";
 import { ChatTurnEvent } from "../inference/chat";
 import { InferenceKeyResult } from "../user/inference_key_context";
 import { assertExhaustive } from "../util/assert_exhaustive";
+import { errorMessage } from "../util/error";
+import { validateConversationAttachments } from "./conversation_attachment_policy";
 import {
     LLMConversationTurnResult,
     LLMConversationUserInput,
+    conversationAttachmentMetadata,
     runLLMConversationTurn,
 } from "./document";
 import type { ApiLLMConversation } from "./live_doc_compatibility";
@@ -49,6 +53,12 @@ export type LLMConversationController = {
 
     /** Run a turn of the LLM conversation. */
     runTurn: (userInput: LLMConversationUserInput) => Promise<LLMConversationTurnResult>;
+
+    /** Validate files staged to be attached to the next user message. */
+    validateAttachments: (files: readonly File[]) => JsResult<void, string>;
+
+    /** Read staged files into data, returning null if a file cannot be read. */
+    readAttachments: (files: readonly File[]) => Promise<InlineFile[] | null>;
 };
 
 export function createLLMConversationController(
@@ -130,10 +140,49 @@ export function createLLMConversationController(
         }
     };
 
+    const validateAttachments = (files: readonly File[]): JsResult<void, string> =>
+        validateConversationAttachments([
+            ...conversationAttachmentMetadata(conversation().interactions()),
+            ...files.map((file) => ({
+                filename: file.name,
+                mediaType: file.type,
+                byteLength: file.size,
+            })),
+        ]);
+
+    const readAttachments = async (files: readonly File[]): Promise<InlineFile[] | null> => {
+        try {
+            return await Promise.all(files.map(readInlineFile));
+        } catch (error) {
+            setStore("notice", {
+                kind: "error",
+                message: errorMessage(error),
+                retryable: false,
+            });
+            return null;
+        }
+    };
+
     return {
         state: store,
         runTurn,
+        validateAttachments,
+        readAttachments,
     };
+}
+
+async function readInlineFile(file: File): Promise<InlineFile> {
+    try {
+        return {
+            filename: file.name,
+            mediaType: file.type,
+            content: Array.from(new Uint8Array(await file.arrayBuffer())),
+        };
+    } catch (error) {
+        throw new Error(`${file.name} could not be read: ${errorMessage(error)}`, {
+            cause: error,
+        });
+    }
 }
 
 function turnResultToNotice(result: LLMConversationTurnResult): LLMTurnNotice | null {
