@@ -14,9 +14,11 @@ import type {
     ApiDocumentVersion,
     DocRef,
     LiveDoc,
+    LiveDocWithRef,
 } from "../api";
 import type { LiveModelDoc, ModelLibrary } from "../model";
 import { notebookShapes, shapeForTheory } from "../model/shapes";
+import { assertExhaustive } from "../util/assert_exhaustive";
 
 /**
  * Live*Doc compatibility and binder loading for LLM conversations, following
@@ -71,28 +73,58 @@ async function loadNotebook(api: Api, binder: ApiBinder, modelRefId: string) {
     return notebook.content;
 }
 
+async function loadInstance(
+    api: Api,
+    binder: ApiBinder,
+    instanceRefId: string,
+    modelRefId: string,
+) {
+    const schema = await loadNotebook(api, binder, modelRefId);
+    const instance = await binder.loadInstanceFromRef(schema, {
+        id: instanceRefId,
+        version: null,
+        server: api.serverHost,
+    });
+    if (instance.tag === "Err") {
+        throw new Error(instance.content.map((issue) => issue.message).join("\n"));
+    }
+    return instance.content;
+}
+
+/** Load the document with the given ref as an LLM conversation attachment. */
 async function loadAttachment(
     api: Api,
     binder: ApiBinder,
-    attachmentRef: DocumentRef,
+    refId: string,
+    document: Document,
 ): Promise<{ attachment: ApiLLMConversationAttachment; modelRefId: string }> {
-    const handle = await getHandle(binder, attachmentRef);
-    const document: Document = binder.store.getDocumentView(handle);
-
-    if (document.type === "model") {
-        const attachment = await loadNotebook(api, binder, attachmentRef.id);
-        return { attachment, modelRefId: attachmentRef.id };
-    }
-    if (document.type === "instance") {
-        const modelRefId = document.instanceOf._id;
-        const schema = await loadNotebook(api, binder, modelRefId);
-        const instance = await binder.loadInstanceFromRef(schema, attachmentRef);
-        if (instance.tag === "Err") {
-            throw new Error(instance.content.map((issue) => issue.message).join("\n"));
+    switch (document.type) {
+        case "model":
+            return { attachment: await loadNotebook(api, binder, refId), modelRefId: refId };
+        case "instance": {
+            const modelRefId = document.instanceOf._id;
+            const attachment = await loadInstance(api, binder, refId, modelRefId);
+            return { attachment, modelRefId };
         }
-        return { attachment: instance.content, modelRefId };
+        default:
+            throw new Error(`Cannot attach an LLM conversation to a "${document.type}" document.`);
     }
-    throw new Error(`Cannot attach an LLM conversation to a "${document.type}" document.`);
+}
+
+/** Whether an LLM conversation can be attached to the given document. */
+export function supportsLLMConversation(document: Document): boolean {
+    switch (document.type) {
+        case "model":
+            return shapeForTheory(notebookShapes, document.theory) !== undefined;
+        case "instance":
+            return true;
+        case "diagram":
+        case "analysis":
+        case "llmconversation":
+            return false;
+        default:
+            return assertExhaustive(document);
+    }
 }
 
 export async function getLiveLLMConversation(
@@ -110,8 +142,16 @@ export async function getLiveLLMConversation(
         throw new Error("LLM conversations require a live attachment on the current server.");
     }
     const attachmentRef = { id: of._id, version: null, server: api.serverHost };
+    const attachmentDocument: Document = binder.store.getDocumentView(
+        await getHandle(binder, attachmentRef),
+    );
 
-    const { attachment, modelRefId } = await loadAttachment(api, binder, attachmentRef);
+    const { attachment, modelRefId } = await loadAttachment(
+        api,
+        binder,
+        of._id,
+        attachmentDocument,
+    );
     const liveModel = await models.getLiveModel(modelRefId);
     const conversationHandle = await getHandle(binder, {
         id: refId,
@@ -132,13 +172,19 @@ export async function getLiveLLMConversation(
     };
 }
 
+/** Create a new LLM conversation attached to the given live document. */
 export async function createLLMConversation(
     api: Api,
     binder: ApiBinder,
-    modelRefId: string,
+    attachTo: LiveDocWithRef,
     llmModel: string,
 ): Promise<string> {
-    const attachment = await loadNotebook(api, binder, modelRefId);
+    const { attachment } = await loadAttachment(
+        api,
+        binder,
+        attachTo.docRef.refId,
+        attachTo.liveDoc.doc,
+    );
     const conversation = await binder.createLLMConversation(attachment, llmModel, {
         title: "",
     });
