@@ -30,7 +30,7 @@
         "katex": "^0.16.22",
         "lucide-solid": "^0.577.0",
         "shiki": "^4.0.2",
-        "solid-js": "^1.9.10"
+        "solid-js": "^1.9.15"
     },
     "devDependencies": {
         "@catcolab-dev-tools/oxlint-plugin-catcolab": "link:../../tools/oxlint-plugin-catcolab",
@@ -54,7 +54,7 @@
         "typed-css-modules": "^0.9.1",
         "typescript": "^6.0.3",
         "vite": "^7.2.2",
-        "vite-plugin-solid": "^2.11.10",
+        "vite-plugin-solid": "^2.11.14",
         "vitest": "4.1.10"
     }
 }

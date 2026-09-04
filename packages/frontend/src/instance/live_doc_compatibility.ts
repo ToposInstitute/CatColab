@@ -88,3 +88,33 @@ export async function getLiveInstance(
         docRef,
     };
 }
+
+/** Create a new, empty data instance of the model with the given ref ID. */
+export async function createInstance(
+    api: Api,
+    binder: ApiBinder,
+    modelRefId: string,
+): Promise<string> {
+    const ref = { id: modelRefId, version: null, server: api.serverHost };
+    const handle = await binder.store.getHandle(ref);
+    if (handle.tag === "Err") {
+        throw new Error(handle.content.map((issue) => issue.message).join("\n"));
+    }
+    const document = binder.store.getDocumentView(handle.content);
+    if (document.type !== "model") {
+        throw new Error(`Cannot create a data instance of a "${document.type}" document.`);
+    }
+    const shape = shapeForTheory(document.theory);
+    if (!shape) {
+        throw new Error(`Data instances are not supported for theory "${document.theory}".`);
+    }
+    const model = await binder.loadNotebookFromRef(shape, ref);
+    if (model.tag === "Err") {
+        throw new Error(model.content.map((issue) => issue.message).join("\n"));
+    }
+    const instance = await binder.createInstance(model.content, { title: "" });
+    if (instance.tag === "Err") {
+        throw new Error(instance.content.map((issue) => issue.message).join("\n"));
+    }
+    return instance.content.handle.ref.id;
+}
