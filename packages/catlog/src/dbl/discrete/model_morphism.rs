@@ -59,7 +59,7 @@ impl DiscreteDblModelMapping {
     pub fn functor_into<'a>(
         &'a self,
         cod: &'a DiscreteDblModel,
-    ) -> FpFunctor<'a, DiscreteDblModelMappingData, QualifiedFpCategory> {
+    ) -> FpFunctor<'a, DiscreteDblModelMappingData, FpCategory> {
         self.0.functor_into(&cod.category)
     }
 
