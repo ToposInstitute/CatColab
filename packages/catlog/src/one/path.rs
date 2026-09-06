@@ -546,6 +546,9 @@ pub struct PathEq<V, E> {
     pub rhs: Path<V, E>,
 }
 
+/// An equation between paths whose vertices and edges are qualified names.
+pub type QualifiedPathEq = PathEq<QualifiedName, QualifiedName>;
+
 impl<V, E> PathEq<V, E> {
     /// Source of the path equation in the given graph.
     ///

@@ -20,7 +20,7 @@ use crate::zero::QualifiedName;
 /// - a double category whose underlying categories are both discrete categories
 #[derive(From, RefCast, Debug)]
 #[repr(transparent)]
-pub struct DiscreteDblTheory(pub QualifiedFpCategory);
+pub struct DiscreteDblTheory(pub FpCategory);
 
 impl VDblCategory for DiscreteDblTheory {
     type Ob = QualifiedName;

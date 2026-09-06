@@ -13,8 +13,6 @@
 //! you must carry around (references to) more data to evaluate functors than to
 //! evaluate functions or graph morphisms.
 
-use std::hash::Hash;
-
 use derive_more::Constructor;
 use nonempty::NonEmpty;
 use ref_cast::RefCast;
@@ -23,7 +21,7 @@ use thiserror::Error;
 use super::{
     Category, FpCategory, GraphMapping, GraphMorphism, InvalidGraphMorphism, Path, UnderlyingGraph,
 };
-use crate::zero::{Column, Mapping};
+use crate::zero::{Column, Mapping, QualifiedName};
 
 /// A mapping between categories.
 ///
@@ -240,28 +238,26 @@ where
     }
 }
 
-impl<'a, V, E, Ob, Mor, Map, Cod> FpFunctor<'a, Map, Cod>
+impl<'a, Ob, Mor, Map, Cod> FpFunctor<'a, Map, Cod>
 where
-    V: Eq + Clone + Hash,
-    E: Eq + Clone + Hash,
     Ob: Eq + Clone,
     Mor: Eq + Clone,
-    Map: GraphMapping<DomV = V, DomE = E, CodV = Ob, CodE = Mor>,
+    Map: GraphMapping<DomV = QualifiedName, DomE = QualifiedName, CodV = Ob, CodE = Mor>,
     Cod: Category<Ob = Ob, Mor = Mor>,
 {
     /// Validates that the functor is well-defined on the given f.p. category.
     pub fn validate_on(
         &self,
-        dom: &FpCategory<V, E>,
-    ) -> Result<(), NonEmpty<InvalidFpFunctor<V, E>>> {
+        dom: &FpCategory,
+    ) -> Result<(), NonEmpty<InvalidFpFunctor<QualifiedName, QualifiedName>>> {
         crate::validate::wrap_errors(self.iter_invalid_on(dom))
     }
 
     /// Iterates over failures to be functorial on the given f.p. category.
     pub fn iter_invalid_on<'b>(
         &'b self,
-        dom: &'b FpCategory<V, E>,
-    ) -> impl Iterator<Item = InvalidFpFunctor<V, E>> + 'b {
+        dom: &'b FpCategory,
+    ) -> impl Iterator<Item = InvalidFpFunctor<QualifiedName, QualifiedName>> + 'b {
         let generator_errors =
             GraphMorphism(self.map, dom.generators(), UnderlyingGraph::ref_cast(self.cod))
                 .iter_invalid()
