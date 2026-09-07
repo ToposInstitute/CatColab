@@ -1,7 +1,7 @@
 import { Entity, SimpleSchema } from "catcolab-logics/simple-schema";
 import { describe, expect, test } from "vitest";
 
-// RFC-0006 "Transactions": a set of changes staged on drafts, invisible on the
+// Transactions: a set of changes staged on drafts, invisible on the
 // source documents until committed, and revertible as a whole via the returned
 // commit.
 import { createBinder, type Result } from "catcolab-documents";
