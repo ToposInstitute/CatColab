@@ -208,7 +208,9 @@ impl FpDblModel for DiscreteDblModel {
     }
 
     fn equations(&self) -> impl Iterator<Item = (Self::Mor, Self::Mor)> {
-        self.category.equations().map(|PathEq { lhs, rhs }| (lhs.clone(), rhs.clone()))
+        self.category
+            .equations()
+            .map(|(_, PathEq { lhs, rhs })| (lhs.clone(), rhs.clone()))
     }
 }
 

@@ -85,10 +85,7 @@ pub type DiscreteDblModelMorphism<'a> =
 
 impl<'a> DiscreteDblModelMorphism<'a> {
     /// Iterates over failures of the mapping to be a model morphism.
-    pub fn iter_invalid(
-        &self,
-    ) -> impl Iterator<Item = InvalidDblModelMorphism<QualifiedName, QualifiedName>> + 'a + use<'a>
-    {
+    pub fn iter_invalid(&self) -> impl Iterator<Item = InvalidDblModelMorphism> + 'a + use<'a> {
         let DblModelMorphism(DiscreteDblModelMapping(mapping), dom, cod) = *self;
         let category_errors: Vec<_> = mapping
             .functor_into(&cod.category)
@@ -193,7 +190,7 @@ impl<'a> DiscreteDblModelMorphism<'a> {
 }
 
 impl Validate for DiscreteDblModelMorphism<'_> {
-    type ValidationError = InvalidDblModelMorphism<QualifiedName, QualifiedName>;
+    type ValidationError = InvalidDblModelMorphism;
 
     fn validate(&self) -> Result<(), NonEmpty<Self::ValidationError>> {
         validate::wrap_errors(self.iter_invalid())

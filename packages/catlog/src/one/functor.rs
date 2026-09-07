@@ -19,7 +19,8 @@ use ref_cast::RefCast;
 use thiserror::Error;
 
 use super::{
-    Category, FpCategory, GraphMapping, GraphMorphism, InvalidGraphMorphism, Path, UnderlyingGraph,
+    Category, FpCategory, GraphMapping, GraphMorphism, InvalidGraphMorphism, Path, QualifiedPath,
+    UnderlyingGraph,
 };
 use crate::zero::{Column, Mapping, QualifiedName};
 
@@ -169,11 +170,11 @@ impl<'a, Ob, Mor, Map, Cod> CategoryMap for FpFunctor<'a, Map, Cod>
 where
     Ob: Eq + Clone,
     Mor: Eq + Clone,
-    Map: GraphMapping<CodV = Ob, CodE = Mor>,
+    Map: GraphMapping<DomV = QualifiedName, DomE = QualifiedName, CodV = Ob, CodE = Mor>,
     Cod: Category<Ob = Ob, Mor = Mor>,
 {
-    type DomOb = Map::DomV;
-    type DomMor = Path<Map::DomV, Map::DomE>;
+    type DomOb = QualifiedName;
+    type DomMor = QualifiedPath;
     type CodOb = Ob;
     type CodMor = Mor;
     type ObMap = Map::VertexMap;
@@ -191,13 +192,13 @@ impl<'a, Ob, Mor, Map, Cod> FgCategoryMap for FpFunctor<'a, Map, Cod>
 where
     Ob: Eq + Clone,
     Mor: Eq + Clone,
-    Map: GraphMapping<CodV = Ob, CodE = Mor>,
+    Map: GraphMapping<DomV = QualifiedName, DomE = QualifiedName, CodV = Ob, CodE = Mor>,
     Map::VertexMap: Column,
     Map::EdgeMap: Column,
     Cod: Category<Ob = Ob, Mor = Mor>,
 {
-    type ObGen = Map::DomV;
-    type MorGen = Map::DomE;
+    type ObGen = QualifiedName;
+    type MorGen = QualifiedName;
     type ObGenMap = Map::VertexMap;
     type MorGenMap = Map::EdgeMap;
 
@@ -214,23 +215,21 @@ where
 #[repr(transparent)]
 pub struct FpFunctorMorMap<'a, Map, Cod>(FpFunctor<'a, Map, Cod>);
 
-impl<'a, V, E, Ob, Mor, Map, Cod> Mapping for FpFunctorMorMap<'a, Map, Cod>
+impl<'a, Ob, Mor, Map, Cod> Mapping for FpFunctorMorMap<'a, Map, Cod>
 where
-    V: Eq + Clone,
-    E: Eq + Clone,
     Mor: Eq + Clone,
-    Map: GraphMapping<DomV = V, DomE = E, CodV = Ob, CodE = Mor>,
+    Map: GraphMapping<DomV = QualifiedName, DomE = QualifiedName, CodV = Ob, CodE = Mor>,
     Cod: Category<Ob = Ob, Mor = Mor>,
 {
-    type Dom = Path<V, E>;
+    type Dom = QualifiedPath;
     type Cod = Mor;
 
-    fn apply(&self, path: Path<V, E>) -> Option<Mor> {
+    fn apply(&self, path: QualifiedPath) -> Option<Mor> {
         path.partial_map(|v| self.0.map.apply_vertex(v), |e| self.0.map.apply_edge(e))
             .map(|path| self.0.cod.compose(path))
     }
 
-    fn is_set(&self, path: &Path<V, E>) -> bool {
+    fn is_set(&self, path: &QualifiedPath) -> bool {
         match path {
             Path::Id(v) => self.0.map.is_vertex_assigned(v),
             Path::Seq(edges) => edges.iter().all(|e| self.0.map.is_edge_assigned(e)),
@@ -246,10 +245,7 @@ where
     Cod: Category<Ob = Ob, Mor = Mor>,
 {
     /// Validates that the functor is well-defined on the given f.p. category.
-    pub fn validate_on(
-        &self,
-        dom: &FpCategory,
-    ) -> Result<(), NonEmpty<InvalidFpFunctor<QualifiedName, QualifiedName>>> {
+    pub fn validate_on(&self, dom: &FpCategory) -> Result<(), NonEmpty<InvalidFpFunctor>> {
         crate::validate::wrap_errors(self.iter_invalid_on(dom))
     }
 
@@ -257,7 +253,7 @@ where
     pub fn iter_invalid_on<'b>(
         &'b self,
         dom: &'b FpCategory,
-    ) -> impl Iterator<Item = InvalidFpFunctor<QualifiedName, QualifiedName>> + 'b {
+    ) -> impl Iterator<Item = InvalidFpFunctor> + 'b {
         let generator_errors =
             GraphMorphism(self.map, dom.generators(), UnderlyingGraph::ref_cast(self.cod))
                 .iter_invalid()
@@ -267,12 +263,12 @@ where
                     InvalidGraphMorphism::Src(e) => InvalidFpFunctor::Dom(e),
                     InvalidGraphMorphism::Tgt(e) => InvalidFpFunctor::Cod(e),
                 });
-        let equation_errors = dom.equations().enumerate().filter_map(|(id, eq)| {
+        let equation_errors = dom.equations().filter_map(|(name, eq)| {
             let map = self.mor_map();
             if let (Some(lhs), Some(rhs)) = (map.apply_to_ref(&eq.lhs), map.apply_to_ref(&eq.rhs))
                 && !self.cod.morphisms_are_equal(lhs, rhs)
             {
-                Some(InvalidFpFunctor::Eq(id))
+                Some(InvalidFpFunctor::Eq(name))
             } else {
                 None
             }
@@ -283,26 +279,26 @@ where
 
 /// A failure of a map out of an f.p. category to be functorial.
 #[derive(Debug, Error, PartialEq, Eq)]
-pub enum InvalidFpFunctor<V, E> {
+pub enum InvalidFpFunctor {
     /// An object generator not mapped to an object in the codomain category.
     #[error("Object generator `{0}` is not mapped to an object in the codomain")]
-    ObGen(V),
+    ObGen(QualifiedName),
 
     /// A morphism generator not mapped to a morphism in the codomain category.
     #[error("Morphism generator `{0}` is not mapped to a morphism in the codomain")]
-    MorGen(E),
+    MorGen(QualifiedName),
 
     /// A morphism generator whose domain is not preserved.
     #[error("Domain of morphism generator `{0}` is not preserved")]
-    Dom(E),
+    Dom(QualifiedName),
 
     /// A morphism generator whose codomain is not preserved.
     #[error("Codomain of morphism generator `{0}` is not preserved")]
-    Cod(E),
+    Cod(QualifiedName),
 
     /// A path equation in domain presentation that is not respected.
     #[error("Path equation `{0}` is not respected")]
-    Eq(usize),
+    Eq(QualifiedName),
 }
 
 #[cfg(test)]
@@ -310,6 +306,7 @@ mod tests {
     use super::*;
     use crate::one::fp_category::{sch_graph, sch_hgraph, sch_sgraph};
     use crate::zero::{HashColumn, name};
+    use nonempty::nonempty;
 
     /// Isomorphism b/w the schemas for half-edge graphs and symmetric graphs.
     ///
@@ -345,7 +342,12 @@ mod tests {
         ]);
         let data = FpFunctorData::new(ob_map, mor_map);
         let functor = data.functor_into(&sch_graph);
-        // Two equations fail, namely that `inv` swaps `src` and `tgt`.
-        assert_eq!(functor.validate_on(&sch_sgraph).map_err(|errs| errs.len()), Err(2));
+        assert_eq!(
+            functor.validate_on(&sch_sgraph),
+            Err(nonempty![
+                InvalidFpFunctor::Eq(name("inv_src")),
+                InvalidFpFunctor::Eq(name("inv_tgt")),
+            ])
+        );
     }
 }
