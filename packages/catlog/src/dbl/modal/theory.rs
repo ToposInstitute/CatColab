@@ -670,7 +670,7 @@ impl<Kind: DblTheoryKind> Validate for ModalDblTheory<Kind> {
             self.pro_composites.iter().enumerate().filter_map(|(id, ((fst, snd), comp))| {
                 let eq = PathEq::new(Path::pair(fst.clone(), snd.clone()), comp.clone().into());
                 let errs = eq.validate_in(graph).err()?;
-                Some(InvalidDblTheory::MorTypeEq(id, errs))
+                Some(InvalidDblTheory::MorTypeComposite(id, errs))
             });
 
         validate::wrap_errors(arr_errors.chain(pro_errors))

@@ -402,7 +402,10 @@ pub enum InvalidDblTheory {
     MorOpBoundary(QualifiedName),
 
     /// Equation between morphism types with one or more errors.
-    MorTypeEq(usize, NonEmpty<InvalidPathEq>),
+    MorTypeEq(QualifiedName, NonEmpty<InvalidPathEq>),
+
+    /// Declared composite of morphism types with one or more errors.
+    MorTypeComposite(usize, NonEmpty<InvalidPathEq>),
 
     /// Equation between object operations with one or more errors.
     ObOpEq(usize, NonEmpty<InvalidPathEq>),

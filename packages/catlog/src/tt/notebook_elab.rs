@@ -336,19 +336,13 @@ impl<'a> Elaborator<'a> {
                 (ty_s, ty_v)
             }
             (Some(errors), _, _) => {
-                // FIXME: The assumption in InvalidDblModel that we should already have the vector of equations
-                // built up, so as to give the index in the first argument here, doesn't hold in this case.
-                // It would be best not to use InvalidDblModel here before we've begun
-                // to build a DblModel.
-                self.ty_error(InvalidDblModel::Eqn(None, errors))
+                self.ty_error(InvalidDblModel::Eqn(QualifiedName::from(eqn_decl.id), errors))
             }
             _ => unreachable!(),
         }
     }
 
     fn equation_cell(&mut self, eqn_decl: &nb::EqnDecl) -> (NameSegment, LabelSegment, TyS, TyV) {
-        // Kind of funny that the decl's id produces the cell's name
-        // but the decl's name produces the cell's label.
         let name = NameSegment::Uuid(eqn_decl.id);
         let label = LabelSegment::Text(ustr(&eqn_decl.name));
         let (ty_s, ty_v) = self.equation_cell_ty(eqn_decl);

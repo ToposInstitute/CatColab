@@ -119,7 +119,7 @@ mod tests {
         let mut sgn = FpCategory::new();
         sgn.add_ob_generator(name("*"));
         sgn.add_mor_generator(name("n"), name("*"), name("*"));
-        sgn.equate(Path::pair(name("n"), name("n")), Path::Id(name("*")));
+        sgn.equate(name("involutivity"), Path::pair(name("n"), name("n")), Path::Id(name("*")));
 
         let th = DiscreteDblTheory::from(sgn);
         assert!(th.has_ob_type(&name("*")));

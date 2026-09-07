@@ -25,7 +25,7 @@ use thiserror::Error;
 use super::{category::*, graph::*, path::*};
 use crate::egglog_util::EGraphUtils;
 use crate::validate::{self, Validate};
-use crate::zero::QualifiedName;
+use crate::zero::{Column, HashColumn, MutMapping, QualifiedName};
 
 /// A finitely presented category backed by an e-graph.
 ///
@@ -47,7 +47,7 @@ use crate::zero::QualifiedName;
 #[derivative(Debug, Default(new = "true"), PartialEq, Eq)]
 pub struct FpCategory {
     generators: HashGraph<QualifiedName, QualifiedName>,
-    equations: Vec<QualifiedPathEq>,
+    equations: HashColumn<QualifiedName, QualifiedPathEq>,
     #[derivative(Debug = "ignore", PartialEq = "ignore")]
     state: RefCell<CategoryEGraph>,
 }
@@ -60,7 +60,7 @@ impl FpCategory {
 
     /// Gets the path equations of the category presentation.
     pub fn equations(&self) -> impl Iterator<Item = &QualifiedPathEq> {
-        self.equations.iter()
+        self.equations.values()
     }
 
     /// Is the category freely generated?
@@ -143,16 +143,19 @@ impl FpCategory {
     }
 
     /// Adds a path equation to the presentation.
-    pub fn add_equation(&mut self, eq: QualifiedPathEq) {
-        self.equations.push(eq.clone());
+    pub fn add_equation(&mut self, name: QualifiedName, eq: QualifiedPathEq) {
+        assert!(
+            self.equations.set(name, eq.clone()).is_none(),
+            "Equation with given name already exists"
+        );
         let (lhs, rhs) = (self.path_expr(eq.lhs), self.path_expr(eq.rhs));
         let action = action!((union (unquote lhs) (unquote rhs)));
         self.state.get_mut().egraph.run_action(action).unwrap();
     }
 
     /// Equates two path in the presentation.
-    pub fn equate(&mut self, lhs: QualifiedPath, rhs: QualifiedPath) {
-        self.add_equation(PathEq::new(lhs, rhs));
+    pub fn equate(&mut self, name: QualifiedName, lhs: QualifiedPath, rhs: QualifiedPath) {
+        self.add_equation(name, PathEq::new(lhs, rhs));
     }
 
     fn path_expr(&self, path: QualifiedPath) -> Expr {
@@ -172,8 +175,8 @@ impl FpCategory {
             InvalidGraph::Src(e) => InvalidFpCategory::Dom(e),
             InvalidGraph::Tgt(e) => InvalidFpCategory::Cod(e),
         });
-        let equation_errors = self.equations.iter().enumerate().filter_map(|(i, eq)| {
-            Some(InvalidFpCategory::Eqn(i, eq.validate_in(&self.generators).err()?))
+        let equation_errors = self.equations.iter().filter_map(|(name, eq)| {
+            Some(InvalidFpCategory::Eqn(name, eq.validate_in(&self.generators).err()?))
         });
         generator_errors.chain(equation_errors)
     }
@@ -250,7 +253,7 @@ pub enum InvalidFpCategory {
 
     /// Path equation with one or more errors.
     #[error("Path equation `{0}` is not valid: `{1:?}`")]
-    Eqn(usize, NonEmpty<InvalidPathEq>),
+    Eqn(QualifiedName, NonEmpty<InvalidPathEq>),
 }
 
 /// E-graph state for computing with categories in egglog.
@@ -449,9 +452,13 @@ pub fn sch_sgraph() -> FpCategory {
     cat.add_mor_generator(name("src"), name("E"), name("V"));
     cat.add_mor_generator(name("tgt"), name("E"), name("V"));
     cat.add_mor_generator(name("inv"), name("E"), name("E"));
-    cat.equate(Path::pair(name("inv"), name("inv")), Path::empty(name("E")));
-    cat.equate(Path::pair(name("inv"), name("src")), Path::single(name("tgt")));
-    cat.equate(Path::pair(name("inv"), name("tgt")), Path::single(name("src")));
+    cat.equate(
+        name("involutivity"),
+        Path::pair(name("inv"), name("inv")),
+        Path::empty(name("E")),
+    );
+    cat.equate(name("inv_src"), Path::pair(name("inv"), name("src")), Path::single(name("tgt")));
+    cat.equate(name("inv_tgt"), Path::pair(name("inv"), name("tgt")), Path::single(name("src")));
     cat
 }
 
@@ -462,7 +469,11 @@ pub fn sch_hgraph() -> FpCategory {
     cat.add_ob_generators([name("V"), name("H")]);
     cat.add_mor_generator(name("vert"), name("H"), name("V"));
     cat.add_mor_generator(name("inv"), name("H"), name("H"));
-    cat.equate(Path::pair(name("inv"), name("inv")), Path::empty(name("H")));
+    cat.equate(
+        name("involutivity"),
+        Path::pair(name("inv"), name("inv")),
+        Path::empty(name("H")),
+    );
     cat
 }
 
