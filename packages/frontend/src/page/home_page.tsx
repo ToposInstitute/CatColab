@@ -8,10 +8,11 @@ import FilePlus from "lucide-solid/icons/file-plus";
 import Files from "lucide-solid/icons/files";
 import InfoIcon from "lucide-solid/icons/info";
 import LogInIcon from "lucide-solid/icons/log-in";
+import { siGithub, siZulip } from "simple-icons";
 import { useAuth, useFirebaseApp } from "solid-firebase";
 import { createSignal, Match, Show, Switch } from "solid-js";
 
-import { Button } from "catcolab-ui-components";
+import { Button, SimpleIcon } from "catcolab-ui-components";
 import { useApi } from "../api";
 import { createModel } from "../model/document";
 import { stdTheories } from "../stdlib";
@@ -137,11 +138,7 @@ export default function HomePage() {
                                             rel="noopener"
                                         >
                                             <span class="resource-icon">
-                                                <img
-                                                    width="24"
-                                                    height="24"
-                                                    src="https://cdn.jsdelivr.net/npm/simple-icons@latest/icons/github.svg"
-                                                />
+                                                <SimpleIcon icon={siGithub} />
                                             </span>
                                             <span>Source code</span>
                                             <span class="external-link-icon">
@@ -155,7 +152,7 @@ export default function HomePage() {
                                             rel="noopener"
                                         >
                                             <span class="resource-icon">
-                                                <img src="/zulip_icon.png" width="24" height="24" />
+                                                <SimpleIcon icon={siZulip} />
                                             </span>
                                             <span>Zulip chatroom</span>
                                             <span class="external-link-icon">
