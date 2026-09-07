@@ -71,7 +71,7 @@ const backendStore: DocumentStore<StoreHandle> = {
         }
         return { id: refId, version: null, server: backend.serverHost };
     },
-    listInstancesOf: async (handle) => {
+    listChildren: async (handle) => {
         const refId = refByDocId.get(handle.docHandle.documentId);
         if (!refId) {
             throw new Error("handle is not registered with this store");

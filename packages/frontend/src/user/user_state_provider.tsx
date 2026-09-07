@@ -5,7 +5,7 @@ import { useFirebaseApp } from "solid-firebase";
 import { type JSX, onCleanup } from "solid-js";
 import { createStore, reconcile } from "solid-js/store";
 
-import { useApi } from "../api";
+import { BinderContext, createApiBinder, useApi } from "../api";
 import { unwrap } from "../api/rpc";
 import { normalizeImmutableStrings } from "../util/immutable_string";
 import { INITIAL_USER_STATE, UserStateContext } from "./user_state_context";
@@ -14,6 +14,12 @@ export function UserStateProvider(props: { children: JSX.Element }) {
     const api = useApi();
     const firebaseApp = useFirebaseApp();
     const [userState, setUserState] = createStore<UserState>(INITIAL_USER_STATE);
+
+    // The binder resolves relations between the user's documents through the
+    // user state, so it is created here, where the state lives, and provided
+    // alongside it. The state store updates in place, so the binder keeps
+    // seeing current data across auth changes.
+    const binder = createApiBinder(api, userState);
 
     let currentDocHandle: DocHandle<UserState> | null = null;
     let currentChangeHandler: ((arg: { doc: UserState }) => void) | null = null;
@@ -61,6 +67,10 @@ export function UserStateProvider(props: { children: JSX.Element }) {
     });
 
     return (
-        <UserStateContext.Provider value={userState}>{props.children}</UserStateContext.Provider>
+        <BinderContext.Provider value={binder}>
+            <UserStateContext.Provider value={userState}>
+                {props.children}
+            </UserStateContext.Provider>
+        </BinderContext.Provider>
     );
 }

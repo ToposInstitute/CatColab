@@ -32,9 +32,9 @@ function createFixture() {
     );
     const instanceLiveDoc = makeLiveDoc<InstanceDocument>(instanceAutomergeHandle);
 
-    // A user state document whose backlinks record the instance as depending
-    // on the schema, the way the backend computes `usedBy` relations.
-    const userStateDoc = repo.create({
+    // A user state whose backlinks record the instance as depending on the
+    // schema, the way the backend computes `usedBy` relations.
+    const userState = {
         documents: {
             [schemaRef]: {
                 usedBy: [{ refId: uuidParse(instanceRef), relationType: "instance-of" }],
@@ -42,16 +42,10 @@ function createFixture() {
             },
             [instanceRef]: { usedBy: [], deletedAt: null },
         },
-    } as unknown as UserState);
+    } as unknown as UserState;
 
     const api = {
         serverHost: server,
-        repo,
-        rpc: {
-            get_user_state_doc_id: {
-                query: async () => ({ tag: "Ok", content: userStateDoc.documentId }) as const,
-            },
-        },
         async getDocHandle(refId: string) {
             if (refId === schemaRef) {
                 return schemaAutomergeHandle;
@@ -62,7 +56,7 @@ function createFixture() {
             throw new Error(`Unknown document ref: ${refId}`);
         },
     } as unknown as Api;
-    const store = createApiDocumentStore(api);
+    const store = createApiDocumentStore(api, userState);
 
     return {
         binder: createBinder(store),
@@ -228,7 +222,7 @@ describe("API document store", () => {
         }
 
         // The backend's ref ids are resolved back into store handles.
-        const instances = await store.listInstancesOf(schema.content);
+        const instances = await store.listChildren(schema.content);
         expect(instances).toHaveLength(1);
         expect(instances[0]?.automergeHandle).toBe(instanceAutomergeHandle);
         expect(store.getDocumentView(instances[0]!).type).toBe("instance");
@@ -239,7 +233,7 @@ describe("API document store", () => {
         if (instance.tag === "Err") {
             throw new Error("expected instance ref to resolve");
         }
-        expect(await store.listInstancesOf(instance.content)).toEqual([]);
+        expect(await store.listChildren(instance.content)).toEqual([]);
     });
 
     test("copyValue detaches Solid projection values", async () => {

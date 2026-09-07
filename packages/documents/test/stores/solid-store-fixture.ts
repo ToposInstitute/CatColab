@@ -24,7 +24,7 @@ const solidStoreIdFor = (handle: SolidStoreHandle): string => {
     return id;
 };
 
-// Handles minted by `createHandle`, so `listInstancesOf` can enumerate them.
+// Handles minted by `createHandle`, so `listChildren` can enumerate them.
 // Drafts are excluded: only committed documents answer the query.
 const createdHandles = new Set<SolidStoreHandle>();
 
@@ -87,7 +87,7 @@ export const solidStore: DocumentStore<SolidStoreHandle> = {
     },
     getDocumentView: (handle) => handle.docView,
     getDocumentRef: (handle) => ({ id: solidStoreIdFor(handle), version: null, server: "" }),
-    listInstancesOf: async (handle) =>
+    listChildren: async (handle) =>
         [...createdHandles].filter((other) => {
             const doc = other.docView;
             return (
