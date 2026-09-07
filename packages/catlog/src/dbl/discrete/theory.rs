@@ -20,7 +20,7 @@ use crate::zero::QualifiedName;
 /// - a double category whose underlying categories are both discrete categories
 #[derive(From, RefCast, Debug)]
 #[repr(transparent)]
-pub struct DiscreteDblTheory(pub QualifiedFpCategory);
+pub struct DiscreteDblTheory(pub FpCategory);
 
 impl VDblCategory for DiscreteDblTheory {
     type Ob = QualifiedName;
@@ -119,7 +119,7 @@ mod tests {
         let mut sgn = FpCategory::new();
         sgn.add_ob_generator(name("*"));
         sgn.add_mor_generator(name("n"), name("*"), name("*"));
-        sgn.equate(Path::pair(name("n"), name("n")), Path::Id(name("*")));
+        sgn.equate(name("involutivity"), Path::pair(name("n"), name("n")), Path::Id(name("*")));
 
         let th = DiscreteDblTheory::from(sgn);
         assert!(th.has_ob_type(&name("*")));

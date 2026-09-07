@@ -14,8 +14,7 @@
 //! to check for equivalence of paths under the congruence.
 
 use std::cell::RefCell;
-use std::fmt::Debug;
-use std::{collections::HashMap, hash::Hash};
+use std::collections::HashMap;
 
 use derivative::Derivative;
 use egglog::ast::{Command, Expr, RunConfig, Schedule, Schema};
@@ -26,7 +25,7 @@ use thiserror::Error;
 use super::{category::*, graph::*, path::*};
 use crate::egglog_util::EGraphUtils;
 use crate::validate::{self, Validate};
-use crate::zero::QualifiedName;
+use crate::zero::{Column, HashColumn, MutMapping, QualifiedName};
 
 /// A finitely presented category backed by an e-graph.
 ///
@@ -45,32 +44,22 @@ use crate::zero::QualifiedName;
 /// pattern to encapsulate the mutability of the e-graph and perform borrow checking
 /// at runtime. The current implementation allows only *single-threaded* usage.
 #[derive(Clone, Derivative)]
-#[derivative(Debug(bound = "V: Debug, E: Debug"))]
-#[derivative(Default(bound = "", new = "true"))]
-#[derivative(PartialEq(bound = "V: Eq + Hash, E: Eq + Hash"))]
-#[derivative(Eq(bound = "V: Eq + Hash, E: Eq + Hash"))]
-pub struct FpCategory<V, E> {
-    generators: HashGraph<V, E>,
-    equations: Vec<PathEq<V, E>>,
+#[derivative(Debug, Default(new = "true"), PartialEq, Eq)]
+pub struct FpCategory {
+    generators: HashGraph<QualifiedName, QualifiedName>,
+    equations: HashColumn<QualifiedName, QualifiedPathEq>,
     #[derivative(Debug = "ignore", PartialEq = "ignore")]
-    state: RefCell<CategoryEGraph<V, E>>,
+    state: RefCell<CategoryEGraph>,
 }
 
-/// A finitely presented category whose generators have qualified names.
-pub type QualifiedFpCategory = FpCategory<QualifiedName, QualifiedName>;
-
-impl<V, E> FpCategory<V, E>
-where
-    V: Eq + Clone + Hash,
-    E: Eq + Clone + Hash,
-{
+impl FpCategory {
     /// Gets the generating graph of the category presentation.
-    pub fn generators(&self) -> &(impl FinGraph<V = V, E = E> + use<V, E>) {
+    pub fn generators(&self) -> &impl FinGraph<V = QualifiedName, E = QualifiedName> {
         &self.generators
     }
 
     /// Gets the path equations of the category presentation.
-    pub fn equations(&self) -> impl Iterator<Item = &PathEq<V, E>> {
+    pub fn equations(&self) -> impl Iterator<Item = (QualifiedName, &QualifiedPathEq)> {
         self.equations.iter()
     }
 
@@ -80,7 +69,7 @@ where
     }
 
     /// Adds an object generator.
-    pub fn add_ob_generator(&mut self, v: V) {
+    pub fn add_ob_generator(&mut self, v: QualifiedName) {
         assert!(self.generators.add_vertex(v.clone()), "Object generator already exists");
         let state = self.state.get_mut();
         let expr = state.ob_generator(v);
@@ -88,14 +77,14 @@ where
     }
 
     /// Adds several object generators at once.
-    pub fn add_ob_generators(&mut self, iter: impl IntoIterator<Item = V>) {
+    pub fn add_ob_generators(&mut self, iter: impl IntoIterator<Item = QualifiedName>) {
         for v in iter {
             self.add_ob_generator(v)
         }
     }
 
     /// Adds a morphism generator.
-    pub fn add_mor_generator(&mut self, e: E, dom: V, cod: V) {
+    pub fn add_mor_generator(&mut self, e: QualifiedName, dom: QualifiedName, cod: QualifiedName) {
         assert!(
             self.generators.add_edge(e.clone(), dom.clone(), cod.clone()),
             "Morphism generator already exists"
@@ -112,7 +101,7 @@ where
     }
 
     /// Adds a morphism generator without declaring its (co)domain.
-    pub fn make_mor_generator(&mut self, e: E) {
+    pub fn make_mor_generator(&mut self, e: QualifiedName) {
         assert!(self.generators.make_edge(e.clone()), "Morphism generator already exists");
         let state = self.state.get_mut();
         let expr = state.mor_generator(e);
@@ -120,17 +109,17 @@ where
     }
 
     /// Gets the domain of a morphism generator.
-    pub fn get_dom(&self, e: &E) -> Option<&V> {
+    pub fn get_dom(&self, e: &QualifiedName) -> Option<&QualifiedName> {
         self.generators.get_src(e)
     }
 
     /// Gets the codomain of a morphism generator.
-    pub fn get_cod(&self, e: &E) -> Option<&V> {
+    pub fn get_cod(&self, e: &QualifiedName) -> Option<&QualifiedName> {
         self.generators.get_tgt(e)
     }
 
     /// Sets the domain of a morphism generator.
-    pub fn set_dom(&mut self, e: E, v: V) {
+    pub fn set_dom(&mut self, e: QualifiedName, v: QualifiedName) {
         assert!(
             self.generators.set_src(e.clone(), v.clone()).is_none(),
             "Domain of morphism generator should not already be set"
@@ -142,7 +131,7 @@ where
     }
 
     /// Sets the codomain of a morphism generator.
-    pub fn set_cod(&mut self, e: E, v: V) {
+    pub fn set_cod(&mut self, e: QualifiedName, v: QualifiedName) {
         assert!(
             self.generators.set_tgt(e.clone(), v.clone()).is_none(),
             "Codomain of morphism generator should not already be set"
@@ -154,19 +143,22 @@ where
     }
 
     /// Adds a path equation to the presentation.
-    pub fn add_equation(&mut self, eq: PathEq<V, E>) {
-        self.equations.push(eq.clone());
+    pub fn add_equation(&mut self, name: QualifiedName, eq: QualifiedPathEq) {
+        assert!(
+            self.equations.set(name, eq.clone()).is_none(),
+            "Equation with given name already exists"
+        );
         let (lhs, rhs) = (self.path_expr(eq.lhs), self.path_expr(eq.rhs));
         let action = action!((union (unquote lhs) (unquote rhs)));
         self.state.get_mut().egraph.run_action(action).unwrap();
     }
 
     /// Equates two path in the presentation.
-    pub fn equate(&mut self, lhs: Path<V, E>, rhs: Path<V, E>) {
-        self.add_equation(PathEq::new(lhs, rhs));
+    pub fn equate(&mut self, name: QualifiedName, lhs: QualifiedPath, rhs: QualifiedPath) {
+        self.add_equation(name, PathEq::new(lhs, rhs));
     }
 
-    fn path_expr(&self, path: Path<V, E>) -> Expr {
+    fn path_expr(&self, path: QualifiedPath) -> Expr {
         path.map_reduce(
             |v| {
                 let ob = self.state.borrow_mut().ob_generator(v);
@@ -178,25 +170,21 @@ where
     }
 
     /// Iterates over failures to be a well-defined presentation of a category.
-    pub fn iter_invalid(&self) -> impl Iterator<Item = InvalidFpCategory<E>> + '_ {
+    pub fn iter_invalid(&self) -> impl Iterator<Item = InvalidFpCategory> + '_ {
         let generator_errors = self.generators.iter_invalid().map(|err| match err {
             InvalidGraph::Src(e) => InvalidFpCategory::Dom(e),
             InvalidGraph::Tgt(e) => InvalidFpCategory::Cod(e),
         });
-        let equation_errors = self.equations.iter().enumerate().filter_map(|(i, eq)| {
-            Some(InvalidFpCategory::Eqn(i, eq.validate_in(&self.generators).err()?))
+        let equation_errors = self.equations.iter().filter_map(|(name, eq)| {
+            Some(InvalidFpCategory::Eqn(name, eq.validate_in(&self.generators).err()?))
         });
         generator_errors.chain(equation_errors)
     }
 }
 
-impl<V, E> Category for FpCategory<V, E>
-where
-    V: Eq + Clone + Hash,
-    E: Eq + Clone + Hash,
-{
-    type Ob = V;
-    type Mor = Path<V, E>;
+impl Category for FpCategory {
+    type Ob = QualifiedName;
+    type Mor = QualifiedPath;
 
     fn has_ob(&self, x: &Self::Ob) -> bool {
         self.generators.has_vertex(x)
@@ -226,13 +214,9 @@ where
     }
 }
 
-impl<V, E> FgCategory for FpCategory<V, E>
-where
-    V: Eq + Clone + Hash,
-    E: Eq + Clone + Hash,
-{
-    type ObGen = V;
-    type MorGen = E;
+impl FgCategory for FpCategory {
+    type ObGen = QualifiedName;
+    type MorGen = QualifiedName;
 
     fn ob_generators(&self) -> impl Iterator<Item = Self::ObGen> {
         self.generators.vertices()
@@ -248,12 +232,8 @@ where
     }
 }
 
-impl<V, E> Validate for FpCategory<V, E>
-where
-    V: Eq + Clone + Hash,
-    E: Eq + Clone + Hash,
-{
-    type ValidationError = InvalidFpCategory<E>;
+impl Validate for FpCategory {
+    type ValidationError = InvalidFpCategory;
 
     fn validate(&self) -> Result<(), NonEmpty<Self::ValidationError>> {
         validate::wrap_errors(self.iter_invalid())
@@ -262,18 +242,18 @@ where
 
 /// A failure of a finite presentation of a category to be well defined.
 #[derive(Debug, Error)]
-pub enum InvalidFpCategory<E> {
+pub enum InvalidFpCategory {
     /// Morphism generator with an invalid domain.
     #[error("Domain of morphism generator `{0}` is not in the category")]
-    Dom(E),
+    Dom(QualifiedName),
 
     /// Morphism generator with an invalid codomain.
     #[error("Codomain of morphism generator `{0}` is not in the category")]
-    Cod(E),
+    Cod(QualifiedName),
 
     /// Path equation with one or more errors.
     #[error("Path equation `{0}` is not valid: `{1:?}`")]
-    Eqn(usize, NonEmpty<InvalidPathEq>),
+    Eqn(QualifiedName, NonEmpty<InvalidPathEq>),
 }
 
 /// E-graph state for computing with categories in egglog.
@@ -282,19 +262,15 @@ pub enum InvalidFpCategory<E> {
 /// mappings from vertices and edges in the category's generating graph to numeric
 /// IDs for generator terms in egglog.
 #[derive(Clone)]
-struct CategoryEGraph<V, E> {
+struct CategoryEGraph {
     egraph: EGraph,
-    ob_generators: HashMap<V, usize>,
-    mor_generators: HashMap<E, usize>,
+    ob_generators: HashMap<QualifiedName, usize>,
+    mor_generators: HashMap<QualifiedName, usize>,
 }
 
-impl<V, E> CategoryEGraph<V, E>
-where
-    V: Eq + Hash,
-    E: Eq + Hash,
-{
+impl CategoryEGraph {
     /// Constructs an object generator expression, assigning an ID if needed.
-    fn ob_generator(&mut self, v: V) -> Expr {
+    fn ob_generator(&mut self, v: QualifiedName) -> Expr {
         let n = self.ob_generators.len();
         let id: i64 = (*self.ob_generators.entry(v).or_insert(n))
             .try_into()
@@ -303,7 +279,7 @@ where
     }
 
     /// Constructs a morphism generator expression, assigning an ID if needed.
-    fn mor_generator(&mut self, e: E) -> Expr {
+    fn mor_generator(&mut self, e: QualifiedName) -> Expr {
         let n = self.mor_generators.len();
         let id: i64 = (*self.mor_generators.entry(e).or_insert(n))
             .try_into()
@@ -312,7 +288,7 @@ where
     }
 }
 
-impl<V, E> CategoryEGraph<V, E> {
+impl CategoryEGraph {
     /// Checks whether two morphism expressions are equal.
     ///
     /// The category axioms are saturated before performing the check.
@@ -334,7 +310,7 @@ impl<V, E> CategoryEGraph<V, E> {
     }
 }
 
-impl<V, E> Default for CategoryEGraph<V, E> {
+impl Default for CategoryEGraph {
     fn default() -> Self {
         let mut egraph = EGraph::default();
         init_category_egraph(&mut egraph).expect("Unexpected egglog error");
@@ -460,7 +436,7 @@ use crate::zero::name;
 
 /// The schema for graphs, an f.p. category.
 #[cfg(test)]
-pub fn sch_graph() -> QualifiedFpCategory {
+pub fn sch_graph() -> FpCategory {
     let mut cat = FpCategory::new();
     cat.add_ob_generators([name("V"), name("E")]);
     cat.add_mor_generator(name("src"), name("E"), name("V"));
@@ -470,26 +446,34 @@ pub fn sch_graph() -> QualifiedFpCategory {
 
 /// The schema for symmetric graphs, an f.p. category.
 #[cfg(test)]
-pub fn sch_sgraph() -> QualifiedFpCategory {
+pub fn sch_sgraph() -> FpCategory {
     let mut cat = FpCategory::new();
     cat.add_ob_generators([name("V"), name("E")]);
     cat.add_mor_generator(name("src"), name("E"), name("V"));
     cat.add_mor_generator(name("tgt"), name("E"), name("V"));
     cat.add_mor_generator(name("inv"), name("E"), name("E"));
-    cat.equate(Path::pair(name("inv"), name("inv")), Path::empty(name("E")));
-    cat.equate(Path::pair(name("inv"), name("src")), Path::single(name("tgt")));
-    cat.equate(Path::pair(name("inv"), name("tgt")), Path::single(name("src")));
+    cat.equate(
+        name("involutivity"),
+        Path::pair(name("inv"), name("inv")),
+        Path::empty(name("E")),
+    );
+    cat.equate(name("inv_src"), Path::pair(name("inv"), name("src")), Path::single(name("tgt")));
+    cat.equate(name("inv_tgt"), Path::pair(name("inv"), name("tgt")), Path::single(name("src")));
     cat
 }
 
 /// The schema for half-edge graphs, an f.p. category.
 #[cfg(test)]
-pub fn sch_hgraph() -> QualifiedFpCategory {
+pub fn sch_hgraph() -> FpCategory {
     let mut cat = FpCategory::new();
     cat.add_ob_generators([name("V"), name("H")]);
     cat.add_mor_generator(name("vert"), name("H"), name("V"));
     cat.add_mor_generator(name("inv"), name("H"), name("H"));
-    cat.equate(Path::pair(name("inv"), name("inv")), Path::empty(name("H")));
+    cat.equate(
+        name("involutivity"),
+        Path::pair(name("inv"), name("inv")),
+        Path::empty(name("H")),
+    );
     cat
 }
 

@@ -145,7 +145,7 @@ pub trait FpDblModel: DblModel + FgCategory {
     }
 
     /// Iterates over equations between morphisms.
-    fn equations(&self) -> impl Iterator<Item = (Self::Mor, Self::Mor)>;
+    fn equations(&self) -> impl Iterator<Item = (QualifiedName, Self::Mor, Self::Mor)>;
 }
 
 /// A mutable, finitely generated model of a double theory.
@@ -251,13 +251,17 @@ impl DblModelPrinter {
                 + Model::mor_type_to_doc(&model.mor_generator_type(&name))
         });
 
-        let eqn_entries = model.equations().map(|(lhs, rhs)| {
+        let eqn_entries = model.equations().map(|(name, lhs, rhs)| {
             let mor_type = Model::mor_type_to_doc(&model.mor_type(&lhs));
-            let src = model.ob_to_doc(&model.dom(&lhs), ob_ns, mor_ns);
-            let tgt = model.ob_to_doc(&model.cod(&lhs), ob_ns, mor_ns);
+            let dom = model.ob_to_doc(&model.dom(&lhs), ob_ns, mor_ns);
+            let cod = model.ob_to_doc(&model.cod(&lhs), ob_ns, mor_ns);
             let lhs = model.mor_to_doc(&lhs, ob_ns, mor_ns);
             let rhs = model.mor_to_doc(&rhs, ob_ns, mor_ns);
-            lhs + t(" = ") + rhs + t(" : ") + mor_type.parens() + tuple([src, tgt])
+            let eqn = lhs + t(" = ") + rhs + t(" : ") + mor_type.parens() + tuple([dom, cod]);
+            match mor_ns.label(&name) {
+                Some(label) => t(label.to_string()) + t(" : ") + eqn,
+                None => eqn,
+            }
         });
 
         let entries = ob_entries.chain(mor_entries).chain(eqn_entries);
@@ -299,9 +303,7 @@ pub enum InvalidDblModel {
     CodType(QualifiedName),
 
     /// Equation between morphisms has one or more errors.
-    ///
-    /// FIXME: should not really be an Option, fix after issue 1017 is resolved..
-    Eqn(Option<usize>, NonEmpty<InvalidModelEqn>),
+    Eqn(QualifiedName, NonEmpty<InvalidModelEqn>),
 
     /// Tried to us a feature not yet supported by the elaborator.
     UnsupportedFeature(Feature),
