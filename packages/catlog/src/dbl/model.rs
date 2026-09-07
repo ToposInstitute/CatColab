@@ -299,9 +299,7 @@ pub enum InvalidDblModel {
     CodType(QualifiedName),
 
     /// Equation between morphisms has one or more errors.
-    ///
-    /// FIXME: should not really be an Option, fix after issue 1017 is resolved..
-    Eqn(Option<usize>, NonEmpty<InvalidModelEqn>),
+    Eqn(QualifiedName, NonEmpty<InvalidModelEqn>),
 
     /// Tried to us a feature not yet supported by the elaborator.
     UnsupportedFeature(Feature),
