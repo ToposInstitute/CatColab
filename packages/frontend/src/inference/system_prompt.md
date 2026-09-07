@@ -85,15 +85,46 @@ Instance issues: `issues` from `validate()` is an array of `{ message, path, iss
 
 Column typing: a column's type comes from the schema morphism's codomain. A codomain object labeled `"Bool"`, `"Int"`, `"Float"`, or `"String"` gives a column of that literal type; any other label gives a `String` column. A codomain that is another table entity gives a row-reference column.
 
-Example --- populate tables:
+Example --- populate tables, checking issues along the way:
 ```js
-const { tables } = await inst.validate();
+const { tables, issues } = await inst.validate();
+if (issues.length > 0) return issues; // report existing issues instead of editing blindly
 const companyTable = tables.find((table) => table.label === "Company");
 const personTable = tables.find((table) => table.label === "Person");
-const acme = (await inst.addRow(companyTable, { name: "Acme" })).content;
-await inst.addRow(personTable, { name: "Alice", employer: acme });
+const acme = await inst.addRow(companyTable, { name: "Acme" });
+if (acme.tag === "Err") return acme.content; // the row was not added; content lists the issues
+const alice = await inst.addRow(personTable, { name: "Alice", employer: acme.content });
+if (alice.tag === "Err") return alice.content;
 return (await inst.validate()).issues;
 ```
+
+Example --- add a batch of rows with computed values:
+```js
+const { tables, issues } = await inst.validate();
+if (issues.length > 0) return issues;
+const orderTable = tables.find((table) => table.label === "Order");
+const ordered = [
+    { item: "Widget", quantity: 3, price: 2.5 },
+    { item: "Gadget", quantity: 2, price: 12 },
+    { item: "Gizmo", quantity: 5, price: 7 },
+];
+const result = await inst.addRows([
+    {
+        table: orderTable,
+        values: ordered.map(({ item, quantity, price }) => ({
+            item,
+            quantity,
+            price,
+            total: quantity * price, // a field computed per row
+        })),
+    },
+]);
+if (result.tag === "Err") return result.content; // the issues list what was skipped; valid rows were still added
+// on Ok, result.content is the new rows in order --- pass them as row-reference values in later calls
+return (await inst.validate()).issues;
+```
+
+`updateRows` and `deleteRows` take entry lists in the same style --- `[{ row, values: [...] }, ...]` and `[{ tableId, rowId }, ...]` --- with `updateRows` resolving to a `Result` like `addRows` and `deleteRows` being synchronous.
 
 Example --- read a table as plain values:
 ```js
