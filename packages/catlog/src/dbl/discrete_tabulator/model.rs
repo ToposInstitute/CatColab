@@ -315,7 +315,7 @@ impl FpDblModel for DiscreteTabModel {
         self.mor_types.preimage(mortype)
     }
 
-    fn equations(&self) -> impl Iterator<Item = (Self::Mor, Self::Mor)> {
+    fn equations(&self) -> impl Iterator<Item = (QualifiedName, Self::Mor, Self::Mor)> {
         self.equations.iter().map(|()| unreachable!())
     }
 }

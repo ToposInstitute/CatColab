@@ -576,7 +576,7 @@ mod test {
     #[test]
     fn commutative_square() {
         let th_schema = Theory::new(name("ThSchema"), TheoryDef::discrete(th_schema()));
-        let model = elab_example(
+        elab_example(
             &th_schema,
             "commutative_square",
             expect![[r#"
@@ -589,10 +589,7 @@ mod test {
                 l : NW -> SW : Hom Entity
                 r : NE -> SE : Hom Entity
                 b : SW -> SE : Hom Entity
-                t ⋅ r = l ⋅ b : (Hom Entity)[NW, SE]"#]],
+                comm : t ⋅ r = l ⋅ b : (Hom Entity)[NW, SE]"#]],
         );
-        let model = model.as_discrete().unwrap();
-        let eqns: Vec<_> = model.category.equations().collect();
-        assert_eq!(eqns.len(), 1);
     }
 }

@@ -782,6 +782,7 @@ mod tests {
 
     use crate::stdlib;
     use crate::tt::modelgen::Model;
+    use crate::zero::name;
 
     #[test]
     fn generate_model_from_text() {
@@ -795,7 +796,6 @@ mod tests {
         assert_eq!(model, stdlib::models::negative_loop(th));
     }
 
-    /// Check that a commutative square really produces a model with exactly one equation.
     #[test]
     fn generate_model_with_eqn() {
         let th = Rc::new(stdlib::th_schema()).into();
@@ -811,8 +811,8 @@ mod tests {
             comm : (t * r == l * b)
         ]";
         let model = Model::from_text(&th, source).unwrap().as_discrete().unwrap();
-        let eqns: Vec<_> = model.category.equations().collect();
-        assert_eq!(eqns.len(), 1);
+        let eqns: Vec<_> = model.category.equations().map(|(id, _)| id).collect();
+        assert_eq!(eqns, vec![name("comm")]);
     }
 
     #[test]
