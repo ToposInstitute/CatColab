@@ -11,11 +11,12 @@ import {
 } from "firebase/auth";
 import SignInIcon from "lucide-solid/icons/log-in";
 import SignUpIcon from "lucide-solid/icons/user-pen";
+import { siGithub, siGoogle } from "simple-icons";
 import { useAuth, useFirebaseApp } from "solid-firebase";
 import { type JSX, Match, Switch } from "solid-js";
 import invariant from "tiny-invariant";
 
-import { Button, IconButton } from "catcolab-ui-components";
+import { Button, IconButton, SimpleIcon } from "catcolab-ui-components";
 import { useApi } from "../api";
 
 import "./login.css";
@@ -130,18 +131,10 @@ export function Login(props: { onComplete?: (user: User) => void }) {
             <div class="separator">{"Or continue with"}</div>
             <div class="provider-list">
                 <IconButton onClick={signInWithGoogle} tooltip="Login with Google">
-                    <img
-                        height="28"
-                        width="28"
-                        src="https://cdn.jsdelivr.net/npm/simple-icons@latest/icons/google.svg"
-                    />
+                    <SimpleIcon icon={siGoogle} size={28} />
                 </IconButton>
                 <IconButton onClick={signInWithGitHub} tooltip="Login with GitHub">
-                    <img
-                        height="28"
-                        width="28"
-                        src="https://cdn.jsdelivr.net/npm/simple-icons@latest/icons/github.svg"
-                    />
+                    <SimpleIcon icon={siGithub} size={28} />
                 </IconButton>
             </div>
         </div>
