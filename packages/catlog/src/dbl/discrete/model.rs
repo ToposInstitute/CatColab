@@ -207,10 +207,10 @@ impl FpDblModel for DiscreteDblModel {
         self.mor_types.preimage(typ)
     }
 
-    fn equations(&self) -> impl Iterator<Item = (Self::Mor, Self::Mor)> {
+    fn equations(&self) -> impl Iterator<Item = (QualifiedName, Self::Mor, Self::Mor)> {
         self.category
             .equations()
-            .map(|(_, PathEq { lhs, rhs })| (lhs.clone(), rhs.clone()))
+            .map(|(name, PathEq { lhs, rhs })| (name, lhs.clone(), rhs.clone()))
     }
 }
 
