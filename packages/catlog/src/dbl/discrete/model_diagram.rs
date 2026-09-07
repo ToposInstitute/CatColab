@@ -9,7 +9,7 @@ use tsify::declare;
 use crate::dbl::{model::*, model_diagram::*, model_morphism::*};
 use crate::one::{Category, FgCategory, GraphMapping};
 use crate::validate;
-use crate::zero::{Mapping, QualifiedName};
+use crate::zero::Mapping;
 
 /// A diagram in a model of a discrete double theory.
 pub type DiscreteDblModelDiagram = DblModelDiagram<DiscreteDblModelMapping, DiscreteDblModel>;
@@ -17,7 +17,7 @@ pub type DiscreteDblModelDiagram = DblModelDiagram<DiscreteDblModelMapping, Disc
 /// A failure to be valid in a diagram in a model of a discrete double theory.
 #[cfg_attr(feature = "serde-wasm", declare)]
 pub type InvalidDiscreteDblModelDiagram =
-    InvalidDblModelDiagram<InvalidDblModel, InvalidDblModelMorphism<QualifiedName, QualifiedName>>;
+    InvalidDblModelDiagram<InvalidDblModel, InvalidDblModelMorphism>;
 
 impl DiscreteDblModelDiagram {
     /// Validates that the diagram is well-defined in the given model.

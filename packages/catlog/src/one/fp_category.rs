@@ -59,8 +59,8 @@ impl FpCategory {
     }
 
     /// Gets the path equations of the category presentation.
-    pub fn equations(&self) -> impl Iterator<Item = &QualifiedPathEq> {
-        self.equations.values()
+    pub fn equations(&self) -> impl Iterator<Item = (QualifiedName, &QualifiedPathEq)> {
+        self.equations.iter()
     }
 
     /// Is the category freely generated?
