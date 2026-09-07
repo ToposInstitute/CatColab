@@ -1,5 +1,5 @@
 import ChevronDown from "lucide-solid/icons/chevron-down";
-import { createEffect, createMemo, createSignal, Index, Show } from "solid-js";
+import { batch, createEffect, createMemo, createSignal, Index, onCleanup, Show } from "solid-js";
 
 import type {
     FieldValue,
@@ -28,15 +28,20 @@ const COLUMN_WIDTHS = {
 const DELETE_COLUMN_WIDTH = 36;
 const EMPTY_COLUMN_WIDTH = 180;
 
-/** Position of a cell in the grid, by zero-based row and column index. */
-type CellPosition = { row: number; col: number };
+/** A cell resolved to its current row and header objects.
 
-/** Identifies a cell by column index and row ID, so it is stable as rows are removed. */
-type CellKey = `${number}:${string}`;
+Never stored: cells are resolved afresh from the table so that they cannot go
+stale when rows or columns change under the editor.
+ */
+type Cell = { row: TableRow; header: TableHeader };
 
+/** Identifies a cell by header and row ID, so it is stable as either are shuffled. */
+type CellKey = `${string}\u0000${string}`;
+
+/** The cell being edited, by ID, and the live text of its editor. */
 type EditState = { rowId: string; headerId: string; text: string };
 
-type PendingAppend = { col: number; previousRowIds: ReadonlySet<string> };
+type PendingAppend = { headerId: string; previousRowIds: ReadonlySet<string> };
 
 type PendingDelete = { rowId: string };
 
@@ -94,17 +99,63 @@ export function TableEditor(props: TableEditorProps) {
     const rows = () => props.table.rows;
     const headers = () => props.table.headers;
 
-    const keyOf = (pos: CellPosition): CellKey | undefined => {
-        const row = rows()[pos.row];
-        return row && `${pos.col}:${row.id}`;
+    const headerIndex = createMemo(
+        () => new Map(headers().map((header, index) => [header.id, index] as const)),
+    );
+
+    const keyOf = (cell: Cell): CellKey => makeCellKey(cell.header.id, cell.row.id);
+
+    const resolveCell = (rowId: string, headerId: string): Cell | undefined => {
+        const row = rows().find((row) => row.id === rowId);
+        const header = headers().find((header) => header.id === headerId);
+        return row && header ? { row, header } : undefined;
     };
 
-    const clampPosition = (pos: CellPosition): CellPosition => ({
-        row: Math.max(0, Math.min(pos.row, rows().length - 1)),
-        col: Math.max(0, Math.min(pos.col, headers().length - 1)),
-    });
+    const fieldOf = (cell: Cell): FieldValue | undefined => {
+        const index = headerIndex().get(cell.header.id);
+        return index === undefined ? undefined : cell.row.fields[index];
+    };
 
-    const isEditable = (pos: CellPosition) => headers()[pos.col]?.type.tag !== "Unknown";
+    /** The adjacent cell in a direction, or `undefined` at the edge of the grid.
+
+    This is the only place that reasons about the order of rows and columns.
+     */
+    const neighbor = (cell: Cell, dir: MoveDirection): Cell | undefined => {
+        if (dir === "stay") {
+            return cell;
+        }
+        const allHeaders = headers();
+        let rowIndex = cell.row.index;
+        let colIndex = headerIndex().get(cell.header.id) ?? 0;
+        if (dir === "up") {
+            rowIndex -= 1;
+        } else if (dir === "down") {
+            rowIndex += 1;
+        } else if (dir === "left") {
+            colIndex -= 1;
+        } else if (dir === "right") {
+            colIndex += 1;
+        } else if (dir === "forward") {
+            colIndex += 1;
+            if (colIndex >= allHeaders.length) {
+                rowIndex += 1;
+                colIndex = 0;
+            }
+        } else if (dir === "backward") {
+            colIndex -= 1;
+            if (colIndex < 0) {
+                rowIndex -= 1;
+                colIndex = allHeaders.length - 1;
+            }
+        }
+        const row = rows()[rowIndex];
+        const header = allHeaders[colIndex];
+        return row && header ? { row, header } : undefined;
+    };
+
+    const isFirstCell = (cell: Cell) => neighbor(cell, "backward") === undefined;
+
+    const isEditable = (cell: Cell) => cell.header.type.tag !== "Unknown";
 
     /** The table referenced by a `RowRef` column, if it can be resolved. */
     const codomainOf = (header: TableHeader): InstanceTable | undefined => {
@@ -115,59 +166,55 @@ export function TableEditor(props: TableEditorProps) {
         return props.tables.find((table) => table.id === type.content.id);
     };
 
-    /** Selection clamped to the current bounds of the grid.
+    /** The selected cell, resolved against the current table.
 
     Nothing is selected while a row is being appended: the selection lands on
     the new row once it appears.
      */
-    const clampedSelection = createMemo((prev: CellPosition | null): CellPosition | null => {
+    const selectedCell = createMemo((prev: Cell | null): Cell | null => {
+        const allRows = rows();
+        const allHeaders = headers();
         if (
             !parentFocus.hasFocus() ||
             pendingAppend() !== null ||
-            rows().length === 0 ||
-            headers().length === 0
+            allRows.length === 0 ||
+            allHeaders.length === 0
         ) {
             return null;
         }
         const key = focus.activeChild();
         if (key === null) {
-            return { row: 0, col: 0 };
+            return { row: allRows[0]!, header: allHeaders[0]! };
         }
-        const { col, rowId } = parseCellKey(key);
-        let row = rows().findIndex((row) => row.id === rowId);
-        if (row < 0) {
-            // The selected row is gone: stay at the same index.
-            row = prev?.row ?? 0;
-        }
-        return clampPosition({ row, col });
+        const { headerId, rowId } = parseCellKey(key);
+        // If the selected row is gone, stay at the same position; if the
+        // selected column is gone, move to the first one.
+        const row =
+            allRows.find((row) => row.id === rowId) ??
+            allRows[Math.min(prev?.row.index ?? 0, allRows.length - 1)]!;
+        const header = allHeaders.find((header) => header.id === headerId) ?? allHeaders[0]!;
+        return { row, header };
     }, null);
 
-    const isSelected = (pos: CellPosition): boolean => {
-        const sel = clampedSelection();
-        return sel !== null && sel.row === pos.row && sel.col === pos.col;
+    const isSelected = (cell: Cell): boolean => {
+        const sel = selectedCell();
+        return sel !== null && sel.row.id === cell.row.id && sel.header.id === cell.header.id;
     };
 
-    const isEditing = (pos: CellPosition): boolean => {
+    const isEditing = (cell: Cell): boolean => {
         const state = edit();
-        if (!state) {
-            return false;
-        }
         return (
-            isSelected(pos) &&
-            rows()[pos.row]?.id === state.rowId &&
-            headers()[pos.col]?.id === state.headerId
+            state !== null &&
+            isSelected(cell) &&
+            cell.row.id === state.rowId &&
+            cell.header.id === state.headerId
         );
     };
 
     createEffect(() => {
         const state = edit();
-        const sel = clampedSelection();
-        if (
-            state &&
-            (!sel ||
-                rows()[sel.row]?.id !== state.rowId ||
-                headers()[sel.col]?.id !== state.headerId)
-        ) {
+        const sel = selectedCell();
+        if (state && (!sel || sel.row.id !== state.rowId || sel.header.id !== state.headerId)) {
             setEdit(null);
         }
     });
@@ -178,23 +225,24 @@ export function TableEditor(props: TableEditorProps) {
         if (!pending) {
             return;
         }
-        const newRow = rows().findIndex((row) => !pending.previousRowIds.has(row.id));
-        if (newRow < 0) {
+        const newRow = rows().find((row) => !pending.previousRowIds.has(row.id));
+        if (!newRow) {
             return;
         }
         setPendingAppend(null);
-        focus.setActiveChild(keyOf(clampPosition({ row: newRow, col: pending.col })) ?? null);
+        const header = headers().find((header) => header.id === pending.headerId) ?? headers()[0];
+        focus.setActiveChild(header ? makeCellKey(header.id, newRow.id) : null);
     });
 
-    // Repoint the active child at the clamped selection when its cell no longer exists.
+    // Repoint the active child at the selected cell when its own cell no longer exists.
     createEffect(() => {
         const key = focus.activeChild();
-        const sel = clampedSelection();
+        const sel = selectedCell();
         if (key === null || sel === null) {
             return;
         }
         const target = keyOf(sel);
-        if (target && target !== key) {
+        if (target !== key) {
             focus.setActiveChild(target);
         }
     });
@@ -215,20 +263,16 @@ export function TableEditor(props: TableEditorProps) {
         });
     });
 
-    const select = (pos: CellPosition) => {
-        const key = keyOf(pos);
-        if (!key) {
-            return;
-        }
+    const select = (cell: Cell) => {
         setPendingAppend(null);
         setSuppressedFocus(null);
-        focus.childFocus(key).setFocused(true);
+        focus.childFocus(keyOf(cell)).setFocused(true);
     };
 
     /** Add a row and select its cell in the given column once it appears. */
-    const addRow = (col: number) => {
+    const addRow = (headerId: string) => {
         setPendingAppend({
-            col,
+            headerId,
             previousRowIds: new Set(rows().map((row) => row.id)),
         });
         setSuppressedFocus(null);
@@ -236,40 +280,11 @@ export function TableEditor(props: TableEditorProps) {
         props.onAddRow();
     };
 
-    const moveSelection = (from: CellPosition, dir: MoveDirection) => {
-        if (dir === "forward" || dir === "backward") {
-            const step = dir === "forward" ? 1 : -1;
-            let { row, col } = from;
-            col += step;
-            // Wrap to the adjacent row at the ends of a row.
-            if (col >= headers().length && row < rows().length - 1) {
-                row += 1;
-                col = 0;
-            } else if (col < 0 && row > 0) {
-                row -= 1;
-                col = headers().length - 1;
-            }
-            select(clampPosition({ row, col }));
-            return;
-        }
-        const next = { ...from };
-        if (dir === "up") {
-            next.row -= 1;
-        } else if (dir === "down") {
-            next.row += 1;
-        } else if (dir === "left") {
-            next.col -= 1;
-        } else if (dir === "right") {
-            next.col += 1;
-        }
-        select(clampPosition(next));
+    const moveSelection = (from: Cell, dir: MoveDirection) => {
+        select(neighbor(from, dir) ?? from);
     };
 
-    const cellText = (pos: CellPosition): string => {
-        const header = headers()[pos.col];
-        const field = rows()[pos.row]?.fields[pos.col];
-        return header ? fieldText(field, header) : "";
-    };
+    const cellText = (cell: Cell): string => fieldText(fieldOf(cell), cell.header);
 
     const issuesByPath = createMemo(() => {
         const index = new Map<string, string[]>();
@@ -288,18 +303,18 @@ export function TableEditor(props: TableEditorProps) {
             .map((issue) => issue.message),
     );
 
-    const cellIssueMessages = (pos: CellPosition): string[] => {
-        const field = rows()[pos.row]?.fields[pos.col];
+    const cellIssueMessages = (cell: Cell): string[] => {
+        const field = fieldOf(cell);
         return field ? (issuesByPath().get(pathKey(field.content.path)) ?? []) : [];
     };
 
-    const cellIsInvalid = (pos: CellPosition): boolean => {
-        if (cellIssueMessages(pos).length > 0) {
+    const cellIsInvalid = (cell: Cell): boolean => {
+        if (cellIssueMessages(cell).length > 0) {
             return true;
         }
-        const header = headers()[pos.col];
-        const field = rows()[pos.row]?.fields[pos.col];
-        if (!header || !field || field.tag === "Null" || header.type.tag === "Unknown") {
+        const header = cell.header;
+        const field = fieldOf(cell);
+        if (!field || field.tag === "Null" || header.type.tag === "Unknown") {
             return false;
         }
         if (header.type.tag === "RowRef") {
@@ -376,146 +391,158 @@ export function TableEditor(props: TableEditorProps) {
     const validateText = (header: TableHeader, text: string): boolean =>
         parseValue(header, text).ok;
 
-    const setField = (pos: CellPosition, value: LiteralValue | TableRow) => {
-        const row = rows()[pos.row];
-        const header = headers()[pos.col];
-        if (row && header) {
-            props.onSetField(row, header, value);
-        }
+    const setField = (cell: Cell, value: LiteralValue | TableRow) => {
+        props.onSetField(cell.row, cell.header, value);
     };
 
-    const startEditing = (pos: CellPosition, text: string) => {
-        if (!isEditable(pos)) {
+    const startEditing = (cell: Cell, text: string) => {
+        if (!isEditable(cell)) {
             return;
         }
-        select(pos);
-        setEdit({ text, rowId: rows()[pos.row]!.id, headerId: headers()[pos.col]!.id });
+        select(cell);
+        setEdit({ text, rowId: cell.row.id, headerId: cell.header.id });
     };
 
-    /** Stop editing and move the selection, adding a row when moving below the last one. */
-    const finishEditing = (pos: CellPosition, dir: MoveDirection) => {
+    const setEditText = (text: string) => setEdit((state) => (state ? { ...state, text } : state));
+
+    /** Stop editing and move the selection, adding a row when moving below the last one.
+
+    The edited cell is located by ID, since rows and columns may have shifted
+    since editing began.
+     */
+    const finishEditing = (state: EditState, dir: MoveDirection) => {
         setEdit(null);
         if (dir === "stay") {
             return;
         }
-        if (
-            (dir === "down" || (dir === "forward" && pos.col === headers().length - 1)) &&
-            pos.row === rows().length - 1
-        ) {
-            addRow(dir === "down" ? pos.col : 0);
+        const cell = resolveCell(state.rowId, state.headerId);
+        if (!cell) {
+            return;
+        }
+        const next = neighbor(cell, dir);
+        if (next) {
+            select(next);
+        } else if (dir === "down") {
+            addRow(cell.header.id);
+        } else if (dir === "forward") {
+            addRow(headers()[0]!.id);
         } else {
-            moveSelection(pos, dir);
+            select(cell);
         }
     };
 
-    const commitEdit = (pos: CellPosition, text: string, dir: MoveDirection | "blur") => {
-        const header = headers()[pos.col];
-        if (header) {
-            const parsed = parseValue(header, text);
+    /** Commit the text of a cell editor, writing to the cell by ID.
+
+    The write is skipped if the row or column has since been removed.
+     */
+    const commitEdit = (state: EditState, dir: MoveDirection | "blur") => {
+        const cell = resolveCell(state.rowId, state.headerId);
+        if (cell) {
+            const parsed = parseValue(cell.header, state.text);
             if (parsed.ok) {
-                setField(pos, parsed.value);
+                setField(cell, parsed.value);
             }
             // Otherwise, revert to the previous value.
         }
         if (dir === "blur") {
             // Focus has moved elsewhere; don't steal it back.
-            setSuppressedFocus(keyOf(pos) ?? null);
+            setSuppressedFocus(makeCellKey(state.headerId, state.rowId));
             setEdit(null);
         } else {
-            finishEditing(pos, dir);
+            finishEditing(state, dir);
         }
     };
 
     /** Commit a row reference chosen from the completions dropdown. */
-    const commitRowRef = (pos: CellPosition, target: TableRow) => {
-        setField(pos, target);
-        finishEditing(pos, "stay");
+    const commitRowRef = (state: EditState, target: TableRow) => {
+        const cell = resolveCell(state.rowId, state.headerId);
+        if (cell) {
+            setField(cell, target);
+        }
+        finishEditing(state, "stay");
     };
 
     const cancelEdit = () => {
         setEdit(null);
     };
 
-    const toggleBool = (pos: CellPosition) => {
-        const field = rows()[pos.row]?.fields[pos.col];
+    const toggleBool = (cell: Cell) => {
+        const field = fieldOf(cell);
         const current = field?.tag === "Bool" ? field.content.value : false;
-        setField(pos, !current);
+        setField(cell, !current);
     };
 
-    const completionsFor = (pos: CellPosition, header: TableHeader): Completion[] | undefined => {
-        if (header.type.tag !== "RowRef") {
+    const completionsFor = (cell: Cell): Completion[] | undefined => {
+        if (cell.header.type.tag !== "RowRef") {
             return undefined;
         }
-        const codomain = codomainOf(header);
+        const codomain = codomainOf(cell.header);
         if (!codomain) {
             return [];
         }
-        const field = rows()[pos.row]?.fields[pos.col];
+        const field = fieldOf(cell);
         const currentId = field?.tag === "RowRef" ? field.content.id : undefined;
         return codomain.rows.map((target) => ({
             name: defaultRowLabel(codomain, target),
             selected: target.id === currentId,
-            onComplete: () => commitRowRef(pos, target),
+            onComplete: () => {
+                const state = edit();
+                if (state) {
+                    commitRowRef(state, target);
+                }
+            },
         }));
     };
 
-    const onCellKeyDown = (evt: KeyboardEvent, pos: CellPosition) => {
+    const onCellKeyDown = (evt: KeyboardEvent, cell: Cell) => {
         // Ignore keystrokes handled by a cell editor, including those that
         // just closed it: the editor prevents default on keys it handles.
         if (edit() !== null || evt.defaultPrevented) {
             return;
         }
-        const header = headers()[pos.col];
-        if (!header) {
-            return;
-        }
         const key = evt.key;
         if (key === "ArrowUp") {
-            moveSelection(pos, "up");
+            moveSelection(cell, "up");
         } else if (key === "ArrowDown") {
-            moveSelection(pos, "down");
+            moveSelection(cell, "down");
         } else if (key === "ArrowLeft") {
-            moveSelection(pos, "left");
+            moveSelection(cell, "left");
         } else if (key === "ArrowRight") {
-            moveSelection(pos, "right");
+            moveSelection(cell, "right");
         } else if (key === "Tab") {
             // At the boundary of the grid, let Tab move focus out of it.
-            const atBoundary = evt.shiftKey
-                ? pos.row === 0 && pos.col === 0
-                : pos.row === rows().length - 1 && pos.col === headers().length - 1;
-            if (atBoundary) {
+            const dir = evt.shiftKey ? "backward" : "forward";
+            const next = neighbor(cell, dir);
+            if (!next) {
                 return;
             }
-            moveSelection(pos, evt.shiftKey ? "backward" : "forward");
-        } else if (!isEditable(pos)) {
+            select(next);
+        } else if (!isEditable(cell)) {
             return;
         } else if (key === "Enter" || key === "F2") {
-            if (header.type.tag === "Bool") {
-                toggleBool(pos);
+            if (cell.header.type.tag === "Bool") {
+                toggleBool(cell);
             } else {
-                startEditing(pos, cellText(pos));
+                startEditing(cell, cellText(cell));
             }
-        } else if (key === " " && header.type.tag === "Bool") {
-            toggleBool(pos);
+        } else if (key === " " && cell.header.type.tag === "Bool") {
+            toggleBool(cell);
         } else if (key === "Delete" || key === "Backspace") {
-            setField(pos, null);
-        } else if (isPrintableKey(evt) && header.type.tag !== "Bool") {
-            startEditing(pos, key);
+            setField(cell, null);
+        } else if (isPrintableKey(evt) && cell.header.type.tag !== "Bool") {
+            startEditing(cell, key);
         } else {
             return;
         }
         evt.preventDefault();
     };
 
-    const deleteRow = (index: number) => {
-        const row = rows()[index];
-        if (row) {
-            // Only a focused table needs its focus restored after the row is removed.
-            if (parentFocus.hasFocus()) {
-                setPendingDelete({ rowId: row.id });
-            }
-            props.onDeleteRow(row);
+    const deleteRow = (row: TableRow) => {
+        // Only a focused table needs its focus restored after the row is removed.
+        if (parentFocus.hasFocus()) {
+            setPendingDelete({ rowId: row.id });
         }
+        props.onDeleteRow(row);
     };
 
     return (
@@ -524,12 +551,25 @@ export function TableEditor(props: TableEditorProps) {
             classList={{ [styles.unknown]: props.table.label === null }}
             title={tableIssueMessages().join("\n") || undefined}
             onFocusOut={(evt) => {
+                const section = evt.currentTarget;
                 const next = evt.relatedTarget as Element | null;
-                if (!next || !evt.currentTarget.contains(next)) {
-                    setPendingAppend(null);
-                    setSuppressedFocus(null);
-                    parentFocus.setFocused(false);
+                if (next && section.contains(next)) {
+                    return;
                 }
+                // A focused element removed from the DOM, such as a cell editor
+                // unmounted by a concurrent change, also fires `focusout`. Focus
+                // is restored synchronously in that case, so check afterwards.
+                queueMicrotask(() => {
+                    if (!section.contains(document.activeElement)) {
+                        // Batched so no cell sees itself selected but unsuppressed
+                        // and grabs the focus back.
+                        batch(() => {
+                            setPendingAppend(null);
+                            setSuppressedFocus(null);
+                            parentFocus.setFocused(false);
+                        });
+                    }
+                });
             }}
         >
             <div class={styles.header}>
@@ -581,34 +621,35 @@ export function TableEditor(props: TableEditorProps) {
                 </thead>
                 <tbody>
                     <Index each={rows()}>
-                        {(_, rowIndex) => (
+                        {(row) => (
                             <tr>
                                 <Show
                                     when={headers().length > 0}
                                     fallback={<td class={styles.cell} role="gridcell" />}
                                 >
                                     <Index each={headers()}>
-                                        {(header, colIndex) => {
-                                            const pos = { row: rowIndex, col: colIndex };
-                                            // The row at this index changes, so resolve the key lazily.
+                                        {(header) => {
+                                            // The row and header at this slot change, so
+                                            // resolve the cell lazily.
+                                            const cell = (): Cell => ({
+                                                row: row(),
+                                                header: header(),
+                                            });
                                             const cellFocus: FocusHandle = {
-                                                hasFocus: () => isSelected(pos),
-                                                setFocused: (focused) => {
-                                                    const key = keyOf(pos);
-                                                    if (key) {
-                                                        focus.childFocus(key).setFocused(focused);
-                                                    }
-                                                },
+                                                hasFocus: () => isSelected(cell()),
+                                                setFocused: (focused) =>
+                                                    focus
+                                                        .childFocus(keyOf(cell()))
+                                                        .setFocused(focused),
                                             };
-                                            const isFirstCell = rowIndex === 0 && colIndex === 0;
                                             let cellRef!: HTMLTableCellElement;
 
                                             createEffect(() => {
                                                 focusRequest();
                                                 if (
                                                     cellFocus.hasFocus() &&
-                                                    !isEditing(pos) &&
-                                                    suppressedFocus() !== keyOf(pos) &&
+                                                    !isEditing(cell()) &&
+                                                    suppressedFocus() !== keyOf(cell()) &&
                                                     document.activeElement !== cellRef
                                                 ) {
                                                     cellRef.focus();
@@ -621,25 +662,24 @@ export function TableEditor(props: TableEditorProps) {
                                                     class={styles.cell}
                                                     role="gridcell"
                                                     classList={{
-                                                        [styles.selected]: isSelected(pos),
-                                                        [styles.invalid]: cellIsInvalid(pos),
+                                                        [styles.selected]: isSelected(cell()),
+                                                        [styles.invalid]: cellIsInvalid(cell()),
                                                     }}
                                                     tabindex={
-                                                        !isEditing(pos) &&
-                                                        (isSelected(pos) ||
-                                                            (!clampedSelection() &&
-                                                                rowIndex === 0 &&
-                                                                colIndex === 0))
+                                                        !isEditing(cell()) &&
+                                                        (isSelected(cell()) ||
+                                                            (!selectedCell() &&
+                                                                isFirstCell(cell())))
                                                             ? 0
                                                             : -1
                                                     }
-                                                    aria-selected={isSelected(pos)}
-                                                    aria-invalid={cellIsInvalid(pos)}
+                                                    aria-selected={isSelected(cell())}
+                                                    aria-invalid={cellIsInvalid(cell())}
                                                     title={
-                                                        cellIssueMessages(pos).join("\n") ||
+                                                        cellIssueMessages(cell()).join("\n") ||
                                                         undefined
                                                     }
-                                                    onFocus={() => select(pos)}
+                                                    onFocus={() => select(cell())}
                                                     onMouseDown={(evt) => {
                                                         // Focus explicitly: not all browsers
                                                         // focus a tabindex ancestor on click.
@@ -647,24 +687,24 @@ export function TableEditor(props: TableEditorProps) {
                                                         // blurs, and thereby commits, any open
                                                         // cell editor, while selecting first
                                                         // would unmount it without a commit.
-                                                        if (!isEditing(pos)) {
+                                                        if (!isEditing(cell())) {
                                                             evt.currentTarget.focus();
                                                         }
                                                     }}
                                                     onDblClick={() => {
                                                         if (header().type.tag === "Bool") {
-                                                            toggleBool(pos);
+                                                            toggleBool(cell());
                                                         } else {
-                                                            startEditing(pos, cellText(pos));
+                                                            startEditing(cell(), cellText(cell()));
                                                         }
                                                     }}
-                                                    onKeyDown={(evt) => onCellKeyDown(evt, pos)}
+                                                    onKeyDown={(evt) => onCellKeyDown(evt, cell())}
                                                 >
                                                     <Show
-                                                        when={isEditing(pos)}
+                                                        when={isEditing(cell())}
                                                         fallback={
                                                             <CellContent
-                                                                text={cellText(pos)}
+                                                                text={cellText(cell())}
                                                                 isBool={
                                                                     header().type.tag === "Bool"
                                                                 }
@@ -672,30 +712,34 @@ export function TableEditor(props: TableEditorProps) {
                                                                     header().type.tag === "RowRef"
                                                                 }
                                                                 onOpenRowRef={() =>
-                                                                    startEditing(pos, cellText(pos))
+                                                                    startEditing(
+                                                                        cell(),
+                                                                        cellText(cell()),
+                                                                    )
                                                                 }
-                                                                onToggle={() => toggleBool(pos)}
+                                                                onToggle={() => toggleBool(cell())}
                                                             />
                                                         }
                                                     >
                                                         <CellEditor
                                                             focus={cellFocus}
-                                                            initialText={edit()?.text ?? ""}
+                                                            text={edit()?.text ?? ""}
+                                                            setText={setEditText}
                                                             isRowRef={
                                                                 header().type.tag === "RowRef"
                                                             }
                                                             validate={(text) =>
                                                                 validateText(header(), text)
                                                             }
-                                                            completions={completionsFor(
-                                                                pos,
-                                                                header(),
-                                                            )}
-                                                            onCommit={(text, dir) =>
-                                                                commitEdit(pos, text, dir)
-                                                            }
+                                                            completions={completionsFor(cell())}
+                                                            onCommit={(dir) => {
+                                                                const state = edit();
+                                                                if (state) {
+                                                                    commitEdit(state, dir);
+                                                                }
+                                                            }}
                                                             onCancel={cancelEdit}
-                                                            canExitBackward={!isFirstCell}
+                                                            canExitBackward={!isFirstCell(cell())}
                                                         />
                                                     </Show>
                                                 </td>
@@ -711,7 +755,7 @@ export function TableEditor(props: TableEditorProps) {
                                         aria-label="Delete row"
                                         tabindex={-1}
                                         onMouseDown={(evt) => evt.preventDefault()}
-                                        onClick={() => deleteRow(rowIndex)}
+                                        onClick={() => deleteRow(row())}
                                     >
                                         ×
                                     </button>
@@ -723,7 +767,11 @@ export function TableEditor(props: TableEditorProps) {
             </table>
             <Show when={props.table.label !== null}>
                 <div class={styles.footer}>
-                    <button class={styles.addRow} type="button" onClick={() => addRow(0)}>
+                    <button
+                        class={styles.addRow}
+                        type="button"
+                        onClick={() => addRow(headers()[0]?.id ?? "")}
+                    >
                         + Row
                     </button>
                 </div>
@@ -787,21 +835,29 @@ function CellContent(props: {
     );
 }
 
-/** Text editor for a single cell, active while the cell is in editing mode. */
+/** Text editor for a single cell, active while the cell is in editing mode.
+
+The text is owned by the parent so that it survives the editor being remounted
+in a different cell slot when rows or columns shift under it.
+ */
 function CellEditor(props: {
     focus: FocusHandle;
-    initialText: string;
+    text: string;
+    setText: (text: string) => void;
     isRowRef: boolean;
     validate: (text: string) => boolean;
     completions?: Completion[];
-    onCommit: (text: string, dir: MoveDirection | "blur") => void;
+    onCommit: (dir: MoveDirection | "blur") => void;
     onCancel: () => void;
     canExitBackward: boolean;
 }) {
-    // The initial text is intentionally captured on mount.
-    const [text, setText] = createSignal(props.initialText);
-
     let finished = false;
+
+    // An editor unmounted by a concurrent change must not commit from the
+    // `blur` that removing its focused input fires.
+    onCleanup(() => {
+        finished = true;
+    });
 
     /** Whether the input has gained focus since mounting.
 
@@ -813,16 +869,16 @@ function CellEditor(props: {
     const commit = (dir: MoveDirection | "blur") => {
         if (!finished) {
             finished = true;
-            props.onCommit(text(), dir);
+            props.onCommit(dir);
         }
     };
 
     const input = (
         <TextInput
             class={styles.cellInput}
-            classList={{ [styles.invalid]: !props.validate(text()) }}
-            text={text()}
-            setText={setText}
+            classList={{ [styles.invalid]: !props.validate(props.text) }}
+            text={props.text}
+            setText={props.setText}
             focus={props.focus}
             completions={props.completions}
             filterCompletionsByText={!props.isRowRef}
@@ -871,10 +927,13 @@ function pathKey(path: ReadonlyArray<string>): string {
     return path.join("\u0000");
 }
 
-function parseCellKey(key: CellKey): { col: number; rowId: string } {
-    // Split at the first colon only: row IDs may contain colons.
-    const sep = key.indexOf(":");
-    return { col: Number(key.slice(0, sep)), rowId: key.slice(sep + 1) };
+function makeCellKey(headerId: string, rowId: string): CellKey {
+    return `${headerId}\u0000${rowId}`;
+}
+
+function parseCellKey(key: CellKey): { headerId: string; rowId: string } {
+    const sep = key.indexOf("\u0000");
+    return { headerId: key.slice(0, sep), rowId: key.slice(sep + 1) };
 }
 
 /** Default display label for a row referenced by a `RowRef` cell. */
