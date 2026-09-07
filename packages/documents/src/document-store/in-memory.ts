@@ -121,7 +121,7 @@ export function createInMemoryStore(): DocumentStore<Document, Document> {
             return handle;
         },
 
-        async listInstancesOf(handle: Document): Promise<ReadonlyArray<Document>> {
+        async listChildren(handle: Document): Promise<ReadonlyArray<Document>> {
             const id = requireDocumentId(handle);
             const instances: Document[] = [];
             for (const doc of idToDocument.values()) {
