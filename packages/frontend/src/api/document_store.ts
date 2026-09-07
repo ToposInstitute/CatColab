@@ -1,5 +1,5 @@
 import { applyPatches, diff, getHeads, type Heads } from "@automerge/automerge";
-import { type DocHandle, type DocumentId, Repo } from "@automerge/automerge-repo";
+import { type DocHandle, Repo } from "@automerge/automerge-repo";
 import { makeDocumentProjection } from "@automerge/automerge-repo-solid-primitives";
 import type { UserState } from "catcolab-api/src/user_state";
 import { createStore, reconcile, unwrap } from "solid-js/store";
@@ -14,8 +14,6 @@ import {
     type DocumentStore,
     type Result,
 } from "catcolab-documents";
-import { normalizeImmutableStrings } from "../util/immutable_string";
-import { unwrap as unwrapRpcResult } from "./rpc";
 import type { Api } from "./types";
 
 export type ApiDocumentHandle = {
@@ -35,32 +33,27 @@ export type ApiDocumentStore = DocumentStore<ApiDocumentHandle, Heads>;
 /** A binder over the API document store. */
 export type ApiBinder = Binder<ApiDocumentHandle, Heads>;
 
-/** Create a binder over the document store for an API client.
+/** Create a binder over the document store for an API client and user state.
 
 The binder should be created once per API client and shared across the
 application (via context) so that document handles are cached and deduplicated
 between loads.
  */
-export function createApiBinder(api: Api): ApiBinder {
-    return createBinder(createApiDocumentStore(api));
+export function createApiBinder(api: Api, userState: UserState): ApiBinder {
+    return createBinder(createApiDocumentStore(api, userState));
 }
 
 // Drafts live only in this repo, which has neither storage nor networking, so
 // that uncommitted edits never reach the backend or other clients.
 const draftRepo = new Repo();
 
-/** Get the active user's state document, which tracks relations between documents. */
-async function getUserState(api: Api): Promise<UserState> {
-    const docId = unwrapRpcResult(await api.rpc.get_user_state_doc_id.query());
-    const docHandle = (await api.repo.find(docId as DocumentId)) as DocHandle<UserState>;
-    // Automerge materializes string values as `ImmutableString` objects (not
-    // primitives) in the browser, so normalize before comparing against
-    // primitive strings. `UserStateProvider` does the same for the UI copy.
-    return normalizeImmutableStrings(docHandle.doc());
-}
+/** Adapt frontend Automerge documents to the storage boundary used by catcolab-documents.
 
-/** Adapt frontend Automerge documents to the storage boundary used by catcolab-documents. */
-export function createApiDocumentStore(api: Api): ApiDocumentStore {
+The user state tracks relations between documents; it is retrieved from
+application context (see `UserStateContext`) rather than fetched here, and it
+may update while the store lives.
+ */
+export function createApiDocumentStore(api: Api, userState: UserState): ApiDocumentStore {
     const handles = new Map<string, ApiDocumentHandle>();
 
     const cacheHandle = (ref: DocumentRef, automergeHandle: DocHandle<Document>) => {
@@ -112,18 +105,17 @@ export function createApiDocumentStore(api: Api): ApiDocumentStore {
             };
         },
         getDocumentRef: (handle) => handle.ref,
-        async listInstancesOf(handle) {
-            // The user state document tracks backlinks between documents:
-            // every instance of this document appears in its `usedBy` relations
-            // with relation type "instance-of". Resolve those refs back into
-            // store handles like any other document ref.
-            const state = await getUserState(api);
-            const instanceRefIds = (state.documents[handle.ref.id]?.usedBy ?? [])
+        async listChildren(handle) {
+            // The user state tracks backlinks between documents: every
+            // instance of this document appears in its `usedBy` relations with
+            // relation type "instance-of". Resolve those refs back into store
+            // handles like any other document ref.
+            const instanceRefIds = (userState.documents[handle.ref.id]?.usedBy ?? [])
                 .filter(
                     (relation) =>
                         relation.relationType === "instance-of" &&
                         // Skip instances that no longer exist.
-                        state.documents[uuidStringify(relation.refId)]?.deletedAt === null,
+                        userState.documents[uuidStringify(relation.refId)]?.deletedAt === null,
                 )
                 .map((relation) => uuidStringify(relation.refId));
             const instances: ApiDocumentHandle[] = [];

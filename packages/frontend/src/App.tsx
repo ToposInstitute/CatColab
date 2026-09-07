@@ -10,7 +10,7 @@ import invariant from "tiny-invariant";
 import * as uuid from "uuid";
 
 import { Button } from "catcolab-ui-components";
-import { Api, ApiContext, BinderContext, createApiBinder, useApi } from "./api";
+import { Api, ApiContext, useApi } from "./api";
 import { helpRoutes } from "./help/routes";
 import { createModelLibraryWithApi, ModelLibraryContext } from "./model";
 import { createModel } from "./model/document";
@@ -45,14 +45,12 @@ const Root = (props: RouteSectionProps) => {
 
     const theories = stdTheories;
     const models = createModelLibraryWithApi(api, theories);
-    const binder = createApiBinder(api);
 
     return (
         <FirebaseProvider app={firebaseApp}>
             <MultiProvider
                 values={[
                     [ApiContext, api],
-                    [BinderContext, binder],
                     [TheoryLibraryContext, theories],
                     [ModelLibraryContext, models],
                     UserStateProvider,
