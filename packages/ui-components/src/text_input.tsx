@@ -228,7 +228,7 @@ export function TextInput(allProps: TextInputProps) {
             onOpenChange={(open) => {
                 setCompletionsOpen(open);
                 if (!open) {
-                    completionsRef()?.setPresumptive(0);
+                    completionsRef()?.resetPresumptive();
                 }
             }}
             placement="bottom-start"

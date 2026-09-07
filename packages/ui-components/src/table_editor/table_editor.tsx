@@ -450,8 +450,11 @@ export function TableEditor(props: TableEditorProps) {
         if (!codomain) {
             return [];
         }
+        const field = rows()[pos.row]?.fields[pos.col];
+        const currentId = field?.tag === "RowRef" ? field.content.id : undefined;
         return codomain.rows.map((target) => ({
             name: defaultRowLabel(codomain, target),
+            selected: target.id === currentId,
             onComplete: () => commitRowRef(pos, target),
         }));
     };

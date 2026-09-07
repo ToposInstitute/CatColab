@@ -221,6 +221,24 @@ export const DoubleClickBooleanCell: Story = {
     },
 };
 
+export const RowRefHighlightsCurrent: Story = {
+    render: () => <EditableTables initialSpecs={[teamSpec, personSpec]} />,
+    play: async ({ canvasElement }: { canvasElement: HTMLElement }) => {
+        const tables = within(canvasElement).getAllByRole("grid");
+        // Bob's team cell, which references the second team.
+        const cell = within(tables[1]!).getAllByRole("gridcell")[9]!;
+        await expect(cell).toHaveTextContent('Team "Beacon"');
+
+        await userEvent.dblClick(cell);
+        const listbox = await within(document.body).findByRole("listbox");
+        const active = listbox.querySelector("li.active");
+        await expect(active).toHaveTextContent('Team "Beacon"');
+
+        await userEvent.keyboard("{Enter}");
+        await expect(cell).toHaveTextContent('Team "Beacon"');
+    },
+};
+
 export const InvalidData: Story = {
     render: () => (
         <EditableTables
