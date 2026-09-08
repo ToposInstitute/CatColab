@@ -32,15 +32,23 @@ function createFixture() {
     );
     const instanceLiveDoc = makeLiveDoc<InstanceDocument>(instanceAutomergeHandle);
 
-    // A user state whose backlinks record the instance as depending on the
-    // schema, the way the backend computes `usedBy` relations.
+    // A user state whose relations record the instance and the schema as
+    // depending on each other, the way the backend computes relations.
+    // The unknown relation type is not a link type: it must be dropped.
     const userState = {
         documents: {
             [schemaRef]: {
-                usedBy: [{ refId: uuidParse(instanceRef), relationType: "instance-of" }],
+                usedBy: [
+                    { refId: uuidParse(instanceRef), relationType: "instance-of" },
+                    { refId: uuidParse(instanceRef), relationType: "not-a-link" },
+                ],
                 deletedAt: null,
             },
-            [instanceRef]: { usedBy: [], deletedAt: null },
+            [instanceRef]: {
+                usedBy: [],
+                dependsOn: [{ refId: uuidParse(schemaRef), relationType: "instance-of" }],
+                deletedAt: null,
+            },
         },
     } as unknown as UserState;
 
@@ -212,28 +220,59 @@ describe("API document store", () => {
         expect(local.content.ref.server).toBe(server);
     });
 
-    test("lists instances of a document through the API", async () => {
-        const { instanceAutomergeHandle, store } = createFixture();
+    test("lists documents related through the API, indexed by link type", async () => {
+        const { instanceAutomergeHandle, schemaAutomergeHandle, store } = createFixture();
 
         const schema = await store.getHandle({ id: schemaRef, version: null, server });
         expect(schema.tag).toBe("Ok");
         if (schema.tag === "Err") {
             throw new Error("expected schema ref to resolve");
         }
-
-        // The backend's ref ids are resolved back into store handles.
-        const instances = await store.listUsedBy(schema.content);
-        expect(instances).toHaveLength(1);
-        expect(instances[0]?.automergeHandle).toBe(instanceAutomergeHandle);
-        expect(store.getDocumentView(instances[0]!).type).toBe("instance");
-
-        // Documents without instances resolve to an empty list.
         const instance = await store.getHandle({ id: instanceRef, version: null, server });
         expect(instance.tag).toBe("Ok");
         if (instance.tag === "Err") {
             throw new Error("expected instance ref to resolve");
         }
-        expect(await store.listUsedBy(instance.content)).toEqual([]);
+
+        // The backend's ref ids are resolved back into store handles, and
+        // relations of unknown types are dropped.
+        expect(await store.listUsedBy(schema.content)).toEqual({
+            "analysis-of": [],
+            "diagram-in": [],
+            "instance-of": [instance.content],
+            "llmconversation-of": [],
+            instantiation: [],
+        });
+        expect((await store.listUsedBy(schema.content))["instance-of"][0]?.automergeHandle).toBe(
+            instanceAutomergeHandle,
+        );
+
+        expect(await store.listDependsOn(instance.content)).toEqual({
+            "analysis-of": [],
+            "diagram-in": [],
+            "instance-of": [schema.content],
+            "llmconversation-of": [],
+            instantiation: [],
+        });
+        expect(
+            (await store.listDependsOn(instance.content))["instance-of"][0]?.automergeHandle,
+        ).toBe(schemaAutomergeHandle);
+
+        // Documents without relations resolve to empty groups.
+        expect(await store.listUsedBy(instance.content)).toEqual({
+            "analysis-of": [],
+            "diagram-in": [],
+            "instance-of": [],
+            "llmconversation-of": [],
+            instantiation: [],
+        });
+        expect(await store.listDependsOn(schema.content)).toEqual({
+            "analysis-of": [],
+            "diagram-in": [],
+            "instance-of": [],
+            "llmconversation-of": [],
+            instantiation: [],
+        });
     });
 
     test("copyValue detaches Solid projection values", async () => {

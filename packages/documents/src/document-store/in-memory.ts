@@ -2,7 +2,13 @@ import { v7 } from "uuid";
 
 import type { Document } from "catcolab-document-types";
 import type { Result } from "../result";
-import type { DocumentChange, DocumentStore, DocumentRef } from "./document-store";
+import type {
+    DocumentChange,
+    DocumentStore,
+    DocumentRef,
+    HandlesByLinkType,
+} from "./document-store";
+import { documentLinks, emptyHandlesByLinkType } from "./document-store";
 
 export function createInMemoryStore(): DocumentStore<Document, Document> {
     const idToDocument = new Map<string, Document>();
@@ -121,16 +127,33 @@ export function createInMemoryStore(): DocumentStore<Document, Document> {
             return handle;
         },
 
-        async listUsedBy(handle: Document): Promise<ReadonlyArray<Document>> {
+        async listUsedBy(handle: Document): Promise<HandlesByLinkType<Document>> {
             const id = requireDocumentId(handle);
-            const instances: Document[] = [];
+            const linked = emptyHandlesByLinkType<Document>();
             for (const doc of idToDocument.values()) {
                 // Skip drafts: only committed documents answer the query.
-                if (doc.type === "instance" && !drafts.has(doc) && doc.instanceOf._id === id) {
-                    instances.push(doc);
+                if (drafts.has(doc)) {
+                    continue;
+                }
+                for (const link of documentLinks(doc)) {
+                    if (link._id === id) {
+                        linked[link.type].push(doc);
+                    }
                 }
             }
-            return instances;
+            return linked;
+        },
+
+        async listDependsOn(handle: Document): Promise<HandlesByLinkType<Document>> {
+            requireDocumentId(handle);
+            const linked = emptyHandlesByLinkType<Document>();
+            for (const link of documentLinks(handle)) {
+                const target = idToDocument.get(link._id);
+                if (target !== undefined) {
+                    linked[link.type].push(target);
+                }
+            }
+            return linked;
         },
 
         createDraft(handle: Document): Document {

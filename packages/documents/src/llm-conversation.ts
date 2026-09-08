@@ -9,8 +9,6 @@ import type { SupportedDocument } from "./supported-document";
 
 export type { LLMConversationDocument } from "catcolab-document-methods";
 
-export type LLMConversationAttachment<S extends Shape, H, V> = SupportedDocument<S, H, V>;
-
 export interface LLMConversation<A, H> {
     readonly handle: H;
     readonly attachment: A;
@@ -33,7 +31,7 @@ export interface LLMConversation<A, H> {
 
 export function llmConversationFromStore<
     Handle,
-    Attachment extends LLMConversationAttachment<Shape, Handle, Version>,
+    Attachment extends SupportedDocument<Shape, Handle, Version>,
     Version,
 >(
     store: DocumentStore<Handle, Version>,

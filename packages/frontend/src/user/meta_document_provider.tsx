@@ -8,12 +8,12 @@ import { createStore, reconcile } from "solid-js/store";
 import { BinderContext, createApiBinder, useApi } from "../api";
 import { unwrap } from "../api/rpc";
 import { normalizeImmutableStrings } from "../util/immutable_string";
-import { INITIAL_META_DOCUMENT, MetaDocumentContext } from "./meta_document_context";
+import { INITIAL_USER_STATE, MetaDocumentContext } from "./meta_document_context";
 
 export function MetaDocumentProvider(props: { children: JSX.Element }) {
     const api = useApi();
     const firebaseApp = useFirebaseApp();
-    const [metaDocument, setMetaDocument] = createStore<UserState>(INITIAL_META_DOCUMENT);
+    const [metaDocument, setMetaDocument] = createStore<UserState>(INITIAL_USER_STATE);
 
     // The binder resolves relations between the user's documents through the
     // meta document, so it is created here, where the data lives, and provided
@@ -39,7 +39,7 @@ export function MetaDocumentProvider(props: { children: JSX.Element }) {
         currentUserId = userId;
 
         teardownDocHandle();
-        setMetaDocument(INITIAL_META_DOCUMENT);
+        setMetaDocument(INITIAL_USER_STATE);
 
         const userStateDocId = unwrap(await api.rpc.get_user_state_doc_id.query());
         if (currentUserId !== userId) {
