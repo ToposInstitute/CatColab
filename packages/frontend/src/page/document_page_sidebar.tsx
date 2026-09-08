@@ -130,8 +130,7 @@ function DocumentsTreeNode(props: {
                     (relation) =>
                         relation.relationType === "diagram-in" ||
                         relation.relationType === "instance-of" ||
-                        relation.relationType === "analysis-of" ||
-                        relation.relationType === "llmconversation-of",
+                        relation.relationType === "analysis-of",
                 )
                 .map((relation) => uuidStringify(relation.refId)) ?? []
         );

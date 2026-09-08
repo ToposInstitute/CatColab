@@ -6,18 +6,9 @@ import invariant from "tiny-invariant";
 
 import { DocumentTypeIcon, IconButton } from "catcolab-ui-components";
 import { createAnalysis } from "../analysis";
-import {
-    type DocRef,
-    type DocumentType,
-    documentTypeLabel,
-    type LiveDoc,
-    useApi,
-    useBinder,
-} from "../api";
+import { type DocRef, type DocumentType, type LiveDoc, useApi, useBinder } from "../api";
 import { createDiagram } from "../diagram";
-import { DEFAULT_LLM_MODEL } from "../inference/chat";
 import { createInstance, shapeForTheory } from "../instance/live_doc_compatibility";
-import { createLLMConversation, supportsLLMConversation } from "../llm_conversation";
 import {
     CopyJSONMenuItem,
     DeleteMenuItem,
@@ -29,7 +20,6 @@ import {
     RestoreMenuItem,
 } from "../page";
 import { TheoryLibraryContext } from "../theory";
-import { isDocumentVisible, useUserSettings } from "../user/user_settings";
 
 export function DocumentMenu(props: {
     liveDoc: LiveDoc;
@@ -39,7 +29,6 @@ export function DocumentMenu(props: {
 }) {
     const api = useApi();
     const binder = useBinder();
-    const { settings } = useUserSettings();
 
     const navigate = useNavigate();
     const docType = () => props.liveDoc.doc.type;
@@ -92,21 +81,6 @@ export function DocumentMenu(props: {
         handleDocCreated("instance", newRef);
     };
 
-    const canCreateLLMConversation = () =>
-        supportsLLMConversation(props.liveDoc.doc) &&
-        isDocumentVisible({ typeName: "llmconversation" }, settings());
-
-    const onNewLLMConversation = async () => {
-        invariant(canCreateLLMConversation(), "LLM Conversation creation should be enabled");
-        const newRef = await createLLMConversation(
-            api,
-            binder,
-            { liveDoc: props.liveDoc, docRef: props.docRef },
-            DEFAULT_LLM_MODEL,
-        );
-        handleDocCreated("llmconversation", newRef);
-    };
-
     const theories = useContext(TheoryLibraryContext);
     invariant(theories, "Library of theories should be provided as context");
 
@@ -121,7 +95,6 @@ export function DocumentMenu(props: {
         () =>
             theory()?.supportsInstances ||
             canCreateInstance() ||
-            canCreateLLMConversation() ||
             docType() === "model" ||
             docType() === "diagram",
     );
@@ -166,14 +139,6 @@ export function DocumentMenu(props: {
                         <MenuItem onSelect={() => onNewAnalysis()}>
                             <DocumentTypeIcon documentType="analysis" />
                             <MenuItemLabel>{`New analysis of this ${docType()}`}</MenuItemLabel>
-                        </MenuItem>
-                    </Show>
-                    <Show when={canCreateLLMConversation()}>
-                        <MenuItem onSelect={() => onNewLLMConversation()}>
-                            <DocumentTypeIcon documentType="llmconversation" />
-                            <MenuItemLabel>
-                                {`New LLM conversation on this ${documentTypeLabel(docType())}`}
-                            </MenuItemLabel>
                         </MenuItem>
                     </Show>
                     <Show when={showSeparator()}>
