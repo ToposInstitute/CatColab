@@ -23,12 +23,16 @@ export type Completion = {
 
     /** Function called when completion is selected. */
     onComplete?: () => void;
+
+    /** Whether this completion is the current value, and so highlighted initially. */
+    selected?: boolean;
 };
 
 export type CompletionsRef = {
     remainingCompletions: () => Completion[];
     presumptive: () => number;
     setPresumptive: (i: number) => void;
+    resetPresumptive: () => void;
     previousPresumptive: () => void;
     nextPresumptive: () => void;
     selectPresumptive: () => void;
@@ -48,7 +52,6 @@ export function Completions(props: {
         setPresumptive((i) => Math.min(remainingCompletions().length - 1, i + 1));
 
     const remainingCompletions = createMemo(() => {
-        setPresumptive(0);
         const prefix = props.text?.toLowerCase() ?? "";
         const starts = props.completions?.filter((c) => c.name.toLowerCase().startsWith(prefix));
         const startsNames = new Set(starts.map((c) => c.name.toLowerCase()));
@@ -57,8 +60,12 @@ export function Completions(props: {
                 (c) =>
                     c.name.toLowerCase().includes(prefix) && !startsNames.has(c.name.toLowerCase()),
             ) ?? [];
-        return starts.concat(includes);
+        const remaining = starts.concat(includes);
+        setPresumptive(defaultPresumptive(remaining));
+        return remaining;
     });
+
+    const resetPresumptive = () => setPresumptive(defaultPresumptive(remainingCompletions()));
 
     const selectPresumptive = () => {
         const completion = remainingCompletions()[presumptive()];
@@ -77,6 +84,7 @@ export function Completions(props: {
             remainingCompletions,
             presumptive,
             setPresumptive,
+            resetPresumptive,
             previousPresumptive,
             nextPresumptive,
             selectPresumptive,
@@ -121,6 +129,14 @@ export function Completions(props: {
                 )}
             </For>
         </ul>
+    );
+}
+
+/** Index of the completion highlighted initially: the selected one, if any. */
+function defaultPresumptive(completions: Completion[]): number {
+    return Math.max(
+        0,
+        completions.findIndex((c) => c.selected),
     );
 }
 
