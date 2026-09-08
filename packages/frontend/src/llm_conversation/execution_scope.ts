@@ -184,7 +184,7 @@ async function resolveLinkedInstances<Handle, Version>(
     store: DocumentStore<Handle, Version>,
 ): Promise<ReadonlyArray<Instance<Handle, Shape, Version>>> {
     const instances: Instance<Handle, Shape, Version>[] = [];
-    for (const handle of await store.listChildren(notebook.handle)) {
+    for (const handle of await store.listUsedBy(notebook.handle)) {
         // Guard against stores reporting documents that are not instances.
         if (store.getDocumentView(handle).type !== "instance") {
             continue;

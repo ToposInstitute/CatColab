@@ -8,18 +8,18 @@ import { createStore, reconcile } from "solid-js/store";
 import { BinderContext, createApiBinder, useApi } from "../api";
 import { unwrap } from "../api/rpc";
 import { normalizeImmutableStrings } from "../util/immutable_string";
-import { INITIAL_USER_STATE, UserStateContext } from "./user_state_context";
+import { INITIAL_META_DOCUMENT, MetaDocumentContext } from "./meta_document_context";
 
-export function UserStateProvider(props: { children: JSX.Element }) {
+export function MetaDocumentProvider(props: { children: JSX.Element }) {
     const api = useApi();
     const firebaseApp = useFirebaseApp();
-    const [userState, setUserState] = createStore<UserState>(INITIAL_USER_STATE);
+    const [metaDocument, setMetaDocument] = createStore<UserState>(INITIAL_META_DOCUMENT);
 
     // The binder resolves relations between the user's documents through the
-    // user state, so it is created here, where the state lives, and provided
-    // alongside it. The state store updates in place, so the binder keeps
-    // seeing current data across auth changes.
-    const binder = createApiBinder(api, userState);
+    // meta document, so it is created here, where the data lives, and provided
+    // alongside it. The store updates in place, so the binder keeps seeing
+    // current data across auth changes.
+    const binder = createApiBinder(api, metaDocument);
 
     let currentDocHandle: DocHandle<UserState> | null = null;
     let currentChangeHandler: ((arg: { doc: UserState }) => void) | null = null;
@@ -39,7 +39,7 @@ export function UserStateProvider(props: { children: JSX.Element }) {
         currentUserId = userId;
 
         teardownDocHandle();
-        setUserState(INITIAL_USER_STATE);
+        setMetaDocument(INITIAL_META_DOCUMENT);
 
         const userStateDocId = unwrap(await api.rpc.get_user_state_doc_id.query());
         if (currentUserId !== userId) {
@@ -53,11 +53,11 @@ export function UserStateProvider(props: { children: JSX.Element }) {
 
         currentDocHandle = docHandle;
         const onChange = ({ doc }: { doc: UserState }) => {
-            setUserState(reconcile(normalizeImmutableStrings(doc)));
+            setMetaDocument(reconcile(normalizeImmutableStrings(doc)));
         };
         currentChangeHandler = onChange;
 
-        setUserState(reconcile(normalizeImmutableStrings(docHandle.doc())));
+        setMetaDocument(reconcile(normalizeImmutableStrings(docHandle.doc())));
         docHandle.on("change", onChange);
     });
 
@@ -68,9 +68,9 @@ export function UserStateProvider(props: { children: JSX.Element }) {
 
     return (
         <BinderContext.Provider value={binder}>
-            <UserStateContext.Provider value={userState}>
+            <MetaDocumentContext.Provider value={metaDocument}>
                 {props.children}
-            </UserStateContext.Provider>
+            </MetaDocumentContext.Provider>
         </BinderContext.Provider>
     );
 }

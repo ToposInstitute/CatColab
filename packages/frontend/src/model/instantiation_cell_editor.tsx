@@ -13,7 +13,7 @@ import { useApi } from "../api";
 import { DocumentPicker, IdInput, IdInputPlaceholder } from "../components";
 import type { CellActions } from "../notebook";
 import { DocRefIdContext } from "../page/context";
-import { useUserState } from "../user/user_state_context";
+import { useMetaDocument } from "../user/meta_document_context";
 import { LiveModelContext, ModelLibraryContext } from "./context";
 import { ObInput } from "./object_input";
 
@@ -29,7 +29,7 @@ export function InstantiationCellEditor(props: {
     const api = useApi();
     const docRefId = useContext(DocRefIdContext);
     const liveModel = useContext(LiveModelContext);
-    const userState = useUserState();
+    const metaDocument = useMetaDocument();
 
     const filterCompletions = (refId: string, doc: DocInfo) => {
         if (doc.typeName !== "model") {
@@ -51,7 +51,7 @@ export function InstantiationCellEditor(props: {
             inst.model = refId ? api.makeUnversionedLink(refId, "instantiation") : null;
             // Auto-fill the name from the selected model's title when unnamed.
             if (refId && !inst.name) {
-                const docName = userState.documents[refId]?.name;
+                const docName = metaDocument.documents[refId]?.name;
                 if (docName) {
                     inst.name = docName;
                 }

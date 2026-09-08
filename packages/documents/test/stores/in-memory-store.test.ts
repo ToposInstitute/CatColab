@@ -1,4 +1,4 @@
-// The in-memory store's `listChildren`: every instance document linking
+// The in-memory store's `listUsedBy`: every instance document linking
 // back to a document, with drafts and unrelated documents excluded.
 import { Entity, SimpleSchema } from "catcolab-logics/simple-schema";
 import { describe, expect, test } from "vitest";
@@ -24,17 +24,17 @@ describe("in-memory store", () => {
         expectOk(await binder.createInstance(other, { title: "Other data" }));
         schema.add(Entity, { label: "Person" });
 
-        const schemaInstances = await store.listChildren(schema.handle);
+        const schemaInstances = await store.listUsedBy(schema.handle);
         expect(schemaInstances).toEqual([instance.handle]);
-        expect((await store.listChildren(other.handle)).length).toBe(1);
+        expect((await store.listUsedBy(other.handle)).length).toBe(1);
 
         // Instances do not have instances of their own.
-        expect(await store.listChildren(instance.handle)).toEqual([]);
+        expect(await store.listUsedBy(instance.handle)).toEqual([]);
 
         // Drafts are invisible to the query: staging a draft of the instance
         // does not make it (or its clone) appear twice.
         const draft = store.createDraft(instance.handle);
-        expect(await store.listChildren(schema.handle)).toEqual([instance.handle]);
+        expect(await store.listUsedBy(schema.handle)).toEqual([instance.handle]);
         store.discardDraft(draft);
     });
 });
