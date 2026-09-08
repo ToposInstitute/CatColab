@@ -3,7 +3,7 @@ import { type Accessor, createMemo } from "solid-js";
 
 import type { HistoryItem } from "catcolab-ui-components";
 import { useApi } from "../api";
-import { useUserState } from "../user/user_state_context";
+import { useMetaDocument } from "../user/meta_document_context";
 
 /** Walk backwards from `head` to root, then forward via newest children to the tip. */
 function buildFullChain(
@@ -76,9 +76,9 @@ export type SnapshotHistory = {
 /** Reactive hook providing snapshot history navigation for a document ref. */
 export function useSnapshotHistory(refId: Accessor<string>): SnapshotHistory {
     const api = useApi();
-    const userState = useUserState();
+    const metaDocument = useMetaDocument();
 
-    const docInfo = createMemo(() => userState.documents[refId()]);
+    const docInfo = createMemo(() => metaDocument.documents[refId()]);
     const head = createMemo(() => {
         const cs = docInfo()?.currentSnapshot;
         return cs != null ? String(cs) : "";
