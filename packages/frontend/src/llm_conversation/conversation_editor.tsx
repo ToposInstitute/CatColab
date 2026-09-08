@@ -1,6 +1,5 @@
 import * as Forms from "@modular-forms/solid";
 import type { SubmitHandler } from "@modular-forms/solid";
-import { makeEventListener } from "@solid-primitives/event-listener";
 import { createVisibilityObserver } from "@solid-primitives/intersection-observer";
 import { createResizeObserver } from "@solid-primitives/resize-observer";
 import Check from "lucide-solid/icons/check";
@@ -89,16 +88,15 @@ export function LLMConversationEditor(props: {
         return controller.runTurn({ content: values.message, files });
     };
 
-    // Set up `Shift + Enter` shortcut to send message.
-    makeEventListener(window, "keydown", (evt) => {
-        if (!props.focus.hasFocus()) {
-            return;
-        }
-        if (evt.shiftKey && evt.key === "Enter" && canSubmit()) {
-            Forms.submit(form);
+    // `Enter` sends the message; `Shift + Enter` inserts a newline.
+    const onMessageKeyDown = (evt: KeyboardEvent) => {
+        if (evt.key === "Enter" && !evt.shiftKey && !evt.isComposing) {
             evt.preventDefault();
+            if (canSubmit()) {
+                Forms.submit(form);
+            }
         }
-    });
+    };
 
     // Open pane scrolled to bottom, and set up autoscroll.
     let conversation!: HTMLDivElement;
@@ -191,7 +189,8 @@ export function LLMConversationEditor(props: {
                                     {...fieldProps}
                                     rows={1}
                                     value={field.value ?? ""}
-                                    placeholder="Type a message & press Shift-Enter to send"
+                                    onKeyDown={onMessageKeyDown}
+                                    placeholder="Type a message & press Enter to send"
                                 />
                             )}
                         </Field>
