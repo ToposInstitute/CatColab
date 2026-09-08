@@ -1,4 +1,7 @@
 .layout {
+    --llm-conversation-tab-width: 44px;
+    --llm-conversation-pane-width: 420px;
+
     display: flex;
     height: 100vh;
     width: 100vw;
@@ -95,6 +98,30 @@
     flex: 1;
 }
 
+/* Width taken from the document panes by the LLM conversation drawer. */
+.split-pane-toolbar {
+    --llm-conversation-pane-offset: 0px;
+
+    display: contents;
+
+    &.llm-conversations-available {
+        --llm-conversation-pane-offset: var(--llm-conversation-tab-width);
+    }
+
+    &.llm-conversations-open {
+        --llm-conversation-pane-offset: calc(
+            var(--llm-conversation-tab-width) + var(--llm-conversation-pane-width) + 1px
+        );
+    }
+}
+
+.single-pane-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-right: var(--llm-conversation-pane-offset);
+}
+
 .primary-permissions-toolbar {
     position: absolute;
     top: -6px;
@@ -113,7 +140,7 @@
 .secondary-permissions-toolbar {
     position: absolute;
     top: -6px;
-    right: -11px;
+    right: calc(var(--llm-conversation-pane-offset) - 11px);
     display: flex;
     align-items: center;
     padding-right: 8px;
