@@ -1,8 +1,8 @@
-// The in-memory store's `listUsedBy`: every instance document linking
-// back to a document, with drafts and unrelated documents excluded.
 import { Entity, SimpleSchema } from "catcolab-logics/simple-schema";
 import { describe, expect, test } from "vitest";
 
+// The in-memory store's link-indexed relation queries.
+import { Diagram } from "catcolab-document-methods";
 import { createBinder, createInMemoryStore, type Result } from "catcolab-documents";
 
 function expectOk<T, E>(result: Result<T, E>): T {
@@ -14,7 +14,7 @@ function expectOk<T, E>(result: Result<T, E>): T {
 }
 
 describe("in-memory store", () => {
-    test("lists the instances linking back to a document", async () => {
+    test("lists related documents indexed by link type", async () => {
         const store = createInMemoryStore();
         const binder = createBinder(store);
 
@@ -22,19 +22,57 @@ describe("in-memory store", () => {
         const other = await binder.createNotebook(SimpleSchema, { title: "Other" });
         const instance = expectOk(await binder.createInstance(schema, { title: "Data" }));
         expectOk(await binder.createInstance(other, { title: "Other data" }));
+        const conversation = await binder.createLLMConversation(schema, "test-model", {
+            title: "Conversation",
+        });
+        const schemaRefId = store.getDocumentRef(schema.handle).id;
+        const diagram = await store.createHandle(
+            Diagram.newDiagramDocument({ _id: schemaRefId, _version: null, _server: "" }),
+        );
         schema.add(Entity, { label: "Person" });
 
-        const schemaInstances = await store.listUsedBy(schema.handle);
-        expect(schemaInstances).toEqual([instance.handle]);
-        expect((await store.listUsedBy(other.handle)).length).toBe(1);
+        expect(await store.listUsedBy(schema.handle)).toEqual({
+            "analysis-of": [],
+            "diagram-in": [diagram],
+            "instance-of": [instance.handle],
+            "llmconversation-of": [conversation.handle],
+            instantiation: [],
+        });
+        expect((await store.listDependsOn(diagram))["diagram-in"]).toEqual([schema.handle]);
+        expect((await store.listUsedBy(other.handle))["instance-of"]).toHaveLength(1);
 
-        // Instances do not have instances of their own.
-        expect(await store.listUsedBy(instance.handle)).toEqual([]);
+        expect(await store.listDependsOn(instance.handle)).toEqual({
+            "analysis-of": [],
+            "diagram-in": [],
+            "instance-of": [schema.handle],
+            "llmconversation-of": [],
+            instantiation: [],
+        });
+        expect((await store.listDependsOn(conversation.handle))["llmconversation-of"]).toEqual([
+            schema.handle,
+        ]);
+
+        // The schema depends on no document, and nothing depends on the
+        // instance.
+        expect(await store.listDependsOn(schema.handle)).toEqual({
+            "analysis-of": [],
+            "diagram-in": [],
+            "instance-of": [],
+            "llmconversation-of": [],
+            instantiation: [],
+        });
+        expect(await store.listUsedBy(instance.handle)).toEqual({
+            "analysis-of": [],
+            "diagram-in": [],
+            "instance-of": [],
+            "llmconversation-of": [],
+            instantiation: [],
+        });
 
         // Drafts are invisible to the query: staging a draft of the instance
         // does not make it (or its clone) appear twice.
         const draft = store.createDraft(instance.handle);
-        expect(await store.listUsedBy(schema.handle)).toEqual([instance.handle]);
+        expect((await store.listUsedBy(schema.handle))["instance-of"]).toEqual([instance.handle]);
         store.discardDraft(draft);
     });
 });

@@ -3,8 +3,8 @@ import type { InlineFile, LLMInteraction } from "catcolab-document-types";
 import type {
     DocumentStore,
     LLMConversation as LLMConversationAPI,
-    LLMConversationAttachment,
     Shape,
+    SupportedDocument,
 } from "catcolab-documents";
 import type { JsResult } from "catlog-wasm";
 import {
@@ -70,7 +70,7 @@ export type LLMConversationTurnResult =
 export async function runLLMConversationTurn<
     Handle,
     Version,
-    Attachment extends LLMConversationAttachment<Shape, Handle, Version>,
+    Attachment extends SupportedDocument<Shape, Handle, Version>,
 >(
     conversation: LLMConversationAPI<Attachment, Handle>,
     store: DocumentStore<Handle, Version>,
@@ -102,7 +102,7 @@ export async function runLLMConversationTurn<
 export async function retryLastLLMConversationResponse<
     Handle,
     Version,
-    Attachment extends LLMConversationAttachment<Shape, Handle, Version>,
+    Attachment extends SupportedDocument<Shape, Handle, Version>,
 >(
     conversation: LLMConversationAPI<Attachment, Handle>,
     store: DocumentStore<Handle, Version>,
@@ -123,7 +123,7 @@ export async function retryLastLLMConversationResponse<
 async function generateLLMConversationResponse<
     Handle,
     Version,
-    Attachment extends LLMConversationAttachment<Shape, Handle, Version>,
+    Attachment extends SupportedDocument<Shape, Handle, Version>,
 >(
     conversation: LLMConversationAPI<Attachment, Handle>,
     store: DocumentStore<Handle, Version>,

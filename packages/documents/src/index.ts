@@ -1,9 +1,15 @@
 export { createBinder } from "./binder";
 export { CellKind } from "./model/cell";
 export type { Binder } from "./binder";
-export type { DocumentChange, DocumentRef, DocumentStore, ReactiveView } from "./document-store";
+export type {
+    DocumentChange,
+    DocumentRef,
+    DocumentStore,
+    HandlesByLinkType,
+    ReactiveView,
+} from "./document-store";
 export type { Issue, PathSegment, Result } from "./result";
-export { createInMemoryStore } from "./document-store";
+export { createInMemoryStore, documentLinks, emptyHandlesByLinkType } from "./document-store";
 export { atomicTypeOfAttributeType } from "./instance/validation";
 export type {
     FieldPath,
@@ -20,11 +26,7 @@ export type {
     InstanceValidationView,
 } from "./instance/instance";
 export { llmConversationFromStore } from "./llm-conversation";
-export type {
-    LLMConversation,
-    LLMConversationAttachment,
-    LLMConversationDocument,
-} from "./llm-conversation";
+export type { LLMConversation, LLMConversationDocument } from "./llm-conversation";
 export type {
     FieldValue,
     InstancePath,

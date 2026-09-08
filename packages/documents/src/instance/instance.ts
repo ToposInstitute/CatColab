@@ -107,7 +107,6 @@ export interface InstanceValidationView<out S extends Shape> extends InstanceVal
 Schema-derived operations elaborate the schema on demand and work against the
 resulting model even when the schema is only partially valid. */
 export function instanceFromStore<Handle, S extends Shape, Version>(
-    shape: S,
     schema: Notebook<S, ModelDocument, Handle, Version>,
     store: DocumentStore<Handle, Version>,
     handle: Handle,
@@ -148,7 +147,7 @@ export function instanceFromStore<Handle, S extends Shape, Version>(
 
     const instance: Instance<Handle, S, Version> = {
         handle,
-        shape,
+        shape: schema.shape,
         get document(): Readonly<InstanceDocument> {
             return currentDocument();
         },

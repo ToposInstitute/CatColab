@@ -1,6 +1,7 @@
 import { Entity, Mapping, SimpleSchema } from "catcolab-logics/simple-schema";
 import { assert, beforeEach, describe, test, vi } from "vitest";
 
+import { Diagram } from "catcolab-document-methods";
 import type { Document } from "catcolab-document-types";
 import {
     createBinder,
@@ -138,7 +139,7 @@ describe("LLM conversation turns", { timeout: 30_000 }, () => {
                 assert.match(systemPromptSuffix ?? "", /Company schema/);
                 assert.match(
                     systemPromptSuffix ?? "",
-                    /`document_Company_data` is the document .*`instanceOf` link points to `document_Company_schema`\./s,
+                    /`document_Company_data` is the document .*`instance-of` link points to `document_Company_schema`\./s,
                 );
 
                 // Both documents are staged in the same transaction: edits to
@@ -152,6 +153,85 @@ describe("LLM conversation turns", { timeout: 30_000 }, () => {
         assert.deepStrictEqual(await runTurn(fixture), { tag: "Completed", content: "Done." });
         assert.strictEqual(fixture.schema.title, "Updated schema");
         assert.strictEqual(instance.title, "Updated data");
+    });
+
+    test("stages sibling conversations of the attached document", async () => {
+        const fixture = await makeFixture();
+        const sibling = await fixture.binder.createLLMConversation(fixture.schema, "test-model", {
+            title: "Conversation 2",
+        });
+
+        inference.runChatTurn.mockImplementation(
+            async (_client, _transcript, scope, _onContent, _model, systemPromptSuffix) => {
+                // The running conversation itself is not staged: only its
+                // sibling is in the draft scope.
+                const stagedConversation = scope.document_Conversation_2 as
+                    | typeof fixture.conversation
+                    | undefined;
+                assert(stagedConversation);
+                assert.match(
+                    systemPromptSuffix ?? "",
+                    /`document_Conversation_2` is the document .*`llmconversation-of` link points to `document_Company_schema`\./s,
+                );
+                stagedConversation.update({ title: "Renamed" });
+                return response("Done.");
+            },
+        );
+
+        assert.deepStrictEqual(await runTurn(fixture), { tag: "Completed", content: "Done." });
+        assert.strictEqual(sibling.title, "Renamed");
+        assert.strictEqual(fixture.conversation.title, "Conversation");
+    });
+
+    test("brings the attachment of a conversation-attached conversation into scope", async () => {
+        const fixture = await makeFixture();
+        const inner = await fixture.binder.createLLMConversation(fixture.schema, "test-model", {
+            title: "Inner",
+        });
+        const outer = await fixture.binder.createLLMConversation(inner, "test-model", {
+            title: "Outer",
+        });
+
+        inference.runChatTurn.mockImplementation(
+            async (_client, _transcript, scope, _onContent, _model, systemPromptSuffix) => {
+                assert.match(
+                    systemPromptSuffix ?? "",
+                    /`document_Inner` is the attached document .*`llmconversation-of` link points to `document_Company_schema`\./s,
+                );
+                schemaBinding(scope).update({ title: "Updated schema" });
+                return response("Done.");
+            },
+        );
+
+        const result = await runLLMConversationTurn(
+            outer,
+            fixture.binder.store,
+            { tag: "Ready", key: "inference-key" },
+            { content: "Inspect the document.", files: [] },
+        );
+        assert.deepStrictEqual(result, { tag: "Completed", content: "Done." });
+        assert.strictEqual(fixture.schema.title, "Updated schema");
+    });
+
+    test("skips documents that have no document API object", async () => {
+        const fixture = await makeFixture();
+        const schemaRefId = fixture.binder.store.getDocumentRef(fixture.schema.handle).id;
+        const diagramHandle = await fixture.binder.store.createHandle(
+            Diagram.newDiagramDocument({ _id: schemaRefId, _version: null, _server: "" }),
+        );
+        fixture.binder.store.changeDocument(diagramHandle, (document) => {
+            assert.strictEqual(document.type, "diagram");
+            if (document.type === "diagram") {
+                document.name = "Company diagram";
+            }
+        });
+
+        inference.runChatTurn.mockImplementation(async (_client, _transcript, scope) => {
+            assert(!("document_Company_diagram" in scope));
+            return response("Done.");
+        });
+
+        assert.deepStrictEqual(await runTurn(fixture), { tag: "Completed", content: "Done." });
     });
 
     test("blocks notebook commits until schema issues are repaired", async () => {
@@ -213,7 +293,10 @@ describe("LLM conversation turns", { timeout: 30_000 }, () => {
                     | undefined;
                 assert(attachedDocument);
                 assert(scope.document_Company_schema);
-                assert.match(systemPromptSuffix ?? "", /Company data.*instanceOf.*Company schema/s);
+                assert.match(
+                    systemPromptSuffix ?? "",
+                    /Company data.*instance-of.*Company schema/s,
+                );
                 assert(onSuccessHook);
 
                 let validationError: unknown;

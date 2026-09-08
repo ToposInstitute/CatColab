@@ -12,7 +12,13 @@ import { SimpleOlog, Type } from "catcolab-logics/simple-olog";
 import { describe, expect, test } from "vitest";
 
 import type { Document } from "catcolab-document-types";
-import { createBinder, type DocumentStore, Instantiation } from "catcolab-documents";
+import {
+    createBinder,
+    type DocumentStore,
+    documentLinks,
+    emptyHandlesByLinkType,
+    Instantiation,
+} from "catcolab-documents";
 import { FakeBackend } from "../helpers/fake_backend";
 
 const backend = new FakeBackend();
@@ -76,14 +82,28 @@ const backendStore: DocumentStore<StoreHandle> = {
         if (!refId) {
             throw new Error("handle is not registered with this store");
         }
-        const instances: StoreHandle[] = [];
+        const linked = emptyHandlesByLinkType<StoreHandle>();
         for (const other of handleByRefId.values()) {
-            const doc = other.docView;
-            if (other !== handle && doc.type === "instance" && doc.instanceOf._id === refId) {
-                instances.push(other);
+            if (other === handle) {
+                continue;
+            }
+            for (const link of documentLinks(other.docView)) {
+                if (link._id === refId) {
+                    linked[link.type].push(other);
+                }
             }
         }
-        return instances;
+        return linked;
+    },
+    listDependsOn: async (handle) => {
+        const linked = emptyHandlesByLinkType<StoreHandle>();
+        for (const link of documentLinks(handle.docView)) {
+            const other = handleByRefId.get(link._id);
+            if (other !== undefined && other !== handle) {
+                linked[link.type].push(other);
+            }
+        }
+        return linked;
     },
     getHandle: async (ref) => {
         const refId = ref.id;

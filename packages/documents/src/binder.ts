@@ -8,11 +8,7 @@ import type { DocumentRef, DocumentStore } from "./document-store";
 import { createInMemoryStore } from "./document-store";
 import type { DocumentChange } from "./document-store";
 import { instanceFromStore, type Instance } from "./instance/instance";
-import {
-    type LLMConversation,
-    type LLMConversationAttachment,
-    llmConversationFromStore,
-} from "./llm-conversation";
+import { type LLMConversation, llmConversationFromStore } from "./llm-conversation";
 import type { ModelDocument } from "./model/document";
 import { modelNotebookFromStore, type Notebook } from "./model/notebook";
 import type { Result } from "./result";
@@ -39,7 +35,7 @@ export interface Binder<Handle, Version> {
         options: { title: string },
     ): Promise<Result<Instance<Handle, S, Version>>>;
 
-    createLLMConversation<Attachment extends LLMConversationAttachment<Shape, Handle, Version>>(
+    createLLMConversation<Attachment extends SupportedDocument<Shape, Handle, Version>>(
         attachment: Attachment,
         llmModel: string,
         options: { title: string },
@@ -158,12 +154,14 @@ function binderFromStore<Handle, Version>(
             const handle = await store.createHandle(document);
             return {
                 tag: "Ok",
-                content: instanceFromStore(shape, schema, store, handle),
+                content: instanceFromStore(schema, store, handle),
             };
         },
-        async createLLMConversation<
-            Attachment extends LLMConversationAttachment<Shape, Handle, Version>,
-        >(attachment: Attachment, llmModel: string, options: { title: string }) {
+        async createLLMConversation<Attachment extends SupportedDocument<Shape, Handle, Version>>(
+            attachment: Attachment,
+            llmModel: string,
+            options: { title: string },
+        ) {
             const attachmentRef = store.getDocumentRef(attachment.handle);
             const document = LLMConversationMethods.newLLMConversationDocument(
                 {
@@ -232,7 +230,7 @@ function binderFromStore<Handle, Version>(
 
             return {
                 tag: "Ok",
-                content: instanceFromStore(schema.shape, schema, store, result.content),
+                content: instanceFromStore(schema, store, result.content),
             };
         },
         async beginTransaction<
@@ -258,21 +256,27 @@ function binderFromStore<Handle, Version>(
                 draftHandleBySourceRefId.set(store.getDocumentRef(doc.handle).id, draftHandle);
             }
 
-            /** Construct the draft counterpart of a staged document. */
+            const drafts = new Map<Handle, SupportedDocument<Shape, Handle, Version>>();
+
+            /** Construct the draft counterpart of a staged document, or
+             * undefined when it cannot be drafted yet because it binds to the
+             * draft of another staged document that has not been drafted. */
             async function draftDoc(
                 doc: SupportedDocument<Shape, Handle, Version>,
-            ): Promise<SupportedDocument<Shape, Handle, Version>> {
+            ): Promise<SupportedDocument<Shape, Handle, Version> | undefined> {
                 const draftHandle = draftHandleBySource.get(doc.handle)!;
                 switch (doc.document.type) {
                     case "model": {
-                        return modelNotebookFromStore(doc.shape, store, draftHandle);
+                        return modelNotebookFromStore(
+                            (doc as Notebook<Shape, ModelDocument, Handle, Version>).shape,
+                            store,
+                            draftHandle,
+                        );
                     }
                     case "instance": {
-                        // Connecting a draft instance to its schema is the
-                        // binder's job: bind it to the schema's own draft when
-                        // the schema is also staged in the transaction, and
-                        // otherwise to the real schema resolved through the
-                        // store.
+                        //  bind it to the schema's own draft when the schema is
+                        // also staged in the transaction, and otherwise to the
+                        // real schema resolved through the store.
                         const instanceOf = doc.document.instanceOf;
                         let schemaHandle = draftHandleBySourceRefId.get(instanceOf._id);
                         if (schemaHandle === undefined) {
@@ -294,19 +298,54 @@ function binderFromStore<Handle, Version>(
                                 `The schema of instance "${doc.title}" is not a model document.`,
                             );
                         }
-                        const schema = modelNotebookFromStore(doc.shape, store, schemaHandle);
-                        return instanceFromStore(doc.shape, schema, store, draftHandle);
+                        const schema = modelNotebookFromStore(
+                            (doc as Notebook<Shape, ModelDocument, Handle, Version>).shape,
+                            store,
+                            schemaHandle,
+                        );
+                        return instanceFromStore(schema, store, draftHandle);
+                    }
+                    case "llmconversation": {
+                        // binds to the draft of the document it is attached to
+                        // when that document is also staged in the transaction,
+                        // and otherwise to the real document.
+                        const attachment = (
+                            doc as LLMConversation<
+                                SupportedDocument<Shape, Handle, Version>,
+                                Handle
+                            >
+                        ).attachment;
+                        if (draftHandleBySource.has(attachment.handle)) {
+                            const attachmentDraft = drafts.get(attachment.handle);
+                            if (attachmentDraft === undefined) {
+                                return undefined;
+                            }
+                            return llmConversationFromStore(store, draftHandle, attachmentDraft);
+                        }
+                        return llmConversationFromStore(store, draftHandle, attachment);
                     }
                 }
             }
 
-            const drafts = new Map<
-                SupportedDocument<Shape, Handle, Version>,
-                SupportedDocument<Shape, Handle, Version>
-            >();
+            // Draft the staged documents in dependency order
+            const pending = [...sources];
             try {
-                for (const doc of sources) {
-                    drafts.set(doc, await draftDoc(doc));
+                while (pending.length > 0) {
+                    const drafted = await Promise.all(pending.map((doc) => draftDoc(doc)));
+                    const remaining = pending.filter((_, index) => drafted[index] === undefined);
+                    if (remaining.length === pending.length) {
+                        throw new Error(
+                            "The staged conversations are attached in a cycle, " +
+                                "so no draft order exists.",
+                        );
+                    }
+                    for (const [index, doc] of pending.entries()) {
+                        const draft = drafted[index];
+                        if (draft !== undefined) {
+                            drafts.set(doc.handle, draft);
+                        }
+                    }
+                    pending.splice(0, pending.length, ...remaining);
                 }
             } catch (error) {
                 // Constructing the drafts failed: discard the staged drafts so
@@ -318,7 +357,7 @@ function binderFromStore<Handle, Version>(
             }
 
             const draftDocs = Object.fromEntries(
-                Object.entries(docs).map(([key, doc]) => [key, drafts.get(doc)]),
+                Object.entries(docs).map(([key, doc]) => [key, drafts.get(doc.handle)]),
             ) as Docs;
 
             const staged = sources.map((doc) => ({

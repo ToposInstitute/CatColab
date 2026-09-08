@@ -1,17 +1,18 @@
 import { applyPatches, diff, getHeads, type Heads } from "@automerge/automerge";
 import { type DocHandle, Repo } from "@automerge/automerge-repo";
 import { makeDocumentProjection } from "@automerge/automerge-repo-solid-primitives";
-import type { UserState } from "catcolab-api/src/user_state";
+import type { RelationInfo, UserState } from "catcolab-api/src/user_state";
 import { createStore, reconcile, unwrap } from "solid-js/store";
 import { stringify as uuidStringify } from "uuid";
 
-import type { Document } from "catcolab-document-types";
+import type { Document, LinkType } from "catcolab-document-types";
 import {
     type Binder,
     createBinder,
     type DocumentChange,
     type DocumentRef,
     type DocumentStore,
+    type HandlesByLinkType,
     type Result,
 } from "catcolab-documents";
 import type { Api } from "./types";
@@ -77,6 +78,78 @@ export function createApiDocumentStore(api: Api, userState: UserState): ApiDocum
         },
     });
 
+    async function getHandle(ref: DocumentRef): Promise<Result<ApiDocumentHandle>> {
+        if (ref.version !== null) {
+            return {
+                tag: "Err",
+                content: [
+                    { message: "Pinned document refs are not supported.", path: ["version"] },
+                ],
+            };
+        }
+        if (ref.server && ref.server !== api.serverHost) {
+            return {
+                tag: "Err",
+                content: [
+                    {
+                        message: `Cannot resolve a document on server "${ref.server}".`,
+                        path: ["server"],
+                    },
+                ],
+            };
+        }
+        const canonicalRef = { ...ref, server: ref.server || api.serverHost };
+
+        const cached = handles.get(ref.id);
+        if (cached) {
+            cached.ref = canonicalRef;
+            return { tag: "Ok", content: cached };
+        }
+        try {
+            const automergeHandle = await api.getDocHandle(ref.id);
+            return { tag: "Ok", content: cacheHandle(canonicalRef, automergeHandle) };
+        } catch (error) {
+            return {
+                tag: "Err",
+                content: [
+                    {
+                        message: error instanceof Error ? error.message : String(error),
+                        path: ["id"],
+                    },
+                ],
+            };
+        }
+    }
+
+    /** Resolve the relations recorded for a document in the user state into
+     * handles, indexed by link type. Relations of unknown link types, and
+     * relations to documents that no longer exist, are skipped. */
+    async function resolveLinked(
+        relations: ReadonlyArray<RelationInfo>,
+    ): Promise<HandlesByLinkType<ApiDocumentHandle>> {
+        const linked: Record<LinkType, ApiDocumentHandle[]> = {
+            "analysis-of": [],
+            "diagram-in": [],
+            "instance-of": [],
+            "llmconversation-of": [],
+            instantiation: [],
+        };
+        for (const relation of relations) {
+            if (!(relation.relationType in linked)) {
+                continue;
+            }
+            const refId = uuidStringify(relation.refId);
+            if (userState.documents[refId]?.deletedAt !== null) {
+                continue;
+            }
+            const result = await getHandle({ id: refId, version: null, server: api.serverHost });
+            if (result.tag === "Ok") {
+                linked[relation.relationType as LinkType].push(result.content);
+            }
+        }
+        return linked;
+    }
+
     return {
         async createHandle(initialDoc) {
             const refId = await api.createDoc(initialDoc);
@@ -106,73 +179,12 @@ export function createApiDocumentStore(api: Api, userState: UserState): ApiDocum
         },
         getDocumentRef: (handle) => handle.ref,
         async listUsedBy(handle) {
-            // The user state tracks backlinks between documents: every
-            // instance of this document appears in its `usedBy` relations with
-            // relation type "instance-of". Resolve those refs back into store
-            // handles like any other document ref.
-            const instanceRefIds = (userState.documents[handle.ref.id]?.usedBy ?? [])
-                .filter(
-                    (relation) =>
-                        relation.relationType === "instance-of" &&
-                        // Skip instances that no longer exist.
-                        userState.documents[uuidStringify(relation.refId)]?.deletedAt === null,
-                )
-                .map((relation) => uuidStringify(relation.refId));
-            const instances: ApiDocumentHandle[] = [];
-            for (const instanceRefId of instanceRefIds) {
-                const result = await this.getHandle({
-                    id: instanceRefId,
-                    version: null,
-                    server: api.serverHost,
-                });
-                if (result.tag === "Ok") {
-                    instances.push(result.content);
-                }
-            }
-            return instances;
+            return resolveLinked(userState.documents[handle.ref.id]?.usedBy ?? []);
         },
-        async getHandle(ref: DocumentRef): Promise<Result<ApiDocumentHandle>> {
-            if (ref.version !== null) {
-                return {
-                    tag: "Err",
-                    content: [
-                        { message: "Pinned document refs are not supported.", path: ["version"] },
-                    ],
-                };
-            }
-            if (ref.server && ref.server !== api.serverHost) {
-                return {
-                    tag: "Err",
-                    content: [
-                        {
-                            message: `Cannot resolve a document on server "${ref.server}".`,
-                            path: ["server"],
-                        },
-                    ],
-                };
-            }
-            const canonicalRef = { ...ref, server: ref.server || api.serverHost };
-
-            const cached = handles.get(ref.id);
-            if (cached) {
-                cached.ref = canonicalRef;
-                return { tag: "Ok", content: cached };
-            }
-            try {
-                const automergeHandle = await api.getDocHandle(ref.id);
-                return { tag: "Ok", content: cacheHandle(canonicalRef, automergeHandle) };
-            } catch (error) {
-                return {
-                    tag: "Err",
-                    content: [
-                        {
-                            message: error instanceof Error ? error.message : String(error),
-                            path: ["id"],
-                        },
-                    ],
-                };
-            }
+        async listDependsOn(handle) {
+            return resolveLinked(userState.documents[handle.ref.id]?.dependsOn ?? []);
         },
+        getHandle,
         createDraft: (handle) => {
             const automergeDraft = draftRepo.clone(handle.automergeHandle);
             const draft = draftHandle(automergeDraft);

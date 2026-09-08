@@ -68,6 +68,56 @@ describe("transactions", () => {
     });
 
     test(
+        "binds draft conversations to the drafts of their attachments",
+        { timeout: 20_000 },
+        async () => {
+            const binder = createBinder();
+            const schema = await binder.createNotebook(SimpleSchema, { title: "Example schema" });
+            const inner = await binder.createLLMConversation(schema, "test-model", {
+                title: "Inner",
+            });
+            const outer = await binder.createLLMConversation(inner, "test-model", {
+                title: "Outer",
+            });
+
+            const { tx, draftDocs } = await binder.beginTransaction({ schema, inner, outer });
+
+            // Each draft conversation is attached to the draft of the document
+            // it is attached to.
+            expect(draftDocs.inner.attachment.handle).toBe(draftDocs.schema.handle);
+            expect(draftDocs.outer.attachment.handle).toBe(draftDocs.inner.handle);
+
+            draftDocs.outer.update({ title: "Renamed" });
+            expect(outer.title).toBe("Outer");
+
+            tx.commit();
+            expect(outer.title).toBe("Renamed");
+            expect(inner.title).toBe("Inner");
+        },
+    );
+
+    test(
+        "stages a conversation on its own, attached to the real document",
+        { timeout: 20_000 },
+        async () => {
+            const binder = createBinder();
+            const schema = await binder.createNotebook(SimpleSchema, { title: "Example schema" });
+            const conversation = await binder.createLLMConversation(schema, "test-model", {
+                title: "Conversation",
+            });
+
+            const { tx, draftDocs } = await binder.beginTransaction({ conversation });
+
+            const draft = draftDocs.conversation;
+            expect(draft.attachment.handle).toBe(schema.handle);
+
+            draft.update({ title: "Renamed" });
+            tx.commit();
+            expect(conversation.title).toBe("Renamed");
+        },
+    );
+
+    test(
         "abort discards the staged drafts without touching the sources",
         { timeout: 20_000 },
         async () => {
