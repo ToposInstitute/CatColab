@@ -11,8 +11,8 @@ import { useApi } from "../api";
 import { BrandedToolbar } from "../page";
 import { DocumentList, filterDocuments } from "./document_list";
 import { LoginGate } from "./login";
+import { useMetaDocument } from "./meta_document_context";
 import { useUserSettings } from "./user_settings";
-import { useUserState } from "./user_state_context";
 
 import "./documents.css";
 import styles from "./menu_pages.module.css";
@@ -36,12 +36,12 @@ export default function TrashBin() {
 }
 
 function TrashBinSearch() {
-    const userState = useUserState();
+    const metaDocument = useMetaDocument();
     const { settings } = useUserSettings();
     const [searchQuery, setSearchQuery] = createSignal("");
 
     const documents = createMemo(() =>
-        filterDocuments(userState.documents, {
+        filterDocuments(metaDocument.documents, {
             query: searchQuery().trim().toLowerCase(),
             deleted: true,
             settings: settings(),

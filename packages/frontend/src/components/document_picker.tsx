@@ -29,8 +29,8 @@ import {
 import type { Document, Uuid } from "catlog-wasm";
 import { useApi } from "../api";
 import { TheoryLibraryContext } from "../theory";
+import { useMetaDocument } from "../user/meta_document_context";
 import { isDocumentVisible, useUserSettings } from "../user/user_settings";
-import { useUserState } from "../user/user_state_context";
 
 import "./document_picker.css";
 
@@ -166,7 +166,7 @@ function DocSearchInput(
         "filterCompletions",
     ]);
 
-    const userState = useUserState();
+    const metaDocument = useMetaDocument();
     const { settings } = useUserSettings();
     const theories = useContext(TheoryLibraryContext);
 
@@ -187,7 +187,7 @@ function DocSearchInput(
     // Build completions from the user's document list, filtered by the
     // caller-provided predicate (if any) and excluding deleted documents.
     const documentCompletions = createMemo((): Completion[] => {
-        const docs = userState.documents;
+        const docs = metaDocument.documents;
         const filter = props.filterCompletions;
 
         const entries = Object.entries(docs) as [string, DocInfo][];

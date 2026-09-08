@@ -222,7 +222,7 @@ describe("API document store", () => {
         }
 
         // The backend's ref ids are resolved back into store handles.
-        const instances = await store.listChildren(schema.content);
+        const instances = await store.listUsedBy(schema.content);
         expect(instances).toHaveLength(1);
         expect(instances[0]?.automergeHandle).toBe(instanceAutomergeHandle);
         expect(store.getDocumentView(instances[0]!).type).toBe("instance");
@@ -233,7 +233,7 @@ describe("API document store", () => {
         if (instance.tag === "Err") {
             throw new Error("expected instance ref to resolve");
         }
-        expect(await store.listChildren(instance.content)).toEqual([]);
+        expect(await store.listUsedBy(instance.content)).toEqual([]);
     });
 
     test("copyValue detaches Solid projection values", async () => {
