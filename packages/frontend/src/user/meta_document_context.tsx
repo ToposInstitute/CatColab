@@ -2,13 +2,13 @@ import type { PermissionInfo, UserInfo, UserState } from "catcolab-api/src/user_
 import { createContext, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
-export const INITIAL_META_DOCUMENT: UserState = {
+export const INITIAL_USER_STATE: UserState = {
     profile: { username: null, displayName: null },
     knownUsers: {},
     documents: {},
 };
 
-export const MetaDocumentContext = createContext<UserState>(INITIAL_META_DOCUMENT);
+export const MetaDocumentContext = createContext<UserState>(INITIAL_USER_STATE);
 
 /** Retrieve the meta document from application context. */
 export function useMetaDocument(): UserState {

@@ -2,9 +2,9 @@ import type { Document } from "catcolab-document-types";
 import type {
     DocumentRef,
     LLMConversation as LLMConversationAPI,
-    LLMConversationAttachment,
     LLMConversationDocument,
     Shape,
+    SupportedDocument,
 } from "catcolab-documents";
 import { llmConversationFromStore } from "catcolab-documents";
 import type {
@@ -19,16 +19,15 @@ import type {
 import type { LiveModelDoc, ModelLibrary } from "../model";
 import { notebookShapes, shapeForTheory } from "../model/shapes";
 import { assertExhaustive } from "../util/assert_exhaustive";
+import { resolveSupportedDocument } from "./document_resolution";
 
 /**
  * Live*Doc compatibility and binder loading for LLM conversations, following
  * `instance/live_doc_compatibility.ts`; see that module for the details of the
- * pattern. Differences: the attachment may be a model notebook or a data
- * instance, and the facade carries the conversation object for use by the
- * conversation editor.
+ * pattern.
  */
 
-export type ApiLLMConversationAttachment = LLMConversationAttachment<
+export type ApiLLMConversationAttachment = SupportedDocument<
     Shape,
     ApiDocumentHandle,
     ApiDocumentVersion
@@ -53,62 +52,6 @@ async function getHandle(binder: ApiBinder, ref: DocumentRef) {
         throw new Error(result.content.map((issue) => issue.message).join("\n"));
     }
     return result.content;
-}
-
-async function loadNotebook(api: Api, binder: ApiBinder, modelRefId: string) {
-    const ref = { id: modelRefId, version: null, server: api.serverHost };
-    const handle = await getHandle(binder, ref);
-    const document = binder.store.getDocumentView(handle);
-    if (document.type !== "model") {
-        throw new Error(`Cannot load document of type "${document.type}" as a model notebook.`);
-    }
-    const shape = shapeForTheory(notebookShapes, document.theory);
-    if (!shape) {
-        throw new Error(`LLM conversations are not supported for theory "${document.theory}".`);
-    }
-    const notebook = await binder.loadNotebookFromRef(shape, ref);
-    if (notebook.tag === "Err") {
-        throw new Error(notebook.content.map((issue) => issue.message).join("\n"));
-    }
-    return notebook.content;
-}
-
-async function loadInstance(
-    api: Api,
-    binder: ApiBinder,
-    instanceRefId: string,
-    modelRefId: string,
-): Promise<ApiLLMConversationAttachment> {
-    const schema = await loadNotebook(api, binder, modelRefId);
-    const instance = await binder.loadInstanceFromRef(schema, {
-        id: instanceRefId,
-        version: null,
-        server: api.serverHost,
-    });
-    if (instance.tag === "Err") {
-        throw new Error(instance.content.map((issue) => issue.message).join("\n"));
-    }
-    return instance.content;
-}
-
-/** Load the document with the given ref as an LLM conversation attachment. */
-async function loadAttachment(
-    api: Api,
-    binder: ApiBinder,
-    refId: string,
-    document: Document,
-): Promise<{ attachment: ApiLLMConversationAttachment; modelRefId: string }> {
-    switch (document.type) {
-        case "model":
-            return { attachment: await loadNotebook(api, binder, refId), modelRefId: refId };
-        case "instance": {
-            const modelRefId = document.instanceOf._id;
-            const attachment = await loadInstance(api, binder, refId, modelRefId);
-            return { attachment, modelRefId };
-        }
-        default:
-            throw new Error(`Cannot attach an LLM conversation to a "${document.type}" document.`);
-    }
 }
 
 /** Whether an LLM conversation can be attached to the given document. */
@@ -141,17 +84,18 @@ export async function getLiveLLMConversation(
     if (of._version !== null || of._server !== api.serverHost) {
         throw new Error("LLM conversations require a live attachment on the current server.");
     }
-    const attachmentRef = { id: of._id, version: null, server: api.serverHost };
-    const attachmentDocument: Document = binder.store.getDocumentView(
-        await getHandle(binder, attachmentRef),
-    );
-
-    const { attachment, modelRefId } = await loadAttachment(
-        api,
-        binder,
-        of._id,
-        attachmentDocument,
-    );
+    const attachmentHandle = await getHandle(binder, {
+        id: of._id,
+        version: null,
+        server: api.serverHost,
+    });
+    const resolved = await resolveSupportedDocument(binder.store, attachmentHandle);
+    if (resolved === undefined) {
+        throw new Error(
+            `Cannot attach an LLM conversation to a "${binder.store.getDocumentView(attachmentHandle).type}" document.`,
+        );
+    }
+    const { document: attachment, modelRefId } = resolved;
     const liveModel = await models.getLiveModel(modelRefId);
     const conversationHandle = await getHandle(binder, {
         id: refId,
@@ -179,13 +123,18 @@ export async function createLLMConversation(
     attachTo: LiveDocWithRef,
     llmModel: string,
 ): Promise<string> {
-    const { attachment } = await loadAttachment(
-        api,
-        binder,
-        attachTo.docRef.refId,
-        attachTo.liveDoc.doc,
-    );
-    const conversation = await binder.createLLMConversation(attachment, llmModel, {
+    const handle = await getHandle(binder, {
+        id: attachTo.docRef.refId,
+        version: null,
+        server: api.serverHost,
+    });
+    const resolved = await resolveSupportedDocument(binder.store, handle);
+    if (resolved === undefined) {
+        throw new Error(
+            `Cannot attach an LLM conversation to a "${attachTo.liveDoc.doc.type}" document.`,
+        );
+    }
+    const conversation = await binder.createLLMConversation(resolved.document, llmModel, {
         title: "",
     });
     return conversation.handle.ref.id;

@@ -4,6 +4,7 @@ import type { Document } from "catcolab-document-types";
 // A SolidJS document store: keeps a draft document plus a Solid store view
 // reconciled on every change.
 import type { DocumentStore } from "catcolab-documents";
+import { documentLinks, emptyHandlesByLinkType } from "catcolab-documents";
 
 export type SolidStoreHandle = {
     draftDoc: Document;
@@ -87,15 +88,31 @@ export const solidStore: DocumentStore<SolidStoreHandle> = {
     },
     getDocumentView: (handle) => handle.docView,
     getDocumentRef: (handle) => ({ id: solidStoreIdFor(handle), version: null, server: "" }),
-    listUsedBy: async (handle) =>
-        [...createdHandles].filter((other) => {
-            const doc = other.docView;
-            return (
-                other !== handle &&
-                doc.type === "instance" &&
-                doc.instanceOf._id === solidStoreIdFor(handle)
-            );
-        }),
+    listUsedBy: async (handle) => {
+        const linked = emptyHandlesByLinkType<SolidStoreHandle>();
+        for (const other of createdHandles) {
+            if (other === handle) {
+                continue;
+            }
+            for (const link of documentLinks(other.docView)) {
+                if (link._id === solidStoreIdFor(handle)) {
+                    linked[link.type].push(other);
+                }
+            }
+        }
+        return linked;
+    },
+    listDependsOn: async (handle) => {
+        const linked = emptyHandlesByLinkType<SolidStoreHandle>();
+        for (const link of documentLinks(handle.docView)) {
+            for (const other of createdHandles) {
+                if (other !== handle && solidStoreIdFor(other) === link._id) {
+                    linked[link.type].push(other);
+                }
+            }
+        }
+        return linked;
+    },
     // Link resolution omitted for brevity.
     getHandle: async () => ({
         tag: "Err",
