@@ -75,6 +75,22 @@
       pkgsLinux = nixpkgsFor linuxSystem;
       rustToolchainLinux = rustToolchainFor linuxSystem;
 
+      # deploy-rs lib whose activate-rs uses the nixpkgs-built (binary cached) deploy-rs,
+      # rather than building the flake's own copy from crates.io.
+      deployLib =
+        (import nixpkgs {
+          system = linuxSystem;
+          overlays = [
+            deploy-rs.overlays.default
+            (final: prev: {
+              deploy-rs = {
+                inherit (pkgsLinux) deploy-rs;
+                lib = prev.deploy-rs.lib;
+              };
+            })
+          ];
+        }).deploy-rs.lib;
+
       # Per-system crane library + prebuilt cargo dependency layer. The
       # frontend package is exposed for every system in `devShellSystems` so
       # macOS developers can `nix build .#frontend` against the same wasm/api
@@ -211,7 +227,7 @@
         };
 
       # NOTE: this is not currently used, but was painful to build and might be useful in the future.
-      # Wraps the typical `deploy-rs.lib.${linuxSystem}.activate.nixos` activation function
+      # Wraps the typical `deployLib.activate.nixos` activation function
       # with a custom script that can run additional health checks. The script runs on the remote host
       # and if it fails the whole deployment will fail.
       # use:
@@ -219,7 +235,7 @@
       healthcheckWrapper =
         nixosConfiguration:
         let
-          defaultNixos = deploy-rs.lib.${linuxSystem}.activate.nixos nixosConfiguration;
+          defaultNixos = deployLib.activate.nixos nixosConfiguration;
 
           healthcheckWrapperScript = pkgsLinux.writeShellScriptBin "healthcheck-wrapper-script" ''
             PROFILE=${defaultNixos}
@@ -227,7 +243,7 @@
             ${defaultNixos}/deploy-rs-activate
           '';
         in
-        deploy-rs.lib.${linuxSystem}.activate.custom healthcheckWrapperScript
+        deployLib.activate.custom healthcheckWrapperScript
           "./bin/healthcheck-wrapper-script";
     in
     {
@@ -388,7 +404,7 @@
           profiles.system = {
             sshUser = "catcolab";
             user = "root";
-            path = deploy-rs.lib.${linuxSystem}.activate.nixos self.nixosConfigurations.catcolab;
+            path = deployLib.activate.nixos self.nixosConfigurations.catcolab;
           };
         };
         catcolab-next = {
@@ -396,7 +412,7 @@
           profiles.system = {
             sshUser = "catcolab";
             user = "root";
-            path = deploy-rs.lib.${linuxSystem}.activate.nixos self.nixosConfigurations.catcolab-next;
+            path = deployLib.activate.nixos self.nixosConfigurations.catcolab-next;
           };
         };
         catcolab-vm = {
@@ -408,7 +424,7 @@
               "2221"
             ];
             sshUser = "catcolab";
-            path = deploy-rs.lib.${linuxSystem}.activate.nixos self.nixosConfigurations.catcolab-vm;
+            path = deployLib.activate.nixos self.nixosConfigurations.catcolab-vm;
             user = "root";
           };
         };
