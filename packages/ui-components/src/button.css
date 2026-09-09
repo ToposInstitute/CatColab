@@ -52,3 +52,28 @@
     background: var(--color-button-danger-hover);
     border: 1px solid var(--color-button-danger-hover);
 }
+
+/* Outline modifier: the variant's border and text color on a transparent
+background, darkening rather than filling on hover. */
+.button-outline,
+.button-outline:hover:not(:disabled) {
+    background: transparent;
+}
+
+.button-positive.button-outline {
+    color: var(--color-button-positive-base);
+}
+
+.button-positive.button-outline:hover:not(:disabled) {
+    color: color-mix(in srgb, var(--color-button-positive-base), black 20%);
+    border-color: color-mix(in srgb, var(--color-button-positive-base), black 20%);
+}
+
+.button-danger.button-outline {
+    color: var(--color-button-danger-base);
+}
+
+.button-danger.button-outline:hover:not(:disabled) {
+    color: color-mix(in srgb, var(--color-button-danger-base), black 20%);
+    border-color: color-mix(in srgb, var(--color-button-danger-base), black 20%);
+}

@@ -94,6 +94,25 @@ export const Danger: Story = {
     ),
 };
 
+export const Outline: Story = {
+    render: () => (
+        <div style={{ display: "flex", gap: "8px", "flex-wrap": "wrap" }}>
+            <Button variant="positive" outline>
+                Positive
+            </Button>
+            <Button variant="utility" outline>
+                Utility
+            </Button>
+            <Button variant="danger" outline>
+                Danger
+            </Button>
+            <Button variant="danger" outline disabled>
+                Disabled
+            </Button>
+        </div>
+    ),
+};
+
 export const WithIcons: Story = {
     render: () => (
         <div style={{ display: "flex", gap: "8px", "flex-wrap": "wrap" }}>

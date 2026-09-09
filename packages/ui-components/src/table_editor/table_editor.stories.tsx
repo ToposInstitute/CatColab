@@ -122,6 +122,19 @@ function EditableTables(props: {
             rows: spec.rows.filter((specRow) => specRow.id !== row.id),
         }));
 
+    const deleteTable = (tableId: string) =>
+        setSpecs((specs) => specs.filter((spec) => spec.id !== tableId));
+
+    const deleteColumn = (tableId: string, header: TableHeader) =>
+        updateSpec(tableId, (spec) => ({
+            ...spec,
+            columns: spec.columns.filter((column) => column.id !== header.id),
+            rows: spec.rows.map((row) => {
+                const { [header.id]: _removed, ...values } = row.values;
+                return { ...row, values };
+            }),
+        }));
+
     return (
         <div style={{ display: "flex", "flex-wrap": "wrap", gap: "1.5rem" }}>
             <Index each={visibleTables()}>
@@ -137,6 +150,8 @@ function EditableTables(props: {
                         onAddRow={() => addRow(table().id)}
                         onDeleteRow={(row) => deleteRow(table().id, row)}
                         onHide={props.hideable ? () => hide(table().id) : undefined}
+                        onDeleteOrphanedTable={() => deleteTable(table().id)}
+                        onDeleteOrphanedColumn={(header) => deleteColumn(table().id, header)}
                     />
                 )}
             </Index>
@@ -431,6 +446,61 @@ export const OrphanedTable: Story = {
         ).not.toBeInTheDocument();
         await expect(unknownRef).toHaveTextContent("Unknown table row 1");
         await expect(unknownRef).toHaveAttribute("aria-invalid", "true");
+
+        // Columns of an orphaned table go with the table, not one by one.
+        await expect(
+            canvas.queryByRole("button", { name: "Delete column" }),
+        ).not.toBeInTheDocument();
+        await userEvent.click(canvas.getByRole("button", { name: "Delete table" }));
+        await waitFor(() => expect(canvas.getAllByRole("grid")).toHaveLength(1));
+        await expect(
+            canvas.queryByRole("heading", { name: "Unknown table" }),
+        ).not.toBeInTheDocument();
+        await expect(canvas.getByRole("gridcell")).toHaveTextContent("?");
+    },
+};
+
+export const OrphanedColumn: Story = {
+    render: () => (
+        <EditableTables
+            initialSpecs={[
+                {
+                    ...teamSpec,
+                    columns: [...teamSpec.columns, { id: "stray", label: null, type: "Unknown" }],
+                    rows: teamSpec.rows.map((row) => ({
+                        ...row,
+                        values: { ...row.values, stray: "leftover" },
+                    })),
+                },
+            ]}
+            issues={teamSpec.rows.map((row) => ({
+                message: "Field `stray` does not exist in the schema",
+                path: ["team", "rows", row.id, "fields", "stray"],
+                issueType: "OrphanedField",
+            }))}
+        />
+    ),
+    play: async ({ canvasElement }: { canvasElement: HTMLElement }) => {
+        const canvas = within(canvasElement);
+
+        const unknownHeader = canvas.getByRole("columnheader", { name: /Unknown column/ });
+        await expect(
+            within(unknownHeader).getByRole("button", { name: "Delete column" }),
+        ).toBeVisible();
+        await expect(
+            within(canvas.getByRole("columnheader", { name: "name" })).queryByRole("button"),
+        ).not.toBeInTheDocument();
+        await expect(canvas.getAllByRole("gridcell")[2]).toHaveTextContent("leftover");
+
+        await userEvent.click(within(unknownHeader).getByRole("button", { name: "Delete column" }));
+        await waitFor(() => expect(canvas.getAllByRole("columnheader")).toHaveLength(3));
+        await expect(
+            canvas.queryByRole("columnheader", { name: /Unknown column/ }),
+        ).not.toBeInTheDocument();
+        const cells = canvas.getAllByRole("gridcell");
+        await expect(cells).toHaveLength(6);
+        await expect(cells[0]).toHaveTextContent("Atlas");
+        await expect(cells[1]).toHaveTextContent("5");
     },
 };
 

@@ -10,6 +10,7 @@ import type {
     TableIssue,
     TableRow,
 } from "catcolab-documents";
+import { Button } from "../button";
 import type { Completion } from "../completions";
 import { IconButton } from "../icon_button";
 import { TextInput } from "../text_input";
@@ -24,7 +25,7 @@ const COLUMN_WIDTHS = {
     Float: 100,
     String: 180,
     RowRef: 220,
-    Unknown: 180,
+    Unknown: 220,
 } as const;
 
 const DELETE_COLUMN_WIDTH = 36;
@@ -82,6 +83,13 @@ export type TableEditorProps = {
 
     /** Called when the user hides the table. Shows a hide button if provided. */
     onHide?: () => void;
+
+    /** Called when the user deletes this table, which is offered only when the
+    table has no entity in the schema. */
+    onDeleteOrphanedTable?: () => void;
+
+    /** Called when the user deletes a column that has no morphism in the schema. */
+    onDeleteOrphanedColumn?: (header: TableHeader) => void;
 };
 
 /** A spreadsheet-like editor for a tabular data instance.
@@ -92,6 +100,8 @@ export function TableEditor(props: TableEditorProps) {
     const [pendingDelete, setPendingDelete] = createSignal<PendingDelete | null>(null);
     const [suppressedFocus, setSuppressedFocus] = createSignal<CellKey | null>(null);
     const [focusRequest, setFocusRequest] = createSignal(0);
+    // Column whose delete button is hovered, highlighted like a row about to be deleted.
+    const [deletingColumnId, setDeletingColumnId] = createSignal<string | null>(null);
 
     // Forward to the prop lazily in case the handle changes.
     const parentFocus: FocusHandle = {
@@ -550,6 +560,12 @@ export function TableEditor(props: TableEditorProps) {
         props.onDeleteRow(row);
     };
 
+    const isOrphanedTable = () => props.table.label === null;
+
+    // Columns of an orphaned table are removed along with the table.
+    const isOrphanedColumn = (header: TableHeader) =>
+        !isOrphanedTable() && header.type.tag === "Unknown";
+
     return (
         <section
             class={`${styles.table}${props.class ? ` ${props.class}` : ""}`}
@@ -581,6 +597,18 @@ export function TableEditor(props: TableEditorProps) {
                 <h3 class={styles.label} classList={{ [styles.unnamed]: !props.table.label }}>
                     {tableDisplayName(props.table)}
                 </h3>
+                <Show when={isOrphanedTable() && props.onDeleteOrphanedTable}>
+                    <Button
+                        variant="danger"
+                        outline
+                        class={styles.deleteTable}
+                        onMouseDown={(evt) => evt.preventDefault()}
+                        aria-label="Delete table"
+                        onClick={() => props.onDeleteOrphanedTable?.()}
+                    >
+                        Delete
+                    </Button>
+                </Show>
                 <Show when={props.onHide}>
                     {(onHide) => (
                         <IconButton
@@ -616,19 +644,55 @@ export function TableEditor(props: TableEditorProps) {
                         >
                             <Index each={headers()}>
                                 {(header) => (
-                                    <th class={styles.columnHeader} scope="col">
-                                        <Show
-                                            when={header().label}
-                                            fallback={
-                                                <span class={styles.unnamed}>
-                                                    {header().label === null
-                                                        ? "Unknown column"
-                                                        : "Unnamed column"}
-                                                </span>
-                                            }
-                                        >
-                                            {header().label}
-                                        </Show>
+                                    <th
+                                        class={styles.columnHeader}
+                                        classList={{
+                                            [styles.columnDeleting]:
+                                                deletingColumnId() === header().id,
+                                        }}
+                                        scope="col"
+                                    >
+                                        <div class={styles.columnContent}>
+                                            <span class={styles.columnLabel}>
+                                                <Show
+                                                    when={header().label}
+                                                    fallback={
+                                                        <span class={styles.unnamed}>
+                                                            {header().label === null
+                                                                ? "Unknown column"
+                                                                : "Unnamed column"}
+                                                        </span>
+                                                    }
+                                                >
+                                                    {header().label}
+                                                </Show>
+                                            </span>
+                                            <Show
+                                                when={
+                                                    isOrphanedColumn(header()) &&
+                                                    props.onDeleteOrphanedColumn
+                                                }
+                                            >
+                                                <Button
+                                                    variant="danger"
+                                                    outline
+                                                    class={styles.deleteColumn}
+                                                    aria-label="Delete column"
+                                                    tabindex={-1}
+                                                    onMouseDown={(evt) => evt.preventDefault()}
+                                                    onMouseEnter={() =>
+                                                        setDeletingColumnId(header().id)
+                                                    }
+                                                    onMouseLeave={() => setDeletingColumnId(null)}
+                                                    onClick={() => {
+                                                        setDeletingColumnId(null);
+                                                        props.onDeleteOrphanedColumn?.(header());
+                                                    }}
+                                                >
+                                                    Delete
+                                                </Button>
+                                            </Show>
+                                        </div>
                                     </th>
                                 )}
                             </Index>
@@ -681,6 +745,8 @@ export function TableEditor(props: TableEditorProps) {
                                                     classList={{
                                                         [styles.selected]: isSelected(cell()),
                                                         [styles.invalid]: cellIsInvalid(cell()),
+                                                        [styles.columnDeleting]:
+                                                            deletingColumnId() === header().id,
                                                     }}
                                                     tabindex={
                                                         !isEditing(cell()) &&
