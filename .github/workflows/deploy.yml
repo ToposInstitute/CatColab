@@ -253,7 +253,7 @@ jobs:
 
     - name: Deploy to catcolab-next
       run: |
-       nix run github:serokell/deploy-rs -- --skip-checks .#catcolab-next
+       nix run .#deploy-rs -- --skip-checks .#catcolab-next
 
     - name: Verify deployment
       run: |
