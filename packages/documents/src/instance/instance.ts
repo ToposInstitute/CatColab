@@ -11,6 +11,8 @@ import type { TableIssue } from "./errors";
 import {
     createAddRowsMethod,
     createAddRowMethod,
+    createDeleteOrphanedColumnMethod,
+    createDeleteOrphanedTableMethod,
     createInstanceValidator,
     createSetMethod,
     createUpdateRowsMethod,
@@ -59,6 +61,12 @@ export interface Instance<H, S extends Shape, V> {
     /** Delete stored rows without requiring a valid schema. */
     deleteRow(tableId: string, rowId: string): void;
     deleteRows(rows: ReadonlyArray<{ tableId: string; rowId: string }>): void;
+
+    /** Delete a stored table that has no entity in the schema. */
+    deleteOrphanedTable(tableId: string): Promise<Result<void>>;
+    /** Delete a stored field from every row of a table when the field has no
+    morphism in the schema. */
+    deleteOrphanedColumn(tableId: string, fieldId: string): Promise<Result<void>>;
 
     /** Validate the schema and instance data. Schema issues are reported by
     `modelValidation`; instance-data issues are reported by `issues`. */
@@ -113,6 +121,8 @@ export function instanceFromStore<Handle, S extends Shape, Version>(
     const updateRows = createUpdateRowsMethod(schema, store, handle);
     const updateRow = createUpdateRowMethod(updateRows);
     const set = createSetMethod(schema, store, handle);
+    const deleteOrphanedTable = createDeleteOrphanedTableMethod(schema, store, handle);
+    const deleteOrphanedColumn = createDeleteOrphanedColumnMethod(schema, store, handle);
     const validateInstance = createInstanceValidator(schema, store, handle);
 
     async function validateCurrentDocument(): Promise<InstanceValidation<S>> {
@@ -166,6 +176,8 @@ export function instanceFromStore<Handle, S extends Shape, Version>(
         deleteRows(rows: ReadonlyArray<{ tableId: string; rowId: string }>): void {
             deleteStoredRows(rows);
         },
+        deleteOrphanedTable,
+        deleteOrphanedColumn,
         validate(): Promise<InstanceValidation<S>> {
             return validateCurrentDocument();
         },

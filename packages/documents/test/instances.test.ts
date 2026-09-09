@@ -681,6 +681,146 @@ describe("tabular instances", () => {
     );
 });
 
+describe("deleting orphaned instance data", () => {
+    test("deleteOrphanedTable removes a stored table absent from the schema", async () => {
+        const binder = createBinder();
+        const schema = await binder.createNotebook(SimpleSchema, { title: "Company schema" });
+        schema.add(Entity, { label: "Person" });
+        const instance = expectOk(
+            await binder.createInstance(schema, { title: "Company instance" }),
+        );
+
+        binder.store.changeDocument(instance.document as Document, (document) => {
+            const stored = document as unknown as StoredInstanceForTest;
+            stored.tables["ghost-table"] = {
+                rows: { "ghost-row": { fields: { mystery: { Int: 3 } } } },
+                rowOrder: ["ghost-row"],
+            };
+        });
+        expect((await instance.validate()).issues.map((issue) => issue.issueType)).toEqual([
+            "OrphanedTable",
+        ]);
+
+        expectOk(await instance.deleteOrphanedTable("ghost-table"));
+
+        const validation = await instance.validate();
+        expect(validation.issues).toEqual([]);
+        expect(validation.tables.map((table) => table.label)).toEqual(["Person"]);
+        expect(instance.document.tables["ghost-table"]).toBeUndefined();
+    });
+
+    test("deleteOrphanedTable refuses schema tables and unknown ids", async () => {
+        const binder = createBinder();
+        const schema = await binder.createNotebook(SimpleSchema, { title: "Company schema" });
+        schema.add(Entity, { label: "Person" });
+        const instance = expectOk(
+            await binder.createInstance(schema, { title: "Company instance" }),
+        );
+        const validation = await instance.validate();
+        const personTable = validation.tables.find((table) => table.label === "Person");
+        if (personTable === undefined) {
+            throw new Error("Person table was not derived");
+        }
+        expectOk(await instance.addRow(personTable));
+
+        const schemaIssues = expectErr(await instance.deleteOrphanedTable(personTable.id));
+        expect(schemaIssues[0]?.message).toBe(
+            `Table \`${personTable.id}\` exists in the schema and is not orphaned`,
+        );
+        expect(instance.document.tables[personTable.id]).toBeDefined();
+
+        const unknownIssues = expectErr(await instance.deleteOrphanedTable("no-such-table"));
+        expect(unknownIssues[0]?.message).toBe("Table `no-such-table` does not exist");
+    });
+
+    test("deleteOrphanedColumn strips a stored field absent from the schema", async () => {
+        const binder = createBinder();
+        const schema = await binder.createNotebook(SimpleSchema, { title: "Company schema" });
+        const person = schema.add(Entity, { label: "Person" });
+        const string = schema.add(AttrType, { label: "String" });
+        schema.add(Attr, { label: "name", from: person, to: string });
+        const instance = expectOk(
+            await binder.createInstance(schema, { title: "Company instance" }),
+        );
+        const validation = await instance.validate();
+        const personTable = validation.tables.find((table) => table.label === "Person");
+        const nameHeader = personTable?.headers.find((header) => header.label === "name");
+        if (personTable === undefined || nameHeader === undefined) {
+            throw new Error("Person table was not derived");
+        }
+        const alice = expectOk(await instance.addRow(personTable, { name: "Alice" }));
+        const bob = expectOk(await instance.addRow(personTable, { name: "Bob" }));
+
+        binder.store.changeDocument(instance.document as Document, (document) => {
+            const stored = document as unknown as StoredInstanceForTest;
+            const rows = stored.tables[personTable.id]?.rows;
+            if (rows === undefined) {
+                throw new Error("Person table is missing from the stored instance");
+            }
+            rows[alice.id]!.fields["unexpected"] = { String: "stray" };
+            rows[bob.id]!.fields["unexpected"] = { String: "also stray" };
+        });
+        expect((await instance.validate()).issues.map((issue) => issue.issueType)).toEqual([
+            "OrphanedField",
+            "OrphanedField",
+        ]);
+
+        expectOk(await instance.deleteOrphanedColumn(personTable.id, "unexpected"));
+
+        const revalidation = await instance.validate();
+        expect(revalidation.issues).toEqual([]);
+        const table = revalidation.tables.find((table) => table.id === personTable.id);
+        expect(table?.headers.map((header) => header.id)).toEqual([nameHeader.id]);
+        const storedRows = instance.document.tables[personTable.id]?.rows;
+        expect(storedRows?.[alice.id]?.fields).toEqual({ [nameHeader.id]: { String: "Alice" } });
+        expect(storedRows?.[bob.id]?.fields).toEqual({ [nameHeader.id]: { String: "Bob" } });
+    });
+
+    test("deleteOrphanedColumn refuses schema headers and orphaned tables", async () => {
+        const binder = createBinder();
+        const schema = await binder.createNotebook(SimpleSchema, { title: "Company schema" });
+        const person = schema.add(Entity, { label: "Person" });
+        const string = schema.add(AttrType, { label: "String" });
+        schema.add(Attr, { label: "name", from: person, to: string });
+        const instance = expectOk(
+            await binder.createInstance(schema, { title: "Company instance" }),
+        );
+        const validation = await instance.validate();
+        const personTable = validation.tables.find((table) => table.label === "Person");
+        const nameHeader = personTable?.headers.find((header) => header.label === "name");
+        if (personTable === undefined || nameHeader === undefined) {
+            throw new Error("Person table was not derived");
+        }
+        const alice = expectOk(await instance.addRow(personTable, { name: "Alice" }));
+
+        binder.store.changeDocument(instance.document as Document, (document) => {
+            const stored = document as unknown as StoredInstanceForTest;
+            stored.tables["ghost-table"] = {
+                rows: { "ghost-row": { fields: { mystery: { Int: 3 } } } },
+                rowOrder: ["ghost-row"],
+            };
+        });
+
+        const headerIssues = expectErr(
+            await instance.deleteOrphanedColumn(personTable.id, nameHeader.id),
+        );
+        expect(headerIssues[0]?.message).toBe(
+            `Field \`${nameHeader.id}\` in table \`Person\` exists in the schema and is not orphaned`,
+        );
+        expect(instance.document.tables[personTable.id]?.rows[alice.id]?.fields).toEqual({
+            [nameHeader.id]: { String: "Alice" },
+        });
+
+        const tableIssues = expectErr(
+            await instance.deleteOrphanedColumn("ghost-table", "mystery"),
+        );
+        expect(tableIssues[0]?.message).toBe("Table `ghost-table` does not exist in the schema");
+        expect(instance.document.tables["ghost-table"]?.rows["ghost-row"]?.fields).toEqual({
+            mystery: { Int: 3 },
+        });
+    });
+});
+
 describe("atomic instance column types", () => {
     test("attribute type labels match exact atomic names", () => {
         expect(atomicTypeOfAttributeType(["Bool"])).toBe("Bool");
