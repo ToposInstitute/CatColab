@@ -6,11 +6,18 @@ import invariant from "tiny-invariant";
 
 import { DocumentTypeIcon, IconButton } from "catcolab-ui-components";
 import { createAnalysis } from "../analysis";
-import { type DocRef, type DocumentType, type LiveDoc, useApi, useBinder } from "../api";
+import {
+    type DocRef,
+    type DocumentType,
+    documentTypeLabel,
+    type LiveDoc,
+    useApi,
+    useBinder,
+} from "../api";
 import { createDiagram } from "../diagram";
 import { DEFAULT_LLM_MODEL } from "../inference/chat";
 import { createInstance, shapeForTheory } from "../instance/live_doc_compatibility";
-import { createLLMConversation } from "../llm_conversation";
+import { createLLMConversation, supportsLLMConversation } from "../llm_conversation";
 import {
     CopyJSONMenuItem,
     DeleteMenuItem,
@@ -86,7 +93,7 @@ export function DocumentMenu(props: {
     };
 
     const canCreateLLMConversation = () =>
-        props.liveDoc.doc.type === "model" &&
+        supportsLLMConversation(props.liveDoc.doc) &&
         isDocumentVisible({ typeName: "llmconversation" }, settings());
 
     const onNewLLMConversation = async () => {
@@ -94,7 +101,7 @@ export function DocumentMenu(props: {
         const newRef = await createLLMConversation(
             api,
             binder,
-            props.docRef.refId,
+            { liveDoc: props.liveDoc, docRef: props.docRef },
             DEFAULT_LLM_MODEL,
         );
         handleDocCreated("llmconversation", newRef);
@@ -114,6 +121,7 @@ export function DocumentMenu(props: {
         () =>
             theory()?.supportsInstances ||
             canCreateInstance() ||
+            canCreateLLMConversation() ||
             docType() === "model" ||
             docType() === "diagram",
     );
@@ -163,7 +171,9 @@ export function DocumentMenu(props: {
                     <Show when={canCreateLLMConversation()}>
                         <MenuItem onSelect={() => onNewLLMConversation()}>
                             <DocumentTypeIcon documentType="llmconversation" />
-                            <MenuItemLabel>{`New LLM conversation on this ${docType()}`}</MenuItemLabel>
+                            <MenuItemLabel>
+                                {`New LLM conversation on this ${documentTypeLabel(docType())}`}
+                            </MenuItemLabel>
                         </MenuItem>
                     </Show>
                     <Show when={showSeparator()}>
