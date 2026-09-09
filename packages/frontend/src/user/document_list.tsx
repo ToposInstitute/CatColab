@@ -10,8 +10,8 @@ import { RelativeTime, createVirtualList, DocumentTypeIcon } from "catcolab-ui-c
 import type { LinkType } from "catlog-wasm";
 import { TheoryLibraryContext } from "../theory";
 import { assertExhaustive } from "../util/assert_exhaustive";
-import { currentUserPermission, formatOwners, useMetaDocument } from "./meta_document_context";
 import { isDocumentVisible } from "./user_settings";
+import { currentUserPermission, formatOwners, useUserState } from "./user_state_context";
 
 import "./documents.css";
 
@@ -160,11 +160,11 @@ function DocumentRow(props: DocumentRowProps) {
     const firebaseApp = useFirebaseApp();
     const auth = getAuth(firebaseApp);
     const theories = useContext(TheoryLibraryContext);
-    const metaDocument = useMetaDocument();
+    const userState = useUserState();
 
     const currentUserId = auth.currentUser?.uid;
     const ownerNames = createMemo(() =>
-        formatOwners(props.doc.permissions, currentUserId, metaDocument.knownUsers),
+        formatOwners(props.doc.permissions, currentUserId, userState.knownUsers),
     );
     const userPermission = createMemo(() =>
         currentUserPermission(props.doc.permissions, currentUserId),
@@ -194,7 +194,7 @@ function DocumentRow(props: DocumentRowProps) {
             return undefined;
         }
         const parentId = uuidStringify(relation.refId);
-        const parentDoc = metaDocument.documents[parentId];
+        const parentDoc = userState.documents[parentId];
         if (!parentDoc) {
             return {
                 prefix: details.orphanedPrefix,
