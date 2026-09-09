@@ -19,8 +19,8 @@ import { PageContainer } from "./page/page_container";
 import { stdTheories } from "./stdlib";
 import { TheoryLibraryContext } from "./theory";
 import { InferenceKeyProvider } from "./user/inference_key_provider";
-import { UserStateProvider } from "./user/user_state_provider";
 import { UserSettingsProvider } from "./user/user_settings_provider";
+import { UserStateProvider } from "./user/user_state_provider";
 
 const serverUrl = import.meta.env.VITE_SERVER_URL;
 const repoUrl = import.meta.env.VITE_AUTOMERGE_REPO_URL;
