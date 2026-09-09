@@ -8,11 +8,13 @@ export function Button(
     allProps: {
         /** Visual variant of the button */
         variant?: ButtonVariant;
+        /** Render the variant as an outline: transparent until hovered. */
+        outline?: boolean;
         /** Button content - can be text, icon, or both */
         children: JSX.Element;
     } & ComponentProps<"button">,
 ) {
-    const [props, buttonProps] = splitProps(allProps, ["variant", "children", "class"]);
+    const [props, buttonProps] = splitProps(allProps, ["variant", "outline", "children", "class"]);
 
     const variantClass = () => {
         switch (props.variant) {
@@ -30,7 +32,7 @@ export function Button(
     return (
         <button
             {...buttonProps}
-            class={`button ${variantClass()}${props.class ? ` ${props.class}` : ""}`}
+            class={`button ${variantClass()}${props.outline ? " button-outline" : ""}${props.class ? ` ${props.class}` : ""}`}
             type={buttonProps.type || "button"}
         >
             {props.children}

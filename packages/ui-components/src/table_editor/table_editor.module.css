@@ -25,6 +25,23 @@
     font-weight: 500;
 }
 
+.deleteTable,
+.deleteColumn {
+    flex: none;
+    margin: 0;
+    font-size: 0.9rem;
+}
+
+.deleteTable {
+    padding: 0.3rem 0.75rem;
+}
+
+.deleteColumn {
+    margin: 0.5rem 0 0.3rem 0.5rem;
+    padding: 0.1rem 0.6rem;
+    line-height: 1.4;
+}
+
 .grid {
     width: max-content;
     border-collapse: collapse;
@@ -40,6 +57,18 @@
     text-align: left;
     overflow: hidden;
     white-space: nowrap;
+}
+
+.columnContent {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+}
+
+.columnLabel {
+    min-width: 0;
+    overflow: hidden;
     text-overflow: ellipsis;
 }
 
@@ -213,6 +242,32 @@ shadow, it is painted above the cell editor input. */
     color: #d87878;
 }
 
+/* Column about to be deleted: sides on every cell, top on the header, bottom
+on the last row. Inset shadows leave the collapsed borders alone. */
+.columnDeleting {
+    box-shadow:
+        inset 3px 0 0 #d87878,
+        inset -3px 0 0 #d87878;
+}
+
+.columnHeader.columnDeleting {
+    box-shadow:
+        inset 3px 0 0 #d87878,
+        inset -3px 0 0 #d87878,
+        inset 0 3px 0 #d87878;
+}
+
+.grid tbody tr:last-child .cell.columnDeleting {
+    box-shadow:
+        inset 3px 0 0 #d87878,
+        inset -3px 0 0 #d87878,
+        inset 0 -3px 0 #d87878;
+}
+
+.grid:not(:has(tbody tr)) .columnHeader.columnDeleting {
+    box-shadow: inset 0 0 0 3px #d87878;
+}
+
 .footer {
     position: sticky;
     left: 0;
@@ -221,8 +276,18 @@ shadow, it is painted above the cell editor input. */
 }
 
 .table.unknown {
-    outline: 2px solid var(--color-button-danger-base);
     background: var(--color-icon-button-danger-hover);
+}
+
+/* Table about to be deleted, matching the row and column highlights. Drawn
+over the border rather than inset, where the sticky header would cover it. */
+.table:has(.deleteTable:hover) {
+    outline: 3px solid #d87878;
+    outline-offset: -1px;
+}
+
+.columnHeader:has(.deleteColumn) {
+    background: var(--color-form-invalid-bg);
 }
 
 .table.unknown .header,
