@@ -89,6 +89,16 @@ export function InstanceEditor(props: {
                                         onDeleteRow={(row) =>
                                             props.instance.deleteRow(table().id, row.id)
                                         }
+                                        onDeleteOrphanedTable={() =>
+                                            void props.instance
+                                                .deleteOrphanedTable(table().id)
+                                                .then(logError("delete table"))
+                                        }
+                                        onDeleteOrphanedColumn={(header) =>
+                                            void props.instance
+                                                .deleteOrphanedColumn(table().id, header.id)
+                                                .then(logError("delete column"))
+                                        }
                                     />
                                 )}
                             </Index>
