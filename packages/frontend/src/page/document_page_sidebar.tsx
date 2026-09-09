@@ -8,8 +8,8 @@ import type { Document, Link } from "catlog-wasm";
 import { type Api, type LiveDocWithRef, useApi } from "../api";
 import { useTableList } from "../instance/table_list";
 import { TheoryLibraryContext } from "../theory";
-import { useMetaDocument } from "../user/meta_document_context";
 import { isDocumentVisible, useUserSettings } from "../user/user_settings";
+import { useUserState } from "../user/user_state_context";
 import { DocumentMenu } from "./document_menu";
 
 export function DocumentSidebar(props: {
@@ -115,7 +115,7 @@ function DocumentsTreeNode(props: {
     refetchSecondaryDoc: () => void;
 }) {
     const api = useApi();
-    const metaDocument = useMetaDocument();
+    const userState = useUserState();
     const { settings } = useUserSettings();
 
     const childRefIds = createMemo(() => {
@@ -125,7 +125,7 @@ function DocumentsTreeNode(props: {
         }
 
         return (
-            metaDocument.documents[docRefId]?.usedBy
+            userState.documents[docRefId]?.usedBy
                 .filter(
                     (relation) =>
                         relation.relationType === "diagram-in" ||
@@ -141,7 +141,7 @@ function DocumentsTreeNode(props: {
         const refIds = childRefIds();
         return {
             createdAtByRefId: Object.fromEntries(
-                refIds.map((refId) => [refId, metaDocument.documents[refId]?.createdAt ?? 0]),
+                refIds.map((refId) => [refId, userState.documents[refId]?.createdAt ?? 0]),
             ),
             isParentOwnerless: props.doc.docRef.permissions.anyone === "Own",
             refIds,

@@ -10,7 +10,7 @@ import invariant from "tiny-invariant";
 import * as uuid from "uuid";
 
 import { Button } from "catcolab-ui-components";
-import { Api, ApiContext, useApi } from "./api";
+import { Api, ApiContext, BinderProvider, useApi } from "./api";
 import { helpRoutes } from "./help/routes";
 import { createModelLibraryWithApi, ModelLibraryContext } from "./model";
 import { createModel } from "./model/document";
@@ -19,7 +19,7 @@ import { PageContainer } from "./page/page_container";
 import { stdTheories } from "./stdlib";
 import { TheoryLibraryContext } from "./theory";
 import { InferenceKeyProvider } from "./user/inference_key_provider";
-import { MetaDocumentProvider } from "./user/meta_document_provider";
+import { UserStateProvider } from "./user/user_state_provider";
 import { UserSettingsProvider } from "./user/user_settings_provider";
 
 const serverUrl = import.meta.env.VITE_SERVER_URL;
@@ -53,7 +53,8 @@ const Root = (props: RouteSectionProps) => {
                     [ApiContext, api],
                     [TheoryLibraryContext, theories],
                     [ModelLibraryContext, models],
-                    MetaDocumentProvider,
+                    UserStateProvider,
+                    BinderProvider,
                     UserSettingsProvider,
                     InferenceKeyProvider,
                 ]}

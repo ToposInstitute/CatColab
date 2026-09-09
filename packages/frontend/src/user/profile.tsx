@@ -7,8 +7,8 @@ import { Button, CheckboxField, FormGroup, TextInputField } from "catcolab-ui-co
 import { useApi } from "../api";
 import { BrandedToolbar } from "../page";
 import { LoginGate } from "./login";
-import { useMetaDocument } from "./meta_document_context";
 import { useUserSettings } from "./user_settings";
+import { useUserState } from "./user_state_context";
 
 import styles from "./menu_pages.module.css";
 
@@ -66,12 +66,12 @@ function LLMCapabilitiesSetting() {
 /** Form to configure user proifle. */
 export function UserProfileForm() {
     const api = useApi();
-    const metaDocument = useMetaDocument();
+    const userState = useUserState();
 
     const [form, { Form, Field }] = createForm<UserProfile>();
 
     createEffect(() => {
-        const { username, displayName } = metaDocument.profile;
+        const { username, displayName } = userState.profile;
         reset(form, { initialValues: { username, displayName } });
     });
 
@@ -83,7 +83,7 @@ export function UserProfileForm() {
     };
 
     const validateUsername = async (value?: string | null) => {
-        const currentName = metaDocument.profile.username;
+        const currentName = userState.profile.username;
         if (value == null || value === currentName) {
             return "";
         }

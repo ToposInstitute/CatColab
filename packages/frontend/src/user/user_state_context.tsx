@@ -8,13 +8,15 @@ export const INITIAL_USER_STATE: UserState = {
     documents: {},
 };
 
-export const MetaDocumentContext = createContext<UserState>(INITIAL_USER_STATE);
+// No default value, so that consuming the context outside `UserStateProvider`
+// fails rather than gives some empty/incorrect state.
+export const UserStateContext = createContext<UserState>();
 
-/** Retrieve the meta document from application context. */
-export function useMetaDocument(): UserState {
-    const metaDocument = useContext(MetaDocumentContext);
-    invariant(metaDocument, "Meta document should be provided as context");
-    return metaDocument;
+/** Retrieve user state from application context. */
+export function useUserState(): UserState {
+    const userState = useContext(UserStateContext);
+    invariant(userState, "User state should be provided as context");
+    return userState;
 }
 
 /** Get the display name for a permission entry's user. */

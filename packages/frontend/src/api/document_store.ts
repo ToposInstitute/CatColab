@@ -51,7 +51,7 @@ const draftRepo = new Repo();
 /** Adapt frontend Automerge documents to the storage boundary used by catcolab-documents.
 
 The user state tracks relations between documents; it is retrieved from
-application context (see `MetaDocumentContext`) rather than fetched here, and it
+application context (see `UserStateContext`) rather than fetched here, and it
 may update while the store lives.
  */
 export function createApiDocumentStore(api: Api, userState: UserState): ApiDocumentStore {
