@@ -47,6 +47,7 @@ import { DiagramInfo } from "../diagram/diagram_info";
 import { InstanceEditor } from "../instance/instance_editor";
 import { InstanceInfo } from "../instance/instance_info";
 import { getLiveInstance, type LiveInstanceDoc } from "../instance/live_doc_compatibility";
+import { createTableList, TableListContext } from "../instance/table_list";
 import {
     getLiveLLMConversation,
     LLMConversationEditor,
@@ -104,6 +105,7 @@ export default function DocumentPage() {
     const isSidePanelOpen = () =>
         !!params.subkind && !!params.subref && documentIsVisible(params.subkind);
     const paneFocus = useChildFocus<"primary" | "secondary">(rootFocus, { default: "primary" });
+    const tableList = createTableList();
 
     // Redirect if primary and secondary refs match
     createEffect(() => {
@@ -193,59 +195,61 @@ export default function DocumentPage() {
             <Title>{documentTitle()}</Title>
             <Show when={primaryLiveDoc()} fallback={<DocumentLoadingScreen />}>
                 {(docWithRef) => (
-                    <SidebarLayout
-                        toolbarContents={
-                            <SplitPaneToolbar
-                                doc={docWithRef().liveDoc}
-                                docRef={docWithRef().docRef}
-                                secondaryDoc={secondaryLiveDoc()?.liveDoc}
-                                secondaryDocRef={secondaryLiveDoc()?.docRef}
-                                panelSizes={resizableContext()?.sizes()}
-                                maximizeSidePanel={maximizeSidePanel}
+                    <TableListContext.Provider value={tableList}>
+                        <SidebarLayout
+                            toolbarContents={
+                                <SplitPaneToolbar
+                                    doc={docWithRef().liveDoc}
+                                    docRef={docWithRef().docRef}
+                                    secondaryDoc={secondaryLiveDoc()?.liveDoc}
+                                    secondaryDocRef={secondaryLiveDoc()?.docRef}
+                                    panelSizes={resizableContext()?.sizes()}
+                                    maximizeSidePanel={maximizeSidePanel}
+                                    closeSidePanel={closeSidePanel}
+                                    togglePrimaryHistorySidebar={togglePrimaryHistorySidebar}
+                                    toggleSecondaryHistorySidebar={toggleSecondaryHistorySidebar}
+                                    primaryPaneFocus={paneFocus.childFocus("primary")}
+                                    secondaryPaneFocus={paneFocus.childFocus("secondary")}
+                                />
+                            }
+                            sidebarContents={
+                                <DocumentSidebar
+                                    primaryDoc={{
+                                        liveDoc: docWithRef().liveDoc.liveDoc,
+                                        docRef: docWithRef().docRef,
+                                    }}
+                                    secondaryDoc={(() => {
+                                        const secondary = secondaryLiveDoc();
+                                        return secondary
+                                            ? {
+                                                  liveDoc: secondary.liveDoc.liveDoc,
+                                                  docRef: secondary.docRef,
+                                              }
+                                            : undefined;
+                                    })()}
+                                    primaryPaneFocus={paneFocus.childFocus("primary")}
+                                    secondaryPaneFocus={paneFocus.childFocus("secondary")}
+                                    refetchPrimaryDoc={refetchPrimaryDoc}
+                                    refetchSecondaryDoc={refetchSecondaryDoc}
+                                />
+                            }
+                        >
+                            <ResizablePanels
+                                primaryDoc={docWithRef().liveDoc}
+                                primaryDocRef={docWithRef().docRef}
+                                secondaryDoc={secondaryLiveDoc()}
+                                isSidePanelOpen={isSidePanelOpen()}
                                 closeSidePanel={closeSidePanel}
-                                togglePrimaryHistorySidebar={togglePrimaryHistorySidebar}
-                                toggleSecondaryHistorySidebar={toggleSecondaryHistorySidebar}
-                                primaryPaneFocus={paneFocus.childFocus("primary")}
-                                secondaryPaneFocus={paneFocus.childFocus("secondary")}
-                            />
-                        }
-                        sidebarContents={
-                            <DocumentSidebar
-                                primaryDoc={{
-                                    liveDoc: docWithRef().liveDoc.liveDoc,
-                                    docRef: docWithRef().docRef,
-                                }}
-                                secondaryDoc={(() => {
-                                    const secondary = secondaryLiveDoc();
-                                    return secondary
-                                        ? {
-                                              liveDoc: secondary.liveDoc.liveDoc,
-                                              docRef: secondary.docRef,
-                                          }
-                                        : undefined;
-                                })()}
-                                primaryPaneFocus={paneFocus.childFocus("primary")}
-                                secondaryPaneFocus={paneFocus.childFocus("secondary")}
                                 refetchPrimaryDoc={refetchPrimaryDoc}
                                 refetchSecondaryDoc={refetchSecondaryDoc}
+                                setResizableContext={setResizableContext}
+                                primaryHistoryOpen={primaryHistoryOpen()}
+                                secondaryHistoryOpen={secondaryHistoryOpen()}
+                                primaryPaneFocus={paneFocus.childFocus("primary")}
+                                secondaryPaneFocus={paneFocus.childFocus("secondary")}
                             />
-                        }
-                    >
-                        <ResizablePanels
-                            primaryDoc={docWithRef().liveDoc}
-                            primaryDocRef={docWithRef().docRef}
-                            secondaryDoc={secondaryLiveDoc()}
-                            isSidePanelOpen={isSidePanelOpen()}
-                            closeSidePanel={closeSidePanel}
-                            refetchPrimaryDoc={refetchPrimaryDoc}
-                            refetchSecondaryDoc={refetchSecondaryDoc}
-                            setResizableContext={setResizableContext}
-                            primaryHistoryOpen={primaryHistoryOpen()}
-                            secondaryHistoryOpen={secondaryHistoryOpen()}
-                            primaryPaneFocus={paneFocus.childFocus("primary")}
-                            secondaryPaneFocus={paneFocus.childFocus("secondary")}
-                        />
-                    </SidebarLayout>
+                        </SidebarLayout>
+                    </TableListContext.Provider>
                 )}
             </Show>
         </Show>
@@ -591,6 +595,7 @@ export function DocumentPane(props: {
                             {(liveInstance) => (
                                 <InstanceEditor
                                     instance={liveInstance.instance}
+                                    refId={props.docRef.refId}
                                     focus={props.focus}
                                 />
                             )}

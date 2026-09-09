@@ -1,10 +1,12 @@
 import { useNavigate } from "@solidjs/router";
+import Table from "lucide-solid/icons/table";
 import { createMemo, createResource, For, Show, useContext } from "solid-js";
 import { stringify as uuidStringify } from "uuid";
 
 import { DocumentTypeIcon, type FocusHandle } from "catcolab-ui-components";
 import type { Document, Link } from "catlog-wasm";
 import { type Api, type LiveDocWithRef, useApi } from "../api";
+import { useTableList } from "../instance/table_list";
 import { TheoryLibraryContext } from "../theory";
 import { isDocumentVisible, useUserSettings } from "../user/user_settings";
 import { useUserState } from "../user/user_state_context";
@@ -198,6 +200,18 @@ function DocumentsTreeNode(props: {
                 refetchPrimaryDoc={props.refetchPrimaryDoc}
                 refetchSecondaryDoc={props.refetchSecondaryDoc}
             />
+            <Show when={props.doc.liveDoc.doc.type === "instance" && props.doc.docRef.refId}>
+                {(refId) => (
+                    <InstanceTableList
+                        refId={refId()}
+                        indent={props.indent + 1}
+                        isOpen={
+                            refId() === props.primaryDoc.docRef.refId ||
+                            refId() === props.secondaryDoc?.docRef.refId
+                        }
+                    />
+                )}
+            </Show>
             <For each={visibleChildDocs()}>
                 {(child) => (
                     <DocumentsTreeNode
@@ -323,6 +337,35 @@ function DocumentsTreeLeaf(props: {
                 />
             </div>
         </div>
+    );
+}
+
+/** Tables of an open instance document. Clicking a row shows the table. */
+function InstanceTableList(props: { refId: string; indent: number; isOpen: boolean }) {
+    const tableList = useTableList();
+
+    return (
+        <Show when={props.isOpen}>
+            <For each={tableList.tables(props.refId)}>
+                {(table) => {
+                    const isVisible = () => tableList.isVisible(props.refId, table.id);
+                    return (
+                        <div
+                            class="related-table"
+                            classList={{
+                                active: isVisible(),
+                                unnamed: !table.label,
+                            }}
+                            style={{ "padding-left": `${props.indent * 16}px` }}
+                            onClick={() => tableList.show(props.refId, table.id)}
+                        >
+                            <Table />
+                            <div class="document-name">{table.label || "Unnamed table"}</div>
+                        </div>
+                    );
+                }}
+            </For>
+        </Show>
     );
 }
 

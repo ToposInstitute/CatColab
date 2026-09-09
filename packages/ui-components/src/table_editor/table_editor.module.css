@@ -11,12 +11,16 @@
 .header {
     position: sticky;
     left: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
     padding: 0.4rem 0.75rem;
     background: var(--color-gray-50);
 }
 
 .label {
     margin: 0;
+    margin-right: auto;
     font-size: 1.05rem;
     font-weight: 500;
 }

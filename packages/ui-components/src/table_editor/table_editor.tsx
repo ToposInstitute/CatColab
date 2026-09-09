@@ -1,4 +1,5 @@
 import ChevronDown from "lucide-solid/icons/chevron-down";
+import Minus from "lucide-solid/icons/minus";
 import { batch, createEffect, createMemo, createSignal, Index, onCleanup, Show } from "solid-js";
 
 import type {
@@ -10,6 +11,7 @@ import type {
     TableRow,
 } from "catcolab-documents";
 import type { Completion } from "../completions";
+import { IconButton } from "../icon_button";
 import { TextInput } from "../text_input";
 import { type FocusHandle, useChildFocus } from "../util/focus";
 
@@ -77,6 +79,9 @@ export type TableEditorProps = {
 
     /** Called when the user deletes a row. */
     onDeleteRow: (row: TableRow) => void;
+
+    /** Called when the user hides the table. Shows a hide button if provided. */
+    onHide?: () => void;
 };
 
 /** A spreadsheet-like editor for a tabular data instance.
@@ -576,6 +581,18 @@ export function TableEditor(props: TableEditorProps) {
                 <h3 class={styles.label} classList={{ [styles.unnamed]: !props.table.label }}>
                     {tableDisplayName(props.table)}
                 </h3>
+                <Show when={props.onHide}>
+                    {(onHide) => (
+                        <IconButton
+                            type="button"
+                            aria-label="Hide table"
+                            tooltip="Hide table"
+                            onClick={() => onHide()()}
+                        >
+                            <Minus size={16} />
+                        </IconButton>
+                    )}
+                </Show>
             </div>
             <table class={styles.grid} role="grid">
                 <colgroup>
