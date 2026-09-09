@@ -9,6 +9,8 @@ import { validatePathEquations } from "./equation-validation";
 import type { InstanceValidation } from "./instance";
 import {
     addInstanceRowsToStore,
+    deleteOrphanedFieldFromStore,
+    deleteOrphanedTableFromStore,
     instanceTablesFromModel,
     readInstancePath,
     tablesWithOrphanedData,
@@ -132,6 +134,41 @@ export function createSetMethod<Handle, S extends Shape, Version>(
                 row,
                 morphism,
                 value,
+            ),
+        );
+}
+
+export function createDeleteOrphanedTableMethod<Handle, S extends Shape, Version>(
+    schema: Notebook<S, ModelDocument, Handle, Version>,
+    store: DocumentStore<Handle, Version>,
+    handle: Handle,
+): (tableId: string) => Promise<Result<void>> {
+    return (tableId) =>
+        withElaboratedSchema(schema, (schemaModel) =>
+            deleteOrphanedTableFromStore(
+                instanceCapableShape(schema),
+                store,
+                handle,
+                schemaModel,
+                tableId,
+            ),
+        );
+}
+
+export function createDeleteOrphanedColumnMethod<Handle, S extends Shape, Version>(
+    schema: Notebook<S, ModelDocument, Handle, Version>,
+    store: DocumentStore<Handle, Version>,
+    handle: Handle,
+): (tableId: string, fieldId: string) => Promise<Result<void>> {
+    return (tableId, fieldId) =>
+        withElaboratedSchema(schema, (schemaModel) =>
+            deleteOrphanedFieldFromStore(
+                instanceCapableShape(schema),
+                store,
+                handle,
+                schemaModel,
+                tableId,
+                fieldId,
             ),
         );
 }

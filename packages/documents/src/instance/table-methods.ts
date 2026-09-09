@@ -199,6 +199,65 @@ export function updateInstanceFieldByIdInStore<Handle, Version>(
     return issues.length > 0 ? { tag: "Err", content: issues } : { tag: "Ok", content: undefined };
 }
 
+/** Delete a stored table that has no entity in the elaborated schema model.
+
+Refuses to delete tables that exist in the schema. */
+export function deleteOrphanedTableFromStore<Handle, Version>(
+    shape: InstanceCapableShape,
+    store: DocumentStore<Handle, Version>,
+    handle: Handle,
+    schemaModel: ElaboratedModel<Shape>,
+    tableId: string,
+): Result<void> {
+    const schemaTables = instanceTablesFromModel(shape, store, handle, schemaModel);
+    if (schemaTables.some((schemaTable) => schemaTable.id === tableId)) {
+        return pathError(`Table \`${tableId}\` exists in the schema and is not orphaned`);
+    }
+    const document = store.getDocumentView(handle) as Readonly<InstanceDocument>;
+    if (document.tables[tableId] === undefined) {
+        return pathError(`Table \`${tableId}\` does not exist`);
+    }
+    store.changeDocument(handle, (changedDocument) => {
+        delete (changedDocument as InstanceDocument).tables[tableId];
+    });
+    return { tag: "Ok", content: undefined };
+}
+
+/** Delete a stored field from every row of a schema table when the field has no
+morphism in the elaborated schema model.
+
+Refuses to delete fields that exist in the schema, and refuses to operate on
+tables that are themselves orphaned. */
+export function deleteOrphanedFieldFromStore<Handle, Version>(
+    shape: InstanceCapableShape,
+    store: DocumentStore<Handle, Version>,
+    handle: Handle,
+    schemaModel: ElaboratedModel<Shape>,
+    tableId: string,
+    fieldId: string,
+): Result<void> {
+    const schemaTables = instanceTablesFromModel(shape, store, handle, schemaModel);
+    const schemaTable = schemaTables.find((schemaTable) => schemaTable.id === tableId);
+    if (schemaTable === undefined) {
+        return pathError(`Table \`${tableId}\` does not exist in the schema`);
+    }
+    if (schemaTable.headers.some((header) => header.id === fieldId)) {
+        return pathError(
+            `Field \`${fieldId}\` in table \`${schemaTable.label}\` exists in the schema and is not orphaned`,
+        );
+    }
+    store.changeDocument(handle, (changedDocument) => {
+        const storedTable = (changedDocument as InstanceDocument).tables[tableId];
+        if (storedTable === undefined) {
+            return;
+        }
+        for (const storedRow of Object.values(storedTable.rows)) {
+            delete storedRow.fields[fieldId];
+        }
+    });
+    return { tag: "Ok", content: undefined };
+}
+
 function freshRowId(document: Readonly<InstanceDocument>): string {
     let id = uuid();
     while (Object.values(document.tables).some((table) => table.rows[id] !== undefined)) {
