@@ -277,6 +277,8 @@
             };
 
           linuxOnlyPackages = {
+            deploy-rs = pkgsLinux.deploy-rs;
+
             backend = pkgsLinux.callPackage ./packages/backend/default.nix {
               inherit craneLib cargoArtifacts;
               pkgs = pkgsLinux;
