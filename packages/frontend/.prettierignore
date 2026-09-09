@@ -1,2 +1,0 @@
-# exempt system prompt from code formatting
-src/inference/system_prompt.md
