@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 // The happy-dom environment makes solid-js resolve to its reactive client
 // build, which the reactive projection tests depend on.
-import { getObjectId, splice, splitBlock } from "@automerge/automerge";
+import { getObjectId, spans, splice, splitBlock } from "@automerge/automerge";
 import { Repo } from "@automerge/automerge-repo";
 import type { UserState } from "catcolab-api/src/user_state";
 import { SimpleOlog, Type } from "catcolab-logics/simple-olog";
@@ -429,6 +429,41 @@ describe("API document store", () => {
         store.commitDraft(source, draft);
         // Once committed, the draft's ref no longer resolves.
         expect((await store.getHandle(draftRef)).tag).toBe("Err");
+    });
+
+    test("reverting a commit restores deleted rich text blocks", async () => {
+        const { schemaAutomergeHandle, store } = createFixture();
+
+        const cell = Nb.newRichTextCell();
+        const path = ["notebook", "cellContents", cell.id, "content"];
+        schemaAutomergeHandle.change((doc) => {
+            doc.notebook.cellContents[cell.id] = cell;
+            doc.notebook.cellOrder.push(cell.id);
+            splitBlock(doc, path, 0, { type: "paragraph", parents: [], attrs: {} });
+            splice(doc, path, 1, 0, "Hello");
+            splitBlock(doc, path, 6, { type: "paragraph", parents: [], attrs: {} });
+            splice(doc, path, 7, 0, "World");
+        });
+        const twoParagraphs = spans(schemaAutomergeHandle.doc(), path);
+        expect(twoParagraphs).toHaveLength(4);
+
+        const local = await store.getHandle({ id: schemaRef, version: null });
+        if (local.tag === "Err") {
+            throw new Error("expected local ref to resolve");
+        }
+        const source = local.content;
+
+        // Delete the second paragraph (its block marker plus text) in a draft.
+        const draft = store.createDraft(source);
+        store.changeDocument(draft, (doc) => {
+            splice(doc as ModelDocument, path, 6, 6);
+        });
+        const change = store.commitDraft(source, draft);
+        expect(spans(schemaAutomergeHandle.doc(), path)).toHaveLength(2);
+
+        // The inverse diff re-inserts the block marker
+        store.revertCommit(source, change);
+        expect(spans(schemaAutomergeHandle.doc(), path)).toEqual(twoParagraphs);
     });
 
     test("discarded drafts stop resolving", async () => {
