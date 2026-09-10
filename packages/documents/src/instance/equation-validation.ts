@@ -48,7 +48,9 @@ export function validatePathEquations<S extends Shape>(
             continue; // the source object has no table
         }
         const tableLabel = sourceTable.label ?? sourceId;
-        const equationName = judgment.label.join(".") || judgment.id;
+        const equationLabel = judgment.label.join(".");
+        const equationText =
+            equationLabel === "" ? "Unnamed equation" : `Equation \`${equationLabel}\``;
 
         let violations = 0;
         for (const row of sourceTable.rows) {
@@ -62,24 +64,26 @@ export function validatePathEquations<S extends Shape>(
             if (violations <= MAX_COUNTEREXAMPLES_PER_EQUATION) {
                 issues.push({
                     message:
-                        `Equation \`${equationName}\` is violated by a row of table \`${tableLabel}\`: ` +
+                        `${equationText} is violated by a row of table \`${tableLabel}\`: ` +
                         `left-hand side yields ${describeSideValue(left)}, ` +
                         `right-hand side yields ${describeSideValue(right)}`,
                     path: [sourceId, "rows", row.id],
                     issueType: "EquationViolation",
                     equationId: judgment.id,
+                    equationLabel: judgment.label,
                 });
             }
         }
         if (violations > MAX_COUNTEREXAMPLES_PER_EQUATION) {
             issues.push({
                 message:
-                    `Equation \`${equationName}\` is violated by ` +
+                    `${equationText} is violated by ` +
                     `${violations - MAX_COUNTEREXAMPLES_PER_EQUATION} more rows of table ` +
                     `\`${tableLabel}\``,
                 path: [sourceId],
                 issueType: "EquationViolation",
                 equationId: judgment.id,
+                equationLabel: judgment.label,
             });
         }
     }

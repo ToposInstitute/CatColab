@@ -70,6 +70,7 @@ describe("instance validation of path equations", { timeout: 30000 }, () => {
                 path: [tableA.id, "rows", a1.id],
                 issueType: "EquationViolation",
                 equationId,
+                equationLabel: ["agree"],
             },
         ]);
 
