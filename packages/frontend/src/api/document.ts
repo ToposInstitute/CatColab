@@ -135,14 +135,12 @@ export function makeLiveDoc<Doc extends Document>(
 
 /** Create a Solid Store that tracks an Automerge document. */
 export function makeDocHandleReactive<T extends object>(handle: DocHandle<T>): T {
-    const init = handle.doc();
-
-    const [store, setStore] = createStore<T>(init);
+    const [store, setStore] = createStore<T>(structuredClone(handle.doc()));
 
     const onChange = (payload: DocHandleChangePayload<T>) => {
         // Use [`reconcile`](https://www.solidjs.com/tutorial/stores_immutable)
         // function to diff the data and thus avoid re-rendering the whole DOM.
-        setStore(reconcile(payload.doc));
+        setStore(reconcile(structuredClone(payload.doc)));
     };
 
     handle.on("change", onChange);
