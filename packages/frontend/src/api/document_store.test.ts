@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 // The happy-dom environment makes solid-js resolve to its reactive client
 // build, which the reactive projection tests depend on.
-import { getObjectId } from "@automerge/automerge";
+import { getObjectId, splice, splitBlock } from "@automerge/automerge";
 import { Repo } from "@automerge/automerge-repo";
 import type { UserState } from "catcolab-api/src/user_state";
 import { SimpleOlog, Type } from "catcolab-logics/simple-olog";
@@ -10,7 +10,12 @@ import { unwrap } from "solid-js/store";
 import { parse as uuidParse } from "uuid";
 import { describe, expect, test } from "vitest";
 
-import { Instance as LegacyInstance, Model, type ModelDocument } from "catcolab-document-methods";
+import {
+    Instance as LegacyInstance,
+    Model,
+    type ModelDocument,
+    Nb,
+} from "catcolab-document-methods";
 import { createBinder, defineShape, type InstanceDocument } from "catcolab-documents";
 import { makeLiveDoc } from "./document";
 import { createApiDocumentStore } from "./document_store";
@@ -206,6 +211,36 @@ describe("API document store", () => {
 
         expect(names).toEqual(["", "Renamed"]);
         expect(schema.title).toBe("Renamed");
+    });
+
+    test("document views tolerate rich text block markers", async () => {
+        const { schemaAutomergeHandle, store } = createFixture();
+
+        // The ProseMirror integration stores paragraphs as block markers
+        // inside the Automerge text of a rich text cell.
+        const cell = Nb.newRichTextCell();
+        schemaAutomergeHandle.change((doc) => {
+            doc.notebook.cellContents[cell.id] = cell;
+            doc.notebook.cellOrder.push(cell.id);
+            const path = ["notebook", "cellContents", cell.id, "content"];
+            splitBlock(doc, path, 0, { type: "paragraph", parents: [], attrs: {} });
+            splice(doc, path, 1, 0, "Hello");
+        });
+
+        const local = await store.getHandle({ id: schemaRef, version: null });
+        expect(local.tag).toBe("Ok");
+        if (local.tag === "Err") {
+            throw new Error("expected local ref to resolve");
+        }
+        const view = store.getDocumentView(local.content) as ModelDocument;
+        expect(view.notebook.cellContents[cell.id]?.content).toContain("Hello");
+
+        schemaAutomergeHandle.change((doc) => {
+            const path = ["notebook", "cellContents", cell.id, "content"];
+            splitBlock(doc, path, 6, { type: "paragraph", parents: [], attrs: {} });
+            splice(doc, path, 7, 0, "World");
+        });
+        expect(view.notebook.cellContents[cell.id]?.content).toContain("World");
     });
 
     test("resolves local refs to canonical cached handles", async () => {
