@@ -54,21 +54,3 @@
         background-color: var(--color-icon-button-positive-active);
     }
 }
-
-.tooltip-content {
-    border-radius: 0.5rem;
-    color: var(--color-background);
-    background-color: var(--color-tooltip-bg);
-    padding: 0.5rem;
-    font-size: smaller;
-    max-width: 500px;
-    word-wrap: break-word;
-
-    & p:first-child {
-        margin-top: 0;
-    }
-
-    & p:last-child {
-        margin-bottom: 0;
-    }
-}

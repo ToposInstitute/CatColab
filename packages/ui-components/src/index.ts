@@ -26,6 +26,7 @@ export * from "./simple_icon";
 export * from "./spinner";
 export * from "./table_editor";
 export * from "./text_input";
+export * from "./tooltip";
 export * from "./util/focus";
 export * from "./util/keyboard";
 export * from "./virtual_list";
