@@ -1,6 +1,16 @@
+import Tooltip from "@corvu/tooltip";
 import ChevronDown from "lucide-solid/icons/chevron-down";
 import Minus from "lucide-solid/icons/minus";
-import { batch, createEffect, createMemo, createSignal, Index, onCleanup, Show } from "solid-js";
+import {
+    batch,
+    type ComponentProps,
+    createEffect,
+    createMemo,
+    createSignal,
+    Index,
+    onCleanup,
+    Show,
+} from "solid-js";
 
 import type {
     FieldValue,
@@ -310,8 +320,6 @@ export function TableEditor(props: TableEditorProps) {
 
     const rowIssues = (row: TableRow): TableIssue[] =>
         issuesByPath().get(pathKey([props.table.id, "rows", row.id])) ?? [];
-
-    const rowIsInvalid = (row: TableRow): boolean => rowIssues(row).length > 0;
 
     const cellIssues = (cell: Cell): TableIssue[] => {
         const field = fieldOf(cell);
@@ -647,11 +655,7 @@ export function TableEditor(props: TableEditorProps) {
                     <Index each={rows()}>
                         {(row) => (
                             <tr>
-                                <th
-                                    class={styles.rowHeader}
-                                    scope="row"
-                                    classList={{ [styles.invalid]: rowIsInvalid(row()) }}
-                                />
+                                <RowHeader issues={rowIssues(row())} />
                                 <Show
                                     when={headers().length > 0}
                                     fallback={<td class={styles.cell} role="gridcell" />}
@@ -706,7 +710,7 @@ export function TableEditor(props: TableEditorProps) {
                                                     aria-invalid={cellIsInvalid(cell())}
                                                     title={
                                                         cellIssues(cell())
-                                                            .map((issue) => issue.message)
+                                                            .map(issueMessage)
                                                             .join("\n") || undefined
                                                     }
                                                     onFocus={() => select(cell())}
@@ -808,6 +812,49 @@ export function TableEditor(props: TableEditorProps) {
             </Show>
         </section>
     );
+}
+
+function RowHeader(props: { issues: ReadonlyArray<TableIssue> }) {
+    const invalid = () => props.issues.length > 0;
+
+    const header = (triggerProps?: ComponentProps<"th">) => (
+        <th
+            {...triggerProps}
+            class={styles.rowHeader}
+            scope="row"
+            classList={{ [styles.invalid]: invalid() }}
+        />
+    );
+
+    return (
+        <Show when={invalid()} fallback={header()}>
+            <Tooltip hoverableContent={false} openOnFocus={false}>
+                <Tooltip.Trigger as={header} />
+                <Tooltip.Portal>
+                    <Tooltip.Content class="tooltip-content">
+                        <RowIssues issues={props.issues} />
+                    </Tooltip.Content>
+                </Tooltip.Portal>
+            </Tooltip>
+        </Show>
+    );
+}
+
+const RowIssues = (props: { issues: ReadonlyArray<TableIssue> }) => (
+    <ul class={styles.rowIssues}>
+        <Index each={props.issues}>{(issue) => <li>{issueMessage(issue())}</li>}</Index>
+    </ul>
+);
+
+function issueMessage(issue: TableIssue): string {
+    switch (issue.issueType) {
+        case "EquationViolation": {
+            const label = issue.equationLabel.join(".");
+            return label ? `Constraint \`${label}\` is violated` : "Unnamed constraint is violated";
+        }
+        default:
+            return issue.message;
+    }
 }
 
 /** The read-only content of a cell that is not being edited.

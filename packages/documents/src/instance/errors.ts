@@ -1,3 +1,4 @@
+import type { QualifiedLabel } from "catlog-wasm";
 import type { Issue } from "../result";
 
 /** Path addressing a field, relative to the document's `tables` map. */
@@ -36,6 +37,8 @@ export interface EquationViolationIssue extends Issue {
     readonly issueType: "EquationViolation";
     /** Id of the violated equation in the schema. */
     readonly equationId: string;
+    /** Label of the violated equation. */
+    readonly equationLabel: QualifiedLabel;
 }
 
 /** A problem found while validating an instance's tables. */

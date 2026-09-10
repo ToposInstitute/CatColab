@@ -88,7 +88,7 @@ Instance issues: `issues` from `validate()` is an array of `{ message, path, iss
 - `MistypedRowRef` --- a row reference points to a row of the wrong table.
 - `OrphanedField` --- a stored field has no matching column in the schema.
 - `OrphanedTable` --- a stored table has no entity in the schema.
-- `EquationViolation` --- a row violates a path equation of the schema; `equationId` identifies the equation. At most 10 counterexamples are reported per equation, followed by a summary issue on the table.
+- `EquationViolation` --- a row violates a path equation of the schema; `equationId` identifies the equation and `equationLabel` names it, when labeled. At most 10 counterexamples are reported per equation, followed by a summary issue on the table.
 
 Column typing: a column's type comes from the schema morphism's codomain. A codomain object labeled `"Bool"`, `"Int"`, `"Float"`, or `"String"` gives a column of that literal type; any other label gives a `String` column. A codomain that is another table entity gives a row-reference column.
 
