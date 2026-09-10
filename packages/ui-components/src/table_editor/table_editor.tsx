@@ -292,11 +292,11 @@ export function TableEditor(props: TableEditorProps) {
     const cellText = (cell: Cell): string => fieldText(fieldOf(cell), cell.header);
 
     const issuesByPath = createMemo(() => {
-        const index = new Map<string, string[]>();
+        const index = new Map<string, TableIssue[]>();
         for (const issue of props.issues ?? []) {
             const key = pathKey(issue.path);
             const messages = index.get(key) ?? [];
-            messages.push(issue.message);
+            messages.push(issue);
             index.set(key, messages);
         }
         return index;
@@ -308,13 +308,18 @@ export function TableEditor(props: TableEditorProps) {
             .map((issue) => issue.message),
     );
 
-    const cellIssueMessages = (cell: Cell): string[] => {
+    const rowIssues = (row: TableRow): TableIssue[] =>
+        issuesByPath().get(pathKey([props.table.id, "rows", row.id])) ?? [];
+
+    const rowIsInvalid = (row: TableRow): boolean => rowIssues(row).length > 0;
+
+    const cellIssues = (cell: Cell): TableIssue[] => {
         const field = fieldOf(cell);
         return field ? (issuesByPath().get(pathKey(field.content.path)) ?? []) : [];
     };
 
     const cellIsInvalid = (cell: Cell): boolean => {
-        if (cellIssueMessages(cell).length > 0) {
+        if (cellIssues(cell).length > 0) {
             return true;
         }
         const header = cell.header;
@@ -596,6 +601,7 @@ export function TableEditor(props: TableEditorProps) {
             </div>
             <table class={styles.grid} role="grid">
                 <colgroup>
+                    <col class={styles.rowHeaderColumn} />
                     <Show
                         when={headers().length > 0}
                         fallback={<col style={{ width: `${EMPTY_COLUMN_WIDTH}px` }} />}
@@ -610,6 +616,7 @@ export function TableEditor(props: TableEditorProps) {
                 </colgroup>
                 <thead>
                     <tr>
+                        <th class={styles.columnHeader} scope="col" />
                         <Show
                             when={headers().length > 0}
                             fallback={<th class={styles.columnHeader} scope="col" />}
@@ -640,6 +647,11 @@ export function TableEditor(props: TableEditorProps) {
                     <Index each={rows()}>
                         {(row) => (
                             <tr>
+                                <th
+                                    class={styles.rowHeader}
+                                    scope="row"
+                                    classList={{ [styles.invalid]: rowIsInvalid(row()) }}
+                                />
                                 <Show
                                     when={headers().length > 0}
                                     fallback={<td class={styles.cell} role="gridcell" />}
@@ -693,8 +705,9 @@ export function TableEditor(props: TableEditorProps) {
                                                     aria-selected={isSelected(cell())}
                                                     aria-invalid={cellIsInvalid(cell())}
                                                     title={
-                                                        cellIssueMessages(cell()).join("\n") ||
-                                                        undefined
+                                                        cellIssues(cell())
+                                                            .map((issue) => issue.message)
+                                                            .join("\n") || undefined
                                                     }
                                                     onFocus={() => select(cell())}
                                                     onMouseDown={(evt) => {

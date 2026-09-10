@@ -141,6 +141,20 @@ shadow, it is painted above the cell editor input. */
     background: var(--color-form-invalid-bg);
 }
 
+.rowHeaderColumn {
+    width: 16px;
+}
+
+.rowHeader {
+    padding: 0;
+    border: 1px solid var(--color-gray-450);
+    background: var(--color-gray-50);
+}
+
+.rowHeader.invalid {
+    background: var(--color-button-danger-base);
+}
+
 .checkbox {
     display: block;
     margin: 0 auto;

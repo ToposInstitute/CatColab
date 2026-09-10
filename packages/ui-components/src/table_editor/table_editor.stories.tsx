@@ -234,8 +234,8 @@ export const DoubleClickBooleanCell: Story = {
             name: "active",
         }) as HTMLTableCellElement;
         const activeColumn = activeHeader.cellIndex;
-        const firstRow = canvas.getAllByRole("row")[1]!;
-        const cell = within(firstRow).getAllByRole("gridcell")[activeColumn]!;
+        const firstRow = canvas.getAllByRole("row")[1] as HTMLTableRowElement;
+        const cell = firstRow.cells[activeColumn]!;
         const checkbox = within(cell).getByRole("checkbox");
 
         await expect(checkbox).toBeChecked();
@@ -751,7 +751,7 @@ export const RemoteColumnInsertWhileEditing: Story = {
         await userEvent.type(input, "Edited");
 
         await userEvent.click(canvas.getByRole("button", { name: "Insert column before" }));
-        await waitFor(() => expect(canvas.getAllByRole("columnheader")).toHaveLength(3));
+        await waitFor(() => expect(canvas.getAllByRole("columnheader")).toHaveLength(4));
         // The editor follows its column to the new position, keeping the text.
         const editing = canvas.getByRole("textbox");
         await expect(editing).toHaveValue("Edited");
