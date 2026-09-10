@@ -5,11 +5,8 @@ settings:
   excludeLinksFromLockfile: false
 
 patchedDependencies:
-  '@automerge/automerge-repo-solid-primitives@2.5.6':
-    hash: a07fedccb0b2226ec9a51ec389778cd28a65a604bbba6ed81fb5f340c6769242
-    path: ../../patches/@automerge__automerge-repo-solid-primitives@2.5.6.patch
   '@automerge/automerge@3.4.1':
-    hash: 421bb3f42dbae7aaa70fc1a073ea4dcf18b871e7990b8cc721b42da8829e4718
+    hash: bf818a70a01f74a7d0f6e564a7d6d2855023bf39d9045b93fc8ae6af4608791e
     path: ../../patches/@automerge__automerge@3.4.1.patch
 
 importers:
@@ -24,16 +21,13 @@ importers:
         version: 1.0.3
       '@automerge/automerge':
         specifier: ^3.4.1
-        version: 3.4.1(patch_hash=421bb3f42dbae7aaa70fc1a073ea4dcf18b871e7990b8cc721b42da8829e4718)
+        version: 3.4.1(patch_hash=bf818a70a01f74a7d0f6e564a7d6d2855023bf39d9045b93fc8ae6af4608791e)
       '@automerge/automerge-repo':
         specifier: ^2.5.6
         version: 2.5.6
       '@automerge/automerge-repo-network-websocket':
         specifier: ^2.5.6
         version: 2.5.6
-      '@automerge/automerge-repo-solid-primitives':
-        specifier: ^2.5.6
-        version: 2.5.6(patch_hash=a07fedccb0b2226ec9a51ec389778cd28a65a604bbba6ed81fb5f340c6769242)(@automerge/automerge@3.4.1(patch_hash=421bb3f42dbae7aaa70fc1a073ea4dcf18b871e7990b8cc721b42da8829e4718))(solid-js@1.9.15)
       '@automerge/automerge-repo-storage-indexeddb':
         specifier: ^2.5.6
         version: 2.5.6
@@ -262,12 +256,6 @@ packages:
 
   '@automerge/automerge-repo-network-websocket@2.5.6':
     resolution: {integrity: sha512-xs/xzOCTf5ZuqhDUtBO1VQ3QOnunEobjtgEqGNu7UcoD2uYWET1ANHVfS+ZzSV8IOA1O9jFAPXxzc4FXoSL0hQ==}
-
-  '@automerge/automerge-repo-solid-primitives@2.5.6':
-    resolution: {integrity: sha512-jwxktGP36AhxpPc9d3qi/k9WS7lIRqjfdWhn6i/Mzc6qe47COHe2QBvdDrDo6FTbFBoRz7+H5fyx3e2tfBIXfA==}
-    peerDependencies:
-      '@automerge/automerge': ^3.0.0
-      solid-js: ^1.9.4
 
   '@automerge/automerge-repo-storage-indexeddb@2.5.6':
     resolution: {integrity: sha512-3349orECq2Mj3mo9q6f9ZeXwDkP3lAm6KaivP5+znUpv6Ze+IraE36DdL5GVdzIm+cXej0yWSOCQOalnTMPcQg==}
@@ -3035,11 +3023,6 @@ snapshots:
       - supports-color
       - utf-8-validate
 
-  '@automerge/automerge-repo-solid-primitives@2.5.6(patch_hash=a07fedccb0b2226ec9a51ec389778cd28a65a604bbba6ed81fb5f340c6769242)(@automerge/automerge@3.4.1(patch_hash=421bb3f42dbae7aaa70fc1a073ea4dcf18b871e7990b8cc721b42da8829e4718))(solid-js@1.9.15)':
-    dependencies:
-      '@automerge/automerge': 3.4.1(patch_hash=421bb3f42dbae7aaa70fc1a073ea4dcf18b871e7990b8cc721b42da8829e4718)
-      solid-js: 1.9.15
-
   '@automerge/automerge-repo-storage-indexeddb@2.5.6':
     dependencies:
       '@automerge/automerge-repo': 2.5.6
@@ -3048,7 +3031,7 @@ snapshots:
 
   '@automerge/automerge-repo@2.5.6':
     dependencies:
-      '@automerge/automerge': 3.4.1(patch_hash=421bb3f42dbae7aaa70fc1a073ea4dcf18b871e7990b8cc721b42da8829e4718)
+      '@automerge/automerge': 3.4.1(patch_hash=bf818a70a01f74a7d0f6e564a7d6d2855023bf39d9045b93fc8ae6af4608791e)
       bs58check: 3.0.1
       cbor-x: 1.6.0
       debug: 4.4.3
@@ -3059,11 +3042,11 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@automerge/automerge@3.4.1(patch_hash=421bb3f42dbae7aaa70fc1a073ea4dcf18b871e7990b8cc721b42da8829e4718)': {}
+  '@automerge/automerge@3.4.1(patch_hash=bf818a70a01f74a7d0f6e564a7d6d2855023bf39d9045b93fc8ae6af4608791e)': {}
 
   '@automerge/prosemirror@0.2.0':
     dependencies:
-      '@automerge/automerge': 3.4.1(patch_hash=421bb3f42dbae7aaa70fc1a073ea4dcf18b871e7990b8cc721b42da8829e4718)
+      '@automerge/automerge': 3.4.1(patch_hash=bf818a70a01f74a7d0f6e564a7d6d2855023bf39d9045b93fc8ae6af4608791e)
       ordered-map: 0.1.0
       prosemirror-changeset: 2.3.1
       prosemirror-history: 1.4.1

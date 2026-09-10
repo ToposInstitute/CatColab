@@ -12,7 +12,6 @@ import {
     type Prop,
     Repo,
 } from "@automerge/automerge-repo";
-import { makeDocumentProjection } from "@automerge/automerge-repo-solid-primitives";
 import { basicSchemaAdapter, init } from "@automerge/prosemirror";
 import { SimpleOlog } from "catcolab-logics/simple-olog";
 import { EditorState } from "prosemirror-state";
@@ -29,6 +28,7 @@ import {
     RichText,
     type RichTextCell,
 } from "catcolab-documents";
+import { makeDocHandleReactive } from "./helpers/reactive_doc_handle";
 
 type StoreHandle = {
     readonly docHandle: DocHandle<Document>;
@@ -40,7 +40,7 @@ function makeAutomergeRichTextStore(): DocumentStore<StoreHandle> {
     return {
         createHandle: async (initialDoc) => {
             const docHandle = repo.create<Document>(initialDoc as Document);
-            return { docHandle, docView: makeDocumentProjection(docHandle) };
+            return { docHandle, docView: makeDocHandleReactive(docHandle) };
         },
         getDocumentView: (handle) => handle.docView,
         changeDocument: (handle, fn) => handle.docHandle.change(fn),
