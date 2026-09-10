@@ -431,6 +431,20 @@ describe("API document store", () => {
         expect((await store.getHandle(draftRef)).tag).toBe("Err");
     });
 
+    test("transaction drafts do not mutate source projections (automerge-repo#721)", async () => {
+        const { binder, schema } = await createFixtureWithSchema();
+
+        const { tx, draftDocs } = await binder.beginTransaction({ schema });
+        try {
+            draftDocs.schema.add(Type, { label: "Person" });
+
+            expect(draftDocs.schema.cellsOf(Type)).toHaveLength(1);
+            expect(schema.cellsOf(Type)).toHaveLength(0);
+        } finally {
+            tx.abort();
+        }
+    });
+
     test("reverting a commit restores deleted rich text blocks", async () => {
         const { schemaAutomergeHandle, store } = createFixture();
 
