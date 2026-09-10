@@ -47,7 +47,7 @@ export default defineConfig({
             deps: {
                 // Process solid through vite so that a single, consistent
                 // build of the reactive runtime is used everywhere.
-                inline: [/solid-js/, /automerge-repo-solid-primitives/],
+                inline: [/solid-js/],
             },
         },
     },

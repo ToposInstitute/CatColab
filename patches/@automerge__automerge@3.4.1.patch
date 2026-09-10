@@ -1,21 +1,49 @@
 diff --git a/dist/cjs/fullfat_base64.cjs b/dist/cjs/fullfat_base64.cjs
-index c243265c86d6be8e3c15f626203da61ce5e8c6f5..d824682e08a1d9d097b37771f90d9df2368c981f 100644
+index c243265c86d6be8e3c15f626203da61ce5e8c6f5..d51bc264098e91ceb57a092de46aee7575b162d9 100644
 --- a/dist/cjs/fullfat_base64.cjs
 +++ b/dist/cjs/fullfat_base64.cjs
-@@ -3791,20 +3791,24 @@ function applyPutPatch(doc, path, patch) {
+@@ -3765,6 +3765,11 @@ function _is_proxy(doc) {
+ 
+ // mjs/apply_patches.js
+ function applyPatch(doc, patch) {
++  const marker = findBlockMarker(doc, patch.path);
++  if (marker !== null) {
++    applyBlockMarkerPatch(doc, marker, patch);
++    return;
++  }
+   let path = resolvePath(doc, patch.path);
+   if (patch.action === "put") {
+     applyPutPatch(doc, path, patch);
+@@ -3790,21 +3795,39 @@ function applyPutPatch(doc, path, patch) {
+   parent[prop] = patch.value;
  }
  function applyInsertPatch(doc, path, patch) {
-   let { obj: parent, prop } = pathElemAt(path, -1);
+-  let { obj: parent, prop } = pathElemAt(path, -1);
 -  if (!Array.isArray(parent)) {
 -    throw new RangeError(`target is not an array for patch`);
 -  }
 -  if (!(typeof prop === "number")) {
 -    throw new RangeError(`index is not a number for patch`);
++  let { obj: parent, prop, parentPath } = pathElemAt(path, -1);
 +  if (Array.isArray(parent)) {
 +    if (!(typeof prop === "number")) {
 +      throw new RangeError(`index is not a number for patch`);
 +    }
 +    parent.splice(prop, 0, ...patch.values);
++  } else if (typeof parent === "string") {
++    // Inserts into text are block markers.
++    if (!(typeof prop === "number")) {
++      throw new RangeError(`index is not a number for patch`);
++    }
++    if (isAutomerge(doc)) {
++      for (let i = 0; i < patch.values.length; i++) {
++        splitBlock(doc, parentPath, prop + i, { type: "", parents: [], attrs: {} });
++      }
++    } else {
++      let { obj: grandParent, prop: grandParentProp } = pathElemAt(path, -2);
++      const markers = "\uFFFC".repeat(patch.values.length);
++      grandParent[grandParentProp] = parent.slice(0, prop) + markers + parent.slice(prop);
++    }
 +  } else if (typeof parent === "object" && parent !== null) {
 +    parent[prop] = patch.values[0];
 +  } else {
@@ -36,24 +64,98 @@ index c243265c86d6be8e3c15f626203da61ce5e8c6f5..d824682e08a1d9d097b37771f90d9df2
      parent.splice(prop, patch.length || 1);
    } else if (typeof parent === "string") {
      if (isAutomerge(doc)) {
+@@ -3884,6 +3907,45 @@ function applyUnmarkPatch(doc, path, patch) {
+   }
+   unmark(doc, patch.path, { start: patch.start, end: patch.end, expand: "none" }, patch.name);
+ }
++// Block markers appear as objects nested in text in patch paths, but a
++// materialized string only holds a single "\uFFFC" character per marker,
++// so their attributes have to be updated through the block API.
++function applyBlockMarkerPatch(doc, marker, patch) {
++  if (!isAutomerge(doc)) {
++    return;
++  }
++  const current = block(doc, marker.textPath, marker.index);
++  if (current == null) {
++    throw new RangeError(`no block marker at index ${marker.index} for patch`);
++  }
++  const updated = {
++    type: current.type,
++    parents: [...current.parents],
++    attrs: Object.assign({}, current.attrs),
++  };
++  applyPatch(updated, Object.assign({}, patch, { path: marker.rest }));
++  updateBlock(doc, marker.textPath, marker.index, updated);
++}
++// Find the first element of `path` that indexes into a string, if any.
++function findBlockMarker(doc, path) {
++  let current = doc;
++  for (const [index, prop] of path.entries()) {
++    if (index === path.length - 1) {
++      break;
++    }
++    if (typeof current === "string") {
++      if (typeof prop !== "number") {
++        throw new Error(`Invalid path: ${path}`);
++      }
++      return { textPath: path.slice(0, index), index: prop, rest: path.slice(index + 1) };
++    }
++    if (current == null || typeof current != "object") {
++      throw new Error(`Invalid path: ${path}`);
++    }
++    current = current[prop];
++  }
++  return null;
++}
+ function applyPatches(doc, patches) {
+   for (const patch of patches) {
+     applyPatch(doc, patch);
 diff --git a/dist/cjs/fullfat_node.cjs b/dist/cjs/fullfat_node.cjs
-index 40da38a6ed3d554d08891ac7cefe16eea1d5d88f..d4ac2ba52951ed3d5a231f50df1ee20f55629112 100644
+index 40da38a6ed3d554d08891ac7cefe16eea1d5d88f..0e2f599aecfad9d44e2a93d41d63042daf89b638 100644
 --- a/dist/cjs/fullfat_node.cjs
 +++ b/dist/cjs/fullfat_node.cjs
-@@ -6343,20 +6343,24 @@ function applyPutPatch(doc, path, patch) {
+@@ -6317,6 +6317,11 @@ function _is_proxy(doc) {
+ 
+ // mjs/apply_patches.js
+ function applyPatch(doc, patch) {
++  const marker = findBlockMarker(doc, patch.path);
++  if (marker !== null) {
++    applyBlockMarkerPatch(doc, marker, patch);
++    return;
++  }
+   let path = resolvePath(doc, patch.path);
+   if (patch.action === "put") {
+     applyPutPatch(doc, path, patch);
+@@ -6342,21 +6347,39 @@ function applyPutPatch(doc, path, patch) {
+   parent[prop] = patch.value;
  }
  function applyInsertPatch(doc, path, patch) {
-   let { obj: parent, prop } = pathElemAt(path, -1);
+-  let { obj: parent, prop } = pathElemAt(path, -1);
 -  if (!Array.isArray(parent)) {
 -    throw new RangeError(`target is not an array for patch`);
 -  }
 -  if (!(typeof prop === "number")) {
 -    throw new RangeError(`index is not a number for patch`);
++  let { obj: parent, prop, parentPath } = pathElemAt(path, -1);
 +  if (Array.isArray(parent)) {
 +    if (!(typeof prop === "number")) {
 +      throw new RangeError(`index is not a number for patch`);
 +    }
 +    parent.splice(prop, 0, ...patch.values);
++  } else if (typeof parent === "string") {
++    // Inserts into text are block markers.
++    if (!(typeof prop === "number")) {
++      throw new RangeError(`index is not a number for patch`);
++    }
++    if (isAutomerge(doc)) {
++      for (let i = 0; i < patch.values.length; i++) {
++        splitBlock(doc, parentPath, prop + i, { type: "", parents: [], attrs: {} });
++      }
++    } else {
++      let { obj: grandParent, prop: grandParentProp } = pathElemAt(path, -2);
++      const markers = "\uFFFC".repeat(patch.values.length);
++      grandParent[grandParentProp] = parent.slice(0, prop) + markers + parent.slice(prop);
++    }
 +  } else if (typeof parent === "object" && parent !== null) {
 +    parent[prop] = patch.values[0];
 +  } else {
@@ -74,24 +176,98 @@ index 40da38a6ed3d554d08891ac7cefe16eea1d5d88f..d4ac2ba52951ed3d5a231f50df1ee20f
      parent.splice(prop, patch.length || 1);
    } else if (typeof parent === "string") {
      if (isAutomerge(doc)) {
+@@ -6436,6 +6459,45 @@ function applyUnmarkPatch(doc, path, patch) {
+   }
+   unmark(doc, patch.path, { start: patch.start, end: patch.end, expand: "none" }, patch.name);
+ }
++// Block markers appear as objects nested in text in patch paths, but a
++// materialized string only holds a single "\uFFFC" character per marker,
++// so their attributes have to be updated through the block API.
++function applyBlockMarkerPatch(doc, marker, patch) {
++  if (!isAutomerge(doc)) {
++    return;
++  }
++  const current = block(doc, marker.textPath, marker.index);
++  if (current == null) {
++    throw new RangeError(`no block marker at index ${marker.index} for patch`);
++  }
++  const updated = {
++    type: current.type,
++    parents: [...current.parents],
++    attrs: Object.assign({}, current.attrs),
++  };
++  applyPatch(updated, Object.assign({}, patch, { path: marker.rest }));
++  updateBlock(doc, marker.textPath, marker.index, updated);
++}
++// Find the first element of `path` that indexes into a string, if any.
++function findBlockMarker(doc, path) {
++  let current = doc;
++  for (const [index, prop] of path.entries()) {
++    if (index === path.length - 1) {
++      break;
++    }
++    if (typeof current === "string") {
++      if (typeof prop !== "number") {
++        throw new Error(`Invalid path: ${path}`);
++      }
++      return { textPath: path.slice(0, index), index: prop, rest: path.slice(index + 1) };
++    }
++    if (current == null || typeof current != "object") {
++      throw new Error(`Invalid path: ${path}`);
++    }
++    current = current[prop];
++  }
++  return null;
++}
+ function applyPatches(doc, patches) {
+   for (const patch of patches) {
+     applyPatch(doc, patch);
 diff --git a/dist/cjs/iife.cjs b/dist/cjs/iife.cjs
-index 69bebf7ae3774a7d1feb7f02d3dd6a672761f0d3..963d963d0414ccf4668311c11cb8e479e67ec5a8 100644
+index 69bebf7ae3774a7d1feb7f02d3dd6a672761f0d3..ef8d472490822a792703da2546b274b255f9c560 100644
 --- a/dist/cjs/iife.cjs
 +++ b/dist/cjs/iife.cjs
-@@ -3778,20 +3778,24 @@ function applyPutPatch(doc, path, patch) {
+@@ -3752,6 +3752,11 @@ function _is_proxy(doc) {
+ 
+ // mjs/apply_patches.js
+ function applyPatch(doc, patch) {
++  const marker = findBlockMarker(doc, patch.path);
++  if (marker !== null) {
++    applyBlockMarkerPatch(doc, marker, patch);
++    return;
++  }
+   let path = resolvePath(doc, patch.path);
+   if (patch.action === "put") {
+     applyPutPatch(doc, path, patch);
+@@ -3777,21 +3782,39 @@ function applyPutPatch(doc, path, patch) {
+   parent[prop] = patch.value;
  }
  function applyInsertPatch(doc, path, patch) {
-   let { obj: parent, prop } = pathElemAt(path, -1);
+-  let { obj: parent, prop } = pathElemAt(path, -1);
 -  if (!Array.isArray(parent)) {
 -    throw new RangeError(`target is not an array for patch`);
 -  }
 -  if (!(typeof prop === "number")) {
 -    throw new RangeError(`index is not a number for patch`);
++  let { obj: parent, prop, parentPath } = pathElemAt(path, -1);
 +  if (Array.isArray(parent)) {
 +    if (!(typeof prop === "number")) {
 +      throw new RangeError(`index is not a number for patch`);
 +    }
 +    parent.splice(prop, 0, ...patch.values);
++  } else if (typeof parent === "string") {
++    // Inserts into text are block markers.
++    if (!(typeof prop === "number")) {
++      throw new RangeError(`index is not a number for patch`);
++    }
++    if (isAutomerge(doc)) {
++      for (let i = 0; i < patch.values.length; i++) {
++        splitBlock(doc, parentPath, prop + i, { type: "", parents: [], attrs: {} });
++      }
++    } else {
++      let { obj: grandParent, prop: grandParentProp } = pathElemAt(path, -2);
++      const markers = "\uFFFC".repeat(patch.values.length);
++      grandParent[grandParentProp] = parent.slice(0, prop) + markers + parent.slice(prop);
++    }
 +  } else if (typeof parent === "object" && parent !== null) {
 +    parent[prop] = patch.values[0];
 +  } else {
@@ -112,24 +288,98 @@ index 69bebf7ae3774a7d1feb7f02d3dd6a672761f0d3..963d963d0414ccf4668311c11cb8e479
      parent.splice(prop, patch.length || 1);
    } else if (typeof parent === "string") {
      if (isAutomerge(doc)) {
+@@ -3871,6 +3894,45 @@ function applyUnmarkPatch(doc, path, patch) {
+   }
+   unmark(doc, patch.path, { start: patch.start, end: patch.end, expand: "none" }, patch.name);
+ }
++// Block markers appear as objects nested in text in patch paths, but a
++// materialized string only holds a single "\uFFFC" character per marker,
++// so their attributes have to be updated through the block API.
++function applyBlockMarkerPatch(doc, marker, patch) {
++  if (!isAutomerge(doc)) {
++    return;
++  }
++  const current = block(doc, marker.textPath, marker.index);
++  if (current == null) {
++    throw new RangeError(`no block marker at index ${marker.index} for patch`);
++  }
++  const updated = {
++    type: current.type,
++    parents: [...current.parents],
++    attrs: Object.assign({}, current.attrs),
++  };
++  applyPatch(updated, Object.assign({}, patch, { path: marker.rest }));
++  updateBlock(doc, marker.textPath, marker.index, updated);
++}
++// Find the first element of `path` that indexes into a string, if any.
++function findBlockMarker(doc, path) {
++  let current = doc;
++  for (const [index, prop] of path.entries()) {
++    if (index === path.length - 1) {
++      break;
++    }
++    if (typeof current === "string") {
++      if (typeof prop !== "number") {
++        throw new Error(`Invalid path: ${path}`);
++      }
++      return { textPath: path.slice(0, index), index: prop, rest: path.slice(index + 1) };
++    }
++    if (current == null || typeof current != "object") {
++      throw new Error(`Invalid path: ${path}`);
++    }
++    current = current[prop];
++  }
++  return null;
++}
+ function applyPatches(doc, patches) {
+   for (const patch of patches) {
+     applyPatch(doc, patch);
 diff --git a/dist/cjs/slim.cjs b/dist/cjs/slim.cjs
-index e0585d1762e6bb2166b72005ed6a73efeb5eeee9..b654028d4bf31edb3a1524413c6b47722f41f6ee 100644
+index e0585d1762e6bb2166b72005ed6a73efeb5eeee9..d9192866b2887935532a079130c70354c2672e19 100644
 --- a/dist/cjs/slim.cjs
 +++ b/dist/cjs/slim.cjs
-@@ -3762,20 +3762,24 @@ function applyPutPatch(doc, path, patch) {
+@@ -3736,6 +3736,11 @@ function _is_proxy(doc) {
+ 
+ // mjs/apply_patches.js
+ function applyPatch(doc, patch) {
++  const marker = findBlockMarker(doc, patch.path);
++  if (marker !== null) {
++    applyBlockMarkerPatch(doc, marker, patch);
++    return;
++  }
+   let path = resolvePath(doc, patch.path);
+   if (patch.action === "put") {
+     applyPutPatch(doc, path, patch);
+@@ -3761,21 +3766,39 @@ function applyPutPatch(doc, path, patch) {
+   parent[prop] = patch.value;
  }
  function applyInsertPatch(doc, path, patch) {
-   let { obj: parent, prop } = pathElemAt(path, -1);
+-  let { obj: parent, prop } = pathElemAt(path, -1);
 -  if (!Array.isArray(parent)) {
 -    throw new RangeError(`target is not an array for patch`);
 -  }
 -  if (!(typeof prop === "number")) {
 -    throw new RangeError(`index is not a number for patch`);
++  let { obj: parent, prop, parentPath } = pathElemAt(path, -1);
 +  if (Array.isArray(parent)) {
 +    if (!(typeof prop === "number")) {
 +      throw new RangeError(`index is not a number for patch`);
 +    }
 +    parent.splice(prop, 0, ...patch.values);
++  } else if (typeof parent === "string") {
++    // Inserts into text are block markers.
++    if (!(typeof prop === "number")) {
++      throw new RangeError(`index is not a number for patch`);
++    }
++    if (isAutomerge(doc)) {
++      for (let i = 0; i < patch.values.length; i++) {
++        splitBlock(doc, parentPath, prop + i, { type: "", parents: [], attrs: {} });
++      }
++    } else {
++      let { obj: grandParent, prop: grandParentProp } = pathElemAt(path, -2);
++      const markers = "\uFFFC".repeat(patch.values.length);
++      grandParent[grandParentProp] = parent.slice(0, prop) + markers + parent.slice(prop);
++    }
 +  } else if (typeof parent === "object" && parent !== null) {
 +    parent[prop] = patch.values[0];
 +  } else {
@@ -150,24 +400,98 @@ index e0585d1762e6bb2166b72005ed6a73efeb5eeee9..b654028d4bf31edb3a1524413c6b4772
      parent.splice(prop, patch.length || 1);
    } else if (typeof parent === "string") {
      if (isAutomerge(doc)) {
+@@ -3855,6 +3878,45 @@ function applyUnmarkPatch(doc, path, patch) {
+   }
+   unmark(doc, patch.path, { start: patch.start, end: patch.end, expand: "none" }, patch.name);
+ }
++// Block markers appear as objects nested in text in patch paths, but a
++// materialized string only holds a single "\uFFFC" character per marker,
++// so their attributes have to be updated through the block API.
++function applyBlockMarkerPatch(doc, marker, patch) {
++  if (!isAutomerge(doc)) {
++    return;
++  }
++  const current = block(doc, marker.textPath, marker.index);
++  if (current == null) {
++    throw new RangeError(`no block marker at index ${marker.index} for patch`);
++  }
++  const updated = {
++    type: current.type,
++    parents: [...current.parents],
++    attrs: Object.assign({}, current.attrs),
++  };
++  applyPatch(updated, Object.assign({}, patch, { path: marker.rest }));
++  updateBlock(doc, marker.textPath, marker.index, updated);
++}
++// Find the first element of `path` that indexes into a string, if any.
++function findBlockMarker(doc, path) {
++  let current = doc;
++  for (const [index, prop] of path.entries()) {
++    if (index === path.length - 1) {
++      break;
++    }
++    if (typeof current === "string") {
++      if (typeof prop !== "number") {
++        throw new Error(`Invalid path: ${path}`);
++      }
++      return { textPath: path.slice(0, index), index: prop, rest: path.slice(index + 1) };
++    }
++    if (current == null || typeof current != "object") {
++      throw new Error(`Invalid path: ${path}`);
++    }
++    current = current[prop];
++  }
++  return null;
++}
+ function applyPatches(doc, patches) {
+   for (const patch of patches) {
+     applyPatch(doc, patch);
 diff --git a/dist/iife/iife.js b/dist/iife/iife.js
-index 9d1a1806cac975eea131abb17e7b0ea794f8253c..91c803dad109ef3e2ad920bda377a40c8217018f 100644
+index 9d1a1806cac975eea131abb17e7b0ea794f8253c..af7f74c076aa384e3094f912ac253b0ea70fdfb1 100644
 --- a/dist/iife/iife.js
 +++ b/dist/iife/iife.js
-@@ -3779,20 +3779,24 @@ ${val.stack}`;
+@@ -3753,6 +3753,11 @@ ${val.stack}`;
+ 
+   // mjs/apply_patches.js
+   function applyPatch(doc, patch) {
++    const marker = findBlockMarker(doc, patch.path);
++    if (marker !== null) {
++      applyBlockMarkerPatch(doc, marker, patch);
++      return;
++    }
+     let path = resolvePath(doc, patch.path);
+     if (patch.action === "put") {
+       applyPutPatch(doc, path, patch);
+@@ -3778,21 +3783,39 @@ ${val.stack}`;
+     parent[prop] = patch.value;
    }
    function applyInsertPatch(doc, path, patch) {
-     let { obj: parent, prop } = pathElemAt(path, -1);
+-    let { obj: parent, prop } = pathElemAt(path, -1);
 -    if (!Array.isArray(parent)) {
 -      throw new RangeError(`target is not an array for patch`);
 -    }
 -    if (!(typeof prop === "number")) {
 -      throw new RangeError(`index is not a number for patch`);
++    let { obj: parent, prop, parentPath } = pathElemAt(path, -1);
 +    if (Array.isArray(parent)) {
 +      if (!(typeof prop === "number")) {
 +        throw new RangeError(`index is not a number for patch`);
 +      }
 +      parent.splice(prop, 0, ...patch.values);
++    } else if (typeof parent === "string") {
++      // Inserts into text are block markers.
++      if (!(typeof prop === "number")) {
++        throw new RangeError(`index is not a number for patch`);
++      }
++      if (isAutomerge(doc)) {
++        for (let i = 0; i < patch.values.length; i++) {
++          splitBlock(doc, parentPath, prop + i, { type: "", parents: [], attrs: {} });
++        }
++      } else {
++        let { obj: grandParent, prop: grandParentProp } = pathElemAt(path, -2);
++        const markers = "\uFFFC".repeat(patch.values.length);
++        grandParent[grandParentProp] = parent.slice(0, prop) + markers + parent.slice(prop);
++      }
 +    } else if (typeof parent === "object" && parent !== null) {
 +      parent[prop] = patch.values[0];
 +    } else {
@@ -188,16 +512,76 @@ index 9d1a1806cac975eea131abb17e7b0ea794f8253c..91c803dad109ef3e2ad920bda377a40c
        parent.splice(prop, patch.length || 1);
      } else if (typeof parent === "string") {
        if (isAutomerge(doc)) {
+@@ -3872,6 +3895,45 @@ ${val.stack}`;
+     }
+     unmark(doc, patch.path, { start: patch.start, end: patch.end, expand: "none" }, patch.name);
+   }
++  // Block markers appear as objects nested in text in patch paths, but a
++  // materialized string only holds a single "\uFFFC" character per marker,
++  // so their attributes have to be updated through the block API.
++  function applyBlockMarkerPatch(doc, marker, patch) {
++    if (!isAutomerge(doc)) {
++      return;
++    }
++    const current = block(doc, marker.textPath, marker.index);
++    if (current == null) {
++      throw new RangeError(`no block marker at index ${marker.index} for patch`);
++    }
++    const updated = {
++      type: current.type,
++      parents: [...current.parents],
++      attrs: Object.assign({}, current.attrs),
++    };
++    applyPatch(updated, Object.assign({}, patch, { path: marker.rest }));
++    updateBlock(doc, marker.textPath, marker.index, updated);
++  }
++  // Find the first element of `path` that indexes into a string, if any.
++  function findBlockMarker(doc, path) {
++    let current = doc;
++    for (const [index, prop] of path.entries()) {
++      if (index === path.length - 1) {
++        break;
++      }
++      if (typeof current === "string") {
++        if (typeof prop !== "number") {
++          throw new Error(`Invalid path: ${path}`);
++        }
++        return { textPath: path.slice(0, index), index: prop, rest: path.slice(index + 1) };
++      }
++      if (current == null || typeof current != "object") {
++        throw new Error(`Invalid path: ${path}`);
++      }
++      current = current[prop];
++    }
++    return null;
++  }
+   function applyPatches(doc, patches) {
+     for (const patch of patches) {
+       applyPatch(doc, patch);
 diff --git a/dist/mjs/apply_patches.js b/dist/mjs/apply_patches.js
-index a21173a8b375a53694381ab45577d8cba6502db1..9dce8c62ddd29130dd1cd5f1015b20e4d3f7174e 100644
+index a21173a8b375a53694381ab45577d8cba6502db1..e55c6ec731bc16d1c260697626723fa2d8fe87e1 100644
 --- a/dist/mjs/apply_patches.js
 +++ b/dist/mjs/apply_patches.js
-@@ -35,20 +35,28 @@ function applyPutPatch(doc, path, patch) {
+@@ -1,5 +1,10 @@
+-import { isAutomerge, isCounter, mark, splice, unmark, } from "./implementation.js";
++import { block, isAutomerge, isCounter, mark, splice, splitBlock, unmark, updateBlock, } from "./implementation.js";
+ export function applyPatch(doc, patch) {
++    const marker = findBlockMarker(doc, patch.path);
++    if (marker !== null) {
++        applyBlockMarkerPatch(doc, marker, patch);
++        return;
++    }
+     let path = resolvePath(doc, patch.path);
+     if (patch.action === "put") {
+         applyPutPatch(doc, path, patch);
+@@ -34,21 +39,45 @@ function applyPutPatch(doc, path, patch) {
+     parent[prop] = patch.value;
  }
  function applyInsertPatch(doc, path, patch) {
-     let { obj: parent, prop } = pathElemAt(path, -1);
+-    let { obj: parent, prop } = pathElemAt(path, -1);
 -    if (!Array.isArray(parent)) {
 -        throw new RangeError(`target is not an array for patch`);
++    let { obj: parent, prop, parentPath } = pathElemAt(path, -1);
 +    if (Array.isArray(parent)) {
 +        if (!(typeof prop === "number")) {
 +            throw new RangeError(`index is not a number for patch`);
@@ -206,6 +590,22 @@ index a21173a8b375a53694381ab45577d8cba6502db1..9dce8c62ddd29130dd1cd5f1015b20e4
      }
 -    if (!(typeof prop === "number")) {
 -        throw new RangeError(`index is not a number for patch`);
++    else if (typeof parent === "string") {
++        // Inserts into text are block markers.
++        if (!(typeof prop === "number")) {
++            throw new RangeError(`index is not a number for patch`);
++        }
++        if (isAutomerge(doc)) {
++            for (let i = 0; i < patch.values.length; i++) {
++                splitBlock(doc, parentPath, prop + i, { type: "", parents: [], attrs: {} });
++            }
++        }
++        else {
++            let { obj: grandParent, prop: grandParentProp } = pathElemAt(path, -2);
++            const markers = "\uFFFC".repeat(patch.values.length);
++            grandParent[grandParentProp] = parent.slice(0, prop) + markers + parent.slice(prop);
++        }
++    }
 +    else if (typeof parent === "object" && parent !== null) {
 +        parent[prop] = patch.values[0];
 +    }
@@ -228,3 +628,49 @@ index a21173a8b375a53694381ab45577d8cba6502db1..9dce8c62ddd29130dd1cd5f1015b20e4
          parent.splice(prop, patch.length || 1);
      }
      else if (typeof parent === "string") {
+@@ -128,6 +157,45 @@ function applyUnmarkPatch(doc, path, patch) {
+     }
+     unmark(doc, patch.path, { start: patch.start, end: patch.end, expand: "none" }, patch.name);
+ }
++// Block markers appear as objects nested in text in patch paths, but a
++// materialized string only holds a single "\uFFFC" character per marker,
++// so their attributes have to be updated through the block API.
++function applyBlockMarkerPatch(doc, marker, patch) {
++    if (!isAutomerge(doc)) {
++        return;
++    }
++    const current = block(doc, marker.textPath, marker.index);
++    if (current == null) {
++        throw new RangeError(`no block marker at index ${marker.index} for patch`);
++    }
++    const updated = {
++        type: current.type,
++        parents: [...current.parents],
++        attrs: Object.assign({}, current.attrs),
++    };
++    applyPatch(updated, Object.assign({}, patch, { path: marker.rest }));
++    updateBlock(doc, marker.textPath, marker.index, updated);
++}
++// Find the first element of `path` that indexes into a string, if any.
++function findBlockMarker(doc, path) {
++    let current = doc;
++    for (const [index, prop] of path.entries()) {
++        if (index === path.length - 1) {
++            break;
++        }
++        if (typeof current === "string") {
++            if (typeof prop !== "number") {
++                throw new Error(`Invalid path: ${path}`);
++            }
++            return { textPath: path.slice(0, index), index: prop, rest: path.slice(index + 1) };
++        }
++        if (current == null || typeof current != "object") {
++            throw new Error(`Invalid path: ${path}`);
++        }
++        current = current[prop];
++    }
++    return null;
++}
+ export function applyPatches(doc, patches) {
+     for (const patch of patches) {
+         applyPatch(doc, patch);
