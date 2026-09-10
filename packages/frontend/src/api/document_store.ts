@@ -1,5 +1,5 @@
-import { applyPatches, diff, getHeads, type Heads } from "@automerge/automerge";
-import { type DocHandle, Repo } from "@automerge/automerge-repo";
+import { applyPatches, clone, diff, getHeads, type Heads } from "@automerge/automerge";
+import { DocHandle, generateAutomergeUrl, parseAutomergeUrl } from "@automerge/automerge-repo";
 import type { RelationInfo, UserState } from "catcolab-api/src/user_state";
 import { createStore, reconcile, unwrap } from "solid-js/store";
 import { stringify as uuidStringify } from "uuid";
@@ -43,10 +43,6 @@ between loads.
 export function createApiBinder(api: Api, userState: UserState): ApiBinder {
     return createBinder(createApiDocumentStore(api, userState));
 }
-
-// Drafts live only in this repo, which has neither storage nor networking, so
-// that uncommitted edits never reach the backend or other clients.
-const draftRepo = new Repo();
 
 /** Adapt frontend Automerge documents to the storage boundary used by catcolab-documents.
 
@@ -150,6 +146,16 @@ export function createApiDocumentStore(api: Api, userState: UserState): ApiDocum
         return linked;
     }
 
+    const createAutomergeDraft = (source: DocHandle<Document>): DocHandle<Document> => {
+        const { documentId } = parseAutomergeUrl(generateAutomergeUrl());
+        const draft = new DocHandle<Document>(documentId, () => {
+            throw new Error("Document refs are not supported on drafts.");
+        });
+        draft.update(() => clone(source.doc()));
+        draft.doneLoading();
+        return draft;
+    };
+
     return {
         async createHandle(initialDoc) {
             const refId = await api.createDoc(initialDoc);
@@ -186,7 +192,7 @@ export function createApiDocumentStore(api: Api, userState: UserState): ApiDocum
         },
         getHandle,
         createDraft: (handle) => {
-            const automergeDraft = draftRepo.clone(handle.automergeHandle);
+            const automergeDraft = createAutomergeDraft(handle.automergeHandle);
             const draft = draftHandle(automergeDraft);
             handles.set(automergeDraft.documentId, draft);
             return draft;
@@ -197,16 +203,13 @@ export function createApiDocumentStore(api: Api, userState: UserState): ApiDocum
             handle.automergeHandle.merge(draft.automergeHandle);
             const after = getHeads(handle.automergeHandle.doc());
 
-            // The draft clone has served its purpose: evict it from the handle
-            // cache and the draft repo so that it is not retained for the rest
-            // of the session.
             handles.delete(draft.automergeHandle.documentId);
-            draftRepo.delete(draft.automergeHandle.documentId);
+            draft.automergeHandle.delete();
             return { before, after };
         },
         discardDraft: (draft) => {
             handles.delete(draft.automergeHandle.documentId);
-            draftRepo.delete(draft.automergeHandle.documentId);
+            draft.automergeHandle.delete();
         },
         revertCommit: (handle, change: DocumentChange<Heads>) => {
             // Trust automerge to figure this out.
