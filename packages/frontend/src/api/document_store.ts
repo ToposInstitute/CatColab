@@ -1,6 +1,5 @@
 import { applyPatches, diff, getHeads, type Heads } from "@automerge/automerge";
 import { type DocHandle, Repo } from "@automerge/automerge-repo";
-import { makeDocumentProjection } from "@automerge/automerge-repo-solid-primitives";
 import type { RelationInfo, UserState } from "catcolab-api/src/user_state";
 import { createStore, reconcile, unwrap } from "solid-js/store";
 import { stringify as uuidStringify } from "uuid";
@@ -15,6 +14,7 @@ import {
     type HandlesByLinkType,
     type Result,
 } from "catcolab-documents";
+import { makeDocHandleReactive } from "./document";
 import type { Api } from "./types";
 
 export type ApiDocumentHandle = {
@@ -63,14 +63,14 @@ export function createApiDocumentStore(api: Api, userState: UserState): ApiDocum
             existing.ref = ref;
             return existing;
         }
-        const handle = { automergeHandle, docView: makeDocumentProjection(automergeHandle), ref };
+        const handle = { automergeHandle, docView: makeDocHandleReactive(automergeHandle), ref };
         handles.set(ref.id, handle);
         return handle;
     };
 
     const draftHandle = (automergeDraft: DocHandle<Document>): ApiDocumentHandle => ({
         automergeHandle: automergeDraft,
-        docView: makeDocumentProjection(automergeDraft),
+        docView: makeDocHandleReactive(automergeDraft),
         ref: {
             id: automergeDraft.documentId,
             version: null,
