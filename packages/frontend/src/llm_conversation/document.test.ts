@@ -415,6 +415,90 @@ describe("LLM conversation turns", { timeout: 30_000 }, () => {
         assert.strictEqual(inference.runChatTurn.mock.calls.length, 1);
     });
 
+    test("persists several contextExec calls batched into one assistant message", async () => {
+        const fixture = await makeFixture();
+        inference.runChatTurn
+            .mockResolvedValueOnce({
+                content: "Done.",
+                generatedMessageDelta: [
+                    {
+                        role: "assistant",
+                        content: "Two updates.",
+                        tool_calls: [
+                            {
+                                id: "call-a",
+                                type: "function",
+                                function: {
+                                    name: "contextExec",
+                                    arguments: JSON.stringify({ code: "return 'first';" }),
+                                },
+                            },
+                            {
+                                id: "call-b",
+                                type: "function",
+                                function: {
+                                    name: "contextExec",
+                                    arguments: JSON.stringify({ code: "return 'second';" }),
+                                },
+                            },
+                        ],
+                    },
+                    {
+                        role: "tool",
+                        tool_call_id: "call-a",
+                        content: JSON.stringify({ tag: "Ok", value: "first" }),
+                    },
+                    {
+                        role: "tool",
+                        tool_call_id: "call-b",
+                        content: JSON.stringify({ tag: "Ok", value: "second" }),
+                    },
+                    { role: "assistant", content: "Done." },
+                ],
+                termination: { tag: "FinalResponse" },
+            })
+            .mockResolvedValueOnce(response("Follow-up done."));
+
+        assert.deepStrictEqual(await runTurn(fixture), { tag: "Completed", content: "Done." });
+
+        const interactions = fixture.conversation.interactions();
+        assert.deepStrictEqual(
+            interactions.map((interaction) => interaction.tag),
+            [
+                "user-message",
+                "llm-message",
+                "llm-code-execution",
+                "llm-code-execution",
+                "llm-message",
+            ],
+        );
+        const [first, second] = interactions.slice(2);
+        assert(first?.tag === "llm-code-execution");
+        assert(second?.tag === "llm-code-execution");
+        assert.strictEqual(first.toolCallId, "call-a");
+        assert.strictEqual(first.code, "return 'first';");
+        assert.strictEqual(second.toolCallId, "call-b");
+        assert.strictEqual(second.code, "return 'second';");
+
+        // The persisted executions round-trip as one assistant/tool pair each.
+        assert.deepStrictEqual(await runTurn(fixture), {
+            tag: "Completed",
+            content: "Follow-up done.",
+        });
+        const transcript = inference.runChatTurn.mock.calls[1]![1];
+        assert.deepStrictEqual(
+            transcript.map((message) => message.role),
+            ["user", "assistant", "assistant", "tool", "assistant", "tool", "assistant", "user"],
+        );
+        const toolCallIds: Array<string | undefined> = [];
+        for (const message of transcript) {
+            if (message.role === "assistant") {
+                toolCallIds.push(message.tool_calls?.[0]?.id);
+            }
+        }
+        assert.deepStrictEqual(toolCallIds, [undefined, "call-a", "call-b", undefined]);
+    });
+
     test("retains the user message when inference fails", async () => {
         const fixture = await makeFixture();
         inference.runChatTurn.mockRejectedValue(new Error("network failed"));
