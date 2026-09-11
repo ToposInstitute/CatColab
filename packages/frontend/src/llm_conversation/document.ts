@@ -238,36 +238,39 @@ function generatedChatMessageDeltaToLLMInteractions(
             continue;
         }
 
-        if (toolCalls.length !== 1) {
-            return { tag: "Err", content: "Expected exactly one contextExec tool call" };
-        }
         if (typeof message.content === "string" && message.content.trim().length > 0) {
             // sometimes we have narration and tools calls together, persist the text
             interactions.push(LLMConversation.newLLMMessage(message.content));
         }
 
-        const toolCall = toolCalls[0]!;
-        if (toolCall.type !== "function" || toolCall.function.name !== "contextExec") {
-            return { tag: "Err", content: "Expected a contextExec function call" };
-        }
-        const args = parseContextExecArguments(toolCall.function.arguments);
-        if (!args) {
-            return { tag: "Err", content: "Invalid contextExec arguments" };
-        }
+        // A provider may batch several calls into one assistant message. The
+        // runner executes them serially, so their tool results follow the
+        // assistant message in call order.
+        let resultIndex = index + 1;
+        for (const toolCall of toolCalls) {
+            if (toolCall.type !== "function" || toolCall.function.name !== "contextExec") {
+                return { tag: "Err", content: "Expected a contextExec function call" };
+            }
+            const args = parseContextExecArguments(toolCall.function.arguments);
+            if (!args) {
+                return { tag: "Err", content: "Invalid contextExec arguments" };
+            }
 
-        const toolResult = messages[index + 1];
-        if (toolResult?.role !== "tool" || toolResult.tool_call_id !== toolCall.id) {
-            return {
-                tag: "Err",
-                content: "Expected the matching contextExec result immediately after its call",
-            };
+            const toolResult = messages[resultIndex];
+            if (toolResult?.role !== "tool" || toolResult.tool_call_id !== toolCall.id) {
+                return {
+                    tag: "Err",
+                    content: "Expected the matching contextExec result immediately after its call",
+                };
+            }
+            if (typeof toolResult.content !== "string") {
+                return { tag: "Err", content: "Expected the contextExec result to be a string" };
+            }
+            const result = parseContextExecResult(toolResult.content);
+            interactions.push(LLMConversation.newLLMCodeExecution(toolCall.id, args.code, result));
+            resultIndex += 1;
         }
-        if (typeof toolResult.content !== "string") {
-            return { tag: "Err", content: "Expected the contextExec result to be a string" };
-        }
-        const result = parseContextExecResult(toolResult.content);
-        interactions.push(LLMConversation.newLLMCodeExecution(toolCall.id, args.code, result));
-        index += 1;
+        index = resultIndex - 1;
     }
 
     return { tag: "Ok", content: interactions };

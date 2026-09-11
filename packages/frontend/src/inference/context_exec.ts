@@ -35,7 +35,18 @@ export async function contextExec(
         // oxlint-enable no-implied-eval
 
         const value = await fn(...bindings.map(([, value]) => value));
-        await onSuccessHook?.();
+        try {
+            await onSuccessHook?.();
+        } catch (error) {
+            // The validation feedback must reach the LLM, but it must not make
+            // the return result unobservable.
+            return {
+                tag: "Err",
+                error: truncateResult(
+                    `${errorMessage(error)}\n\nYour code returned:\n${stringify(value)}`,
+                ),
+            };
+        }
         return { tag: "Ok", value: truncateResult(stringify(value)) };
     } catch (error) {
         return { tag: "Err", error: truncateResult(errorMessage(error)) };
