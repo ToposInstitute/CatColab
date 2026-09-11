@@ -1,13 +1,5 @@
 import Plus from "lucide-solid/icons/plus";
-import {
-    createEffect,
-    createResource,
-    createSignal,
-    For,
-    Show,
-    untrack,
-    useContext,
-} from "solid-js";
+import { createEffect, createResource, For, Show, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
 import type { UserSettings } from "catcolab-api";
@@ -46,6 +38,8 @@ export function LLMConversationPane(props: {
     documents: LiveDocWithRef[];
     createOn: LiveDocWithRef | undefined;
     focus: FocusHandle;
+    selectedRefId: string | undefined;
+    onSelect: (refId: string | undefined, replace?: boolean) => void;
 }) {
     const api = useApi();
     const binder = useBinder();
@@ -56,7 +50,6 @@ export function LLMConversationPane(props: {
     const conversations = useLLMConversationsOf(() =>
         props.documents.map((document) => document.docRef.refId),
     );
-    const [selectedRefId, setSelectedRefId] = createSignal<string | null>(null);
     const creationDocument = () => {
         const document = props.createOn;
         return document && supportsLLMConversation(document.liveDoc.doc) ? document : undefined;
@@ -64,12 +57,14 @@ export function LLMConversationPane(props: {
 
     createEffect(() => {
         const docs = conversations();
-        const selected = untrack(selectedRefId);
         if (
-            selected === null ||
-            !docs?.some(({ conversation }) => conversation.ref.id === selected)
+            props.documents.length > 0 &&
+            docs &&
+            docs.length > 0 &&
+            !conversations.loading &&
+            !docs.some(({ conversation }) => conversation.ref.id === props.selectedRefId)
         ) {
-            setSelectedRefId(docs?.[0]?.conversation.ref.id ?? null);
+            props.onSelect(docs[0]!.conversation.ref.id, true);
         }
     });
 
@@ -77,7 +72,7 @@ export function LLMConversationPane(props: {
         const document = creationDocument();
         invariant(document, "The right-most document must support LLM conversations");
         const newRefId = await createLLMConversation(api, binder, document, DEFAULT_LLM_MODEL);
-        setSelectedRefId(newRefId);
+        props.onSelect(newRefId);
     };
 
     const iconLettersOf = (document: Document): [string, string] | undefined => {
@@ -91,10 +86,13 @@ export function LLMConversationPane(props: {
         }
     };
 
-    const [liveConversation] = createResource(selectedRefId, async (refId) => {
-        const { liveConversation } = await getLiveLLMConversation(refId, api, models, binder);
-        return liveConversation;
-    });
+    const [liveConversation] = createResource(
+        () => props.selectedRefId,
+        async (refId) => {
+            const { liveConversation } = await getLiveLLMConversation(refId, api, models, binder);
+            return liveConversation;
+        },
+    );
 
     return (
         <div class={styles.pane}>
@@ -119,14 +117,14 @@ export function LLMConversationPane(props: {
                             <div
                                 class={styles.row}
                                 classList={{
-                                    [styles.active]: conversation.ref.id === selectedRefId(),
+                                    [styles.active]: conversation.ref.id === props.selectedRefId,
                                 }}
-                                onMouseDown={() => setSelectedRefId(conversation.ref.id)}
+                                onMouseDown={() => props.onSelect(conversation.ref.id)}
                             >
                                 <DocumentTypeIcon documentType="llmconversation" />
                                 <div
                                     class={styles.rowName}
-                                    onFocusIn={() => setSelectedRefId(conversation.ref.id)}
+                                    onFocusIn={() => props.onSelect(conversation.ref.id)}
                                 >
                                     <InlineInput
                                         text={conversation.docView.name}

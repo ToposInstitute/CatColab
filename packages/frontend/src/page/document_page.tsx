@@ -1,7 +1,7 @@
 import Resizable, { type ContextValue } from "@corvu/resizable";
 import { makeEventListener } from "@solid-primitives/event-listener";
 import { Title } from "@solidjs/meta";
-import { useNavigate, useParams } from "@solidjs/router";
+import { useLocation, useNavigate, useParams, useSearchParams } from "@solidjs/router";
 import BotMessageSquare from "lucide-solid/icons/bot-message-square";
 import ChevronsRight from "lucide-solid/icons/chevrons-right";
 import History from "lucide-solid/icons/history";
@@ -102,7 +102,9 @@ export default function DocumentPage() {
     invariant(models, "Must provide model library as context to page");
 
     const params = useParams();
+    const location = useLocation();
     const navigate = useNavigate();
+    const [searchParams, setSearchParams] = useSearchParams();
     const { settings } = useUserSettings();
     const documentIsVisible = (kind: string | undefined) =>
         kind === undefined || isDocumentVisible({ typeName: kind as DocumentType }, settings());
@@ -119,7 +121,7 @@ export default function DocumentPage() {
     // Redirect if primary and secondary refs match
     createEffect(() => {
         if (params.subref && params.ref === params.subref) {
-            navigate(`/${params.kind}/${params.ref}`, { replace: true });
+            navigate(`/${params.kind}/${params.ref}${location.search}`, { replace: true });
         }
     });
 
@@ -127,6 +129,25 @@ export default function DocumentPage() {
         () => (documentIsVisible(params.kind) ? params.ref : undefined),
         (refId) => getLiveDocument(refId, api, models, binder, params.kind as DocumentType),
     );
+
+    createEffect(() => {
+        const primary = primaryLiveDoc();
+        if (
+            params.kind !== "llmconversation" ||
+            !primary ||
+            primary.docRef.refId !== params.ref ||
+            primary.liveDoc.type !== "llmconversation"
+        ) {
+            return;
+        }
+
+        const conversationRefId = primary.docRef.refId;
+        const attachmentRefId = primary.liveDoc.liveDoc.doc.llmConversationOf._id;
+        const attachmentType = primary.liveDoc.attachment.document.type;
+        const query = new URLSearchParams(location.search);
+        query.set("llmconversation", conversationRefId);
+        navigate(`/${attachmentType}/${attachmentRefId}?${query}`, { replace: true });
+    });
 
     const [secondaryLiveDoc, { refetch: refetchSecondaryDoc }] = createResource(
         () => {
@@ -155,25 +176,48 @@ export default function DocumentPage() {
 
     const closeSidePanel = () => {
         paneFocus.setActiveChild("primary");
-        navigate(`/${params.kind}/${params.ref}`);
+        navigate(`/${params.kind}/${params.ref}${location.search}`);
     };
 
     const maximizeSidePanel = () => {
-        navigate(`/${params.subkind}/${params.subref}`);
+        navigate(`/${params.subkind}/${params.subref}${location.search}`);
     };
 
     const [primaryHistoryOpen, setPrimaryHistoryOpen] = createSignal(false);
     const togglePrimaryHistorySidebar = () => setPrimaryHistoryOpen((v) => !v);
     const [secondaryHistoryOpen, setSecondaryHistoryOpen] = createSignal(false);
     const toggleSecondaryHistorySidebar = () => setSecondaryHistoryOpen((v) => !v);
-    const [llmConversationsOpen, setLLMConversationsOpen] = createSignal(false);
+    const selectedLLMConversationRefId = () => {
+        const value = searchParams.llmconversation;
+        return typeof value === "string" ? value : undefined;
+    };
+    const llmConversationsEnabled = () =>
+        isDocumentVisible({ typeName: "llmconversation" }, settings());
+    const [llmConversationsOpen, setLLMConversationsOpen] = createSignal(
+        llmConversationsEnabled() && selectedLLMConversationRefId() !== undefined,
+    );
+    createEffect(() => {
+        const selectedRefId = selectedLLMConversationRefId();
+        const enabled = llmConversationsEnabled();
+        setLLMConversationsOpen(enabled && selectedRefId !== undefined);
+        if (!enabled && selectedRefId !== undefined) {
+            setSearchParams({ llmconversation: undefined }, { replace: true });
+        }
+    });
+    const selectLLMConversation = (refId: string | undefined, replace = false) => {
+        if (refId !== selectedLLMConversationRefId()) {
+            setSearchParams({ llmconversation: refId }, { replace });
+        }
+    };
     const toggleLLMConversationPane = () => {
-        if (llmConversationsOpen()) {
+        const open = !llmConversationsOpen();
+        if (!open) {
             (isSidePanelOpen() ? secondaryPaneFocus : primaryPaneFocus).setFocused(true);
+            selectLLMConversation(undefined, true);
         } else {
             llmConversationsFocus.setFocused(true);
         }
-        setLLMConversationsOpen((open) => !open);
+        setLLMConversationsOpen(open);
     };
 
     const llmConversationDocuments = (): LiveDocWithRef[] => {
@@ -204,10 +248,11 @@ export default function DocumentPage() {
         return undefined;
     };
     const canOpenLLMConversations = () =>
-        llmConversationsOpen() ||
-        llmConversationDocuments().some((doc) =>
-            canOpenLLMConversationPane(doc.liveDoc.doc, settings()),
-        );
+        llmConversationsEnabled() &&
+        (llmConversationsOpen() ||
+            llmConversationDocuments().some((doc) =>
+                canOpenLLMConversationPane(doc.liveDoc.doc, settings()),
+            ));
 
     const [resizableContext, setResizableContext] = createSignal<ContextValue>();
     createEffect(() => {
@@ -330,6 +375,8 @@ export default function DocumentPage() {
                                                     documents={llmConversationDocuments()}
                                                     createOn={llmConversationCreationDocument()}
                                                     focus={llmConversationsFocus}
+                                                    selectedRefId={selectedLLMConversationRefId()}
+                                                    onSelect={selectLLMConversation}
                                                 />
                                             </div>
                                         </Show>

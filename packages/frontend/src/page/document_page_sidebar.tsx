@@ -1,4 +1,4 @@
-import { useNavigate } from "@solidjs/router";
+import { useLocation, useNavigate } from "@solidjs/router";
 import Table from "lucide-solid/icons/table";
 import { createMemo, createResource, For, Show, useContext } from "solid-js";
 import { stringify as uuidStringify } from "uuid";
@@ -239,7 +239,9 @@ function DocumentsTreeLeaf(props: {
     refetchPrimaryDoc: () => void;
     refetchSecondaryDoc: () => void;
 }) {
+    const location = useLocation();
     const navigate = useNavigate();
+    const navigateInWorkspace = (path: string) => navigate(`${path}${location.search}`);
     const theories = useContext(TheoryLibraryContext);
     const api = useApi();
 
@@ -276,10 +278,14 @@ function DocumentsTreeLeaf(props: {
             const parentOfPrimary = await getDocParent(props.primaryDoc.liveDoc.doc, api);
             if (parentOfPrimary && clickedDoc.docRef.refId === parentOfPrimary.docRef.refId) {
                 props.primaryPaneFocus.setFocused(true);
-                navigate(`/${createLinkPart(clickedDoc)}/${createLinkPart(props.primaryDoc)}`);
+                navigateInWorkspace(
+                    `/${createLinkPart(clickedDoc)}/${createLinkPart(props.primaryDoc)}`,
+                );
             } else {
                 props.secondaryPaneFocus.setFocused(true);
-                navigate(`/${createLinkPart(props.primaryDoc)}/${createLinkPart(clickedDoc)}`);
+                navigateInWorkspace(
+                    `/${createLinkPart(props.primaryDoc)}/${createLinkPart(clickedDoc)}`,
+                );
             }
         }
     };
@@ -310,7 +316,7 @@ function DocumentsTreeLeaf(props: {
                     liveDoc={props.doc.liveDoc}
                     docRef={props.doc.docRef}
                     onDocCreated={(docType, refId) => {
-                        navigate(`/${createLinkPart(props.doc)}/${docType}/${refId}`);
+                        navigateInWorkspace(`/${createLinkPart(props.doc)}/${docType}/${refId}`);
                     }}
                     onDocDeleted={() => {
                         const deletedRefId = props.doc.docRef.refId;
@@ -328,7 +334,7 @@ function DocumentsTreeLeaf(props: {
                                     // This is a root document: navigate to documents list
                                     navigate("/documents");
                                 } else {
-                                    navigate(`/${createLinkPart(parentDoc)}`);
+                                    navigateInWorkspace(`/${createLinkPart(parentDoc)}`);
                                 }
                             });
                         }
