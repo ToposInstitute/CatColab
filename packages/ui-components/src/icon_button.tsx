@@ -1,5 +1,6 @@
-import Tooltip from "@corvu/tooltip";
 import { type ComponentProps, type JSX, Show, splitProps } from "solid-js";
+
+import { Tooltip } from "./tooltip";
 
 import "./icon_button.css";
 
@@ -34,14 +35,12 @@ export function IconButton(
 
     return (
         <Show when={props.tooltip} fallback={button()}>
-            <Tooltip hoverableContent={false} openOnFocus={false}>
-                <Tooltip.Anchor>
-                    <Tooltip.Trigger as={button} />
-                </Tooltip.Anchor>
-                <Tooltip.Portal>
-                    <Tooltip.Content class="tooltip-content">{props.tooltip}</Tooltip.Content>
-                </Tooltip.Portal>
-            </Tooltip>
+            <Tooltip
+                content={props.tooltip}
+                trigger={button}
+                hoverableContent={false}
+                openOnFocus={false}
+            />
         </Show>
     );
 }

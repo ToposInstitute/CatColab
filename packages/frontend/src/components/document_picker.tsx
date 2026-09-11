@@ -1,4 +1,3 @@
-import Tooltip from "@corvu/tooltip";
 import { A } from "@solidjs/router";
 import type { DocInfo } from "catcolab-api/src/user_state";
 import Copy from "lucide-solid/icons/copy";
@@ -25,6 +24,7 @@ import {
     RelativeTime,
     TextInput,
     type TextInputOptions,
+    Tooltip,
 } from "catcolab-ui-components";
 import type { Document, Uuid } from "catlog-wasm";
 import { useApi } from "../api";
@@ -105,12 +105,12 @@ export function DocumentPicker(
     };
 
     const EditableDocLink = () => (
-        <Tooltip placement="bottom">
-            <Tooltip.Anchor>
-                <Tooltip.Trigger as={DocLink} />
-            </Tooltip.Anchor>
-            <Tooltip.Portal>
-                <Tooltip.Content class="popup document-picker-popup">
+        <Tooltip
+            placement="bottom"
+            trigger={DocLink}
+            contentClass="popup document-picker-popup"
+            content={
+                <>
                     <IconButton onClick={copyToClipboard}>
                         <Copy />
                     </IconButton>
@@ -118,9 +118,9 @@ export function DocumentPicker(
                         <Pencil />
                         {"Edit"}
                     </IconButton>
-                </Tooltip.Content>
-            </Tooltip.Portal>
-        </Tooltip>
+                </>
+            }
+        />
     );
 
     return (
