@@ -17,8 +17,13 @@ packages:
 # Fix Automerge's `applyPatches`: map key insertions/deletions (upstream fix in
 # https://github.com/automerge/automerge/pull/1308) and block markers in rich
 # text (https://github.com/automerge/automerge/issues/1548), which
-# `revertCommit` relies on to invert diffs. Can be removed once
-# these are fixed upstream and released.
+# `revertCommit` relies on to invert diffs. Also chunk the large
+# `Array.prototype.splice` calls made by the wasm-bindgen glue when
+# applying large list insert patches, which otherwise exceed the JS
+# engine's limit on function call arguments (upstream fix in
+# https://github.com/automerge/automerge/commit/028d73dc94b9e8eb106677a136a33538cf31453e,
+# closing https://github.com/automerge/automerge/issues/1526). Can be removed
+# once these are fixed upstream and released.
 patchedDependencies:
   "@automerge/automerge@3.4.1": patches/@automerge__automerge@3.4.1.patch
 # Not every workspace package depends on the patched packages.
