@@ -1,4 +1,7 @@
+import { getAuth } from "firebase/auth";
 import Plus from "lucide-solid/icons/plus";
+import X from "lucide-solid/icons/x";
+import { useFirebaseApp } from "solid-firebase";
 import { createEffect, createResource, For, Show, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
@@ -10,11 +13,19 @@ import {
     IconButton,
     InlineInput,
 } from "catcolab-ui-components";
-import { documentTypeLabel, type LiveDocWithRef, useApi, useBinder } from "../api";
+import {
+    type ApiDocumentHandle,
+    documentTypeLabel,
+    type LiveDocWithRef,
+    useApi,
+    useBinder,
+} from "../api";
 import { DEFAULT_LLM_MODEL } from "../inference/chat";
 import { ModelLibraryContext } from "../model";
+import { PageActionsContext } from "../page/context";
 import { TheoryLibraryContext } from "../theory";
 import { isDocumentVisible } from "../user/user_settings";
+import { useUserState } from "../user/user_state_context";
 import { LLMConversationEditor } from "./conversation_editor";
 import {
     createLLMConversation,
@@ -45,7 +56,11 @@ export function LLMConversationPane(props: {
     const binder = useBinder();
     const models = useContext(ModelLibraryContext);
     invariant(models, "Must provide model library as context to LLM conversation pane");
+    const actions = useContext(PageActionsContext);
+    invariant(actions, "Page actions should be provided");
     const theories = useContext(TheoryLibraryContext);
+    const userState = useUserState();
+    const currentUserId = getAuth(useFirebaseApp()).currentUser?.uid;
 
     const conversations = useLLMConversationsOf(() =>
         props.documents.map((document) => document.docRef.refId),
@@ -73,6 +88,30 @@ export function LLMConversationPane(props: {
         invariant(document, "The right-most document must support LLM conversations");
         const newRefId = await createLLMConversation(api, binder, document, DEFAULT_LLM_MODEL);
         props.onSelect(newRefId);
+    };
+
+    const onDeleteLLMConversation = async (conversation: ApiDocumentHandle) => {
+        const deleted = await actions.showDeleteDialog({
+            refId: conversation.ref.id,
+            name: conversation.docView.name,
+            typeName: documentTypeLabel(conversation.docView.type),
+        });
+        if (deleted && props.selectedRefId === conversation.ref.id) {
+            const nextConversation = conversations()?.find(
+                ({ conversation: candidate }) => candidate.ref.id !== conversation.ref.id,
+            );
+            props.onSelect(nextConversation?.conversation.ref.id, true);
+        }
+    };
+
+    const canDeleteLLMConversation = (conversation: ApiDocumentHandle) => {
+        const document = userState.documents[conversation.ref.id];
+        return (
+            document?.deletedAt === null &&
+            document.permissions.some(
+                (permission) => permission.user === currentUserId && permission.level === "Own",
+            )
+        );
     };
 
     const iconLettersOf = (document: Document): [string, string] | undefined => {
@@ -146,6 +185,23 @@ export function LLMConversationPane(props: {
                                     />
                                     <span>{attachment.docView.name || "Untitled"}</span>
                                 </div>
+                                <Show when={canDeleteLLMConversation(conversation)}>
+                                    <div
+                                        class={styles.rowDelete}
+                                        onMouseDown={(event) => event.stopPropagation()}
+                                    >
+                                        <IconButton
+                                            variant="danger"
+                                            tooltip="Delete LLM conversation"
+                                            onClick={(event) => {
+                                                event.stopPropagation();
+                                                void onDeleteLLMConversation(conversation);
+                                            }}
+                                        >
+                                            <X size={16} />
+                                        </IconButton>
+                                    </div>
+                                </Show>
                             </div>
                         )}
                     </For>

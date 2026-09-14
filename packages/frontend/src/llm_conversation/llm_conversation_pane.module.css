@@ -40,11 +40,15 @@
     text-align: left;
 
     &:hover {
-        background: var(--color-hover-bg);
+        background: var(--color-hover-bg-light);
     }
 
     &.active {
-        background: var(--color-gray-150);
+        background: var(--color-hover-bg-medium);
+
+        &:hover {
+            background: var(--color-hover-bg-dark);
+        }
     }
 }
 
@@ -82,6 +86,11 @@
         width: 20px;
         height: 20px;
     }
+}
+
+.rowDelete {
+    display: flex;
+    flex-shrink: 0;
 }
 
 .placeholder {
