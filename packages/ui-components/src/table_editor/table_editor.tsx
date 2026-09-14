@@ -6,6 +6,7 @@ import {
     type ComponentProps,
     createEffect,
     createMemo,
+    createSelector,
     createSignal,
     Index,
     onCleanup,
@@ -61,6 +62,7 @@ type PendingDelete = { rowId: string };
 type IndexedTable = { table: InstanceTable; rowsById: ReadonlyMap<string, TableRow> };
 
 const NO_ISSUES: ReadonlyArray<TableIssue> = Object.freeze([]);
+const NO_FIELD_ISSUES: ReadonlyMap<string, TableIssue[]> = new Map();
 
 /** Direction to move the selection after leaving a cell editor. */
 type MoveDirection = "up" | "down" | "left" | "right" | "forward" | "backward" | "stay";
@@ -243,20 +245,26 @@ export function TableEditor(props: TableEditorProps) {
         return { row, header };
     }, null);
 
-    const isSelected = (cell: Cell): boolean => {
+    // Selection and editing state as keys, so that only the cells whose
+    // status changes are notified rather than every cell in the table.
+    const selectedKey = createMemo((): CellKey | null => {
         const sel = selectedCell();
-        return sel !== null && sel.row.id === cell.row.id && sel.header.id === cell.header.id;
-    };
-
-    const isEditing = (cell: Cell): boolean => {
+        return sel === null ? null : keyOf(sel);
+    });
+    const editingKey = createMemo((): CellKey | null => {
         const state = edit();
-        return (
-            state !== null &&
-            isSelected(cell) &&
-            cell.row.id === state.rowId &&
-            cell.header.id === state.headerId
-        );
-    };
+        if (state === null) {
+            return null;
+        }
+        const key = makeCellKey(state.headerId, state.rowId);
+        return key === selectedKey() ? key : null;
+    });
+    const isSelectedKey = createSelector(selectedKey);
+    const isEditingKey = createSelector(editingKey);
+
+    const isSelected = (cell: Cell): boolean => isSelectedKey(keyOf(cell));
+
+    const isEditing = (cell: Cell): boolean => isEditingKey(keyOf(cell));
 
     createEffect(() => {
         const state = edit();
@@ -333,11 +341,14 @@ export function TableEditor(props: TableEditorProps) {
 
     const cellText = (cell: Cell): string => fieldText(fieldOf(cell), cell.header);
 
+    // Memoized so that the index is only rebuilt when the list itself changes.
+    const issues = createMemo((): ReadonlyArray<TableIssue> => props.issues ?? NO_ISSUES);
+
     // Issues indexed by row ID, and by row and header ID for field issues.
     const issueIndex = createMemo(() => {
         const rows = new Map<string, TableIssue[]>();
         const fields = new Map<string, Map<string, TableIssue[]>>();
-        for (const issue of props.issues ?? []) {
+        for (const issue of issues()) {
             const path = issue.path;
             if (path.length === 3) {
                 const list = rows.get(path[2]) ?? [];
@@ -355,7 +366,7 @@ export function TableEditor(props: TableEditorProps) {
     });
 
     const tableIssueMessages = createMemo(() =>
-        (props.issues ?? [])
+        issues()
             .filter((issue) => issue.issueType === "OrphanedTable")
             .map((issue) => issue.message),
     );
@@ -363,11 +374,20 @@ export function TableEditor(props: TableEditorProps) {
     const rowIssues = (row: TableRow): ReadonlyArray<TableIssue> =>
         issueIndex().rows.get(row.id) ?? NO_ISSUES;
 
-    const cellIssues = (cell: Cell): ReadonlyArray<TableIssue> =>
-        issueIndex().fields.get(cell.row.id)?.get(cell.header.id) ?? NO_ISSUES;
+    /** Field issues of a row by header ID; a shared empty map when there are none. */
+    const rowFieldIssues = (row: TableRow): ReadonlyMap<string, TableIssue[]> =>
+        issueIndex().fields.get(row.id) ?? NO_FIELD_ISSUES;
 
-    const cellIsInvalid = (cell: Cell): boolean => {
-        if (cellIssues(cell).length > 0) {
+    const cellIssues = (
+        fieldIssues: ReadonlyMap<string, TableIssue[]>,
+        cell: Cell,
+    ): ReadonlyArray<TableIssue> => fieldIssues.get(cell.header.id) ?? NO_ISSUES;
+
+    const cellIsInvalid = (
+        fieldIssues: ReadonlyMap<string, TableIssue[]>,
+        cell: Cell,
+    ): boolean => {
+        if (cellIssues(fieldIssues, cell).length > 0) {
             return true;
         }
         const header = cell.header;
@@ -745,7 +765,11 @@ export function TableEditor(props: TableEditorProps) {
                 </thead>
                 <tbody>
                     <Index each={rows()}>
-                        {(row) => (
+                        {(row) => {
+                            // Issues are indexed per row so that rows without
+                            // issues are not notified when the issues change.
+                            const fieldIssues = createMemo(() => rowFieldIssues(row()));
+                            return (
                             <tr>
                                 <RowHeader issues={rowIssues(row())} />
                                 <Show
@@ -764,10 +788,12 @@ export function TableEditor(props: TableEditorProps) {
                                             // update; primitive results skip unchanged DOM writes.
                                             const selected = createMemo(() => isSelected(cell()));
                                             const editing = createMemo(() => isEditing(cell()));
-                                            const invalid = createMemo(() => cellIsInvalid(cell()));
+                                            const invalid = createMemo(() =>
+                                                cellIsInvalid(fieldIssues(), cell()),
+                                            );
                                             const issueTitle = createMemo(
                                                 () =>
-                                                    cellIssues(cell())
+                                                    cellIssues(fieldIssues(), cell())
                                                         .map(issueMessage)
                                                         .join("\n") || undefined,
                                             );
@@ -777,7 +803,7 @@ export function TableEditor(props: TableEditorProps) {
                                                 () =>
                                                     !editing() &&
                                                     (selected() ||
-                                                        (selectedCell() === null && first())),
+                                                        (selectedKey() === null && first())),
                                             );
 
                                             const cellFocus: FocusHandle = {
@@ -895,7 +921,8 @@ export function TableEditor(props: TableEditorProps) {
                                     </button>
                                 </td>
                             </tr>
-                        )}
+                            );
+                        }}
                     </Index>
                 </tbody>
             </table>
