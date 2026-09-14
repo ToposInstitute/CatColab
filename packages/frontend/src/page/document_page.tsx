@@ -200,7 +200,7 @@ export default function DocumentPage() {
         const selectedRefId = selectedLLMConversationRefId();
         const enabled = llmConversationsEnabled();
         setLLMConversationsOpen(enabled && selectedRefId !== undefined);
-        if (!enabled && selectedRefId !== undefined) {
+        if (settings() !== undefined && !enabled && selectedRefId !== undefined) {
             setSearchParams({ llmconversation: undefined }, { replace: true });
         }
     });
