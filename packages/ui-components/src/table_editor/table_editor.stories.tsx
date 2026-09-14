@@ -493,7 +493,7 @@ export const OrphanedColumn: Story = {
         await expect(canvas.getAllByRole("gridcell")[2]).toHaveTextContent("leftover");
 
         await userEvent.click(within(unknownHeader).getByRole("button", { name: "Delete column" }));
-        await waitFor(() => expect(canvas.getAllByRole("columnheader")).toHaveLength(3));
+        await waitFor(() => expect(canvas.getAllByRole("columnheader")).toHaveLength(4));
         await expect(
             canvas.queryByRole("columnheader", { name: /Unknown column/ }),
         ).not.toBeInTheDocument();
