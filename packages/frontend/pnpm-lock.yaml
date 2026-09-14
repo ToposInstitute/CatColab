@@ -6,7 +6,7 @@ settings:
 
 patchedDependencies:
   '@automerge/automerge@3.4.1':
-    hash: bf818a70a01f74a7d0f6e564a7d6d2855023bf39d9045b93fc8ae6af4608791e
+    hash: 27fd5125c0df9cac14a523d212e2604fe06892a57241100c03f63abb7a71f4dc
     path: ../../patches/@automerge__automerge@3.4.1.patch
 
 importers:
@@ -21,7 +21,7 @@ importers:
         version: 1.0.3
       '@automerge/automerge':
         specifier: ^3.4.1
-        version: 3.4.1(patch_hash=bf818a70a01f74a7d0f6e564a7d6d2855023bf39d9045b93fc8ae6af4608791e)
+        version: 3.4.1(patch_hash=27fd5125c0df9cac14a523d212e2604fe06892a57241100c03f63abb7a71f4dc)
       '@automerge/automerge-repo':
         specifier: ^2.5.6
         version: 2.5.6
@@ -1636,6 +1636,7 @@ packages:
   eslint@9.39.4:
     resolution: {integrity: sha512-XoMjdBOwe/esVgEvLmNsD3IRHkm7fbKIUGvrleloJXUZgDHig2IPWNniv+GwjyJXzuNqVjlr5+4yVUZjycJwfQ==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
+    deprecated: This version is no longer supported. Please see https://eslint.org/version-support for other options.
     hasBin: true
     peerDependencies:
       jiti: '*'
@@ -3031,7 +3032,7 @@ snapshots:
 
   '@automerge/automerge-repo@2.5.6':
     dependencies:
-      '@automerge/automerge': 3.4.1(patch_hash=bf818a70a01f74a7d0f6e564a7d6d2855023bf39d9045b93fc8ae6af4608791e)
+      '@automerge/automerge': 3.4.1(patch_hash=27fd5125c0df9cac14a523d212e2604fe06892a57241100c03f63abb7a71f4dc)
       bs58check: 3.0.1
       cbor-x: 1.6.0
       debug: 4.4.3
@@ -3042,11 +3043,11 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@automerge/automerge@3.4.1(patch_hash=bf818a70a01f74a7d0f6e564a7d6d2855023bf39d9045b93fc8ae6af4608791e)': {}
+  '@automerge/automerge@3.4.1(patch_hash=27fd5125c0df9cac14a523d212e2604fe06892a57241100c03f63abb7a71f4dc)': {}
 
   '@automerge/prosemirror@0.2.0':
     dependencies:
-      '@automerge/automerge': 3.4.1(patch_hash=bf818a70a01f74a7d0f6e564a7d6d2855023bf39d9045b93fc8ae6af4608791e)
+      '@automerge/automerge': 3.4.1(patch_hash=27fd5125c0df9cac14a523d212e2604fe06892a57241100c03f63abb7a71f4dc)
       ordered-map: 0.1.0
       prosemirror-changeset: 2.3.1
       prosemirror-history: 1.4.1
