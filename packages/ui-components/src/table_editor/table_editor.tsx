@@ -58,6 +58,10 @@ type PendingAppend = { headerId: string; previousRowIds: ReadonlySet<string> };
 
 type PendingDelete = { rowId: string };
 
+type IndexedTable = { table: InstanceTable; rowsById: ReadonlyMap<string, TableRow> };
+
+const NO_ISSUES: ReadonlyArray<TableIssue> = Object.freeze([]);
+
 /** Direction to move the selection after leaving a cell editor. */
 type MoveDirection = "up" | "down" | "left" | "right" | "forward" | "backward" | "stay";
 
@@ -178,17 +182,35 @@ export function TableEditor(props: TableEditorProps) {
         return row && header ? { row, header } : undefined;
     };
 
-    const isFirstCell = (cell: Cell) => neighbor(cell, "backward") === undefined;
+    const isFirstCell = (cell: Cell) =>
+        cell.row.index === 0 && headerIndex().get(cell.header.id) === 0;
 
     const isEditable = (cell: Cell) => cell.header.type.tag !== "Unknown";
 
+    // Indexes over all tables, so that row references resolve in constant time.
+    const tableIndex = createMemo(() => {
+        const tablesById = new Map<string, IndexedTable>();
+        const rowsById = new Map<string, { table: InstanceTable; row: TableRow }>();
+        for (const table of props.tables) {
+            const rows = new Map<string, TableRow>();
+            for (const row of table.rows) {
+                rows.set(row.id, row);
+                if (!rowsById.has(row.id)) {
+                    rowsById.set(row.id, { table, row });
+                }
+            }
+            tablesById.set(table.id, { table, rowsById: rows });
+        }
+        return { tablesById, rowsById };
+    });
+
     /** The table referenced by a `RowRef` column, if it can be resolved. */
-    const codomainOf = (header: TableHeader): InstanceTable | undefined => {
+    const codomainOf = (header: TableHeader): IndexedTable | undefined => {
         const type = header.type;
         if (type.tag !== "RowRef") {
             return undefined;
         }
-        return props.tables.find((table) => table.id === type.content.id);
+        return tableIndex().tablesById.get(type.content.id);
     };
 
     /** The selected cell, resolved against the current table.
@@ -311,15 +333,25 @@ export function TableEditor(props: TableEditorProps) {
 
     const cellText = (cell: Cell): string => fieldText(fieldOf(cell), cell.header);
 
-    const issuesByPath = createMemo(() => {
-        const index = new Map<string, TableIssue[]>();
+    // Issues indexed by row ID, and by row and header ID for field issues.
+    const issueIndex = createMemo(() => {
+        const rows = new Map<string, TableIssue[]>();
+        const fields = new Map<string, Map<string, TableIssue[]>>();
         for (const issue of props.issues ?? []) {
-            const key = pathKey(issue.path);
-            const messages = index.get(key) ?? [];
-            messages.push(issue);
-            index.set(key, messages);
+            const path = issue.path;
+            if (path.length === 3) {
+                const list = rows.get(path[2]) ?? [];
+                list.push(issue);
+                rows.set(path[2], list);
+            } else if (path.length === 5) {
+                const byHeader = fields.get(path[2]) ?? new Map<string, TableIssue[]>();
+                const list = byHeader.get(path[4]) ?? [];
+                list.push(issue);
+                byHeader.set(path[4], list);
+                fields.set(path[2], byHeader);
+            }
         }
-        return index;
+        return { rows, fields };
     });
 
     const tableIssueMessages = createMemo(() =>
@@ -328,13 +360,11 @@ export function TableEditor(props: TableEditorProps) {
             .map((issue) => issue.message),
     );
 
-    const rowIssues = (row: TableRow): TableIssue[] =>
-        issuesByPath().get(pathKey([props.table.id, "rows", row.id])) ?? [];
+    const rowIssues = (row: TableRow): ReadonlyArray<TableIssue> =>
+        issueIndex().rows.get(row.id) ?? NO_ISSUES;
 
-    const cellIssues = (cell: Cell): TableIssue[] => {
-        const field = fieldOf(cell);
-        return field ? (issuesByPath().get(pathKey(field.content.path)) ?? []) : [];
-    };
+    const cellIssues = (cell: Cell): ReadonlyArray<TableIssue> =>
+        issueIndex().fields.get(cell.row.id)?.get(cell.header.id) ?? NO_ISSUES;
 
     const cellIsInvalid = (cell: Cell): boolean => {
         if (cellIssues(cell).length > 0) {
@@ -349,8 +379,8 @@ export function TableEditor(props: TableEditorProps) {
             const codomain = codomainOf(header);
             return (
                 field.tag !== "RowRef" ||
-                codomain?.label === null ||
-                !codomain?.rows.some((row) => row.id === field.content.id)
+                codomain?.table.label === null ||
+                !codomain?.rowsById.has(field.content.id)
             );
         }
         return field.tag !== header.type.tag;
@@ -362,17 +392,15 @@ export function TableEditor(props: TableEditorProps) {
         }
         if (field.tag === "RowRef") {
             const codomain = codomainOf(header);
-            const target = codomain?.rows.find((row) => row.id === field.content.id);
+            const target = codomain?.rowsById.get(field.content.id);
             if (codomain && target) {
-                return defaultRowLabel(codomain, target);
+                return defaultRowLabel(codomain.table, target);
             }
-            for (const table of props.tables) {
-                const mistypedTarget = table.rows.find((row) => row.id === field.content.id);
-                if (mistypedTarget) {
-                    return defaultRowLabel(table, mistypedTarget);
-                }
+            const mistyped = tableIndex().rowsById.get(field.content.id);
+            if (mistyped) {
+                return defaultRowLabel(mistyped.table, mistyped.row);
             }
-            return codomain ? `${tableDisplayName(codomain)} ?` : "?";
+            return codomain ? `${tableDisplayName(codomain.table)} ?` : "?";
         }
         if (field.tag === "Bool") {
             return field.content.value ? "true" : "false";
@@ -405,7 +433,7 @@ export function TableEditor(props: TableEditorProps) {
                     ? { ok: true, value: trimmed === "true" }
                     : { ok: false };
             case "RowRef": {
-                const codomain = codomainOf(header);
+                const codomain = codomainOf(header)?.table;
                 const target = codomain?.rows.find(
                     (row) => defaultRowLabel(codomain, row) === trimmed,
                 );
@@ -504,7 +532,7 @@ export function TableEditor(props: TableEditorProps) {
         if (cell.header.type.tag !== "RowRef") {
             return undefined;
         }
-        const codomain = codomainOf(cell.header);
+        const codomain = codomainOf(cell.header)?.table;
         if (!codomain) {
             return [];
         }
@@ -732,8 +760,28 @@ export function TableEditor(props: TableEditorProps) {
                                                 row: row(),
                                                 header: header(),
                                             });
+                                            // Derived per-cell state, each computed once per
+                                            // update; primitive results skip unchanged DOM writes.
+                                            const selected = createMemo(() => isSelected(cell()));
+                                            const editing = createMemo(() => isEditing(cell()));
+                                            const invalid = createMemo(() => cellIsInvalid(cell()));
+                                            const issueTitle = createMemo(
+                                                () =>
+                                                    cellIssues(cell())
+                                                        .map(issueMessage)
+                                                        .join("\n") || undefined,
+                                            );
+                                            const text = createMemo(() => cellText(cell()));
+                                            const first = createMemo(() => isFirstCell(cell()));
+                                            const tabbable = createMemo(
+                                                () =>
+                                                    !editing() &&
+                                                    (selected() ||
+                                                        (selectedCell() === null && first())),
+                                            );
+
                                             const cellFocus: FocusHandle = {
-                                                hasFocus: () => isSelected(cell()),
+                                                hasFocus: selected,
                                                 setFocused: (focused) =>
                                                     focus
                                                         .childFocus(keyOf(cell()))
@@ -744,8 +792,8 @@ export function TableEditor(props: TableEditorProps) {
                                             createEffect(() => {
                                                 focusRequest();
                                                 if (
-                                                    cellFocus.hasFocus() &&
-                                                    !isEditing(cell()) &&
+                                                    selected() &&
+                                                    !editing() &&
                                                     suppressedFocus() !== keyOf(cell()) &&
                                                     document.activeElement !== cellRef
                                                 ) {
@@ -759,26 +807,15 @@ export function TableEditor(props: TableEditorProps) {
                                                     class={styles.cell}
                                                     role="gridcell"
                                                     classList={{
-                                                        [styles.selected]: isSelected(cell()),
-                                                        [styles.invalid]: cellIsInvalid(cell()),
+                                                        [styles.selected]: selected(),
+                                                        [styles.invalid]: invalid(),
                                                         [styles.columnDeleting]:
                                                             deletingColumnId() === header().id,
                                                     }}
-                                                    tabindex={
-                                                        !isEditing(cell()) &&
-                                                        (isSelected(cell()) ||
-                                                            (!selectedCell() &&
-                                                                isFirstCell(cell())))
-                                                            ? 0
-                                                            : -1
-                                                    }
-                                                    aria-selected={isSelected(cell())}
-                                                    aria-invalid={cellIsInvalid(cell())}
-                                                    title={
-                                                        cellIssues(cell())
-                                                            .map(issueMessage)
-                                                            .join("\n") || undefined
-                                                    }
+                                                    tabindex={tabbable() ? 0 : -1}
+                                                    aria-selected={selected()}
+                                                    aria-invalid={invalid()}
+                                                    title={issueTitle()}
                                                     onFocus={() => select(cell())}
                                                     onMouseDown={(evt) => {
                                                         // Focus explicitly: not all browsers
@@ -787,7 +824,7 @@ export function TableEditor(props: TableEditorProps) {
                                                         // blurs, and thereby commits, any open
                                                         // cell editor, while selecting first
                                                         // would unmount it without a commit.
-                                                        if (!isEditing(cell())) {
+                                                        if (!editing()) {
                                                             evt.currentTarget.focus();
                                                         }
                                                     }}
@@ -795,16 +832,16 @@ export function TableEditor(props: TableEditorProps) {
                                                         if (header().type.tag === "Bool") {
                                                             toggleBool(cell());
                                                         } else {
-                                                            startEditing(cell(), cellText(cell()));
+                                                            startEditing(cell(), text());
                                                         }
                                                     }}
                                                     onKeyDown={(evt) => onCellKeyDown(evt, cell())}
                                                 >
                                                     <Show
-                                                        when={isEditing(cell())}
+                                                        when={editing()}
                                                         fallback={
                                                             <CellContent
-                                                                text={cellText(cell())}
+                                                                text={text()}
                                                                 isBool={
                                                                     header().type.tag === "Bool"
                                                                 }
@@ -812,10 +849,7 @@ export function TableEditor(props: TableEditorProps) {
                                                                     header().type.tag === "RowRef"
                                                                 }
                                                                 onOpenRowRef={() =>
-                                                                    startEditing(
-                                                                        cell(),
-                                                                        cellText(cell()),
-                                                                    )
+                                                                    startEditing(cell(), text())
                                                                 }
                                                                 onToggle={() => toggleBool(cell())}
                                                             />
@@ -839,7 +873,7 @@ export function TableEditor(props: TableEditorProps) {
                                                                 }
                                                             }}
                                                             onCancel={cancelEdit}
-                                                            canExitBackward={!isFirstCell(cell())}
+                                                            canExitBackward={!first()}
                                                         />
                                                     </Show>
                                                 </td>
@@ -1064,10 +1098,6 @@ function CellEditor(props: {
             </span>
         </Show>
     );
-}
-
-function pathKey(path: ReadonlyArray<string>): string {
-    return path.join("\u0000");
 }
 
 function makeCellKey(headerId: string, rowId: string): CellKey {
