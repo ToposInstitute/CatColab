@@ -199,8 +199,12 @@ export default function DocumentPage() {
     createEffect(() => {
         const selectedRefId = selectedLLMConversationRefId();
         const enabled = llmConversationsEnabled();
-        setLLMConversationsOpen(enabled && selectedRefId !== undefined);
-        if (!enabled && selectedRefId !== undefined) {
+        if (selectedRefId !== undefined) {
+            setLLMConversationsOpen(enabled);
+        } else if (!enabled) {
+            setLLMConversationsOpen(false);
+        }
+        if (settings() !== undefined && !enabled && selectedRefId !== undefined) {
             setSearchParams({ llmconversation: undefined }, { replace: true });
         }
     });
