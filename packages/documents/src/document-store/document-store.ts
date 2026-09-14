@@ -91,6 +91,15 @@ export interface DocumentStore<Handle, Version = unknown> {
     // Create a reactive view for values derived from documents. Stores may
     // use this hook to integrate their host application's reactive primitives.
     createReactiveView?<T extends object>(initial: T): ReactiveView<T>;
+    // Run `fn` without the host application's reactive system tracking the
+    // document reads it makes. Used by computations that track changes by
+    // other means, such as a revision counter, to avoid fine-grained subscriptions.
+    untracked?<T>(fn: () => T): T;
+}
+
+/** Run `fn` with document reads untracked, if the store supports it. */
+export function untracked<Handle, T>(store: DocumentStore<Handle>, fn: () => T): T {
+    return store.untracked ? store.untracked(fn) : fn();
 }
 
 /** Create a store-native reactive view, falling back to a plain replaceable value. */
