@@ -14,6 +14,7 @@ import {
     onCleanup,
     runWithOwner,
     Show,
+    untrack,
 } from "solid-js";
 
 import type {
@@ -59,6 +60,9 @@ type CellKey = `${string}\u0000${string}`;
 /** The cell being edited, by ID, and the live text of its editor. */
 type EditState = { rowId: string; headerId: string; text: string };
 
+/** A committed value shown until the stored field changes or the write settles. */
+type PendingField = { key: CellKey; previousText: string; text: string };
+
 type PendingAppend = { headerId: string; previousRowIds: ReadonlySet<string> };
 
 type PendingDelete = { rowId: string };
@@ -101,9 +105,15 @@ export type TableEditorProps = {
 
     /** Called when the user edits a cell.
 
-    A `TableRow` value sets a row reference; `null` clears the field.
+    A `TableRow` value sets a row reference; `null` clears the field. The new
+    value is shown optimistically until the row snapshot changes or, if a
+    promise is returned, until it settles.
      */
-    onSetField: (row: TableRow, header: TableHeader, value: LiteralValue | TableRow) => void;
+    onSetField: (
+        row: TableRow,
+        header: TableHeader,
+        value: LiteralValue | TableRow,
+    ) => void | Promise<unknown>;
 
     /** Called when the user adds a row. */
     onAddRow: () => void;
@@ -130,6 +140,9 @@ export function TableEditor(props: TableEditorProps) {
     const [pendingDelete, setPendingDelete] = createSignal<PendingDelete | null>(null);
     const [suppressedFocus, setSuppressedFocus] = createSignal<CellKey | null>(null);
     const [focusRequest, setFocusRequest] = createSignal(0);
+    const [pendingField, setPendingField] = createSignal<PendingField | null>(null);
+    const pendingFieldKey = createMemo(() => pendingField()?.key ?? null);
+    const isPendingField = createSelector(pendingFieldKey);
     // Column whose delete button is hovered, highlighted like a row about to be deleted.
     const [deletingColumnId, setDeletingColumnId] = createSignal<string | null>(null);
 
@@ -532,8 +545,44 @@ export function TableEditor(props: TableEditorProps) {
     const validateText = (header: TableHeader, text: string): boolean =>
         parseValue(header, text).ok;
 
+    /** The text a value will display as once stored, mirroring `fieldText`. */
+    const valueText = (header: TableHeader, value: LiteralValue | TableRow): string => {
+        if (value === null) {
+            return "";
+        }
+        if (typeof value === "object") {
+            const codomain = codomainOf(header)?.table;
+            return codomain ? defaultRowLabel(codomain, value) : "?";
+        }
+        return String(value);
+    };
+
     const setField = (cell: Cell, value: LiteralValue | TableRow) => {
-        props.onSetField(cell.row, cell.header, value);
+        const key = keyOf(cell);
+        const pending: PendingField = {
+            key,
+            previousText: cellText(cell),
+            text: valueText(cell.header, value),
+        };
+        setPendingField(pending);
+        const result = props.onSetField(cell.row, cell.header, value);
+        if (result) {
+            const clear = () => {
+                if (untrack(pendingField) === pending) {
+                    setPendingField(null);
+                }
+            };
+            result.then(clear, clear);
+        }
+    };
+
+    /** The pending text of a cell, if its row snapshot has not caught up yet. */
+    const pendingText = (cell: Cell): string | undefined => {
+        if (!isPendingField(keyOf(cell))) {
+            return undefined;
+        }
+        const pending = pendingField();
+        return pending && cellText(cell) === pending.previousText ? pending.text : undefined;
     };
 
     const startEditing = (cell: Cell, text: string) => {
@@ -856,16 +905,26 @@ export function TableEditor(props: TableEditorProps) {
                                                     isSelected(cell()),
                                                 );
                                                 const editing = createMemo(() => isEditing(cell()));
-                                                const invalid = createMemo(() =>
-                                                    cellIsInvalid(fieldIssues(), cell()),
+                                                // A committed value not yet in the snapshot is
+                                                // shown as valid until validated.
+                                                const pending = createMemo(() =>
+                                                    pendingText(cell()),
                                                 );
-                                                const issueTitle = createMemo(
+                                                const invalid = createMemo(
                                                     () =>
-                                                        cellIssues(fieldIssues(), cell())
-                                                            .map(issueMessage)
-                                                            .join("\n") || undefined,
+                                                        pending() === undefined &&
+                                                        cellIsInvalid(fieldIssues(), cell()),
                                                 );
-                                                const text = createMemo(() => cellText(cell()));
+                                                const issueTitle = createMemo(() =>
+                                                    pending() === undefined
+                                                        ? cellIssues(fieldIssues(), cell())
+                                                              .map(issueMessage)
+                                                              .join("\n") || undefined
+                                                        : undefined,
+                                                );
+                                                const text = createMemo(
+                                                    () => pending() ?? cellText(cell()),
+                                                );
                                                 const first = createMemo(() => isFirstCell(cell()));
                                                 const tabbable = createMemo(
                                                     () =>

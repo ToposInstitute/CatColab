@@ -105,7 +105,7 @@ export function InstanceEditor(props: {
                                         focus={focus.childFocus(table().id)}
                                         onHide={() => tableList.hide(props.refId, table().id)}
                                         onSetField={(row, header, value) =>
-                                            void props.instance
+                                            props.instance
                                                 .set(row, header, value)
                                                 .then(logError("set field"))
                                         }
