@@ -46,10 +46,10 @@ export async function createLLMConversationExecutionScope<
         .filter((cellTypes) => cellTypes !== undefined);
     const vocabularyDescriptions = vocabularies.map(
         (cellTypes) =>
-            `The cell types of the notebook documents, for use with their \`add\` method, are: ${Object.keys(
+            `The cell types of the notebook documents, for use with their \`add\` method, are: ${Object.entries(
                 cellTypes,
             )
-                .map((name) => `\`${name}\``)
+                .map(([name, type]) => `\`${name}\` (\`${type.kind}\`)`)
                 .join(", ")}.`,
     );
 
