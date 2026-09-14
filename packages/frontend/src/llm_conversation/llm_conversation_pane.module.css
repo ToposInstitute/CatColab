@@ -84,6 +84,11 @@
     }
 }
 
+.rowDelete {
+    display: flex;
+    flex-shrink: 0;
+}
+
 .placeholder {
     padding: 8px 12px;
     color: var(--color-text-secondary);
