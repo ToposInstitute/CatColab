@@ -1,8 +1,28 @@
 diff --git a/dist/cjs/fullfat_base64.cjs b/dist/cjs/fullfat_base64.cjs
-index c243265c86d6be8e3c15f626203da61ce5e8c6f5..d51bc264098e91ceb57a092de46aee7575b162d9 100644
+index c243265c86d6be8e3c15f626203da61ce5e8c6f5..3d980cefe0768ff131fde6bcf11d03ddedb38920 100644
 --- a/dist/cjs/fullfat_base64.cjs
 +++ b/dist/cjs/fullfat_base64.cjs
-@@ -3765,6 +3765,11 @@ function _is_proxy(doc) {
+@@ -2071,6 +2071,19 @@ function __wbg_get_imports() {
+     },
+     __wbg_apply_23dd4d2439189415: function() {
+       return wrapError(function(arg0, arg1, arg2) {
++                if (arg0 === Array.prototype.splice && Array.isArray(arg2) && arg2[0] >= 0 && arg2.length > 32000) {
++            // automerge-wasm applies large list insert patches by calling
++            // Array.prototype.splice with one argument per inserted element, which
++            // exceeds the JS engine's limit on function call arguments (~125k in
++            // V8, ~65k in SpiderMonkey). Apply such splices in bounded chunks
++            // instead. Upstream fix: https://github.com/automerge/automerge/commit/028d73dc94b9e8eb106677a136a33538cf31453e
++            const start = arg2[0];
++            const deleted = Reflect.apply(arg0, arg1, arg2.slice(0, 2));
++            for (let offset = 2; offset < arg2.length; offset += 32000) {
++              Reflect.apply(arg0, arg1, [start + offset - 2, 0].concat(arg2.slice(offset, offset + 32000)));
++            }
++            return deleted;
++        }
+         const ret = Reflect.apply(arg0, arg1, arg2);
+         return ret;
+       }, arguments);
+@@ -3765,6 +3778,11 @@ function _is_proxy(doc) {
  
  // mjs/apply_patches.js
  function applyPatch(doc, patch) {
@@ -14,7 +34,7 @@ index c243265c86d6be8e3c15f626203da61ce5e8c6f5..d51bc264098e91ceb57a092de46aee75
    let path = resolvePath(doc, patch.path);
    if (patch.action === "put") {
      applyPutPatch(doc, path, patch);
-@@ -3790,21 +3795,39 @@ function applyPutPatch(doc, path, patch) {
+@@ -3790,21 +3808,39 @@ function applyPutPatch(doc, path, patch) {
    parent[prop] = patch.value;
  }
  function applyInsertPatch(doc, path, patch) {
@@ -64,7 +84,7 @@ index c243265c86d6be8e3c15f626203da61ce5e8c6f5..d51bc264098e91ceb57a092de46aee75
      parent.splice(prop, patch.length || 1);
    } else if (typeof parent === "string") {
      if (isAutomerge(doc)) {
-@@ -3884,6 +3907,45 @@ function applyUnmarkPatch(doc, path, patch) {
+@@ -3884,6 +3920,45 @@ function applyUnmarkPatch(doc, path, patch) {
    }
    unmark(doc, patch.path, { start: patch.start, end: patch.end, expand: "none" }, patch.name);
  }
@@ -111,10 +131,50 @@ index c243265c86d6be8e3c15f626203da61ce5e8c6f5..d51bc264098e91ceb57a092de46aee75
    for (const patch of patches) {
      applyPatch(doc, patch);
 diff --git a/dist/cjs/fullfat_node.cjs b/dist/cjs/fullfat_node.cjs
-index 40da38a6ed3d554d08891ac7cefe16eea1d5d88f..0e2f599aecfad9d44e2a93d41d63042daf89b638 100644
+index 40da38a6ed3d554d08891ac7cefe16eea1d5d88f..4774353006ca283b4ca15cf716633ebde9233973 100644
 --- a/dist/cjs/fullfat_node.cjs
 +++ b/dist/cjs/fullfat_node.cjs
-@@ -6317,6 +6317,11 @@ function _is_proxy(doc) {
+@@ -1999,6 +1999,19 @@ var require_automerge_wasm = __commonJS({
+         },
+         __wbg_apply_23dd4d2439189415: function() {
+           return wrapError2(function(arg0, arg1, arg2) {
++                        if (arg0 === Array.prototype.splice && Array.isArray(arg2) && arg2[0] >= 0 && arg2.length > 32000) {
++                // automerge-wasm applies large list insert patches by calling
++                // Array.prototype.splice with one argument per inserted element, which
++                // exceeds the JS engine's limit on function call arguments (~125k in
++                // V8, ~65k in SpiderMonkey). Apply such splices in bounded chunks
++                // instead. Upstream fix: https://github.com/automerge/automerge/commit/028d73dc94b9e8eb106677a136a33538cf31453e
++                const start = arg2[0];
++                const deleted = Reflect.apply(arg0, arg1, arg2.slice(0, 2));
++                for (let offset = 2; offset < arg2.length; offset += 32000) {
++                  Reflect.apply(arg0, arg1, [start + offset - 2, 0].concat(arg2.slice(offset, offset + 32000)));
++                }
++                return deleted;
++            }
+             const ret = Reflect.apply(arg0, arg1, arg2);
+             return ret;
+           }, arguments);
+@@ -4649,6 +4662,19 @@ function __wbg_get_imports() {
+     },
+     __wbg_apply_23dd4d2439189415: function() {
+       return wrapError(function(arg0, arg1, arg2) {
++                if (arg0 === Array.prototype.splice && Array.isArray(arg2) && arg2[0] >= 0 && arg2.length > 32000) {
++            // automerge-wasm applies large list insert patches by calling
++            // Array.prototype.splice with one argument per inserted element, which
++            // exceeds the JS engine's limit on function call arguments (~125k in
++            // V8, ~65k in SpiderMonkey). Apply such splices in bounded chunks
++            // instead. Upstream fix: https://github.com/automerge/automerge/commit/028d73dc94b9e8eb106677a136a33538cf31453e
++            const start = arg2[0];
++            const deleted = Reflect.apply(arg0, arg1, arg2.slice(0, 2));
++            for (let offset = 2; offset < arg2.length; offset += 32000) {
++              Reflect.apply(arg0, arg1, [start + offset - 2, 0].concat(arg2.slice(offset, offset + 32000)));
++            }
++            return deleted;
++        }
+         const ret = Reflect.apply(arg0, arg1, arg2);
+         return ret;
+       }, arguments);
+@@ -6317,6 +6343,11 @@ function _is_proxy(doc) {
  
  // mjs/apply_patches.js
  function applyPatch(doc, patch) {
@@ -126,7 +186,7 @@ index 40da38a6ed3d554d08891ac7cefe16eea1d5d88f..0e2f599aecfad9d44e2a93d41d63042d
    let path = resolvePath(doc, patch.path);
    if (patch.action === "put") {
      applyPutPatch(doc, path, patch);
-@@ -6342,21 +6347,39 @@ function applyPutPatch(doc, path, patch) {
+@@ -6342,21 +6373,39 @@ function applyPutPatch(doc, path, patch) {
    parent[prop] = patch.value;
  }
  function applyInsertPatch(doc, path, patch) {
@@ -176,7 +236,7 @@ index 40da38a6ed3d554d08891ac7cefe16eea1d5d88f..0e2f599aecfad9d44e2a93d41d63042d
      parent.splice(prop, patch.length || 1);
    } else if (typeof parent === "string") {
      if (isAutomerge(doc)) {
-@@ -6436,6 +6459,45 @@ function applyUnmarkPatch(doc, path, patch) {
+@@ -6436,6 +6485,45 @@ function applyUnmarkPatch(doc, path, patch) {
    }
    unmark(doc, patch.path, { start: patch.start, end: patch.end, expand: "none" }, patch.name);
  }
@@ -223,10 +283,30 @@ index 40da38a6ed3d554d08891ac7cefe16eea1d5d88f..0e2f599aecfad9d44e2a93d41d63042d
    for (const patch of patches) {
      applyPatch(doc, patch);
 diff --git a/dist/cjs/iife.cjs b/dist/cjs/iife.cjs
-index 69bebf7ae3774a7d1feb7f02d3dd6a672761f0d3..ef8d472490822a792703da2546b274b255f9c560 100644
+index 69bebf7ae3774a7d1feb7f02d3dd6a672761f0d3..79601b4d319870557d266bfe789259938c2fb54c 100644
 --- a/dist/cjs/iife.cjs
 +++ b/dist/cjs/iife.cjs
-@@ -3752,6 +3752,11 @@ function _is_proxy(doc) {
+@@ -1962,6 +1962,19 @@ function __wbg_get_imports() {
+     },
+     __wbg_apply_23dd4d2439189415: function() {
+       return wrapError(function(arg0, arg1, arg2) {
++                if (arg0 === Array.prototype.splice && Array.isArray(arg2) && arg2[0] >= 0 && arg2.length > 32000) {
++            // automerge-wasm applies large list insert patches by calling
++            // Array.prototype.splice with one argument per inserted element, which
++            // exceeds the JS engine's limit on function call arguments (~125k in
++            // V8, ~65k in SpiderMonkey). Apply such splices in bounded chunks
++            // instead. Upstream fix: https://github.com/automerge/automerge/commit/028d73dc94b9e8eb106677a136a33538cf31453e
++            const start = arg2[0];
++            const deleted = Reflect.apply(arg0, arg1, arg2.slice(0, 2));
++            for (let offset = 2; offset < arg2.length; offset += 32000) {
++              Reflect.apply(arg0, arg1, [start + offset - 2, 0].concat(arg2.slice(offset, offset + 32000)));
++            }
++            return deleted;
++        }
+         const ret = Reflect.apply(arg0, arg1, arg2);
+         return ret;
+       }, arguments);
+@@ -3752,6 +3765,11 @@ function _is_proxy(doc) {
  
  // mjs/apply_patches.js
  function applyPatch(doc, patch) {
@@ -238,7 +318,7 @@ index 69bebf7ae3774a7d1feb7f02d3dd6a672761f0d3..ef8d472490822a792703da2546b274b2
    let path = resolvePath(doc, patch.path);
    if (patch.action === "put") {
      applyPutPatch(doc, path, patch);
-@@ -3777,21 +3782,39 @@ function applyPutPatch(doc, path, patch) {
+@@ -3777,21 +3795,39 @@ function applyPutPatch(doc, path, patch) {
    parent[prop] = patch.value;
  }
  function applyInsertPatch(doc, path, patch) {
@@ -288,7 +368,7 @@ index 69bebf7ae3774a7d1feb7f02d3dd6a672761f0d3..ef8d472490822a792703da2546b274b2
      parent.splice(prop, patch.length || 1);
    } else if (typeof parent === "string") {
      if (isAutomerge(doc)) {
-@@ -3871,6 +3894,45 @@ function applyUnmarkPatch(doc, path, patch) {
+@@ -3871,6 +3907,45 @@ function applyUnmarkPatch(doc, path, patch) {
    }
    unmark(doc, patch.path, { start: patch.start, end: patch.end, expand: "none" }, patch.name);
  }
@@ -335,10 +415,30 @@ index 69bebf7ae3774a7d1feb7f02d3dd6a672761f0d3..ef8d472490822a792703da2546b274b2
    for (const patch of patches) {
      applyPatch(doc, patch);
 diff --git a/dist/cjs/slim.cjs b/dist/cjs/slim.cjs
-index e0585d1762e6bb2166b72005ed6a73efeb5eeee9..d9192866b2887935532a079130c70354c2672e19 100644
+index e0585d1762e6bb2166b72005ed6a73efeb5eeee9..b695ac44892ef3f64f5ea94337d9c9b04617147e 100644
 --- a/dist/cjs/slim.cjs
 +++ b/dist/cjs/slim.cjs
-@@ -3736,6 +3736,11 @@ function _is_proxy(doc) {
+@@ -2952,6 +2952,19 @@ function __wbg_get_imports() {
+     },
+     __wbg_apply_23dd4d2439189415: function() {
+       return wrapError(function(arg0, arg1, arg2) {
++                if (arg0 === Array.prototype.splice && Array.isArray(arg2) && arg2[0] >= 0 && arg2.length > 32000) {
++            // automerge-wasm applies large list insert patches by calling
++            // Array.prototype.splice with one argument per inserted element, which
++            // exceeds the JS engine's limit on function call arguments (~125k in
++            // V8, ~65k in SpiderMonkey). Apply such splices in bounded chunks
++            // instead. Upstream fix: https://github.com/automerge/automerge/commit/028d73dc94b9e8eb106677a136a33538cf31453e
++            const start = arg2[0];
++            const deleted = Reflect.apply(arg0, arg1, arg2.slice(0, 2));
++            for (let offset = 2; offset < arg2.length; offset += 32000) {
++              Reflect.apply(arg0, arg1, [start + offset - 2, 0].concat(arg2.slice(offset, offset + 32000)));
++            }
++            return deleted;
++        }
+         const ret = Reflect.apply(arg0, arg1, arg2);
+         return ret;
+       }, arguments);
+@@ -3736,6 +3749,11 @@ function _is_proxy(doc) {
  
  // mjs/apply_patches.js
  function applyPatch(doc, patch) {
@@ -350,7 +450,7 @@ index e0585d1762e6bb2166b72005ed6a73efeb5eeee9..d9192866b2887935532a079130c70354
    let path = resolvePath(doc, patch.path);
    if (patch.action === "put") {
      applyPutPatch(doc, path, patch);
-@@ -3761,21 +3766,39 @@ function applyPutPatch(doc, path, patch) {
+@@ -3761,21 +3779,39 @@ function applyPutPatch(doc, path, patch) {
    parent[prop] = patch.value;
  }
  function applyInsertPatch(doc, path, patch) {
@@ -400,7 +500,7 @@ index e0585d1762e6bb2166b72005ed6a73efeb5eeee9..d9192866b2887935532a079130c70354
      parent.splice(prop, patch.length || 1);
    } else if (typeof parent === "string") {
      if (isAutomerge(doc)) {
-@@ -3855,6 +3878,45 @@ function applyUnmarkPatch(doc, path, patch) {
+@@ -3855,6 +3891,45 @@ function applyUnmarkPatch(doc, path, patch) {
    }
    unmark(doc, patch.path, { start: patch.start, end: patch.end, expand: "none" }, patch.name);
  }
@@ -447,10 +547,30 @@ index e0585d1762e6bb2166b72005ed6a73efeb5eeee9..d9192866b2887935532a079130c70354
    for (const patch of patches) {
      applyPatch(doc, patch);
 diff --git a/dist/iife/iife.js b/dist/iife/iife.js
-index 9d1a1806cac975eea131abb17e7b0ea794f8253c..af7f74c076aa384e3094f912ac253b0ea70fdfb1 100644
+index 9d1a1806cac975eea131abb17e7b0ea794f8253c..967b7baf7be15c3334d6a9e9a586a16ae697a57e 100644
 --- a/dist/iife/iife.js
 +++ b/dist/iife/iife.js
-@@ -3753,6 +3753,11 @@ ${val.stack}`;
+@@ -1963,6 +1963,19 @@
+       },
+       __wbg_apply_23dd4d2439189415: function() {
+         return wrapError(function(arg0, arg1, arg2) {
++                    if (arg0 === Array.prototype.splice && Array.isArray(arg2) && arg2[0] >= 0 && arg2.length > 32000) {
++              // automerge-wasm applies large list insert patches by calling
++              // Array.prototype.splice with one argument per inserted element, which
++              // exceeds the JS engine's limit on function call arguments (~125k in
++              // V8, ~65k in SpiderMonkey). Apply such splices in bounded chunks
++              // instead. Upstream fix: https://github.com/automerge/automerge/commit/028d73dc94b9e8eb106677a136a33538cf31453e
++              const start = arg2[0];
++              const deleted = Reflect.apply(arg0, arg1, arg2.slice(0, 2));
++              for (let offset = 2; offset < arg2.length; offset += 32000) {
++                Reflect.apply(arg0, arg1, [start + offset - 2, 0].concat(arg2.slice(offset, offset + 32000)));
++              }
++              return deleted;
++          }
+           const ret = Reflect.apply(arg0, arg1, arg2);
+           return ret;
+         }, arguments);
+@@ -3753,6 +3766,11 @@ ${val.stack}`;
  
    // mjs/apply_patches.js
    function applyPatch(doc, patch) {
@@ -462,7 +582,7 @@ index 9d1a1806cac975eea131abb17e7b0ea794f8253c..af7f74c076aa384e3094f912ac253b0e
      let path = resolvePath(doc, patch.path);
      if (patch.action === "put") {
        applyPutPatch(doc, path, patch);
-@@ -3778,21 +3783,39 @@ ${val.stack}`;
+@@ -3778,21 +3796,39 @@ ${val.stack}`;
      parent[prop] = patch.value;
    }
    function applyInsertPatch(doc, path, patch) {
@@ -512,7 +632,7 @@ index 9d1a1806cac975eea131abb17e7b0ea794f8253c..af7f74c076aa384e3094f912ac253b0e
        parent.splice(prop, patch.length || 1);
      } else if (typeof parent === "string") {
        if (isAutomerge(doc)) {
-@@ -3872,6 +3895,45 @@ ${val.stack}`;
+@@ -3872,6 +3908,45 @@ ${val.stack}`;
      }
      unmark(doc, patch.path, { start: patch.start, end: patch.end, expand: "none" }, patch.name);
    }
@@ -674,3 +794,123 @@ index a21173a8b375a53694381ab45577d8cba6502db1..e55c6ec731bc16d1c260697626723fa2
  export function applyPatches(doc, patches) {
      for (const patch of patches) {
          applyPatch(doc, patch);
+diff --git a/dist/mjs/wasm_bindgen_output/bundler/automerge_wasm_bg.js b/dist/mjs/wasm_bindgen_output/bundler/automerge_wasm_bg.js
+index 4be9ae67372323086267d16f7f79bde4d4bce1f5..79885a6d1f316c752f1c5a2ef6365ea607b4ff95 100644
+--- a/dist/mjs/wasm_bindgen_output/bundler/automerge_wasm_bg.js
++++ b/dist/mjs/wasm_bindgen_output/bundler/automerge_wasm_bg.js
+@@ -1952,6 +1952,19 @@ export function __wbg___wbindgen_throw_344f42d3211c4765() { return wrapError(fun
+     throw new WebAssembly.Exception(__wbindgen_wrapped_jstag, [new Error(getStringFromWasm0(arg0, arg1))]);
+ }, arguments); }
+ export function __wbg_apply_23dd4d2439189415() { return wrapError(function (arg0, arg1, arg2) {
++        if (arg0 === Array.prototype.splice && Array.isArray(arg2) && arg2[0] >= 0 && arg2.length > 32000) {
++        // automerge-wasm applies large list insert patches by calling
++        // Array.prototype.splice with one argument per inserted element, which
++        // exceeds the JS engine's limit on function call arguments (~125k in
++        // V8, ~65k in SpiderMonkey). Apply such splices in bounded chunks
++        // instead. Upstream fix: https://github.com/automerge/automerge/commit/028d73dc94b9e8eb106677a136a33538cf31453e
++        const start = arg2[0];
++        const deleted = Reflect.apply(arg0, arg1, arg2.slice(0, 2));
++        for (let offset = 2; offset < arg2.length; offset += 32000) {
++          Reflect.apply(arg0, arg1, [start + offset - 2, 0].concat(arg2.slice(offset, offset + 32000)));
++        }
++        return deleted;
++    }
+     const ret = Reflect.apply(arg0, arg1, arg2);
+     return ret;
+ }, arguments); }
+diff --git a/dist/mjs/wasm_bindgen_output/nodejs/automerge_wasm.cjs b/dist/mjs/wasm_bindgen_output/nodejs/automerge_wasm.cjs
+index 7fa236365a49ddc0757ceb1a14c2778d051b8da5..b8413f8318361208848e5305a0a3f65deceaf3af 100644
+--- a/dist/mjs/wasm_bindgen_output/nodejs/automerge_wasm.cjs
++++ b/dist/mjs/wasm_bindgen_output/nodejs/automerge_wasm.cjs
+@@ -1997,6 +1997,19 @@ function __wbg_get_imports() {
+             throw new WebAssembly.Exception(__wbindgen_wrapped_jstag, [new Error(getStringFromWasm0(arg0, arg1))]);
+         }, arguments); },
+         __wbg_apply_23dd4d2439189415: function() { return wrapError(function (arg0, arg1, arg2) {
++                        if (arg0 === Array.prototype.splice && Array.isArray(arg2) && arg2[0] >= 0 && arg2.length > 32000) {
++                // automerge-wasm applies large list insert patches by calling
++                // Array.prototype.splice with one argument per inserted element, which
++                // exceeds the JS engine's limit on function call arguments (~125k in
++                // V8, ~65k in SpiderMonkey). Apply such splices in bounded chunks
++                // instead. Upstream fix: https://github.com/automerge/automerge/commit/028d73dc94b9e8eb106677a136a33538cf31453e
++                const start = arg2[0];
++                const deleted = Reflect.apply(arg0, arg1, arg2.slice(0, 2));
++                for (let offset = 2; offset < arg2.length; offset += 32000) {
++                  Reflect.apply(arg0, arg1, [start + offset - 2, 0].concat(arg2.slice(offset, offset + 32000)));
++                }
++                return deleted;
++            }
+             const ret = Reflect.apply(arg0, arg1, arg2);
+             return ret;
+         }, arguments); },
+diff --git a/dist/mjs/wasm_bindgen_output/nodejs/automerge_wasm.js b/dist/mjs/wasm_bindgen_output/nodejs/automerge_wasm.js
+index ef8a24b1650143b25fc2a1571ccaefc95cb76940..e3b373108f2c392123bd9d95d4199d7d2d2b0fdd 100644
+--- a/dist/mjs/wasm_bindgen_output/nodejs/automerge_wasm.js
++++ b/dist/mjs/wasm_bindgen_output/nodejs/automerge_wasm.js
+@@ -1973,6 +1973,19 @@ function __wbg_get_imports() {
+             throw new WebAssembly.Exception(__wbindgen_wrapped_jstag, [new Error(getStringFromWasm0(arg0, arg1))]);
+         }, arguments); },
+         __wbg_apply_23dd4d2439189415: function() { return wrapError(function (arg0, arg1, arg2) {
++                        if (arg0 === Array.prototype.splice && Array.isArray(arg2) && arg2[0] >= 0 && arg2.length > 32000) {
++                // automerge-wasm applies large list insert patches by calling
++                // Array.prototype.splice with one argument per inserted element, which
++                // exceeds the JS engine's limit on function call arguments (~125k in
++                // V8, ~65k in SpiderMonkey). Apply such splices in bounded chunks
++                // instead. Upstream fix: https://github.com/automerge/automerge/commit/028d73dc94b9e8eb106677a136a33538cf31453e
++                const start = arg2[0];
++                const deleted = Reflect.apply(arg0, arg1, arg2.slice(0, 2));
++                for (let offset = 2; offset < arg2.length; offset += 32000) {
++                  Reflect.apply(arg0, arg1, [start + offset - 2, 0].concat(arg2.slice(offset, offset + 32000)));
++                }
++                return deleted;
++            }
+             const ret = Reflect.apply(arg0, arg1, arg2);
+             return ret;
+         }, arguments); },
+diff --git a/dist/mjs/wasm_bindgen_output/web/automerge_wasm.js b/dist/mjs/wasm_bindgen_output/web/automerge_wasm.js
+index 489a130415f30758791d82b7ca1683269767f704..4d7fe8efb2993ae7e9dd82a23f9aa2542f6bcaca 100644
+--- a/dist/mjs/wasm_bindgen_output/web/automerge_wasm.js
++++ b/dist/mjs/wasm_bindgen_output/web/automerge_wasm.js
+@@ -1957,6 +1957,19 @@ function __wbg_get_imports() {
+             throw new WebAssembly.Exception(__wbindgen_wrapped_jstag, [new Error(getStringFromWasm0(arg0, arg1))]);
+         }, arguments); },
+         __wbg_apply_23dd4d2439189415: function() { return wrapError(function (arg0, arg1, arg2) {
++                        if (arg0 === Array.prototype.splice && Array.isArray(arg2) && arg2[0] >= 0 && arg2.length > 32000) {
++                // automerge-wasm applies large list insert patches by calling
++                // Array.prototype.splice with one argument per inserted element, which
++                // exceeds the JS engine's limit on function call arguments (~125k in
++                // V8, ~65k in SpiderMonkey). Apply such splices in bounded chunks
++                // instead. Upstream fix: https://github.com/automerge/automerge/commit/028d73dc94b9e8eb106677a136a33538cf31453e
++                const start = arg2[0];
++                const deleted = Reflect.apply(arg0, arg1, arg2.slice(0, 2));
++                for (let offset = 2; offset < arg2.length; offset += 32000) {
++                  Reflect.apply(arg0, arg1, [start + offset - 2, 0].concat(arg2.slice(offset, offset + 32000)));
++                }
++                return deleted;
++            }
+             const ret = Reflect.apply(arg0, arg1, arg2);
+             return ret;
+         }, arguments); },
+diff --git a/dist/mjs/wasm_bindgen_output/workerd/automerge_wasm.js b/dist/mjs/wasm_bindgen_output/workerd/automerge_wasm.js
+index 489a130415f30758791d82b7ca1683269767f704..4d7fe8efb2993ae7e9dd82a23f9aa2542f6bcaca 100644
+--- a/dist/mjs/wasm_bindgen_output/workerd/automerge_wasm.js
++++ b/dist/mjs/wasm_bindgen_output/workerd/automerge_wasm.js
+@@ -1957,6 +1957,19 @@ function __wbg_get_imports() {
+             throw new WebAssembly.Exception(__wbindgen_wrapped_jstag, [new Error(getStringFromWasm0(arg0, arg1))]);
+         }, arguments); },
+         __wbg_apply_23dd4d2439189415: function() { return wrapError(function (arg0, arg1, arg2) {
++                        if (arg0 === Array.prototype.splice && Array.isArray(arg2) && arg2[0] >= 0 && arg2.length > 32000) {
++                // automerge-wasm applies large list insert patches by calling
++                // Array.prototype.splice with one argument per inserted element, which
++                // exceeds the JS engine's limit on function call arguments (~125k in
++                // V8, ~65k in SpiderMonkey). Apply such splices in bounded chunks
++                // instead. Upstream fix: https://github.com/automerge/automerge/commit/028d73dc94b9e8eb106677a136a33538cf31453e
++                const start = arg2[0];
++                const deleted = Reflect.apply(arg0, arg1, arg2.slice(0, 2));
++                for (let offset = 2; offset < arg2.length; offset += 32000) {
++                  Reflect.apply(arg0, arg1, [start + offset - 2, 0].concat(arg2.slice(offset, offset + 32000)));
++                }
++                return deleted;
++            }
+             const ret = Reflect.apply(arg0, arg1, arg2);
+             return ret;
+         }, arguments); },
