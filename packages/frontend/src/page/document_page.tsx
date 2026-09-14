@@ -378,7 +378,6 @@ export default function DocumentPage() {
                                                 <LLMConversationPane
                                                     documents={llmConversationDocuments()}
                                                     createOn={llmConversationCreationDocument()}
-                                                    focus={llmConversationsFocus}
                                                     selectedRefId={selectedLLMConversationRefId()}
                                                     onSelect={selectLLMConversation}
                                                 />
@@ -765,7 +764,6 @@ export function DocumentPane(props: {
                             {(liveConversation) => (
                                 <LLMConversationEditor
                                     conversation={liveConversation.conversation}
-                                    focus={props.focus}
                                 />
                             )}
                         </Match>

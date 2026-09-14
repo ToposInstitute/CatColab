@@ -7,12 +7,7 @@ import invariant from "tiny-invariant";
 
 import type { UserSettings } from "catcolab-api";
 import type { Document } from "catcolab-document-types";
-import {
-    DocumentTypeIcon,
-    type FocusHandle,
-    IconButton,
-    InlineInput,
-} from "catcolab-ui-components";
+import { DocumentTypeIcon, IconButton, InlineInput } from "catcolab-ui-components";
 import {
     type ApiDocumentHandle,
     documentTypeLabel,
@@ -48,7 +43,6 @@ export function canOpenLLMConversationPane(document: Document, settings?: UserSe
 export function LLMConversationPane(props: {
     documents: LiveDocWithRef[];
     createOn: LiveDocWithRef | undefined;
-    focus: FocusHandle;
     selectedRefId: string | undefined;
     onSelect: (refId: string | undefined, replace?: boolean) => void;
 }) {
@@ -222,10 +216,7 @@ export function LLMConversationPane(props: {
                     }
                 >
                     {(conversation) => (
-                        <LLMConversationEditor
-                            conversation={conversation().conversation}
-                            focus={props.focus}
-                        />
+                        <LLMConversationEditor conversation={conversation().conversation} />
                     )}
                 </Show>
             </div>
