@@ -41,6 +41,17 @@
     white-space: pre-wrap;
 }
 
+.statusRow {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.retry {
+    margin: 0;
+}
+
 .codeExecution {
     position: relative;
     display: flex;

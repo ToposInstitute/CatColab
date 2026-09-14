@@ -499,9 +499,11 @@ describe("LLM conversation turns", { timeout: 30_000 }, () => {
         assert.deepStrictEqual(toolCallIds, [undefined, "call-a", "call-b", undefined]);
     });
 
-    test("retains the user message when inference fails", async () => {
+    test("retries an inference failure without duplicating the user message", async () => {
         const fixture = await makeFixture();
-        inference.runChatTurn.mockRejectedValue(new Error("network failed"));
+        inference.runChatTurn
+            .mockRejectedValueOnce(new Error("network failed"))
+            .mockResolvedValueOnce(response("Recovered."));
 
         assert.deepStrictEqual(await runTurn(fixture), {
             tag: "Retryable",
@@ -511,6 +513,22 @@ describe("LLM conversation turns", { timeout: 30_000 }, () => {
         assert.deepStrictEqual(
             fixture.conversation.interactions().map((interaction) => interaction.tag),
             ["user-message"],
+        );
+
+        assert.deepStrictEqual(
+            await retryLastLLMConversationResponse(fixture.conversation, fixture.binder.store, {
+                tag: "Ready",
+                key: "inference-key",
+            }),
+            { tag: "Completed", content: "Recovered." },
+        );
+        assert.deepStrictEqual(
+            fixture.conversation.interactions().map((interaction) => interaction.tag),
+            ["user-message", "llm-message"],
+        );
+        assert.deepStrictEqual(
+            inference.runChatTurn.mock.calls[1]?.[1].map((message) => message.role),
+            ["user"],
         );
     });
 });

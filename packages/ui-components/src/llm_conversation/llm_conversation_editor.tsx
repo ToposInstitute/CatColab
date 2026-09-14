@@ -6,6 +6,7 @@ import Check from "lucide-solid/icons/check";
 import ChevronDown from "lucide-solid/icons/chevron-down";
 import ChevronRight from "lucide-solid/icons/chevron-right";
 import Paperclip from "lucide-solid/icons/paperclip";
+import RotateCcw from "lucide-solid/icons/rotate-ccw";
 import Send from "lucide-solid/icons/send";
 import X from "lucide-solid/icons/x";
 import {
@@ -43,8 +44,10 @@ export type LLMConversationEditorProps = {
     status: string;
     notice?: LLMConversationNotice | null;
     available: boolean;
+    canRetry?: boolean;
     validateAttachments: (files: readonly File[]) => string | undefined;
     onSubmit: (input: LLMConversationInput) => Promise<boolean>;
+    onRetry?: () => void;
     onResolveFeedback: (requestId: string, resolution: "approved" | "rejected") => void;
 };
 
@@ -127,14 +130,30 @@ export function LLMConversationEditor(props: LLMConversationEditorProps) {
                 </Show>
             </div>
             <div class={styles.composer}>
-                <div class={styles.status} aria-live="polite">
-                    {props.status}
-                    <Show when={props.notice}>
-                        {(notice) => (
-                            <>
-                                {" • "}
-                                <LLMConversationNoticeView notice={notice()} />
-                            </>
+                <div class={styles.statusRow}>
+                    <div class={styles.status} aria-live="polite">
+                        {props.status}
+                        <Show when={props.notice}>
+                            {(notice) => (
+                                <>
+                                    {" • "}
+                                    <LLMConversationNoticeView notice={notice()} />
+                                </>
+                            )}
+                        </Show>
+                    </div>
+                    <Show when={props.canRetry && props.onRetry}>
+                        {(retry) => (
+                            <Button
+                                type="button"
+                                variant="utility"
+                                class={styles.retry}
+                                disabled={form.submitting || !props.available}
+                                onClick={retry()}
+                            >
+                                <RotateCcw size={16} />
+                                Retry
+                            </Button>
                         )}
                     </Show>
                 </div>

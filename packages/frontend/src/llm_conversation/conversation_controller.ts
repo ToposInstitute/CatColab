@@ -14,6 +14,7 @@ import {
     LLMConversationTurnResult,
     LLMConversationUserInput,
     conversationAttachmentMetadata,
+    retryLastLLMConversationResponse,
     runLLMConversationTurn,
 } from "./document";
 import type { ApiLLMConversation } from "./live_doc_compatibility";
@@ -54,6 +55,12 @@ export type LLMConversationController = {
     /** Run a turn of the LLM conversation. */
     runTurn: (userInput: LLMConversationUserInput) => Promise<LLMConversationTurnResult>;
 
+    /** Retry the response to the latest user message. */
+    retryTurn: () => Promise<LLMConversationTurnResult>;
+
+    /** Whether the latest user message is the one whose response failed. */
+    canRetry: () => boolean;
+
     /** Validate files staged to be attached to the next user message. */
     validateAttachments: (files: readonly File[]) => JsResult<void, string>;
 
@@ -67,6 +74,7 @@ export function createLLMConversationController(
 ): LLMConversationController {
     const binder = useBinder();
     const [store, setStore] = createStore<LLMTurnState>(newLLMTurnState());
+    let retryableMessageId: string | undefined;
 
     const pushLiveInteraction = (interaction: LLMInteraction) => {
         setStore("liveInteractions", store.liveInteractions.length, interaction);
@@ -114,23 +122,26 @@ export function createLLMConversationController(
         }
     };
 
-    const runTurn = async (
-        userInput: LLMConversationUserInput,
+    const executeTurn = async (
+        run: (key: InferenceKeyResult) => Promise<LLMConversationTurnResult>,
     ): Promise<LLMConversationTurnResult> => {
+        if (store.isRunning) {
+            return { tag: "Failed", error: "An LLM conversation turn is already running." };
+        }
         const key = inferenceKey();
         if (!key) {
             return { tag: "Failed", error: "Inference key is missing. It might still be loading" };
         }
 
+        retryableMessageId = undefined;
         setStore(newLLMTurnState({ isRunning: true }));
         try {
-            const result = await runLLMConversationTurn(
-                conversation(),
-                binder.store,
-                key,
-                userInput,
-                handleTurnEvent,
-            );
+            const result = await run(key);
+            if (result.tag === "Retryable") {
+                const latestInteraction = conversation().interactions().at(-1);
+                retryableMessageId =
+                    latestInteraction?.tag === "user-message" ? latestInteraction.id : undefined;
+            }
             setStore("notice", turnResultToNotice(result));
             setStore("liveInteractions", result.tag === "Retryable" ? result.attempts : []);
             return result;
@@ -138,6 +149,25 @@ export function createLLMConversationController(
             setStore("isRunning", false);
             setStore("streamingContent", "");
         }
+    };
+
+    const runTurn = (userInput: LLMConversationUserInput) =>
+        executeTurn((key) =>
+            runLLMConversationTurn(conversation(), binder.store, key, userInput, handleTurnEvent),
+        );
+
+    const retryTurn = () =>
+        executeTurn((key) =>
+            retryLastLLMConversationResponse(conversation(), binder.store, key, handleTurnEvent),
+        );
+
+    const canRetry = () => {
+        const latestInteraction = conversation().interactions().at(-1);
+        return (
+            store.notice?.retryable === true &&
+            latestInteraction?.tag === "user-message" &&
+            latestInteraction.id === retryableMessageId
+        );
     };
 
     const validateAttachments = (files: readonly File[]): JsResult<void, string> =>
@@ -166,6 +196,8 @@ export function createLLMConversationController(
     return {
         state: store,
         runTurn,
+        retryTurn,
+        canRetry,
         validateAttachments,
         readAttachments,
     };
