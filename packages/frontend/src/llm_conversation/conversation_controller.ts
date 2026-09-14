@@ -31,8 +31,6 @@ export type LLMTurnState = {
 export type LLMTurnNotice = {
     kind: "error" | "note";
     message: string;
-    /** Whether the turn can be retried without resubmitting the user message. */
-    retryable: boolean;
 };
 
 const newLLMTurnState = (overrides?: Partial<LLMTurnState>) => ({
@@ -58,7 +56,7 @@ export type LLMConversationController = {
     /** Retry the response to the latest user message. */
     retryTurn: () => Promise<LLMConversationTurnResult>;
 
-    /** Whether the latest user message is the one whose response failed. */
+    /** Whether the latest interaction is a user message awaiting a response. */
     canRetry: () => boolean;
 
     /** Validate files staged to be attached to the next user message. */
@@ -74,7 +72,6 @@ export function createLLMConversationController(
 ): LLMConversationController {
     const binder = useBinder();
     const [store, setStore] = createStore<LLMTurnState>(newLLMTurnState());
-    let retryableMessageId: string | undefined;
 
     const pushLiveInteraction = (interaction: LLMInteraction) => {
         setStore("liveInteractions", store.liveInteractions.length, interaction);
@@ -133,15 +130,9 @@ export function createLLMConversationController(
             return { tag: "Failed", error: "Inference key is missing. It might still be loading" };
         }
 
-        retryableMessageId = undefined;
         setStore(newLLMTurnState({ isRunning: true }));
         try {
             const result = await run(key);
-            if (result.tag === "Retryable") {
-                const latestInteraction = conversation().interactions().at(-1);
-                retryableMessageId =
-                    latestInteraction?.tag === "user-message" ? latestInteraction.id : undefined;
-            }
             setStore("notice", turnResultToNotice(result));
             setStore("liveInteractions", result.tag === "Retryable" ? result.attempts : []);
             return result;
@@ -161,14 +152,8 @@ export function createLLMConversationController(
             retryLastLLMConversationResponse(conversation(), binder.store, key, handleTurnEvent),
         );
 
-    const canRetry = () => {
-        const latestInteraction = conversation().interactions().at(-1);
-        return (
-            store.notice?.retryable === true &&
-            latestInteraction?.tag === "user-message" &&
-            latestInteraction.id === retryableMessageId
-        );
-    };
+    const canRetry = () =>
+        !store.isRunning && conversation().interactions().at(-1)?.tag === "user-message";
 
     const validateAttachments = (files: readonly File[]): JsResult<void, string> =>
         validateConversationAttachments([
@@ -187,7 +172,6 @@ export function createLLMConversationController(
             setStore("notice", {
                 kind: "error",
                 message: errorMessage(error),
-                retryable: false,
             });
             return null;
         }
@@ -224,11 +208,10 @@ function turnResultToNotice(result: LLMConversationTurnResult): LLMTurnNotice | 
         case "Incomplete":
             // The turn stopped without a final response, but the conversation
             // state is coherent.
-            return { kind: "note", message: result.reason, retryable: false };
+            return { kind: "note", message: result.reason };
         case "Failed":
-            return { kind: "error", message: result.error, retryable: false };
         case "Retryable":
-            return { kind: "error", message: result.error, retryable: true };
+            return { kind: "error", message: result.error };
         default:
             assertExhaustive(result);
     }
