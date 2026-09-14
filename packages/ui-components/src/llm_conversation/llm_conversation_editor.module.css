@@ -14,8 +14,6 @@
     position: absolute;
     bottom: 0;
     pointer-events: none;
-
-    /* Scroll slack: autoscroll stays engaged within this height of the bottom. */
     height: 32px;
 }
 
@@ -39,7 +37,6 @@
     padding-inline: var(--message-inset);
 }
 
-/* Placeholder shown while the Markdown-rendering pipeline loads. */
 .plainMessage {
     white-space: pre-wrap;
 }
@@ -83,7 +80,6 @@
     top: 0;
     left: 0;
     transform: translateX(-100%);
-
     display: flex;
     align-items: center;
     height: 1lh;
@@ -98,7 +94,6 @@
     overflow: hidden;
     mask-image: linear-gradient(to right, black calc(100% - 4rem), transparent 100%);
 
-    /* Render the visible block as ordinary body text, flush with the top. */
     & > * > :first-child {
         margin-block-start: 0;
         font-size: inherit;

@@ -28,7 +28,6 @@
             font-weight: 500;
         }
 
-        /* Thick horizontal rules around header row. */
         & thead tr {
             border-top: 2px solid var(--color-gray-700);
             border-bottom: 2px solid var(--color-gray-700);
@@ -38,7 +37,6 @@
             border-top: 1px solid var(--color-gray-300);
         }
 
-        /* Thick horizontal rule after last row. */
         & tbody tr:last-child {
             border-bottom: 2px solid var(--color-gray-700);
         }

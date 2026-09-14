@@ -3,10 +3,11 @@ import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import { SolidMarkdown } from "solid-markdown";
 
+import "katex/dist/katex.min.css";
 import styles from "./markdown_message.module.css";
 
-/** Render Markdown content, such as a message from the LLM. */
-export default function MarkdownMessage(props: { content: string }) {
+/** Render Markdown content, such as a message from an LLM. */
+export function MarkdownMessage(props: { content: string }) {
     return (
         <SolidMarkdown
             class={styles.message}
@@ -19,6 +20,7 @@ export default function MarkdownMessage(props: { content: string }) {
     );
 }
 
-/** Support GitHub-flavored Markdown, plus math as rendered in MDX help pages. */
+export default MarkdownMessage;
+
 const remarkPlugins = [remarkGfm, remarkMath];
 const rehypePlugins = [rehypeKatex];

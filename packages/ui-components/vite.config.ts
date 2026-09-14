@@ -14,6 +14,14 @@ export default defineConfig({
     define: {
         "process.env": {},
     },
+    optimizeDeps: {
+        // solid-markdown's CommonJS dependencies need explicit prebundling.
+        include: [
+            "solid-markdown > unified",
+            "solid-markdown > remark-parse",
+            "solid-markdown > remark-rehype",
+        ],
+    },
     test: {
         projects: [
             {
