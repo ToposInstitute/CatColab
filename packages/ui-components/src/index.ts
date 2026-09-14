@@ -17,6 +17,7 @@ export * from "./inline_input";
 export * from "./inline_list_editor";
 export * from "./input_options";
 export * from "./katex_display";
+export * from "./llm_conversation";
 export * from "./model_file_icon";
 export * from "./name_input";
 export * from "./panel";
