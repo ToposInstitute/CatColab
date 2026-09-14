@@ -32,6 +32,7 @@ export function useLLMConversationsOf(
             const relations = [...(document?.dependsOn ?? []), ...(document?.usedBy ?? [])];
             for (const relation of relations) {
                 const relatedId = uuidStringify(relation.refId);
+                void userState.documents[relatedId]?.deletedAt;
                 for (const usedBy of userState.documents[relatedId]?.usedBy ?? []) {
                     void usedBy.refId;
                 }
