@@ -9,6 +9,7 @@ import {
     type DocumentRef,
     type DocumentStore,
     type Result,
+    type TableRow,
 } from "catcolab-documents";
 
 function refOf<Handle, Version>(
@@ -332,8 +333,14 @@ describe("tabular instances", () => {
         );
         const bob = expectOk(await instance.addRow(personTable, { name: "Bob", employer: acme }));
 
-        expect(personTable.rows.map((row) => row.id)).toEqual([alice.id, bob.id]);
+        // Tables are snapshots, so the rows appear after revalidating.
+        expect(personTable.rows).toEqual([]);
+        const personTableAfterAdd = (await instance.validate()).tables.find(
+            (table) => table.id === personTable.id,
+        );
+        expect(personTableAfterAdd?.rows.map((row) => row.id)).toEqual([alice.id, bob.id]);
         expect(alice.index).toBe(0);
+        expect(bob.index).toBe(1);
         expect(alice.fields.map((field) => field.tag)).toEqual(["RowRef", "String"]);
 
         const nameResult = validation.get([
@@ -356,6 +363,12 @@ describe("tabular instances", () => {
 
         expectOk(await instance.set(bob, nameHeader, "Robert"));
         expect(bob.fields.find((field) => field.tag === "String")).toMatchObject({
+            content: { value: "Bob" },
+        });
+        const robert = expectOk(
+            (await instance.validate()).get([personTable.id, "rows", bob.id]),
+        ) as TableRow;
+        expect(robert.fields.find((field) => field.tag === "String")).toMatchObject({
             content: { value: "Robert" },
         });
 

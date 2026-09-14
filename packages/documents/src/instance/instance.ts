@@ -218,13 +218,21 @@ export function instanceFromStore<Handle, S extends Shape, Version>(
             const modelValidation = schema.createValidationView();
             let revision = 0;
             const reactiveRevision = createReactiveView(store, { revision });
-            const unsubscribeInstance = store.subscribe(handle, (): void => {
+            const bumpRevision = (): void => {
                 reactiveRevision.replace({ revision: ++revision });
-            });
+            };
+            const unsubscribeInstance = store.subscribe(handle, bumpRevision);
+            const unsubscribeSchema = schema.onValidate(bumpRevision);
 
+            // Validation is expensive, so compute it once per revision rather
+            // than on every read of `tables`, `issues`, or `get`.
+            let cached: { revision: number; validation: InstanceValidation<S> } | undefined;
             function currentValidation(): InstanceValidation<S> {
-                void reactiveRevision.current.revision;
-                return validateInstance(modelValidation);
+                const current = reactiveRevision.current.revision;
+                if (cached === undefined || cached.revision !== current) {
+                    cached = { revision: current, validation: validateInstance(modelValidation) };
+                }
+                return cached.validation;
             }
 
             return {
@@ -240,6 +248,7 @@ export function instanceFromStore<Handle, S extends Shape, Version>(
                 },
                 dispose(): void {
                     unsubscribeInstance();
+                    unsubscribeSchema();
                     modelValidation.dispose();
                 },
             };
