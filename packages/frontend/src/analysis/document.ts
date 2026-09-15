@@ -23,6 +23,9 @@ import { getLiveDiagram, getLiveDiagramFromRepo, type LiveDiagramDoc } from "../
 import type { LiveModelDoc, ModelLibrary } from "../model";
 import { assertExhaustive } from "../util/assert_exhaustive";
 
+import { unwrap } from "solid-js/store";
+import { materializeFromAutomerge } from "../util/materialize_from_automerge";
+
 /** A document defining an analysis. */
 export type AnalysisDocument = Document & { type: "analysis" };
 
@@ -218,10 +221,12 @@ function migrateAnalysis(liveAnalysis: LiveAnalysisDoc) {
             //      so you also have to do migrations for these!
             case "linear-ode":
                 liveAnalysis.liveDoc.changeDoc((doc) => {
-                    Nb.mutateCellContentById(doc.notebook, cell.id, (content) => {
+                    Nb.mutateCellContentById(doc.notebook, cell.id, (cellContent) => {
+                        console.log(cellContent.version);
+                        console.log(materializeFromAutomerge(doc, unwrap(cellContent.content)));
+                        cellContent.version = versionNumberLotkaVolterra();
                         // @ts-expect-error The types of analysis content are too vague: Record<string, unknown>
-                        content.content = latestVersionLinearODEProblemData(content.content);
-                        content.version = versionNumberLinearODE();
+                        // cellContent.content = latestVersionLinearODEProblemData(cellContent.content);
                     });
                 });
                 break;
@@ -229,8 +234,8 @@ function migrateAnalysis(liveAnalysis: LiveAnalysisDoc) {
                 liveAnalysis.liveDoc.changeDoc((doc) => {
                     Nb.mutateCellContentById(doc.notebook, cell.id, (content) => {
                         // @ts-expect-error The types of analysis content are too vague: Record<string, unknown>
-                        content.content = latestVersionLotkaVolterraProblemData(content.content);
                         content.version = versionNumberLotkaVolterra();
+                        content.content = latestVersionLotkaVolterraProblemData(content.content);
                     });
                 });
                 break;
@@ -238,8 +243,8 @@ function migrateAnalysis(liveAnalysis: LiveAnalysisDoc) {
                 liveAnalysis.liveDoc.changeDoc((doc) => {
                     Nb.mutateCellContentById(doc.notebook, cell.id, (content) => {
                         // @ts-expect-error The types of analysis content are too vague: Record<string, unknown>
-                        content.content = latestVersionMassActionProblemData(content.content);
                         content.version = versionNumberMassAction();
+                        content.content = latestVersionMassActionProblemData(content.content);
                     });
                 });
                 break;
@@ -247,8 +252,8 @@ function migrateAnalysis(liveAnalysis: LiveAnalysisDoc) {
                 liveAnalysis.liveDoc.changeDoc((doc) => {
                     Nb.mutateCellContentById(doc.notebook, cell.id, (content) => {
                         // @ts-expect-error The types of analysis content are too vague: Record<string, unknown>
-                        content.content = latestVersionMassActionEquationsData(content.content);
                         content.version = versionNumberMassAction();
+                        content.content = latestVersionMassActionEquationsData(content.content);
                     });
                 });
                 break;
@@ -256,8 +261,8 @@ function migrateAnalysis(liveAnalysis: LiveAnalysisDoc) {
                 liveAnalysis.liveDoc.changeDoc((doc) => {
                     Nb.mutateCellContentById(doc.notebook, cell.id, (content) => {
                         // @ts-expect-error The types of analysis content are too vague: Record<string, unknown>
-                        content.content = latestVersionPolynomialODEProblemData(content.content);
                         content.version = versionNumberPolynomialODE();
+                        content.content = latestVersionPolynomialODEProblemData(content.content);
                     });
                 });
                 break;
