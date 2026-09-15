@@ -37,11 +37,13 @@ export function LLMConversationEditor(props: { conversation: ApiLLMConversation 
             }
             notice={controller.state.notice}
             available={inferenceKey()?.tag === "Ready" && !controller.state.isRunning}
+            canRetry={controller.canRetry()}
             validateAttachments={(files) => {
                 const result = controller.validateAttachments(files);
                 return result.tag === "Err" ? result.content : undefined;
             }}
             onSubmit={submit}
+            onRetry={() => void controller.retryTurn()}
             onResolveFeedback={(id, resolution) =>
                 props.conversation.resolveFeedbackRequest(id, resolution)
             }
