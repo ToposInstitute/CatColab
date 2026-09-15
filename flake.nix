@@ -178,13 +178,14 @@
               esbuild
               lld
               netcat
+              ninja
               nodejs_24
               nix
               openssl
               pkg-config
               pnpm
               postgresql
-              python3
+              (python3.withPackages (ps: [ ps.ninja ]))
               python312Packages.ipykernel
               python312Packages.jupyter-core
               python312Packages.jupyter-server
@@ -286,8 +287,12 @@
             in
             {
               catcolabApi = pkgs.callPackage ./infrastructure/catcolab-api.nix craneArgs;
-              catlog-wasm-browser = pkgs.callPackage ./packages/catlog-wasm/default.nix craneArgs;
-              document-types-wasm = pkgs.callPackage ./packages/document-types/default.nix craneArgs;
+              catlog-wasm-browser = pkgs.callPackage ./infrastructure/ninja-target.nix (
+                craneArgs // { target = "catlog-wasm-browser"; }
+              );
+              document-types-wasm = pkgs.callPackage ./infrastructure/ninja-target.nix (
+                craneArgs // { target = "document-types-wasm"; }
+              );
               frontend = frontendPackage.package;
               frontend-tests = frontendPackage.tests;
             };
