@@ -92,38 +92,36 @@ jobs:
             packages/frontend/dist
           key: frontend-build-${{ steps.cache-key.outputs.git-hash }}-${{ github.event_name == 'release' && 'production' || 'staging' }}
 
-      - name: Setup pnpm
-        if: github.event_name == 'release' || steps.cache-frontend-build.outputs.cache-hit != 'true'
-        uses: pnpm/action-setup@v6
+      - name: Install Nix
+        uses: cachix/install-nix-action@v25
 
-      - name: Setup NodeJS
-        if: github.event_name == 'release' || steps.cache-frontend-build.outputs.cache-hit != 'true'
-        uses: actions/setup-node@v7
+      - name: Configure Cachix
+        uses: cachix/cachix-action@v17
         with:
-          node-version: 24
-          cache: "pnpm"
-
-      - name: Install Rust toolchain from file
-        if: github.event_name == 'release' || steps.cache-frontend-build.outputs.cache-hit != 'true'
-        uses: actions-rust-lang/setup-rust-toolchain@v2
-        with:
-          build-warnings: ""
+          name: catcolab-jmoggr
+          authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
 
       - name: Build for Staging
         if: (github.event_name == 'push' || github.event_name == 'pull_request') && steps.cache-frontend-build.outputs.cache-hit != 'true'
         run: |
-          pnpm install
-          pnpm --filter ./packages/frontend run build:deps
-          # Uses env from packages/frontend/.env.staging
-          pnpm --filter ./packages/frontend run build:staging
+          nix develop .#frontend-build --command bash -c '
+            set -euo pipefail
+            pnpm install
+            pnpm --filter ./packages/frontend run build:deps
+            # Uses env from packages/frontend/.env.staging
+            pnpm --filter ./packages/frontend run build:staging
+          '
 
       - name: Build for Production
         if: github.event_name == 'release'
         run: |
-          pnpm install
-          pnpm --filter ./packages/frontend run build:deps
-          # Uses env from packages/frontend/.env.production
-          pnpm --filter ./packages/frontend run build
+          nix develop .#frontend-build --command bash -c '
+            set -euo pipefail
+            pnpm install
+            pnpm --filter ./packages/frontend run build:deps
+            # Uses env from packages/frontend/.env.production
+            pnpm --filter ./packages/frontend run build
+          '
 
       - name: Report cache status
         run: |
@@ -151,7 +149,7 @@ jobs:
       - name: Build frontend docs
         if: steps.cache-frontend-docs.outputs.cache-hit != 'true'
         run: |
-          pnpm --filter ./packages/frontend run doc
+          nix develop .#frontend-build --command pnpm --filter ./packages/frontend run doc
 
       - name: Report frontend docs cache status
         run: |
@@ -343,29 +341,24 @@ jobs:
           path: packages/gaios/dist
           key: gaios-build-${{ steps.cache-key.outputs.git-hash }}
 
-      - name: Setup pnpm
-        if: steps.cache-gaios-build.outputs.cache-hit != 'true'
-        uses: pnpm/action-setup@v6
+      - name: Install Nix
+        uses: cachix/install-nix-action@v25
 
-      - name: Setup NodeJS
-        if: steps.cache-gaios-build.outputs.cache-hit != 'true'
-        uses: actions/setup-node@v7
+      - name: Configure Cachix
+        uses: cachix/cachix-action@v17
         with:
-          node-version: 24
-          cache: "pnpm"
-
-      - name: Install Rust toolchain from file
-        if: steps.cache-gaios-build.outputs.cache-hit != 'true'
-        uses: actions-rust-lang/setup-rust-toolchain@v2
-        with:
-          build-warnings: ""
+          name: catcolab-jmoggr
+          authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
 
       - name: Build gaios plugin
         if: steps.cache-gaios-build.outputs.cache-hit != 'true'
         run: |
-          pnpm install
-          pnpm --filter ./packages/gaios run build-deps
-          pnpm --filter ./packages/gaios run build
+          nix develop .#frontend-build --command bash -c '
+            set -euo pipefail
+            pnpm install
+            pnpm --filter ./packages/gaios run build-deps
+            pnpm --filter ./packages/gaios run build
+          '
 
       - name: Report cache status
         run: |

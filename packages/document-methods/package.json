@@ -9,7 +9,7 @@
         "./*": "./src/*"
     },
     "scripts": {
-        "build:wasm": "wasm-pack build ../document-types",
+        "build:wasm": "../../build.py document-types-wasm",
         "format": "oxfmt .",
         "lint": "oxlint --fix && oxfmt .",
         "check": "pnpm run build:wasm && tsc && pnpm run lint",
