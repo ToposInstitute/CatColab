@@ -1,12 +1,6 @@
 import { lazy } from "solid-js";
 
-import type {
-    MassActionEquationsData,
-    MorType,
-    ObType,
-    PolynomialODEEquationsData,
-    StochasticMassActionProblemData,
-} from "catlog-wasm";
+import type { MorType, ObType, NullWrapper } from "catlog-wasm";
 import type { DiagramAnalysisMeta, ModelAnalysisMeta } from "../theory";
 import * as GraphLayoutConfig from "../visualization/graph_layout_config";
 import type * as Checkers from "./analyses/checker_types";
@@ -21,6 +15,8 @@ type AnalysisOptions = {
     description?: string;
     help?: string;
 };
+
+const ODESemanticsEquationsDisplay = lazy(() => import("./analyses/ode_semantics_equations"));
 
 export const decapodes = (
     options: AnalysisOptions,
@@ -124,14 +120,42 @@ export function linearODE(
         help,
         component: (props) => <LinearODE simulate={simulate} title={name} {...props} />,
         initialContent: () => ({
-            coefficients: {},
-            initialValues: {},
-            duration: 10,
+            generalData: {
+                initialValues: {},
+                duration: 10,
+            },
+            parameterData: {
+                coefficients: {},
+            },
         }),
     };
 }
 
 const LinearODE = lazy(() => import("./analyses/linear_ode"));
+
+export function linearODEEquations(
+    options: Partial<AnalysisOptions> & {
+        getEquations: Simulators.LinearODEEquations;
+    },
+): ModelAnalysisMeta<NullWrapper> {
+    const {
+        id = "linear-ode-equations",
+        name = "Linear ODE equations",
+        description = "Display the symbolic linear ODE dynamics equations",
+        help = "linear-ode-equations",
+        ...otherOptions
+    } = options;
+    return {
+        id,
+        name,
+        description,
+        help,
+        component: (props) => (
+            <ODESemanticsEquationsDisplay title={name} {...otherOptions} {...props} />
+        ),
+        initialContent: () => ({ content: null }),
+    };
+}
 
 export function lotkaVolterra(
     options: Partial<AnalysisOptions> & {
@@ -140,8 +164,8 @@ export function lotkaVolterra(
 ): ModelAnalysisMeta<Simulators.LotkaVolterraProblemData> {
     const {
         id = "lotka-volterra",
-        name = "Lotka-Volterra dynamics",
-        description = "Simulate the system using a Lotka-Volterra ODE",
+        name = "Lotka–Volterra dynamics",
+        description = "Simulate the system using a Lotka–Volterra ODE",
         help = "lotka-volterra",
         simulate,
     } = options;
@@ -152,15 +176,43 @@ export function lotkaVolterra(
         help,
         component: (props) => <LotkaVolterra simulate={simulate} title={name} {...props} />,
         initialContent: () => ({
-            interactionCoefficients: {},
-            growthRates: {},
-            initialValues: {},
-            duration: 10,
+            generalData: {
+                initialValues: {},
+                duration: 10,
+            },
+            parameterData: {
+                interactionCoefficients: {},
+                growthRates: {},
+            },
         }),
     };
 }
 
 const LotkaVolterra = lazy(() => import("./analyses/lotka_volterra"));
+
+export function lotkaVolterraEquations(
+    options: Partial<AnalysisOptions> & {
+        getEquations: Simulators.LotkaVolterraEquations;
+    },
+): ModelAnalysisMeta<NullWrapper> {
+    const {
+        id = "lotka-volterra-equations",
+        name = "Lotka–Volterra equations",
+        description = "Display the symbolic Lotka–Volterra dynamics equations",
+        help = "lotka-volterra-equations",
+        ...otherOptions
+    } = options;
+    return {
+        id,
+        name,
+        description,
+        help,
+        component: (props) => (
+            <ODESemanticsEquationsDisplay title={name} {...otherOptions} {...props} />
+        ),
+        initialContent: () => ({ content: null }),
+    };
+}
 
 export function massAction(
     options: Partial<AnalysisOptions> & {
@@ -184,14 +236,36 @@ export function massAction(
         help,
         component: (props) => <MassAction title={name} {...otherOptions} {...props} />,
         initialContent: () => ({
-            massConservationType: { type: "Balanced" },
-            rates: {},
-            transitionProductionRates: {},
-            transitionConsumptionRates: {},
-            placeProductionRates: {},
-            placeConsumptionRates: {},
-            initialValues: {},
-            duration: 10,
+            variant: "Balanced",
+            balanced: {
+                generalData: {
+                    initialValues: {},
+                    duration: 10,
+                },
+                parameterData: {
+                    rates: {},
+                },
+            },
+            unbalanced: {
+                generalData: {
+                    initialValues: {},
+                    duration: 10,
+                },
+                parameterData: {
+                    productionRates: {},
+                    consumptionRates: {},
+                },
+            },
+            perPlace: {
+                generalData: {
+                    initialValues: {},
+                    duration: 10,
+                },
+                parameterData: {
+                    productionRates: {},
+                    consumptionRates: {},
+                },
+            },
         }),
     };
 }
@@ -203,7 +277,7 @@ export function massActionEquations(
         ratesHaveGranularity: boolean;
         getEquations: Simulators.MassActionEquations;
     },
-): ModelAnalysisMeta<MassActionEquationsData> {
+): ModelAnalysisMeta<Simulators.MassActionProblemData> {
     const {
         id = "mass-action-equations",
         name = "Mass-action dynamics equations",
@@ -220,7 +294,36 @@ export function massActionEquations(
             <MassActionEquationsDisplay title={name} {...otherOptions} {...props} />
         ),
         initialContent: () => ({
-            massConservationType: { type: "Balanced" },
+            variant: "Balanced",
+            balanced: {
+                generalData: {
+                    initialValues: {},
+                    duration: 10,
+                },
+                parameterData: {
+                    rates: {},
+                },
+            },
+            unbalanced: {
+                generalData: {
+                    initialValues: {},
+                    duration: 10,
+                },
+                parameterData: {
+                    productionRates: {},
+                    consumptionRates: {},
+                },
+            },
+            perPlace: {
+                generalData: {
+                    initialValues: {},
+                    duration: 10,
+                },
+                parameterData: {
+                    productionRates: {},
+                    consumptionRates: {},
+                },
+            },
         }),
     };
 }
@@ -232,7 +335,7 @@ export function stochasticMassAction(
         stateType?: ObType;
         transitionType?: MorType;
     },
-): ModelAnalysisMeta<StochasticMassActionProblemData> {
+): ModelAnalysisMeta<Simulators.StochasticMassActionProblemData> {
     const {
         id = "stochastic-mass-action",
         name = "Stochastic mass-action dynamics",
@@ -372,7 +475,7 @@ export function polynomialODEEquations(
     options: Partial<AnalysisOptions> & {
         getEquations: Simulators.PolynomialODEEquations;
     },
-): ModelAnalysisMeta<PolynomialODEEquationsData> {
+): ModelAnalysisMeta<NullWrapper> {
     const {
         id = "polynomial-ode-equations",
         name = "Polynomial ODE equations",
@@ -386,14 +489,11 @@ export function polynomialODEEquations(
         description,
         help,
         component: (props) => (
-            <PolynomialODEEquationsDisplay title={name} {...otherOptions} {...props} />
+            <ODESemanticsEquationsDisplay title={name} {...otherOptions} {...props} />
         ),
-        initialContent: () => ({
-            trivialData: true,
-        }),
+        initialContent: () => ({ content: null }),
     };
 }
-const PolynomialODEEquationsDisplay = lazy(() => import("./analyses/polynomial_ode_equations"));
 
 export function polynomialODESimulation(
     options: Partial<AnalysisOptions> & {
@@ -417,9 +517,13 @@ export function polynomialODESimulation(
         help,
         component: (props) => <PolynomialODESimulation title={name} {...otherOptions} {...props} />,
         initialContent: () => ({
-            coefficients: {},
-            initialValues: {},
-            duration: 10,
+            generalData: {
+                initialValues: {},
+                duration: 10,
+            },
+            parameterData: {
+                coefficients: {},
+            },
         }),
     };
 }

@@ -36,11 +36,11 @@ Each stock is given an **initial value**.
 
 Since this is mass-action dynamics, we make the assumption that flows depend only on their input stocks; since our stock-flow diagrams are _primitive_, flows are determined by constants (namely their rate coefficients).
 
-The rest of the analysis depends on whether **mass conservation** is checked as true or false.
+The rest of the analysis depends on the setting of **rate granularity**.
 
-- If **mass conservation** is checked as _true_, a flow $S\overset{f}{\Rightarrow}T$ between stocks $S$ and $T$ gives the equations $\dot{S}=-r_fS$ and $\dot{T}=r_fS$, i.e. the flow $f$ goes out of $S$ and into $T$. Here, $r_f$ is the **rate coefficient** of the flow.
+- If **rate granularity** is set to _mass conserving_, then a flow $S\overset{f}{\Rightarrow}T$ between stocks $S$ and $T$ gives the equations $\dot{S}=-r_fS$ and $\dot{T}=r_fS$, i.e. the flow $f$ goes out of $S$ and into $T$. Here, $r_f$ is the **rate coefficient** of the flow.
 
-- If **mass conservation** is checked as _false_, then a flow has distinct **consumption** and **production**, giving the equations $\dot{S}=-\kappa_f$ and $\dot{T}=\rho_f$. Here, $\kappa_f$ and $\rho_f$ are the **consumption** and **production** rate coefficients of the flow.
+- If **rate granularity** is set to _unbalanced_, then a flow has distinct **consumption** and **production**, giving the equations $\dot{S}=-\kappa_f$ and $\dot{T}=\rho_f$. Here, $\kappa_f$ and $\rho_f$ are the **consumption** and **production** rate coefficients of the flow.
 
 In both cases, flows add linearly, i.e. in an arbitrary stock-flow diagram (without links), the equation governing a stock $S$ is $\dot{S}=\sum_{S_\text{in}}f_i - \sum_{S_\text{out}}f_j$, where $S_\text{in}$ (resp. $S_\text{out}$) is the set of all flows whose target (resp. source) is $S$.
 
