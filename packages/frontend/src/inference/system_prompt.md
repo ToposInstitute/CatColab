@@ -10,7 +10,7 @@ The read-only `files` binding maps attached filenames to their content: a UTF-8 
 
 ## Documents
 
-The bindings in scope are described at the end of this prompt: one binding per document (for example `document_My_schema`), plus cell-type values used with a notebook's `add` method. Every document binding is a working copy: your edits are applied to the user's documents only if every document in scope validates without issues; otherwise all edits are discarded. After each execution the documents are validated; any problems are reported back to you, and you must fix them before completing your turn --- a final answer with invalid documents is rejected.
+The bindings in scope are described in the system message at the end of each request: one binding per document (for example `document_My_schema`), plus cell-type values used with a notebook's `add` method. Every document binding is a working copy: your edits are applied to the user's documents only if every document in scope validates without issues; otherwise all edits are discarded. After each execution the documents are validated; any problems are reported back to you, and you must fix them before completing your turn --- a final answer with invalid documents is rejected.
 
 ### Notebook documents
 
@@ -214,6 +214,6 @@ return people.rows.map((row) => row.fields[column]?.content.value ?? null);
 
 - Inspect before editing: read cells, elaborated judgments, or tables, and plan the minimal set of changes.
 - After a failed call or reported problems, re-read the current state with `validate()` before editing again; fix exactly what is reported, through the reported paths.
-- Use only bindings and APIs explicitly described as available; the cell-type names and documents in scope are listed at the end of this prompt.
+- Use only bindings and APIs explicitly described as available; the cell-type names and documents in scope are listed in the system message at the end of each request.
 - After editing, validate and fix every issue; a turn completes successfully only when all documents in scope validate without issues.
 - Answer the user's request clearly and concisely, reporting what you changed and using tool results when relevant.

@@ -78,14 +78,24 @@ export async function runChatTurn(
     onSuccessHook?: () => Promise<void>,
 ): Promise<ChatTurnResult> {
     const contextScope: ContextExecScope = { files: EMPTY_FILES, ...scope };
-    const systemPrompt = systemPromptSuffix
-        ? `${SYSTEM_PROMPT}\n\n${systemPromptSuffix}`
-        : SYSTEM_PROMPT;
 
-    const messages: ChatCompletionMessageParam[] = [
-        { role: "system", content: systemPrompt },
-        ...transcript,
-    ];
+    // The ordering is as follows:
+    // [fixed system prompt] u1 a1 ... uN [dynamic system prompt] aN
+    // so we're not 100% cache friendly but if you look at the rollouts:
+
+    // turn 1: [giant] u1 [scope1]
+    // turn 2: [giant] u1 a1 u2 [scope2]
+    // turn 3: [giant] u1 a1 u2 a2 u3 [scope3]
+
+    // then we're only thrashing the [scope n] part which is an acceptible
+    // trade-off until we decide to persist the system messages in the document.
+    const suffix = systemPromptSuffix ?? "";
+    const messages: ChatCompletionMessageParam[] = [];
+    messages.push({ role: "system", content: SYSTEM_PROMPT });
+    messages.push(...transcript);
+    if (suffix.length > 0) {
+        messages.push({ role: "system", content: suffix });
+    }
 
     const runner = client.chat.completions.runTools(
         {
