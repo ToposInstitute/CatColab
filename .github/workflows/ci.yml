@@ -92,36 +92,34 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v7
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v6
+      - name: Install Nix
+        uses: cachix/install-nix-action@v25
 
-      - name: Setup NodeJS
-        uses: actions/setup-node@v7
+      - name: Configure Cachix
+        uses: cachix/cachix-action@v17
         with:
-          node-version: 24
-          cache: "pnpm"
+          name: catcolab-jmoggr
+          authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
 
       - name: Install NodeJS dependencies
         run: |
-          pnpm install
-
-      - name: Install Rust toolchain from file
-        uses: actions-rust-lang/setup-rust-toolchain@v2
-        with:
-          build-warnings: ""
+          nix develop .#frontend-build --command pnpm install
 
       - name: Format/linting/import sorting
         run: |
-          pnpm --filter "./packages/*" run build:deps
-          pnpm --filter "./packages/*" run ci
+          nix develop .#frontend-build --command bash -c '
+            set -euo pipefail
+            pnpm --filter "./packages/*" run build:deps
+            pnpm --filter "./packages/*" run ci
+          '
 
       - name: Typescript documents package tests
         run: |
-          pnpm --filter catcolab-documents test
+          nix develop .#frontend-build --command pnpm --filter catcolab-documents test
 
       - name: Typescript logic package tests
         run: |
-          pnpm --filter catcolab-logics test
+          nix develop .#frontend-build --command pnpm --filter catcolab-logics test
 
   build_nixos_system:
     name: build NixOS system

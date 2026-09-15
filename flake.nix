@@ -150,6 +150,28 @@
           PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD = "1";
         };
 
+      frontendBuildShellForSystem =
+        system:
+        let
+          pkgs = nixpkgsFor system;
+        in
+        pkgs.mkShell {
+          name = "catcolab-frontend-build";
+
+          packages = [
+            pkgs.binaryen
+            pkgs.lld
+            pkgs.nodejs_24
+            pkgs.openssl
+            pkgs.pkg-config
+            pkgs.pnpm
+            (pkgs.python3.withPackages (ps: [ ps.ninja ]))
+            (rustToolchainFor system)
+            pkgs.wasm-bindgen-cli
+            pkgs.wasm-pack
+          ];
+        };
+
       # Generate devShells for each system
       devShellForSystem =
         system:
@@ -254,6 +276,7 @@
           name = system;
           value = {
             default = devShellForSystem system;
+            frontend-build = frontendBuildShellForSystem system;
             ui-components-tests = uiComponentsTestsShellForSystem system;
           };
         }) devShellSystems
