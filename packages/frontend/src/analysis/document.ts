@@ -218,51 +218,57 @@ function migrateAnalysis(liveAnalysis: LiveAnalysisDoc) {
             //
             //          content: null
             //
-            //      so you also have to do migrations for these!
+            //      so you *also* have to do migrations for these!
             case "linear-ode":
                 liveAnalysis.liveDoc.changeDoc((doc) => {
                     Nb.mutateCellContentById(doc.notebook, cell.id, (cellContent) => {
                         console.log(cellContent.version);
                         console.log(materializeFromAutomerge(doc, unwrap(cellContent.content)));
-                        cellContent.version = versionNumberLotkaVolterra();
-                        // @ts-expect-error The types of analysis content are too vague: Record<string, unknown>
-                        // cellContent.content = latestVersionLinearODEProblemData(cellContent.content);
+                        // // @ts-expect-error The types of analysis content are too vague: Record<string, unknown>
+                        cellContent.version = versionNumberLinearODE();
+                        cellContent.content = latestVersionLinearODEProblemData(
+                            cellContent.content,
+                        );
                     });
                 });
                 break;
             case "lotka-volterra":
                 liveAnalysis.liveDoc.changeDoc((doc) => {
-                    Nb.mutateCellContentById(doc.notebook, cell.id, (content) => {
-                        // @ts-expect-error The types of analysis content are too vague: Record<string, unknown>
-                        content.version = versionNumberLotkaVolterra();
-                        content.content = latestVersionLotkaVolterraProblemData(content.content);
+                    Nb.mutateCellContentById(doc.notebook, cell.id, (cellContent) => {
+                        cellContent.version = versionNumberLotkaVolterra();
+                        cellContent.content = latestVersionLotkaVolterraProblemData(
+                            cellContent.content,
+                        );
                     });
                 });
                 break;
             case "mass-action":
                 liveAnalysis.liveDoc.changeDoc((doc) => {
-                    Nb.mutateCellContentById(doc.notebook, cell.id, (content) => {
-                        // @ts-expect-error The types of analysis content are too vague: Record<string, unknown>
-                        content.version = versionNumberMassAction();
-                        content.content = latestVersionMassActionProblemData(content.content);
+                    Nb.mutateCellContentById(doc.notebook, cell.id, (cellContent) => {
+                        cellContent.version = versionNumberMassAction();
+                        cellContent.content = latestVersionMassActionProblemData(
+                            cellContent.content,
+                        );
                     });
                 });
                 break;
             case "mass-action-equations":
                 liveAnalysis.liveDoc.changeDoc((doc) => {
-                    Nb.mutateCellContentById(doc.notebook, cell.id, (content) => {
-                        // @ts-expect-error The types of analysis content are too vague: Record<string, unknown>
-                        content.version = versionNumberMassAction();
-                        content.content = latestVersionMassActionEquationsData(content.content);
+                    Nb.mutateCellContentById(doc.notebook, cell.id, (cellContent) => {
+                        cellContent.version = versionNumberMassAction();
+                        cellContent.content = latestVersionMassActionEquationsData(
+                            cellContent.content,
+                        );
                     });
                 });
                 break;
             case "polynomial-ode":
                 liveAnalysis.liveDoc.changeDoc((doc) => {
-                    Nb.mutateCellContentById(doc.notebook, cell.id, (content) => {
-                        // @ts-expect-error The types of analysis content are too vague: Record<string, unknown>
-                        content.version = versionNumberPolynomialODE();
-                        content.content = latestVersionPolynomialODEProblemData(content.content);
+                    Nb.mutateCellContentById(doc.notebook, cell.id, (cellContent) => {
+                        cellContent.version = versionNumberPolynomialODE();
+                        cellContent.content = latestVersionPolynomialODEProblemData(
+                            cellContent.content,
+                        );
                     });
                 });
                 break;
