@@ -1,0 +1,118 @@
+{
+    "name": "Two-level predator–prey",
+    "notebook": {
+        "cellContents": {
+            "019b98c8-1dab-7397-af84-9d50806a7aae": {
+                "content": {
+                    "id": "019b98c8-1dab-7397-af84-99a66662d113",
+                    "name": "Grass",
+                    "obType": {
+                        "content": "Object",
+                        "tag": "Basic"
+                    },
+                    "tag": "object"
+                },
+                "id": "019b98c8-1dab-7397-af84-9d50806a7aae",
+                "tag": "formal"
+            },
+            "019b98c8-2de3-7310-bd58-7b2d119b8026": {
+                "content": {
+                    "id": "019b98c8-2de3-7310-bd58-75dec05eb7c0",
+                    "name": "Rabbit",
+                    "obType": {
+                        "content": "Object",
+                        "tag": "Basic"
+                    },
+                    "tag": "object"
+                },
+                "id": "019b98c8-2de3-7310-bd58-7b2d119b8026",
+                "tag": "formal"
+            },
+            "019b98c8-3b0f-74a9-8e63-3ccac950dfb1": {
+                "content": {
+                    "id": "019b98c8-3b0f-74a9-8e63-3bf24aa44f47",
+                    "name": "Fox",
+                    "obType": {
+                        "content": "Object",
+                        "tag": "Basic"
+                    },
+                    "tag": "object"
+                },
+                "id": "019b98c8-3b0f-74a9-8e63-3ccac950dfb1",
+                "tag": "formal"
+            },
+            "019b98c8-4591-705d-b6c7-c7abb66f1e7a": {
+                "content": {
+                    "id": "019b98c8-4591-705d-b6c7-c1106c7b7042",
+                    "model": {
+                        "_id": "019b98c4-486f-7ee0-ad50-5a9e12066ef3",
+                        "_server": "backend-next.catcolab.org",
+                        "_version": null,
+                        "type": "instantiation"
+                    },
+                    "name": "RG",
+                    "specializations": [
+                        {
+                            "id": "019b98c4-a42b-76fc-ab11-7b9789154340",
+                            "ob": {
+                                "content": "019b98c8-2de3-7310-bd58-75dec05eb7c0",
+                                "tag": "Basic"
+                            }
+                        },
+                        {
+                            "id": "019b98c4-b64e-77ce-a55f-cef8453ff0e4",
+                            "ob": {
+                                "content": "019b98c8-1dab-7397-af84-99a66662d113",
+                                "tag": "Basic"
+                            }
+                        }
+                    ],
+                    "tag": "instantiation"
+                },
+                "id": "019b98c8-4591-705d-b6c7-c7abb66f1e7a",
+                "tag": "formal"
+            },
+            "019b98c9-d129-75be-88de-010b622fb394": {
+                "content": {
+                    "id": "019b98c9-d129-75be-88dd-fc3af095542a",
+                    "model": {
+                        "_id": "019b98c4-486f-7ee0-ad50-5a9e12066ef3",
+                        "_server": "backend-next.catcolab.org",
+                        "_version": null,
+                        "type": "instantiation"
+                    },
+                    "name": "FR",
+                    "specializations": [
+                        {
+                            "id": "019b98c4-a42b-76fc-ab11-7b9789154340",
+                            "ob": {
+                                "content": "019b98c8-3b0f-74a9-8e63-3bf24aa44f47",
+                                "tag": "Basic"
+                            }
+                        },
+                        {
+                            "id": "019b98c4-b64e-77ce-a55f-cef8453ff0e4",
+                            "ob": {
+                                "content": "019b98c8-2de3-7310-bd58-75dec05eb7c0",
+                                "tag": "Basic"
+                            }
+                        }
+                    ],
+                    "tag": "instantiation"
+                },
+                "id": "019b98c9-d129-75be-88de-010b622fb394",
+                "tag": "formal"
+            }
+        },
+        "cellOrder": [
+            "019b98c8-1dab-7397-af84-9d50806a7aae",
+            "019b98c8-2de3-7310-bd58-7b2d119b8026",
+            "019b98c8-3b0f-74a9-8e63-3ccac950dfb1",
+            "019b98c8-4591-705d-b6c7-c7abb66f1e7a",
+            "019b98c9-d129-75be-88de-010b622fb394"
+        ]
+    },
+    "theory": "causal-loop",
+    "type": "model",
+    "version": "2"
+}

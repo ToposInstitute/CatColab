@@ -1,11 +1,10 @@
-use crate::v0::AnalysisType;
-use crate::v1;
+use crate::{
+    v0::AnalysisType,
+    v2::{self, LLMConversationDocumentContent, Link, instance::Table},
+};
 use std::{collections::HashMap, str::FromStr};
 
 use super::analysis::Analysis;
-use super::api::Link;
-use super::instance::Table;
-use super::llm_conversation::LLMConversationDocumentContent;
 use super::notebook::Notebook;
 
 use serde::{Deserialize, Serialize};
@@ -118,30 +117,51 @@ impl FromStr for DocumentType {
 }
 
 impl Document {
-    pub fn migrate_from_v1(old: v1::Document) -> Self {
+    pub fn migrate_from_v2(old: v2::Document) -> Self {
         match old {
-            v1::Document::Model(old) => Document::Model(ModelDocumentContent {
+            v2::Document::Model(old) => Document::Model(ModelDocumentContent {
                 name: old.name,
                 theory: old.theory,
                 editor_variant: old.editor_variant,
-                notebook: Notebook::migrate_from_v1(old.notebook),
-                version: "2".to_string(),
+                notebook: Notebook::migrate_from_v2(old.notebook),
+                version: "3".to_string(),
             }),
 
-            v1::Document::Diagram(old) => Document::Diagram(DiagramDocumentContent {
+            v2::Document::Diagram(old) => Document::Diagram(DiagramDocumentContent {
                 name: old.name,
                 diagram_in: old.diagram_in,
-                notebook: Notebook::migrate_from_v1(old.notebook),
-                version: "2".to_string(),
+                notebook: Notebook::migrate_from_v2(old.notebook),
+                version: "3".to_string(),
             }),
 
-            v1::Document::Analysis(old) => Document::Analysis(AnalysisDocumentContent {
+            v2::Document::Analysis(old) => Document::Analysis(AnalysisDocumentContent {
                 name: old.name,
                 analysis_type: old.analysis_type,
                 analysis_of: old.analysis_of,
-                notebook: Notebook::migrate_from_v1(old.notebook),
-                version: "2".to_string(),
+                // Since we are migrating from `Notebook<v0::Analysis>` to `Notebook<v2::Analysis>`,
+                // we cannot simply use `Notebook::migrate_from_v1` as the value of the generic `T`
+                // changes.
+                notebook: Notebook::migrate_from_v2_with_generic(
+                    old.notebook,
+                    Analysis::migrate_from_v2,
+                ),
+                version: "3".to_string(),
             }),
+            v2::Document::Instance(old) => Document::Instance(InstanceDocumentContent {
+                name: old.name,
+                instance_of: old.instance_of,
+                tables: old.tables,
+                version: "3".to_string(),
+            }),
+            v2::Document::LLMConversation(old) => {
+                Document::LLMConversation(LLMConversationDocumentContent {
+                    name: old.name,
+                    conversation_of: old.conversation_of,
+                    llm_model: old.llm_model,
+                    interactions: old.interactions,
+                    version: "3".to_string(),
+                })
+            }
         }
     }
 }

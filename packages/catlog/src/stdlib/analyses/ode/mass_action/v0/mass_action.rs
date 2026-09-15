@@ -1,4 +1,5 @@
-//! Version 0 of `mass_action`, before the addition of `ode_semantics`.
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
 
 use std::collections::HashMap;
 
@@ -8,6 +9,7 @@ use crate::zero::QualifiedName;
 /// - balanced
 /// - unbalanced (rates per transition)
 /// - unbalanced (rates per place)
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Clone)]
 pub enum MassConservationType {
     /// Mass is conserved.
@@ -18,6 +20,7 @@ pub enum MassConservationType {
 
 /// When mass is not necessarily conserved, consumption/production rate parameters
 /// can be set either *per transition* or *per place*.
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Clone)]
 pub enum RateGranularity {
     /// Each flow (transition) gets assigned a single consumption and single production rate.
@@ -77,6 +80,7 @@ pub enum Direction {
 }
 
 /// Data defining mass-action ODE equations for a model.
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Clone)]
 pub struct MassActionEquationsData {
     /// Whether or not mass is conserved.
@@ -84,6 +88,7 @@ pub struct MassActionEquationsData {
 }
 
 /// Data defining a mass-action problem for a model.
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct MassActionProblemData {
     /// Data used for generating the equations (namely, whether or not mass is conserved).
     pub(crate) equations_data: MassActionEquationsData,
