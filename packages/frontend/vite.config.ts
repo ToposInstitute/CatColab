@@ -26,12 +26,11 @@ export default defineConfig({
         target: "es2022",
     },
     optimizeDeps: {
-        // Fixes error in vite dev server about `debug` module, a transitive
-        // dependency of `solid-markdown`.
+        // solid-markdown's CommonJS dependencies need explicit prebundling.
         include: [
-            "solid-markdown > unified",
-            "solid-markdown > remark-parse",
-            "solid-markdown > remark-rehype",
+            "catcolab-ui-components > solid-markdown > unified",
+            "catcolab-ui-components > solid-markdown > remark-parse",
+            "catcolab-ui-components > solid-markdown > remark-rehype",
         ],
     },
     // Vitest runs with node resolve conditions, which select solid-js's
