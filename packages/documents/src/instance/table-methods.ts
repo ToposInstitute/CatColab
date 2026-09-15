@@ -345,28 +345,38 @@ function requireRawRow(
     return row;
 }
 
+/** Snapshot a row from the current document.
+
+Tables and rows are plain snapshots rather than live views: they are rebuilt on
+every validation, and reading the store lazily would make each access costly. */
 function makeRow<Handle, Version>(
     store: DocumentStore<Handle, Version>,
     handle: Handle,
-    schemaTable: InstanceTable,
+    schemaTable: { id: string; headers: ReadonlyArray<TableHeader> },
     rowId: string,
 ): TableRow {
+    const document = store.getDocumentView(handle) as Readonly<InstanceDocument>;
+    const storedTable = document.tables[schemaTable.id];
+    const storedRow = requireRawRow(document, schemaTable.id, rowId);
+    return snapshotRow(schemaTable, rowId, orderedRowIds(storedTable).indexOf(rowId), storedRow);
+}
+
+function snapshotRow(
+    schemaTable: { id: string; headers: ReadonlyArray<TableHeader> },
+    rowId: string,
+    index: number,
+    storedRow: Readonly<DocumentTypes.TableRow>,
+): TableRow {
+    const storedFields = storedRow.fields;
     return {
         id: rowId,
-        get index() {
-            const document = store.getDocumentView(handle) as Readonly<InstanceDocument>;
-            return orderedRowIds(document.tables[schemaTable.id]).indexOf(rowId);
-        },
-        get fields() {
-            const document = store.getDocumentView(handle) as Readonly<InstanceDocument>;
-            const storedRow = requireRawRow(document, schemaTable.id, rowId);
-            return schemaTable.headers.map((header) =>
-                fieldValueFromStored(
-                    [schemaTable.id, "rows", rowId, "fields", header.id],
-                    storedRow.fields[header.id] ?? "Null",
-                ),
-            );
-        },
+        index,
+        fields: schemaTable.headers.map((header) =>
+            fieldValueFromStored(
+                [schemaTable.id, "rows", rowId, "fields", header.id],
+                storedFields[header.id] ?? "Null",
+            ),
+        ),
     };
 }
 
@@ -377,18 +387,13 @@ function makeTable<Handle, Version>(
     label: string | null,
     headers: ReadonlyArray<TableHeader>,
 ): InstanceTable {
-    const table: InstanceTable = {
-        id,
-        label,
-        headers,
-        get rows() {
-            const document = store.getDocumentView(handle) as Readonly<InstanceDocument>;
-            return orderedRowIds(document.tables[id]).map((rowId) =>
-                makeRow(store, handle, table, rowId),
-            );
-        },
-    };
-    return table;
+    const document = store.getDocumentView(handle) as Readonly<InstanceDocument>;
+    const storedTable = document.tables[id];
+    const schemaTable = { id, headers };
+    const rows = orderedRowIds(storedTable).map((rowId, index) =>
+        snapshotRow(schemaTable, rowId, index, storedTable!.rows[rowId]!),
+    );
+    return { id, label, headers, rows };
 }
 
 /** Read the tables using an elaborated schema model. */

@@ -1,6 +1,6 @@
 import type { InstanceDocument } from "catcolab-document-methods";
 import type { Document } from "catcolab-document-types";
-import { createReactiveView, type DocumentStore } from "../document-store";
+import { createReactiveView, type DocumentStore, untracked } from "../document-store";
 import type { ModelDocument } from "../model/document";
 import type { ModelValidation, ModelValidationView } from "../model/elaborated-model";
 import type { Notebook } from "../model/notebook";
@@ -218,13 +218,24 @@ export function instanceFromStore<Handle, S extends Shape, Version>(
             const modelValidation = schema.createValidationView();
             let revision = 0;
             const reactiveRevision = createReactiveView(store, { revision });
-            const unsubscribeInstance = store.subscribe(handle, (): void => {
+            const bumpRevision = (): void => {
                 reactiveRevision.replace({ revision: ++revision });
-            });
+            };
+            const unsubscribeInstance = store.subscribe(handle, bumpRevision);
+            const unsubscribeSchema = schema.onValidate(bumpRevision);
 
+            // Validation is expensive, so compute it once per revision rather
+            // than on every read of `tables`, `issues`, or `get`.
+            let cached: { revision: number; validation: InstanceValidation<S> } | undefined;
             function currentValidation(): InstanceValidation<S> {
-                void reactiveRevision.current.revision;
-                return validateInstance(modelValidation);
+                const current = reactiveRevision.current.revision;
+                if (cached === undefined || cached.revision !== current) {
+                    // Changes are tracked by revision, so the document reads
+                    // need not be tracked individually.
+                    const validation = untracked(store, () => validateInstance(modelValidation));
+                    cached = { revision: current, validation };
+                }
+                return cached.validation;
             }
 
             return {
@@ -240,6 +251,7 @@ export function instanceFromStore<Handle, S extends Shape, Version>(
                 },
                 dispose(): void {
                     unsubscribeInstance();
+                    unsubscribeSchema();
                     modelValidation.dispose();
                 },
             };

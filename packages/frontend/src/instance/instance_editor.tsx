@@ -7,6 +7,12 @@ import { useTableList } from "./table_list";
 
 import styles from "./instance_editor.module.css";
 
+const NO_ISSUES: TableIssue[] = [];
+
+function shallowEqualArrays<T>(a: ReadonlyArray<T>, b: ReadonlyArray<T>): boolean {
+    return a.length === b.length && a.every((item, i) => item === b[i]);
+}
+
 /** Editor for the data instance of a model. */
 export function InstanceEditor(props: {
     instance: ApiInstance;
@@ -40,8 +46,30 @@ export function InstanceEditor(props: {
         tables().filter((table) => tableList.isVisible(props.refId, table.id)),
     );
 
+    // Issues grouped by table. Issue objects keep their identity across
+    // validations, so a table's list is reused when its issues are unchanged
+    // and its editor is not notified.
+    const issuesByTable = createMemo((prev: ReadonlyMap<string, TableIssue[]>) => {
+        const next = new Map<string, TableIssue[]>();
+        for (const issue of issues()) {
+            if (issue.issueType === "MissingValue") {
+                continue;
+            }
+            const list = next.get(issue.path[0]) ?? [];
+            list.push(issue);
+            next.set(issue.path[0], list);
+        }
+        for (const [tableId, list] of next) {
+            const previous = prev.get(tableId);
+            if (previous && shallowEqualArrays(previous, list)) {
+                next.set(tableId, previous);
+            }
+        }
+        return next;
+    }, new Map<string, TableIssue[]>());
+
     const issuesForTable = (tableId: string): TableIssue[] =>
-        issues().filter((issue) => issue.path[0] === tableId && issue.issueType !== "MissingValue");
+        issuesByTable().get(tableId) ?? NO_ISSUES;
 
     // oxlint-disable-next-line solid/reactivity -- Focus handles are stable for a mounted editor.
     const focus = useChildFocus<string>(props.focus);
@@ -77,7 +105,7 @@ export function InstanceEditor(props: {
                                         focus={focus.childFocus(table().id)}
                                         onHide={() => tableList.hide(props.refId, table().id)}
                                         onSetField={(row, header, value) =>
-                                            void props.instance
+                                            props.instance
                                                 .set(row, header, value)
                                                 .then(logError("set field"))
                                         }
