@@ -131,7 +131,7 @@ export function LLMConversationEditor(props: LLMConversationEditorProps) {
             <div class={styles.composer}>
                 <div class={styles.status} aria-live="polite">
                     <Show when={props.busy}>
-                        <Spinner class="small" aria-hidden="true" />
+                        <Spinner size="small" aria-hidden="true" />
                     </Show>
                     {props.status}
                     <Show when={props.notice}>

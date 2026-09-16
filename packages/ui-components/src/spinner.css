@@ -9,7 +9,7 @@
     will-change: transform;
 }
 
-.spinner.small {
+.spinner-small {
     display: inline-block;
     width: 12px;
     height: 12px;

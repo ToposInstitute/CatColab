@@ -20,7 +20,7 @@ export const Summary: Story = {
 export const Inline: Story = {
     render: () => (
         <p style={{ "font-size": "smaller" }}>
-            <Spinner class="small" aria-hidden="true" />
+            <Spinner size="small" aria-hidden="true" />
             Running...
         </p>
     ),
