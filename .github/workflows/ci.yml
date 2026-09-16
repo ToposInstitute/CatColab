@@ -105,13 +105,12 @@ jobs:
         run: |
           nix develop .#frontend-build --command pnpm install
 
+      - name: Prepare frontend dependencies
+        uses: ./.github/actions/prepare-frontend-deps
+
       - name: Format/linting/import sorting
         run: |
-          nix develop .#frontend-build --command bash -c '
-            set -euo pipefail
-            pnpm --filter "./packages/*" run build:deps
-            pnpm --filter "./packages/*" run ci
-          '
+          nix develop .#frontend-build --command pnpm --filter "./packages/*" run ci
 
       - name: Typescript documents package tests
         run: |

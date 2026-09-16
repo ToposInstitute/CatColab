@@ -78,7 +78,7 @@ jobs:
         id: cache-key
         run: |
           # Get git hash of the most recent commit affecting frontend or any of its dependencies
-          hash=$(git log -1 --format="%H" -- packages/frontend packages/backend/pkg packages/catlog packages/catlog-wasm packages/document-types packages/document-methods packages/ui-components Cargo.toml Cargo.lock)
+          hash=$(git log -1 --format="%H" -- .github/actions/prepare-frontend-deps .npmrc patches pnpm-lock.yaml pnpm-workspace.yaml build.py build-targets.json flake.nix flake.lock infrastructure/catcolab-api.nix infrastructure/ninja-target.nix packages/backend packages/catlog packages/catlog-wasm packages/document-methods packages/document-types packages/documents packages/frontend packages/logics packages/migrator packages/ui-components tools/oxlint-plugin-catcolab tools/vite-plugin-monorepo-dedupe Cargo.toml Cargo.lock rust-toolchain.toml)
           echo "git-hash=${hash}" >> $GITHUB_OUTPUT
           echo "Frontend git hash: ${git_hash}"
 
@@ -93,35 +93,39 @@ jobs:
           key: frontend-build-${{ steps.cache-key.outputs.git-hash }}-${{ github.event_name == 'release' && 'production' || 'staging' }}
 
       - name: Install Nix
+        if: github.event_name == 'release' || steps.cache-frontend-build.outputs.cache-hit != 'true'
         uses: cachix/install-nix-action@v25
 
       - name: Configure Cachix
+        if: github.event_name == 'release' || steps.cache-frontend-build.outputs.cache-hit != 'true'
         uses: cachix/cachix-action@v17
         with:
           name: catcolab-jmoggr
           authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
 
+      - name: Install NodeJS dependencies
+        if: github.event_name == 'release' || steps.cache-frontend-build.outputs.cache-hit != 'true'
+        run: nix develop .#frontend-build --command pnpm install
+
+      - name: Prepare frontend dependencies
+        if: github.event_name == 'release' || steps.cache-frontend-build.outputs.cache-hit != 'true'
+        uses: ./.github/actions/prepare-frontend-deps
+
+      - name: Generate CSS module declarations
+        if: github.event_name == 'release' || steps.cache-frontend-build.outputs.cache-hit != 'true'
+        run: nix develop .#frontend-build --command pnpm --filter ./packages/frontend run build:tcm
+
       - name: Build for Staging
         if: (github.event_name == 'push' || github.event_name == 'pull_request') && steps.cache-frontend-build.outputs.cache-hit != 'true'
         run: |
-          nix develop .#frontend-build --command bash -c '
-            set -euo pipefail
-            pnpm install
-            pnpm --filter ./packages/frontend run build:deps
-            # Uses env from packages/frontend/.env.staging
-            pnpm --filter ./packages/frontend run build:staging
-          '
+          # Uses env from packages/frontend/.env.staging
+          nix develop .#frontend-build --command pnpm --filter ./packages/frontend run build:staging
 
       - name: Build for Production
         if: github.event_name == 'release'
         run: |
-          nix develop .#frontend-build --command bash -c '
-            set -euo pipefail
-            pnpm install
-            pnpm --filter ./packages/frontend run build:deps
-            # Uses env from packages/frontend/.env.production
-            pnpm --filter ./packages/frontend run build
-          '
+          # Uses env from packages/frontend/.env.production
+          nix develop .#frontend-build --command pnpm --filter ./packages/frontend run build
 
       - name: Report cache status
         run: |
@@ -139,6 +143,21 @@ jobs:
           name: app
           path: packages/frontend/dist
 
+  build_frontend_docs:
+    name: Build frontend docs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Compute cache key
+        id: cache-key
+        run: |
+          hash=$(git log -1 --format="%H" -- .github/actions/prepare-frontend-deps .npmrc patches pnpm-lock.yaml pnpm-workspace.yaml build.py build-targets.json flake.nix flake.lock infrastructure/catcolab-api.nix infrastructure/ninja-target.nix packages/backend packages/catlog packages/catlog-wasm packages/document-methods packages/document-types packages/documents packages/frontend packages/logics packages/migrator packages/ui-components tools/oxlint-plugin-catcolab tools/vite-plugin-monorepo-dedupe Cargo.toml Cargo.lock rust-toolchain.toml)
+          echo "git-hash=${hash}" >> "$GITHUB_OUTPUT"
+
       - name: Cache frontend docs build
         id: cache-frontend-docs
         uses: actions/cache@v6
@@ -146,18 +165,32 @@ jobs:
           path: packages/frontend/docs
           key: frontend-docs-${{ steps.cache-key.outputs.git-hash }}
 
+      - name: Install Nix
+        if: steps.cache-frontend-docs.outputs.cache-hit != 'true'
+        uses: cachix/install-nix-action@v25
+
+      - name: Configure Cachix
+        if: steps.cache-frontend-docs.outputs.cache-hit != 'true'
+        uses: cachix/cachix-action@v17
+        with:
+          name: catcolab-jmoggr
+          authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
+
+      - name: Install NodeJS dependencies
+        if: steps.cache-frontend-docs.outputs.cache-hit != 'true'
+        run: nix develop .#frontend-build --command pnpm install
+
+      - name: Prepare frontend dependencies
+        if: steps.cache-frontend-docs.outputs.cache-hit != 'true'
+        uses: ./.github/actions/prepare-frontend-deps
+
+      - name: Generate CSS module declarations
+        if: steps.cache-frontend-docs.outputs.cache-hit != 'true'
+        run: nix develop .#frontend-build --command pnpm --filter ./packages/frontend run build:tcm
+
       - name: Build frontend docs
         if: steps.cache-frontend-docs.outputs.cache-hit != 'true'
-        run: |
-          nix develop .#frontend-build --command pnpm --filter ./packages/frontend run doc
-
-      - name: Report frontend docs cache status
-        run: |
-          if [ "${{ steps.cache-frontend-docs.outputs.cache-hit }}" = "true" ]; then
-            echo "✅ Frontend docs restored from cache"
-          else
-            echo "🔨 Frontend docs built and cached"
-          fi
+        run: nix develop .#frontend-build --command pnpm --filter ./packages/frontend run doc
 
       - name: Upload frontend docs
         uses: actions/upload-artifact@v7
@@ -330,7 +363,7 @@ jobs:
         id: cache-key
         run: |
           # Get git hash of the most recent commit affecting gaios or any of its dependencies
-          hash=$(git log -1 --format="%H" -- packages/gaios packages/frontend packages/backend/pkg packages/catlog packages/catlog-wasm packages/document-types packages/document-methods packages/ui-components Cargo.toml Cargo.lock)
+          hash=$(git log -1 --format="%H" -- .github/actions/prepare-frontend-deps .npmrc patches pnpm-lock.yaml pnpm-workspace.yaml build.py build-targets.json flake.nix flake.lock infrastructure/catcolab-api.nix infrastructure/ninja-target.nix packages/backend packages/catlog packages/catlog-wasm packages/document-methods packages/document-types packages/documents packages/frontend packages/gaios packages/logics packages/migrator packages/ui-components tools/oxlint-plugin-catcolab tools/vite-plugin-monorepo-dedupe Cargo.toml Cargo.lock rust-toolchain.toml)
           echo "git-hash=${hash}" >> $GITHUB_OUTPUT
           echo "Gaios git hash: ${hash}"
 
@@ -342,23 +375,31 @@ jobs:
           key: gaios-build-${{ steps.cache-key.outputs.git-hash }}
 
       - name: Install Nix
+        if: steps.cache-gaios-build.outputs.cache-hit != 'true'
         uses: cachix/install-nix-action@v25
 
       - name: Configure Cachix
+        if: steps.cache-gaios-build.outputs.cache-hit != 'true'
         uses: cachix/cachix-action@v17
         with:
           name: catcolab-jmoggr
           authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
 
+      - name: Install NodeJS dependencies
+        if: steps.cache-gaios-build.outputs.cache-hit != 'true'
+        run: nix develop .#frontend-build --command pnpm install
+
+      - name: Prepare frontend dependencies
+        if: steps.cache-gaios-build.outputs.cache-hit != 'true'
+        uses: ./.github/actions/prepare-frontend-deps
+
+      - name: Generate CSS module declarations
+        if: steps.cache-gaios-build.outputs.cache-hit != 'true'
+        run: nix develop .#frontend-build --command pnpm --filter ./packages/frontend run build:tcm
+
       - name: Build gaios plugin
         if: steps.cache-gaios-build.outputs.cache-hit != 'true'
-        run: |
-          nix develop .#frontend-build --command bash -c '
-            set -euo pipefail
-            pnpm install
-            pnpm --filter ./packages/gaios run build-deps
-            pnpm --filter ./packages/gaios run build
-          '
+        run: nix develop .#frontend-build --command pnpm --filter ./packages/gaios run build
 
       - name: Report cache status
         run: |

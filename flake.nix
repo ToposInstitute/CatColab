@@ -159,16 +159,8 @@
           name = "catcolab-frontend-build";
 
           packages = [
-            pkgs.binaryen
-            pkgs.lld
             pkgs.nodejs_24
-            pkgs.openssl
-            pkgs.pkg-config
             pkgs.pnpm
-            (pkgs.python3.withPackages (ps: [ ps.ninja ]))
-            (rustToolchainFor system)
-            pkgs.wasm-bindgen-cli
-            pkgs.wasm-pack
           ];
         };
 
