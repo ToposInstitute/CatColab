@@ -218,13 +218,22 @@ export function instanceFromStore<Handle, S extends Shape, Version>(
             const modelValidation = schema.createValidationView();
             let revision = 0;
             const reactiveRevision = createReactiveView(store, { revision });
-            const unsubscribeInstance = store.subscribe(handle, (): void => {
+
+            // Validation runs in the change callbacks, outside any consumer's
+            // reactive scope, so consumers depend only on the revision rather
+            // than on every document read the validation makes.
+            let validation = validateInstance(modelValidation);
+            const revalidate = (): void => {
+                validation = validateInstance(modelValidation);
                 reactiveRevision.replace({ revision: ++revision });
-            });
+            };
+            const unsubscribeInstance = store.subscribe(handle, revalidate);
+            const unsubscribeSchema = schema.onValidate(revalidate);
 
             function currentValidation(): InstanceValidation<S> {
+                // Read the revision so reactive consumers subscribe to changes.
                 void reactiveRevision.current.revision;
-                return validateInstance(modelValidation);
+                return validation;
             }
 
             return {
@@ -240,6 +249,7 @@ export function instanceFromStore<Handle, S extends Shape, Version>(
                 },
                 dispose(): void {
                     unsubscribeInstance();
+                    unsubscribeSchema();
                     modelValidation.dispose();
                 },
             };

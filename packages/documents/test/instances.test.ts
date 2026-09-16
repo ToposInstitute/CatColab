@@ -9,6 +9,7 @@ import {
     type DocumentRef,
     type DocumentStore,
     type Result,
+    type TableRow,
 } from "catcolab-documents";
 
 function refOf<Handle, Version>(
@@ -267,6 +268,55 @@ describe("instance schema validation", () => {
 });
 
 describe("tabular instances", () => {
+    test("unchanged tables, rows, and issues keep identity", { timeout: 20_000 }, async () => {
+        const binder = createBinder();
+        const schema = await binder.createNotebook(SimpleSchema, { title: "Company schema" });
+        const person = schema.add(Entity, { label: "Person" });
+        const company = schema.add(Entity, { label: "Company" });
+        const str = schema.add(AttrType, { label: "String" });
+        schema.add(Mapping, { label: "employer", from: person, to: company });
+        schema.add(Attr, { label: "name", from: person, to: str });
+        const instance = expectOk(
+            await binder.createInstance(schema, { title: "Company instance" }),
+        );
+
+        const initial = await instance.validate();
+        const personTable = initial.tables.find((table) => table.label === "Person")!;
+        const companyTable = initial.tables.find((table) => table.label === "Company")!;
+        const nameHeader = personTable.headers.find((header) => header.label === "name")!;
+        const acme = expectOk(await instance.addRow(companyTable));
+        const alice = expectOk(await instance.addRow(personTable, { name: "Alice" }));
+        const bob = expectOk(await instance.addRow(personTable, { name: "Bob" }));
+
+        const before = await instance.validate();
+        // The missing employer references are reported for both rows.
+        expect(before.issues.length).toBeGreaterThan(0);
+
+        // Revalidating without a change reuses everything.
+        const same = await instance.validate();
+        expect(same.tables).toBe(before.tables);
+        expect(same.issues).toBe(before.issues);
+
+        expectOk(await instance.set(bob, nameHeader, "Robert"));
+        const after = await instance.validate();
+        const personBefore = before.tables.find((table) => table.id === personTable.id)!;
+        const personAfter = after.tables.find((table) => table.id === personTable.id)!;
+        expect(after.tables).not.toBe(before.tables);
+        expect(after.tables.find((table) => table.id === companyTable.id)).toBe(
+            before.tables.find((table) => table.id === companyTable.id),
+        );
+        expect(personAfter).not.toBe(personBefore);
+        expect(personAfter.headers).toBe(personBefore.headers);
+        expect(personAfter.rows.find((row) => row.id === alice.id)).toBe(
+            personBefore.rows.find((row) => row.id === alice.id),
+        );
+        expect(personAfter.rows.find((row) => row.id === bob.id)).not.toBe(
+            personBefore.rows.find((row) => row.id === bob.id),
+        );
+        expect(after.issues).toBe(before.issues);
+        void acme;
+    });
+
     test("tables and headers are derived and rows can be edited", { timeout: 20_000 }, async () => {
         const binder = createBinder();
         const schema = await binder.createNotebook(SimpleSchema, {
@@ -332,8 +382,14 @@ describe("tabular instances", () => {
         );
         const bob = expectOk(await instance.addRow(personTable, { name: "Bob", employer: acme }));
 
-        expect(personTable.rows.map((row) => row.id)).toEqual([alice.id, bob.id]);
+        // Tables are snapshots, so the rows appear after revalidating.
+        expect(personTable.rows).toEqual([]);
+        const personTableAfterAdd = (await instance.validate()).tables.find(
+            (table) => table.id === personTable.id,
+        );
+        expect(personTableAfterAdd?.rows.map((row) => row.id)).toEqual([alice.id, bob.id]);
         expect(alice.index).toBe(0);
+        expect(bob.index).toBe(1);
         expect(alice.fields.map((field) => field.tag)).toEqual(["RowRef", "String"]);
 
         const nameResult = validation.get([
@@ -356,6 +412,12 @@ describe("tabular instances", () => {
 
         expectOk(await instance.set(bob, nameHeader, "Robert"));
         expect(bob.fields.find((field) => field.tag === "String")).toMatchObject({
+            content: { value: "Bob" },
+        });
+        const robert = expectOk(
+            (await instance.validate()).get([personTable.id, "rows", bob.id]),
+        ) as TableRow;
+        expect(robert.fields.find((field) => field.tag === "String")).toMatchObject({
             content: { value: "Robert" },
         });
 
