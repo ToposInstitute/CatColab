@@ -10,6 +10,7 @@ import {
     Index,
     onCleanup,
     Show,
+    untrack,
 } from "solid-js";
 
 import type {
@@ -54,6 +55,9 @@ type CellKey = `${string}\u0000${string}`;
 /** The cell being edited, by ID, and the live text of its editor. */
 type EditState = { rowId: string; headerId: string; text: string };
 
+/** A committed value shown until the stored field changes or the write settles. */
+type PendingField = { key: CellKey; previousText: string; text: string };
+
 type PendingAppend = { headerId: string; previousRowIds: ReadonlySet<string> };
 
 type PendingDelete = { rowId: string };
@@ -81,9 +85,15 @@ export type TableEditorProps = {
 
     /** Called when the user edits a cell.
 
-    A `TableRow` value sets a row reference; `null` clears the field.
+    A `TableRow` value sets a row reference; `null` clears the field. The new
+    value is shown optimistically until the row snapshot changes or, if a
+    promise is returned, until it settles.
      */
-    onSetField: (row: TableRow, header: TableHeader, value: LiteralValue | TableRow) => void;
+    onSetField: (
+        row: TableRow,
+        header: TableHeader,
+        value: LiteralValue | TableRow,
+    ) => void | Promise<unknown>;
 
     /** Called when the user adds a row. */
     onAddRow: () => void;
@@ -110,6 +120,7 @@ export function TableEditor(props: TableEditorProps) {
     const [pendingDelete, setPendingDelete] = createSignal<PendingDelete | null>(null);
     const [suppressedFocus, setSuppressedFocus] = createSignal<CellKey | null>(null);
     const [focusRequest, setFocusRequest] = createSignal(0);
+    const [pendingField, setPendingField] = createSignal<PendingField | null>(null);
     // Column whose delete button is hovered, highlighted like a row about to be deleted.
     const [deletingColumnId, setDeletingColumnId] = createSignal<string | null>(null);
 
@@ -419,8 +430,42 @@ export function TableEditor(props: TableEditorProps) {
     const validateText = (header: TableHeader, text: string): boolean =>
         parseValue(header, text).ok;
 
+    /** The text a value will display as once stored, mirroring `fieldText`. */
+    const valueText = (header: TableHeader, value: LiteralValue | TableRow): string => {
+        if (value === null) {
+            return "";
+        }
+        if (typeof value === "object") {
+            const codomain = codomainOf(header);
+            return codomain ? defaultRowLabel(codomain, value) : "?";
+        }
+        return String(value);
+    };
+
     const setField = (cell: Cell, value: LiteralValue | TableRow) => {
-        props.onSetField(cell.row, cell.header, value);
+        const pending: PendingField = {
+            key: keyOf(cell),
+            previousText: cellText(cell),
+            text: valueText(cell.header, value),
+        };
+        setPendingField(pending);
+        const result = props.onSetField(cell.row, cell.header, value);
+        if (result) {
+            const clear = () => {
+                if (untrack(pendingField) === pending) {
+                    setPendingField(null);
+                }
+            };
+            result.then(clear, clear);
+        }
+    };
+
+    /** The pending text of a cell, if its row snapshot has not caught up yet. */
+    const pendingText = (cell: Cell): string | undefined => {
+        const pending = pendingField();
+        return pending?.key === keyOf(cell) && cellText(cell) === pending.previousText
+            ? pending.text
+            : undefined;
     };
 
     const startEditing = (cell: Cell, text: string) => {
@@ -760,7 +805,9 @@ export function TableEditor(props: TableEditorProps) {
                                                     role="gridcell"
                                                     classList={{
                                                         [styles.selected]: isSelected(cell()),
-                                                        [styles.invalid]: cellIsInvalid(cell()),
+                                                        [styles.invalid]:
+                                                            pendingText(cell()) === undefined &&
+                                                            cellIsInvalid(cell()),
                                                         [styles.columnDeleting]:
                                                             deletingColumnId() === header().id,
                                                     }}
@@ -773,11 +820,16 @@ export function TableEditor(props: TableEditorProps) {
                                                             : -1
                                                     }
                                                     aria-selected={isSelected(cell())}
-                                                    aria-invalid={cellIsInvalid(cell())}
+                                                    aria-invalid={
+                                                        pendingText(cell()) === undefined &&
+                                                        cellIsInvalid(cell())
+                                                    }
                                                     title={
-                                                        cellIssues(cell())
-                                                            .map(issueMessage)
-                                                            .join("\n") || undefined
+                                                        pendingText(cell()) === undefined
+                                                            ? cellIssues(cell())
+                                                                  .map(issueMessage)
+                                                                  .join("\n") || undefined
+                                                            : undefined
                                                     }
                                                     onFocus={() => select(cell())}
                                                     onMouseDown={(evt) => {
@@ -795,7 +847,10 @@ export function TableEditor(props: TableEditorProps) {
                                                         if (header().type.tag === "Bool") {
                                                             toggleBool(cell());
                                                         } else {
-                                                            startEditing(cell(), cellText(cell()));
+                                                            startEditing(
+                                                                cell(),
+                                                                pendingText(cell()) ?? cellText(cell()),
+                                                            );
                                                         }
                                                     }}
                                                     onKeyDown={(evt) => onCellKeyDown(evt, cell())}
@@ -804,7 +859,10 @@ export function TableEditor(props: TableEditorProps) {
                                                         when={isEditing(cell())}
                                                         fallback={
                                                             <CellContent
-                                                                text={cellText(cell())}
+                                                                text={
+                                                                    pendingText(cell()) ??
+                                                                    cellText(cell())
+                                                                }
                                                                 isBool={
                                                                     header().type.tag === "Bool"
                                                                 }
@@ -814,7 +872,8 @@ export function TableEditor(props: TableEditorProps) {
                                                                 onOpenRowRef={() =>
                                                                     startEditing(
                                                                         cell(),
-                                                                        cellText(cell()),
+                                                                        pendingText(cell()) ??
+                                                                            cellText(cell()),
                                                                     )
                                                                 }
                                                                 onToggle={() => toggleBool(cell())}
