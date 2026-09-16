@@ -11,7 +11,13 @@ const interactions = [
         timestamp: "2026-09-14T09:00:00Z",
         id: "user-message",
         content: "Can you compute **two plus two**?",
-        files: [],
+        files: [
+            {
+                filename: "two-plus-two.txt",
+                mediaType: "text/plain",
+                content: Array.from("2 + 2".repeat(100), (char) => char.charCodeAt(0)),
+            },
+        ],
     },
     {
         tag: "llm-code-execution",
@@ -69,6 +75,8 @@ export const Complete: Story = {
         args: typeof meta.args;
     }) => {
         const canvas = within(canvasElement);
+
+        await expect(canvas.getByText("two-plus-two.txt")).toBeVisible();
 
         const collapseMessage = canvas.getByRole("button", { name: "Collapse message" });
         await userEvent.click(collapseMessage);

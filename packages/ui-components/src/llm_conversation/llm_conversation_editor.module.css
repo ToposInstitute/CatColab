@@ -136,6 +136,10 @@
     gap: 0.25rem;
 }
 
+.userMessage .attachments {
+    margin-top: 0.25rem;
+}
+
 .attachment {
     display: flex;
     align-items: center;

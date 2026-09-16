@@ -20,7 +20,7 @@ import {
     Switch,
 } from "solid-js";
 
-import type { LLMInteraction } from "catcolab-document-types";
+import type { InlineFile, LLMInteraction } from "catcolab-document-types";
 import { Button } from "../button";
 import { CodeView } from "../code_view";
 import { IconButton } from "../icon_button";
@@ -234,7 +234,7 @@ export const LLMInteractionView = (props: {
 }) => (
     <Switch>
         <Match when={props.interaction.tag === "user-message" && props.interaction}>
-            {(message) => <UserMessage content={message().content} />}
+            {(message) => <UserMessage content={message().content} files={message().files} />}
         </Match>
         <Match when={props.interaction.tag === "llm-message" && props.interaction}>
             {(message) => <LLMMessage content={message().content} />}
@@ -250,9 +250,21 @@ export const LLMInteractionView = (props: {
     </Switch>
 );
 
-const UserMessage = (props: { content: string }) => (
+const UserMessage = (props: { content: string; files?: readonly InlineFile[] }) => (
     <div class={styles.userMessage}>
         <MarkdownMessage content={props.content} />
+        <Show when={(props.files?.length ?? 0) > 0}>
+            <div class={styles.attachments}>
+                <For each={props.files}>
+                    {(file) => (
+                        <div class={styles.attachment}>
+                            <Paperclip size={12} aria-hidden="true" />
+                            <span>{file.filename}</span>
+                        </div>
+                    )}
+                </For>
+            </div>
+        </Show>
     </div>
 );
 
