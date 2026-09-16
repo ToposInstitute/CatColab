@@ -1,7 +1,7 @@
 import { applyPatches, clone, diff, getHeads, type Heads } from "@automerge/automerge";
 import { DocHandle, generateAutomergeUrl, parseAutomergeUrl } from "@automerge/automerge-repo";
 import type { RelationInfo, UserState } from "catcolab-api/src/user_state";
-import { createStore, reconcile, unwrap } from "solid-js/store";
+import { createSolidDocumentStore } from "catcolab-documents-solid";
 import { stringify as uuidStringify } from "uuid";
 
 import type { Document, LinkType } from "catcolab-document-types";
@@ -14,15 +14,10 @@ import {
     type HandlesByLinkType,
     type Result,
 } from "catcolab-documents";
-import { makeDocHandleReactive } from "./document";
 import type { Api } from "./types";
 
 export type ApiDocumentHandle = {
     automergeHandle: DocHandle<Document>;
-
-    /** Fine-grained reactive view of the document, for use in SolidJS contexts. */
-    docView: Document;
-
     ref: DocumentRef;
 };
 
@@ -41,7 +36,7 @@ application (via context) so that document handles are cached and deduplicated
 between loads.
  */
 export function createApiBinder(api: Api, userState: UserState): ApiBinder {
-    return createBinder(createApiDocumentStore(api, userState));
+    return createBinder(createSolidDocumentStore(createApiDocumentStore(api, userState)));
 }
 
 /** Adapt frontend Automerge documents to the storage boundary used by catcolab-documents.
@@ -59,14 +54,13 @@ export function createApiDocumentStore(api: Api, userState: UserState): ApiDocum
             existing.ref = ref;
             return existing;
         }
-        const handle = { automergeHandle, docView: makeDocHandleReactive(automergeHandle), ref };
+        const handle = { automergeHandle, ref };
         handles.set(ref.id, handle);
         return handle;
     };
 
     const draftHandle = (automergeDraft: DocHandle<Document>): ApiDocumentHandle => ({
         automergeHandle: automergeDraft,
-        docView: makeDocHandleReactive(automergeDraft),
         ref: {
             id: automergeDraft.documentId,
             version: null,
@@ -165,8 +159,8 @@ export function createApiDocumentStore(api: Api, userState: UserState): ApiDocum
                 automergeHandle,
             );
         },
-        getDocumentView: (handle) => handle.docView,
-        getDocumentSnapshot: (handle) => unwrap(handle.docView),
+        getDocumentView: (handle) => handle.automergeHandle.doc(),
+        getDocumentSnapshot: (handle) => structuredClone(handle.automergeHandle.doc()),
         changeDocument: (handle, fn) => handle.automergeHandle.change(fn),
         subscribe: (handle, callback) => {
             handle.automergeHandle.on("change", callback);
@@ -174,16 +168,7 @@ export function createApiDocumentStore(api: Api, userState: UserState): ApiDocum
                 handle.automergeHandle.off("change", callback);
             };
         },
-        copyValue: (_handle, value) => structuredClone(unwrap(value)),
-        createReactiveView(initial) {
-            const [current, setCurrent] = createStore(initial);
-            return {
-                current,
-                replace(next) {
-                    setCurrent(reconcile(next));
-                },
-            };
-        },
+        copyValue: (_handle, value) => structuredClone(value),
         getDocumentRef: (handle) => handle.ref,
         async listUsedBy(handle) {
             return resolveLinked(userState.documents[handle.ref.id]?.usedBy ?? []);

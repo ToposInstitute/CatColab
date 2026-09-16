@@ -1,4 +1,5 @@
-import { createEffect, createMemo, createResource, Index, onCleanup, Show } from "solid-js";
+import { createInstanceValidation } from "catcolab-documents-solid";
+import { createEffect, createMemo, Index, onCleanup, Show } from "solid-js";
 
 import type { Result, TableIssue } from "catcolab-documents";
 import { type FocusHandle, Spinner, TableEditor, useChildFocus } from "catcolab-ui-components";
@@ -20,19 +21,13 @@ export function InstanceEditor(props: {
     focus: FocusHandle;
 }) {
     // oxlint-disable-next-line solid/reactivity -- The editor is keyed on the instance.
-    const view = props.instance.createValidationView();
-    onCleanup(() => view.dispose());
-
-    // The view reports a pending issue and no tables until the schema has been
-    // validated once, so wait for that before rendering anything.
-    const [ready] = createResource(() => props.instance.validate().then(() => true));
-
-    const issues = createMemo(() => view.issues);
-    const tables = createMemo(() => view.tables);
+    const validation = createInstanceValidation(props.instance);
+    const issues = createMemo(() => validation()?.issues ?? NO_ISSUES);
+    const tables = createMemo(() => validation()?.tables ?? []);
 
     const tableList = useTableList();
     createEffect(() => {
-        if (ready()) {
+        if (validation()) {
             const refId = props.refId;
             tableList.setTables(
                 refId,
@@ -82,7 +77,7 @@ export function InstanceEditor(props: {
 
     return (
         <div class={styles.editor}>
-            <Show when={ready()} fallback={<Spinner />}>
+            <Show when={validation()} fallback={<Spinner />}>
                 <Show
                     when={tables().length > 0}
                     fallback={<p class={styles.empty}>This model has no tables.</p>}

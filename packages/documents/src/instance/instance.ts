@@ -1,8 +1,8 @@
 import type { InstanceDocument } from "catcolab-document-methods";
 import type { Document } from "catcolab-document-types";
-import { createReactiveView, type DocumentStore } from "../document-store";
+import type { DocumentStore } from "../document-store";
 import type { ModelDocument } from "../model/document";
-import type { ModelValidation, ModelValidationView } from "../model/elaborated-model";
+import type { ModelValidation } from "../model/elaborated-model";
 import type { Notebook } from "../model/notebook";
 import type { Result } from "../result";
 import type { Shape } from "../shape";
@@ -75,9 +75,6 @@ export interface Instance<H, S extends Shape, V> {
     onChange(callback: () => void): () => void;
     /** Revalidate initially and whenever either the instance or its schema changes. */
     onValidate(callback: (validation: InstanceValidation<S>) => void): () => void;
-    /** Create a live, reactive view of the instance's validation state. The
-     * caller must dispose the view when it is no longer needed. */
-    createValidationView(): InstanceValidationView<S>;
 
     /** Undo the changes this instance's document received in a commit. */
     revert(commit: Commit<H, V>): void;
@@ -93,13 +90,6 @@ export interface InstanceValidation<out S extends Shape> {
     readonly issues: ReadonlyArray<TableIssue>;
     /** Read one table, row, or field from the validated tables. */
     get(path: InstancePath): Result<InstanceTable | TableRow | FieldValue>;
-}
-
-/** A live view of an instance's validation state. */
-export interface InstanceValidationView<out S extends Shape> extends InstanceValidation<S> {
-    /** The live validation view of the instance's schema. */
-    readonly modelValidation: ModelValidationView<S>;
-    dispose(): void;
 }
 
 /** Create a store-backed instance.
@@ -212,46 +202,6 @@ export function instanceFromStore<Handle, S extends Shape, Version>(
                 active = false;
                 unsubscribeInstance();
                 unsubscribeSchema();
-            };
-        },
-        createValidationView(): InstanceValidationView<S> {
-            const modelValidation = schema.createValidationView();
-            let revision = 0;
-            const reactiveRevision = createReactiveView(store, { revision });
-
-            // Validation runs in the change callbacks, outside any consumer's
-            // reactive scope, so consumers depend only on the revision rather
-            // than on every document read the validation makes.
-            let validation = validateInstance(modelValidation);
-            const revalidate = (): void => {
-                validation = validateInstance(modelValidation);
-                reactiveRevision.replace({ revision: ++revision });
-            };
-            const unsubscribeInstance = store.subscribe(handle, revalidate);
-            const unsubscribeSchema = schema.onValidate(revalidate);
-
-            function currentValidation(): InstanceValidation<S> {
-                // Read the revision so reactive consumers subscribe to changes.
-                void reactiveRevision.current.revision;
-                return validation;
-            }
-
-            return {
-                modelValidation,
-                get tables(): ReadonlyArray<InstanceTable> {
-                    return currentValidation().tables;
-                },
-                get issues(): ReadonlyArray<TableIssue> {
-                    return currentValidation().issues;
-                },
-                get(path: InstancePath): Result<InstanceTable | TableRow | FieldValue> {
-                    return currentValidation().get(path);
-                },
-                dispose(): void {
-                    unsubscribeInstance();
-                    unsubscribeSchema();
-                    modelValidation.dispose();
-                },
             };
         },
         revert(commit: Commit<Handle, Version>): void {

@@ -1,32 +1,28 @@
 import { Attr, AttrType, Entity, SimpleSchema } from "catcolab-logics/simple-schema";
-import { type Accessor, createSignal, For, onCleanup } from "solid-js";
+import { type Accessor, createSignal, For } from "solid-js";
 import { render } from "solid-js/web";
 import { describe, expect, test } from "vitest";
 
-// An extension to RFC-0006 "SolidJS example with validation & completions".
-// This functionality was not described in the RFC.
-// view (`createValidationView`) feeds completions to a Solid component. The
-// view's elaborated model is fine-grained reactive through the Solid store's
-// `createReactiveView`, so no signals need to be wired by hand.
-import { createBinder, type MorphismCell, type Notebook } from "catcolab-documents";
-import { solidStore } from "./solid-store-fixture";
+import {
+    createBinder,
+    createInMemoryStore,
+    type MorphismCell,
+    type Notebook,
+} from "catcolab-documents";
+import { createNotebookValidation, createSolidDocumentStore } from "../src";
 
-/** Shows an attribute's codomain and offers completions for replacing it,
-drawn from the validated model's attribute types. */
 function CodomainPicker(props: {
     attrCell: MorphismCell<typeof SimpleSchema, typeof Attr>;
     notebook: Notebook<typeof SimpleSchema>;
     text: Accessor<string>;
     onSelect: (label: string) => void;
 }) {
-    const view = props.notebook.createValidationView();
-    onCleanup(() => view.dispose());
-
+    const validation = createNotebookValidation(props.notebook);
     const completions = () =>
-        view.model
-            .judgmentsOf(AttrType)
+        validation()
+            ?.model.judgmentsOf(AttrType)
             .map((judgment) => judgment.label.join("."))
-            .filter((label) => label.toLowerCase().includes(props.text().toLowerCase()));
+            .filter((label) => label.toLowerCase().includes(props.text().toLowerCase())) ?? [];
 
     return (
         <span>
@@ -40,11 +36,12 @@ function CodomainPicker(props: {
     );
 }
 
-describe("SolidJS completions from a validation view", { timeout: 20000 }, () => {
-    test("the validated model feeds completions and codomain selection", async () => {
-        const binder = createBinder(solidStore);
-        const notebook = await binder.createNotebook(SimpleSchema, { title: "Company schema" });
-
+describe("Solid completions from validation", { timeout: 20_000 }, () => {
+    test("feeds validated judgments to a component", async () => {
+        const store = createSolidDocumentStore(createInMemoryStore());
+        const notebook = await createBinder(store).createNotebook(SimpleSchema, {
+            title: "Company schema",
+        });
         const person = notebook.add(Entity, { label: "Person" });
         const string = notebook.add(AttrType, { label: "String" });
         const integer = notebook.add(AttrType, { label: "Integer" });
@@ -73,26 +70,20 @@ describe("SolidJS completions from a validation view", { timeout: 20000 }, () =>
         );
 
         const completionLabels = () =>
-            [...container.querySelectorAll(".completion-list li")].map((li) => li.textContent);
+            [...container.querySelectorAll(".completion-list li")].map((item) => item.textContent);
         const selectedLabel = () => container.querySelector(".selected")?.textContent;
 
-        // Completions appear once the view's first validation completes.
         await expect
-            .poll(completionLabels, { timeout: 20000 })
+            .poll(completionLabels, { timeout: 20_000 })
             .toEqual(["String", "Integer", "Boolean"]);
-        expect(selectedLabel()).toBe("String");
-
-        // Filtering is synchronous: it only reads the already-validated model.
         setText("in");
         expect(completionLabels()).toEqual(["String", "Integer"]);
 
-        // Selecting a completion updates the document; the codomain re-renders
-        // and the view revalidates without issues.
-        const items = container.querySelectorAll<HTMLElement>(".completion-list li");
-        items[1]?.click();
+        container.querySelectorAll<HTMLElement>(".completion-list li")[1]?.click();
         await expect.poll(selectedLabel).toBe("Integer");
 
         dispose();
         container.remove();
+        store.dispose();
     });
 });

@@ -1,0 +1,10 @@
+{
+    "extends": ["./tsconfig.json", "@tsconfig/strictest/tsconfig.json"],
+    "compilerOptions": {
+        "types": ["node"],
+        "jsx": "preserve",
+        "jsxImportSource": "solid-js",
+        "lib": ["ES2023", "DOM", "DOM.Iterable"]
+    },
+    "include": ["src", "test", "vite.config.ts"]
+}
