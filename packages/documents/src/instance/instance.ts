@@ -1,6 +1,6 @@
 import type { InstanceDocument } from "catcolab-document-methods";
 import type { Document } from "catcolab-document-types";
-import { createReactiveView, type DocumentStore } from "../document-store";
+import { createReactiveView, type DocumentStore, untracked } from "../document-store";
 import type { ModelDocument } from "../model/document";
 import type { ModelValidation, ModelValidationView } from "../model/elaborated-model";
 import type { Notebook } from "../model/notebook";
@@ -230,7 +230,10 @@ export function instanceFromStore<Handle, S extends Shape, Version>(
             function currentValidation(): InstanceValidation<S> {
                 const current = reactiveRevision.current.revision;
                 if (cached === undefined || cached.revision !== current) {
-                    cached = { revision: current, validation: validateInstance(modelValidation) };
+                    // Changes are tracked by revision, so the document reads
+                    // need not be tracked individually.
+                    const validation = untracked(store, () => validateInstance(modelValidation));
+                    cached = { revision: current, validation };
                 }
                 return cached.validation;
             }
