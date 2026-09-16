@@ -14,6 +14,7 @@ import {
     LLMConversationTurnResult,
     LLMConversationUserInput,
     conversationAttachmentMetadata,
+    retryLastLLMConversationResponse,
     runLLMConversationTurn,
 } from "./document";
 import type { ApiLLMConversation } from "./live_doc_compatibility";
@@ -30,8 +31,6 @@ export type LLMTurnState = {
 export type LLMTurnNotice = {
     kind: "error" | "note";
     message: string;
-    /** Whether the turn can be retried without resubmitting the user message. */
-    retryable: boolean;
 };
 
 const newLLMTurnState = (overrides?: Partial<LLMTurnState>) => ({
@@ -53,6 +52,12 @@ export type LLMConversationController = {
 
     /** Run a turn of the LLM conversation. */
     runTurn: (userInput: LLMConversationUserInput) => Promise<LLMConversationTurnResult>;
+
+    /** Retry the response to the latest user message. */
+    retryTurn: () => Promise<LLMConversationTurnResult>;
+
+    /** Whether the latest interaction is a user message awaiting a response. */
+    canRetry: () => boolean;
 
     /** Validate files staged to be attached to the next user message. */
     validateAttachments: (files: readonly File[]) => JsResult<void, string>;
@@ -114,9 +119,12 @@ export function createLLMConversationController(
         }
     };
 
-    const runTurn = async (
-        userInput: LLMConversationUserInput,
+    const executeTurn = async (
+        run: (key: InferenceKeyResult) => Promise<LLMConversationTurnResult>,
     ): Promise<LLMConversationTurnResult> => {
+        if (store.isRunning) {
+            return { tag: "Failed", error: "An LLM conversation turn is already running." };
+        }
         const key = inferenceKey();
         if (!key) {
             return { tag: "Failed", error: "Inference key is missing. It might still be loading" };
@@ -124,13 +132,7 @@ export function createLLMConversationController(
 
         setStore(newLLMTurnState({ isRunning: true }));
         try {
-            const result = await runLLMConversationTurn(
-                conversation(),
-                binder.store,
-                key,
-                userInput,
-                handleTurnEvent,
-            );
+            const result = await run(key);
             setStore("notice", turnResultToNotice(result));
             setStore("liveInteractions", result.tag === "Retryable" ? result.attempts : []);
             return result;
@@ -139,6 +141,19 @@ export function createLLMConversationController(
             setStore("streamingContent", "");
         }
     };
+
+    const runTurn = (userInput: LLMConversationUserInput) =>
+        executeTurn((key) =>
+            runLLMConversationTurn(conversation(), binder.store, key, userInput, handleTurnEvent),
+        );
+
+    const retryTurn = () =>
+        executeTurn((key) =>
+            retryLastLLMConversationResponse(conversation(), binder.store, key, handleTurnEvent),
+        );
+
+    const canRetry = () =>
+        !store.isRunning && conversation().interactions().at(-1)?.tag === "user-message";
 
     const validateAttachments = (files: readonly File[]): JsResult<void, string> =>
         validateConversationAttachments([
@@ -157,7 +172,6 @@ export function createLLMConversationController(
             setStore("notice", {
                 kind: "error",
                 message: errorMessage(error),
-                retryable: false,
             });
             return null;
         }
@@ -166,6 +180,8 @@ export function createLLMConversationController(
     return {
         state: store,
         runTurn,
+        retryTurn,
+        canRetry,
         validateAttachments,
         readAttachments,
     };
@@ -192,11 +208,10 @@ function turnResultToNotice(result: LLMConversationTurnResult): LLMTurnNotice | 
         case "Incomplete":
             // The turn stopped without a final response, but the conversation
             // state is coherent.
-            return { kind: "note", message: result.reason, retryable: false };
+            return { kind: "note", message: result.reason };
         case "Failed":
-            return { kind: "error", message: result.error, retryable: false };
         case "Retryable":
-            return { kind: "error", message: result.error, retryable: true };
+            return { kind: "error", message: result.error };
         default:
             assertExhaustive(result);
     }

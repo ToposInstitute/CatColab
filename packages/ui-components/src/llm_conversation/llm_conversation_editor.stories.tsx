@@ -44,8 +44,10 @@ const meta = {
         interactions,
         status: "Idle",
         available: true,
+        canRetry: false,
         validateAttachments: () => undefined,
         onSubmit: fn(async () => true),
+        onRetry: fn(),
         onResolveFeedback: fn(),
     },
     decorators: [
@@ -59,6 +61,12 @@ const meta = {
 
 export default meta;
 type Story = StoryObj<typeof meta>;
+
+export const Summary: Story = {
+    // excluding from autodocs and dev seems to be the way to have this
+    // component as the first thing in the docs and only there
+    tags: ["!autodocs", "!dev"],
+};
 
 export const Complete: Story = {
     play: async ({
@@ -133,6 +141,27 @@ export const AttachmentValidation: Story = {
         );
         await userEvent.click(canvas.getByRole("button", { name: "Remove example.txt" }));
         await expect(canvas.queryByText("example.txt")).not.toBeInTheDocument();
+    },
+};
+
+export const Retryable: Story = {
+    args: {
+        interactions: interactions.slice(0, 1),
+        notice: { kind: "error", message: "The inference request failed." },
+        canRetry: true,
+        onRetry: fn(),
+    },
+    play: async ({
+        canvasElement,
+        args,
+    }: {
+        canvasElement: HTMLElement;
+        args: typeof meta.args;
+    }) => {
+        const retry = within(canvasElement).getByRole("button", { name: "Retry" });
+        await expect(retry).toBeEnabled();
+        await userEvent.click(retry);
+        await expect(args.onRetry).toHaveBeenCalledOnce();
     },
 };
 
