@@ -30,7 +30,6 @@ import type { Completion } from "../completions";
 import { IconButton } from "../icon_button";
 import { TextInput } from "../text_input";
 import { type FocusHandle, useChildFocus } from "../util/focus";
-import { arraysEqual, createStableMemo, mapsEqual } from "../util/stable_memo";
 
 import styles from "./table_editor.module.css";
 
@@ -157,11 +156,12 @@ export function TableEditor(props: TableEditorProps) {
     // Snapshots share identity across validations when unchanged, so a change
     // to one row does not reach the cells through the headers.
     const rows = createMemo(() => props.table.rows);
-    const headers = createStableMemo(() => props.table.headers);
+    const headers = createMemo(() => props.table.headers);
 
-    const headerIndex = createStableMemo(
+    const headerIndex = createMemo(
         () => new Map(headers().map((header, index) => [header.id, index] as const)),
-        mapsEqual,
+        undefined,
+        { equals: mapsEqual },
     );
 
     const keyOf = (cell: Cell): CellKey => makeCellKey(cell.header.id, cell.row.id);
@@ -250,9 +250,10 @@ export function TableEditor(props: TableEditorProps) {
     const indexedTable = (tableId: string): IndexedTable | undefined => {
         let memo = indexedTableMemos.get(tableId);
         if (!memo) {
-            memo = runWithOwner(owner, () =>
-                createStableMemo(() => tableIndex().tablesById.get(tableId)),
-            );
+            memo = runWithOwner(owner, () => {
+                const indexed = createMemo(() => tableIndex().tablesById.get(tableId));
+                return indexed;
+            });
             if (!memo) {
                 return tableIndex().tablesById.get(tableId);
             }
@@ -302,11 +303,11 @@ export function TableEditor(props: TableEditorProps) {
 
     // Selection and editing state as keys, so that only the cells whose
     // status changes are notified rather than every cell in the table.
-    const selectedKey = createStableMemo((): CellKey | null => {
+    const selectedKey = createMemo((): CellKey | null => {
         const sel = selectedCell();
         return sel === null ? null : keyOf(sel);
     });
-    const editingKey = createStableMemo((): CellKey | null => {
+    const editingKey = createMemo((): CellKey | null => {
         const state = edit();
         if (state === null) {
             return null;
@@ -397,7 +398,7 @@ export function TableEditor(props: TableEditorProps) {
     const cellText = (cell: Cell): string => fieldText(fieldOf(cell), cell.header);
 
     // Memoized so that the index is only rebuilt when the list itself changes.
-    const issues = createStableMemo((): ReadonlyArray<TableIssue> => props.issues ?? NO_ISSUES);
+    const issues = createMemo((): ReadonlyArray<TableIssue> => props.issues ?? NO_ISSUES);
 
     // Issues indexed by row ID, and by row and header ID for field issues.
     // Entries of rows whose issues are unchanged keep their identity, so
@@ -882,8 +883,8 @@ export function TableEditor(props: TableEditorProps) {
                         {(row) => {
                             // Issues are indexed per row so that rows without
                             // issues are not notified when the issues change.
-                            const fieldIssues = createStableMemo(() => rowFieldIssues(row()));
-                            const ownIssues = createStableMemo(() => rowIssues(row()));
+                            const fieldIssues = createMemo(() => rowFieldIssues(row()));
+                            const ownIssues = createMemo(() => rowIssues(row()));
                             return (
                                 <tr>
                                     <RowHeader issues={ownIssues()} />
@@ -1261,6 +1262,22 @@ function CellEditor(props: {
 
 function makeCellKey(headerId: string, rowId: string): CellKey {
     return `${headerId}\u0000${rowId}`;
+}
+
+function mapsEqual<K, V>(a: ReadonlyMap<K, V>, b: ReadonlyMap<K, V>): boolean {
+    if (a.size !== b.size) {
+        return false;
+    }
+    for (const [key, value] of a) {
+        if (!b.has(key) || b.get(key) !== value) {
+            return false;
+        }
+    }
+    return true;
+}
+
+function arraysEqual<T>(a: ReadonlyArray<T>, b: ReadonlyArray<T>): boolean {
+    return a.length === b.length && a.every((item, i) => item === b[i]);
 }
 
 function parseCellKey(key: CellKey): { headerId: string; rowId: string } {
