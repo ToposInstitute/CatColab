@@ -1,11 +1,38 @@
 ---
-title: "Developer documentation: overview"
+title: Contributing to CatColab
 ---
 
-> **Note:** This page can be viewed at either [next.catcolab.org/dev](https://next.catcolab.org/dev) or [github.com/ToposInstitute/CatColab/blob/main/CONTRIBUTING.md](https://github.com/ToposInstitute/CatColab/blob/main/CONTRIBUTING.md).
+> **Note:** This page can be viewed at
+> [next.catcolab.org/dev](https://next.catcolab.org/dev) and
+> [github.com/ToposInstitute/CatColab/blob/main/CONTRIBUTING.md](https://github.com/ToposInstitute/CatColab/blob/main/CONTRIBUTING.md).
 
+Thank you for your interest in contributing to CatColab!
 
-## Package documentation
+From one point of view, the CatColab project is a collection of software
+components supported by research in mathematics and computer science; from
+another, it is a collaborative human undertaking to create and sustain these
+technical artifacts. This guide---currently far from complete---is intended to
+help you start contributing to CatColab, accounting for both points of view.
+
+## LLM policy
+
+We do not yet have a precise policy about using LLMs to contribute to CatColab.
+For the time being, we request the following minimal commitment of human care
+and attention:
+
+*All discourse belonging to the development process must be written by a human.*
+Such discourse includes commit messages, issue reports, PR descriptions,
+discussions on GitHub and Zulip, documentation, and RFCs. The only acceptable
+use of LLMs for such discourse is proofreading or, for non-native writers of
+English, mechanical translation from text written in other languages; LLMs may
+not be used to create the text *de novo*.
+
+## Developer guide
+
+### Package documentation
+
+CatColab is a monorepo comprising packages for its mathematical core, web-based
+frontend, and backend server. Each package has its own documentation.
 
 | Grouping | Package         | Language   | Instructions                                                                    | Documentation                                                           |
 | :------- | :-------------- | :--------- | :------------------------------------------------------------------------------ | :---------------------------------------------------------------------- |
@@ -16,7 +43,7 @@ title: "Developer documentation: overview"
 | Backend  | `backend`       | Rust       | [README](https://github.com/ToposInstitute/CatColab/tree/main/packages/backend) | [/dev/rust/backend](https://next.catcolab.org/dev/rust/backend)         |
 
 
-## Development build
+### Building for development
 
 CatColab is written in a mix of [Rust](https://www.rust-lang.org/) and
 [TypeScript](https://www.typescriptlang.org/). To start any development, the first steps are
@@ -25,7 +52,7 @@ CatColab is written in a mix of [Rust](https://www.rust-lang.org/) and
 2. install [pnpm](https://pnpm.io/)
 3. clone the [CatColab repository](https://github.com/ToposInstitute/CatColab)
 
-### General development
+#### General development
 
 "Most" development will likely only require changes to the **core** (`catlog`) and the **frontend** (`frontend`) (and thus also the **bindings** in `catlog-wasm`). For this, you can simply follow the instructions in the [`frontend` docs](https://next.catcolab.org/dev/frontend/), replacing `$MODE` by `staging`, i.e. running
 
@@ -43,12 +70,12 @@ pnpm install
 
 to install/update the npm packages.
 
-### Backend development
+#### Backend development
 
 If your development touches the actual backend (e.g. file storage) then you will need to **also** follow the [`backend` README](https://github.com/ToposInstitute/CatColab/tree/main/packages/backend).
 
 
-## Formatting and linting
+### Formatting and linting
 
 To maintain a clean and consistent codebase, we follow strict conventions on
 code formatting and style. To format and lint the frontend code, run these
@@ -68,5 +95,4 @@ cargo clippy
 
 Try to remember to run these commands before making a PR. (If you forget, the CI
 will remind you.)
-
 
