@@ -1,6 +1,6 @@
 import type { InstanceDocument } from "catcolab-document-methods";
 import type { Document } from "catcolab-document-types";
-import { createReactiveView, type DocumentStore, untracked } from "../document-store";
+import { createReactiveView, type DocumentStore } from "../document-store";
 import type { ModelDocument } from "../model/document";
 import type { ModelValidation, ModelValidationView } from "../model/elaborated-model";
 import type { Notebook } from "../model/notebook";
@@ -218,24 +218,22 @@ export function instanceFromStore<Handle, S extends Shape, Version>(
             const modelValidation = schema.createValidationView();
             let revision = 0;
             const reactiveRevision = createReactiveView(store, { revision });
-            const bumpRevision = (): void => {
+
+            // Validation runs in the change callbacks, outside any consumer's
+            // reactive scope, so consumers depend only on the revision rather
+            // than on every document read the validation makes.
+            let validation = validateInstance(modelValidation);
+            const revalidate = (): void => {
+                validation = validateInstance(modelValidation);
                 reactiveRevision.replace({ revision: ++revision });
             };
-            const unsubscribeInstance = store.subscribe(handle, bumpRevision);
-            const unsubscribeSchema = schema.onValidate(bumpRevision);
+            const unsubscribeInstance = store.subscribe(handle, revalidate);
+            const unsubscribeSchema = schema.onValidate(revalidate);
 
-            // Validation is expensive, so compute it once per revision rather
-            // than on every read of `tables`, `issues`, or `get`.
-            let cached: { revision: number; validation: InstanceValidation<S> } | undefined;
             function currentValidation(): InstanceValidation<S> {
-                const current = reactiveRevision.current.revision;
-                if (cached === undefined || cached.revision !== current) {
-                    // Changes are tracked by revision, so the document reads
-                    // need not be tracked individually.
-                    const validation = untracked(store, () => validateInstance(modelValidation));
-                    cached = { revision: current, validation };
-                }
-                return cached.validation;
+                // Read the revision so reactive consumers subscribe to changes.
+                void reactiveRevision.current.revision;
+                return validation;
             }
 
             return {

@@ -1,4 +1,3 @@
-import { untrack } from "solid-js";
 import { createStore, reconcile, type SetStoreFunction, unwrap } from "solid-js/store";
 
 import type { Document } from "catcolab-document-types";
@@ -88,7 +87,7 @@ export const solidStore: DocumentStore<SolidStoreHandle> = {
         };
     },
     getDocumentView: (handle) => handle.docView,
-    untracked: (fn) => untrack(fn),
+    getDocumentSnapshot: (handle) => unwrap(handle.docView),
     getDocumentRef: (handle) => ({ id: solidStoreIdFor(handle), version: null, server: "" }),
     listUsedBy: async (handle) => {
         const linked = emptyHandlesByLinkType<SolidStoreHandle>();

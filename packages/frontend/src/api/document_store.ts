@@ -1,7 +1,6 @@
 import { applyPatches, clone, diff, getHeads, type Heads } from "@automerge/automerge";
 import { DocHandle, generateAutomergeUrl, parseAutomergeUrl } from "@automerge/automerge-repo";
 import type { RelationInfo, UserState } from "catcolab-api/src/user_state";
-import { untrack } from "solid-js";
 import { createStore, reconcile, unwrap } from "solid-js/store";
 import { stringify as uuidStringify } from "uuid";
 
@@ -53,7 +52,6 @@ may update while the store lives.
  */
 export function createApiDocumentStore(api: Api, userState: UserState): ApiDocumentStore {
     const handles = new Map<string, ApiDocumentHandle>();
-    let untrackedDepth = 0;
 
     const cacheHandle = (ref: DocumentRef, automergeHandle: DocHandle<Document>) => {
         const existing = handles.get(ref.id);
@@ -167,9 +165,8 @@ export function createApiDocumentStore(api: Api, userState: UserState): ApiDocum
                 automergeHandle,
             );
         },
-        // Inside `untracked`, hand out the raw object behind the store: reads
-        // are not tracked anyway and skipping the proxy is much cheaper.
-        getDocumentView: (handle) => (untrackedDepth > 0 ? unwrap(handle.docView) : handle.docView),
+        getDocumentView: (handle) => handle.docView,
+        getDocumentSnapshot: (handle) => unwrap(handle.docView),
         changeDocument: (handle, fn) => handle.automergeHandle.change(fn),
         subscribe: (handle, callback) => {
             handle.automergeHandle.on("change", callback);
@@ -186,14 +183,6 @@ export function createApiDocumentStore(api: Api, userState: UserState): ApiDocum
                     setCurrent(reconcile(next));
                 },
             };
-        },
-        untracked(fn) {
-            untrackedDepth += 1;
-            try {
-                return untrack(fn);
-            } finally {
-                untrackedDepth -= 1;
-            }
         },
         getDocumentRef: (handle) => handle.ref,
         async listUsedBy(handle) {

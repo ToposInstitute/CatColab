@@ -73,6 +73,9 @@ export interface DocumentStore<Handle, Version = unknown> {
     getDocumentRef(handle: Handle): DocumentRef;
     // Get a document view from a handle
     getDocumentView(handle: Handle): Readonly<Document>;
+    // Get a plain, non-reactive snapshot of the current document. Cheaper to
+    // read than the view, for computations that track changes by other means.
+    getDocumentSnapshot?(handle: Handle): Readonly<Document>;
     // List the documents that depend on the document at `handle`, indexed by
     // the type of the link through which each depends on it.
     listUsedBy(handle: Handle): Promise<HandlesByLinkType<Handle>>;
@@ -91,15 +94,16 @@ export interface DocumentStore<Handle, Version = unknown> {
     // Create a reactive view for values derived from documents. Stores may
     // use this hook to integrate their host application's reactive primitives.
     createReactiveView?<T extends object>(initial: T): ReactiveView<T>;
-    // Run `fn` without the host application's reactive system tracking the
-    // document reads it makes. Used by computations that track changes by
-    // other means, such as a revision counter, to avoid fine-grained subscriptions.
-    untracked?<T>(fn: () => T): T;
 }
 
-/** Run `fn` with document reads untracked, if the store supports it. */
-export function untracked<Handle, T>(store: DocumentStore<Handle>, fn: () => T): T {
-    return store.untracked ? store.untracked(fn) : fn();
+/** Get a plain snapshot of the document, falling back to the view. */
+export function getDocumentSnapshot<Handle>(
+    store: DocumentStore<Handle>,
+    handle: Handle,
+): Readonly<Document> {
+    return store.getDocumentSnapshot
+        ? store.getDocumentSnapshot(handle)
+        : store.getDocumentView(handle);
 }
 
 /** Create a store-native reactive view, falling back to a plain replaceable value. */

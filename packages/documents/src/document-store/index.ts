@@ -9,6 +9,6 @@ export {
     createReactiveView,
     documentLinks,
     emptyHandlesByLinkType,
-    untracked,
+    getDocumentSnapshot,
 } from "./document-store";
 export { createInMemoryStore } from "./in-memory";

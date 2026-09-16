@@ -1,5 +1,5 @@
 import type { InstanceDocument } from "catcolab-document-methods";
-import type { DocumentStore } from "../document-store";
+import { type DocumentStore, getDocumentSnapshot } from "../document-store";
 import type { ModelDocument } from "../model/document";
 import type { ElaboratedModel, ModelValidation } from "../model/elaborated-model";
 import type { Notebook } from "../model/notebook";
@@ -188,16 +188,16 @@ export function createInstanceValidator<Handle, S extends Shape, Version>(
         | undefined;
 
     return (schemaValidation) => {
+        // The result is a snapshot, so read the document once as a plain value.
+        const document = getDocumentSnapshot(store, handle) as Readonly<InstanceDocument>;
         const schemaTables = instanceTablesFromModel(
             instanceCapableShape(schema),
-            store,
-            handle,
+            document,
             schemaValidation.model,
         );
-        const document = store.getDocumentView(handle) as Readonly<InstanceDocument>;
         const tables = shareTables(
             previous?.tables,
-            tablesWithOrphanedData(store, handle, schemaTables),
+            tablesWithOrphanedData(document, schemaTables),
         );
         const issues = shareIssues(previous?.issues, [
             ...validateInstanceTables(document, schemaTables),
@@ -208,7 +208,7 @@ export function createInstanceValidator<Handle, S extends Shape, Version>(
             modelValidation: schemaValidation,
             tables,
             issues,
-            get: (path) => readInstancePath(store, handle, tables, path),
+            get: (path) => readInstancePath(document, tables, path),
         };
     };
 }
