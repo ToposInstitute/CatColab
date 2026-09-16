@@ -49,6 +49,7 @@ const meta = {
     args: {
         interactions,
         status: "Idle",
+        busy: false,
         available: true,
         validateAttachments: () => undefined,
         onSubmit: fn(async () => true),
@@ -149,6 +150,7 @@ export const Streaming: Story = {
         interactions: interactions.slice(0, 1),
         streamingContent: "Working through the calculation...",
         status: "Running...",
+        busy: true,
         available: false,
     },
 };

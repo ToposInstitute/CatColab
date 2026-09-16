@@ -24,6 +24,7 @@ import type { InlineFile, LLMInteraction } from "catcolab-document-types";
 import { Button } from "../button";
 import { CodeView } from "../code_view";
 import { IconButton } from "../icon_button";
+import { Spinner } from "../spinner";
 
 import styles from "./llm_conversation_editor.module.css";
 
@@ -41,6 +42,7 @@ export type LLMConversationEditorProps = {
     interactions: readonly LLMInteraction[];
     streamingContent?: string;
     status: string;
+    busy: boolean;
     notice?: LLMConversationNotice | null;
     available: boolean;
     validateAttachments: (files: readonly File[]) => string | undefined;
@@ -128,6 +130,9 @@ export function LLMConversationEditor(props: LLMConversationEditorProps) {
             </div>
             <div class={styles.composer}>
                 <div class={styles.status} aria-live="polite">
+                    <Show when={props.busy}>
+                        <Spinner class="small" aria-hidden="true" />
+                    </Show>
                     {props.status}
                     <Show when={props.notice}>
                         {(notice) => (

@@ -35,6 +35,7 @@ export function LLMConversationEditor(props: { conversation: ApiLLMConversation 
                       ? "Running..."
                       : "Idle"
             }
+            busy={controller.state.isRunning || inferenceKey()?.tag !== "Ready"}
             notice={controller.state.notice}
             available={inferenceKey()?.tag === "Ready" && !controller.state.isRunning}
             validateAttachments={(files) => {
