@@ -150,6 +150,20 @@
           PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD = "1";
         };
 
+      frontendBuildShellForSystem =
+        system:
+        let
+          pkgs = nixpkgsFor system;
+        in
+        pkgs.mkShell {
+          name = "catcolab-frontend-build";
+
+          packages = [
+            pkgs.nodejs_24
+            pkgs.pnpm
+          ];
+        };
+
       # Generate devShells for each system
       devShellForSystem =
         system:
@@ -178,13 +192,14 @@
               esbuild
               lld
               netcat
+              ninja
               nodejs_24
               nix
               openssl
               pkg-config
               pnpm
               postgresql
-              python3
+              (python3.withPackages (ps: [ ps.ninja ]))
               python312Packages.ipykernel
               python312Packages.jupyter-core
               python312Packages.jupyter-server
@@ -253,6 +268,7 @@
           name = system;
           value = {
             default = devShellForSystem system;
+            frontend-build = frontendBuildShellForSystem system;
             ui-components-tests = uiComponentsTestsShellForSystem system;
           };
         }) devShellSystems
@@ -286,8 +302,12 @@
             in
             {
               catcolabApi = pkgs.callPackage ./infrastructure/catcolab-api.nix craneArgs;
-              catlog-wasm-browser = pkgs.callPackage ./packages/catlog-wasm/default.nix craneArgs;
-              document-types-wasm = pkgs.callPackage ./packages/document-types/default.nix craneArgs;
+              catlog-wasm-browser = pkgs.callPackage ./infrastructure/ninja-target.nix (
+                craneArgs // { target = "catlog-wasm-browser"; }
+              );
+              document-types-wasm = pkgs.callPackage ./infrastructure/ninja-target.nix (
+                craneArgs // { target = "document-types-wasm"; }
+              );
               frontend = frontendPackage.package;
               frontend-tests = frontendPackage.tests;
             };

@@ -1,0 +1,26 @@
+name: Prepare frontend dependencies
+description: Build and stage generated dependencies needed by frontend packages
+
+runs:
+  using: composite
+  steps:
+    - name: Build generated dependencies
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        document_types=$(nix build .#document-types-wasm --no-link --print-out-paths)
+        catlog_wasm=$(nix build .#catlog-wasm-browser --no-link --print-out-paths)
+        api=$(nix build .#catcolabApi --no-link --print-out-paths)
+
+        rm -rf packages/document-types/pkg
+        mkdir -p packages/document-types/pkg
+        cp -R "$document_types"/. packages/document-types/pkg/
+
+        rm -rf packages/catlog-wasm/dist/pkg-browser
+        mkdir -p packages/catlog-wasm/dist/pkg-browser
+        cp -R "$catlog_wasm"/. packages/catlog-wasm/dist/pkg-browser/
+
+        rm -rf packages/backend/pkg/src
+        mkdir -p packages/backend/pkg/src
+        cp -R "$api"/src/. packages/backend/pkg/src/
