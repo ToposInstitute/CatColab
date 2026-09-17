@@ -5,9 +5,9 @@ settings:
   excludeLinksFromLockfile: false
 
 patchedDependencies:
-  '@automerge/automerge@3.4.1':
-    hash: 27fd5125c0df9cac14a523d212e2604fe06892a57241100c03f63abb7a71f4dc
-    path: ../../patches/@automerge__automerge@3.4.1.patch
+  '@automerge/automerge@3.5.0':
+    hash: 1b451d5888023b0f28b6ef72a15ce4962bed3fbd8d4acabe83fd063e50bd4992
+    path: ../../patches/@automerge__automerge@3.5.0.patch
 
 importers:
 

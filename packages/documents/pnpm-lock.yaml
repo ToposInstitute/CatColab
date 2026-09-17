@@ -5,9 +5,9 @@ settings:
   excludeLinksFromLockfile: false
 
 patchedDependencies:
-  '@automerge/automerge@3.4.1':
-    hash: 27fd5125c0df9cac14a523d212e2604fe06892a57241100c03f63abb7a71f4dc
-    path: ../../patches/@automerge__automerge@3.4.1.patch
+  '@automerge/automerge@3.5.0':
+    hash: 1b451d5888023b0f28b6ef72a15ce4962bed3fbd8d4acabe83fd063e50bd4992
+    path: ../../patches/@automerge__automerge@3.5.0.patch
 
 importers:
 
@@ -27,8 +27,8 @@ importers:
         version: 13.0.2
     devDependencies:
       '@automerge/automerge':
-        specifier: ^3.4.1
-        version: 3.4.1(patch_hash=27fd5125c0df9cac14a523d212e2604fe06892a57241100c03f63abb7a71f4dc)
+        specifier: ^3.5.0
+        version: 3.5.0(patch_hash=1b451d5888023b0f28b6ef72a15ce4962bed3fbd8d4acabe83fd063e50bd4992)
       '@automerge/automerge-repo':
         specifier: ^2.5.6
         version: 2.5.6
@@ -92,8 +92,8 @@ packages:
   '@automerge/automerge-repo@2.5.6':
     resolution: {integrity: sha512-ZXM6TOAwm192g3+zIxYvlB+Z3O00NP+psErOwvbSype8fFO+dhc8tB/jPwfZJqmn1ULUz5w7gssKEynwcYFRSA==}
 
-  '@automerge/automerge@3.4.1':
-    resolution: {integrity: sha512-zsZpbs/iDPvp+ZojIYd+gxmbcPVz2Xbkcx778G8zrt3E0zS+6saHJOm666lOuZyNRlTV4wHw9qzGTKueedeCsQ==}
+  '@automerge/automerge@3.5.0':
+    resolution: {integrity: sha512-ejbqJWfXWM2QbTcUK/5ugYiQiyOP7LYVAp/RuSvthCc07oek0FClMxEuouuhjrLjVPDSI34RP1ftGc45PF7WRA==}
 
   '@automerge/prosemirror@0.2.0':
     resolution: {integrity: sha512-Mixxftvfs12tKi7DsStobrQxFayoLJXhEjbrnmNnaQbMzwHrUzuwac+OUvw6ujbtXaulWX+JE8hAuHFAGRDsvQ==}
@@ -1043,7 +1043,7 @@ snapshots:
 
   '@automerge/automerge-repo@2.5.6':
     dependencies:
-      '@automerge/automerge': 3.4.1(patch_hash=27fd5125c0df9cac14a523d212e2604fe06892a57241100c03f63abb7a71f4dc)
+      '@automerge/automerge': 3.5.0(patch_hash=1b451d5888023b0f28b6ef72a15ce4962bed3fbd8d4acabe83fd063e50bd4992)
       bs58check: 3.0.1
       cbor-x: 1.6.4
       debug: 4.4.3
@@ -1054,11 +1054,11 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@automerge/automerge@3.4.1(patch_hash=27fd5125c0df9cac14a523d212e2604fe06892a57241100c03f63abb7a71f4dc)': {}
+  '@automerge/automerge@3.5.0(patch_hash=1b451d5888023b0f28b6ef72a15ce4962bed3fbd8d4acabe83fd063e50bd4992)': {}
 
   '@automerge/prosemirror@0.2.0':
     dependencies:
-      '@automerge/automerge': 3.4.1(patch_hash=27fd5125c0df9cac14a523d212e2604fe06892a57241100c03f63abb7a71f4dc)
+      '@automerge/automerge': 3.5.0(patch_hash=1b451d5888023b0f28b6ef72a15ce4962bed3fbd8d4acabe83fd063e50bd4992)
       ordered-map: 0.1.0
       prosemirror-changeset: 2.4.1
       prosemirror-history: 1.5.0

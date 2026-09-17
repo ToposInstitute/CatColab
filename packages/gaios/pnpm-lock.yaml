@@ -5,17 +5,17 @@ settings:
   excludeLinksFromLockfile: false
 
 patchedDependencies:
-  '@automerge/automerge@3.4.1':
-    hash: 27fd5125c0df9cac14a523d212e2604fe06892a57241100c03f63abb7a71f4dc
-    path: ../../patches/@automerge__automerge@3.4.1.patch
+  '@automerge/automerge@3.5.0':
+    hash: 1b451d5888023b0f28b6ef72a15ce4962bed3fbd8d4acabe83fd063e50bd4992
+    path: ../../patches/@automerge__automerge@3.5.0.patch
 
 importers:
 
   .:
     dependencies:
       '@automerge/automerge':
-        specifier: ^3.4.1
-        version: 3.4.1(patch_hash=27fd5125c0df9cac14a523d212e2604fe06892a57241100c03f63abb7a71f4dc)
+        specifier: ^3.5.0
+        version: 3.5.0(patch_hash=1b451d5888023b0f28b6ef72a15ce4962bed3fbd8d4acabe83fd063e50bd4992)
       '@automerge/automerge-repo':
         specifier: ^2.5.6
         version: 2.5.6
@@ -37,7 +37,7 @@ importers:
         version: link:../../tools/vite-plugin-monorepo-dedupe
       '@inkandswitch/patchwork-bootloader':
         specifier: ^0.6.2
-        version: 0.6.2(@automerge/automerge-repo@2.5.6)(@automerge/automerge@3.4.1(patch_hash=27fd5125c0df9cac14a523d212e2604fe06892a57241100c03f63abb7a71f4dc))(@types/react@18.3.18)(react@18.3.1)
+        version: 0.6.2(@automerge/automerge-repo@2.5.6)(@automerge/automerge@3.5.0(patch_hash=1b451d5888023b0f28b6ef72a15ce4962bed3fbd8d4acabe83fd063e50bd4992))(@types/react@18.3.18)(react@18.3.1)
       autoprefixer:
         specifier: ^10.4.20
         version: 10.4.20(postcss@8.5.26)
@@ -115,8 +115,8 @@ packages:
   '@automerge/automerge@3.3.2':
     resolution: {integrity: sha512-9vCdCL7pdQwUra66SBxPVHr+/t9epXKni9KDeak2rNBFMzABVh2u6gSpcwxi3jkR5qr047jVqZv9DlrOfVxLFw==}
 
-  '@automerge/automerge@3.4.1':
-    resolution: {integrity: sha512-zsZpbs/iDPvp+ZojIYd+gxmbcPVz2Xbkcx778G8zrt3E0zS+6saHJOm666lOuZyNRlTV4wHw9qzGTKueedeCsQ==}
+  '@automerge/automerge@3.5.0':
+    resolution: {integrity: sha512-ejbqJWfXWM2QbTcUK/5ugYiQiyOP7LYVAp/RuSvthCc07oek0FClMxEuouuhjrLjVPDSI34RP1ftGc45PF7WRA==}
 
   '@babel/code-frame@7.29.7':
     resolution: {integrity: sha512-Aup7aUOfpbAUg2ROOJN6Iw5f9DMBlzu0mIkm/malLQFN/YQgO48wCj0Kxa3sEHJvPVFg7siR+qRInwXd2qhQKw==}
@@ -1122,7 +1122,6 @@ packages:
   eslint@9.39.4:
     resolution: {integrity: sha512-XoMjdBOwe/esVgEvLmNsD3IRHkm7fbKIUGvrleloJXUZgDHig2IPWNniv+GwjyJXzuNqVjlr5+4yVUZjycJwfQ==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
-    deprecated: This version is no longer supported. Please see https://eslint.org/version-support for other options.
     hasBin: true
     peerDependencies:
       jiti: '*'
@@ -1931,7 +1930,7 @@ snapshots:
 
   '@automerge/automerge-repo@2.5.6':
     dependencies:
-      '@automerge/automerge': 3.4.1(patch_hash=27fd5125c0df9cac14a523d212e2604fe06892a57241100c03f63abb7a71f4dc)
+      '@automerge/automerge': 3.5.0(patch_hash=1b451d5888023b0f28b6ef72a15ce4962bed3fbd8d4acabe83fd063e50bd4992)
       bs58check: 3.0.1
       cbor-x: 1.6.5
       debug: 4.4.3
@@ -1986,7 +1985,7 @@ snapshots:
 
   '@automerge/automerge@3.3.2': {}
 
-  '@automerge/automerge@3.4.1(patch_hash=27fd5125c0df9cac14a523d212e2604fe06892a57241100c03f63abb7a71f4dc)': {}
+  '@automerge/automerge@3.5.0(patch_hash=1b451d5888023b0f28b6ef72a15ce4962bed3fbd8d4acabe83fd063e50bd4992)': {}
 
   '@babel/code-frame@7.29.7':
     dependencies:
@@ -2307,7 +2306,7 @@ snapshots:
 
   '@humanwhocodes/retry@0.4.3': {}
 
-  '@inkandswitch/patchwork-bootloader@0.6.2(@automerge/automerge-repo@2.5.6)(@automerge/automerge@3.4.1(patch_hash=27fd5125c0df9cac14a523d212e2604fe06892a57241100c03f63abb7a71f4dc))(@types/react@18.3.18)(react@18.3.1)':
+  '@inkandswitch/patchwork-bootloader@0.6.2(@automerge/automerge-repo@2.5.6)(@automerge/automerge@3.5.0(patch_hash=1b451d5888023b0f28b6ef72a15ce4962bed3fbd8d4acabe83fd063e50bd4992))(@types/react@18.3.18)(react@18.3.1)':
     dependencies:
       '@automerge/automerge-repo-network-messagechannel': 2.6.0-subduction.47
       '@automerge/automerge-repo-network-websocket': 2.6.0-subduction.47
@@ -2317,9 +2316,9 @@ snapshots:
       '@codemirror/language': 6.12.4
       '@codemirror/state': 6.7.1
       '@codemirror/view': 6.43.7
-      '@inkandswitch/patchwork-elements': 6.0.0(@automerge/automerge-repo@2.5.6)(@inkandswitch/patchwork-filesystem@0.2.5(@automerge/automerge-repo@2.5.6)(@automerge/automerge@3.4.1(patch_hash=27fd5125c0df9cac14a523d212e2604fe06892a57241100c03f63abb7a71f4dc)))(@inkandswitch/patchwork-plugins@1.2.0(@automerge/automerge-repo@2.5.6)(@automerge/automerge@3.4.1(patch_hash=27fd5125c0df9cac14a523d212e2604fe06892a57241100c03f63abb7a71f4dc))(@inkandswitch/patchwork-filesystem@0.2.5(@automerge/automerge-repo@2.5.6)(@automerge/automerge@3.4.1(patch_hash=27fd5125c0df9cac14a523d212e2604fe06892a57241100c03f63abb7a71f4dc))))(@inkandswitch/patchwork-providers@0.5.0(@automerge/automerge-repo@2.5.6))(@types/react@18.3.18)(react@18.3.1)(solid-js@1.9.15)
-      '@inkandswitch/patchwork-filesystem': 0.2.5(@automerge/automerge-repo@2.5.6)(@automerge/automerge@3.4.1(patch_hash=27fd5125c0df9cac14a523d212e2604fe06892a57241100c03f63abb7a71f4dc))
-      '@inkandswitch/patchwork-plugins': 1.2.0(@automerge/automerge-repo@2.5.6)(@automerge/automerge@3.4.1(patch_hash=27fd5125c0df9cac14a523d212e2604fe06892a57241100c03f63abb7a71f4dc))(@inkandswitch/patchwork-filesystem@0.2.5(@automerge/automerge-repo@2.5.6)(@automerge/automerge@3.4.1(patch_hash=27fd5125c0df9cac14a523d212e2604fe06892a57241100c03f63abb7a71f4dc)))
+      '@inkandswitch/patchwork-elements': 6.0.0(@automerge/automerge-repo@2.5.6)(@inkandswitch/patchwork-filesystem@0.2.5(@automerge/automerge-repo@2.5.6)(@automerge/automerge@3.5.0(patch_hash=1b451d5888023b0f28b6ef72a15ce4962bed3fbd8d4acabe83fd063e50bd4992)))(@inkandswitch/patchwork-plugins@1.2.0(@automerge/automerge-repo@2.5.6)(@automerge/automerge@3.5.0(patch_hash=1b451d5888023b0f28b6ef72a15ce4962bed3fbd8d4acabe83fd063e50bd4992))(@inkandswitch/patchwork-filesystem@0.2.5(@automerge/automerge-repo@2.5.6)(@automerge/automerge@3.5.0(patch_hash=1b451d5888023b0f28b6ef72a15ce4962bed3fbd8d4acabe83fd063e50bd4992))))(@inkandswitch/patchwork-providers@0.5.0(@automerge/automerge-repo@2.5.6))(@types/react@18.3.18)(react@18.3.1)(solid-js@1.9.15)
+      '@inkandswitch/patchwork-filesystem': 0.2.5(@automerge/automerge-repo@2.5.6)(@automerge/automerge@3.5.0(patch_hash=1b451d5888023b0f28b6ef72a15ce4962bed3fbd8d4acabe83fd063e50bd4992))
+      '@inkandswitch/patchwork-plugins': 1.2.0(@automerge/automerge-repo@2.5.6)(@automerge/automerge@3.5.0(patch_hash=1b451d5888023b0f28b6ef72a15ce4962bed3fbd8d4acabe83fd063e50bd4992))(@inkandswitch/patchwork-filesystem@0.2.5(@automerge/automerge-repo@2.5.6)(@automerge/automerge@3.5.0(patch_hash=1b451d5888023b0f28b6ef72a15ce4962bed3fbd8d4acabe83fd063e50bd4992)))
       '@inkandswitch/patchwork-providers': 0.5.0(@automerge/automerge-repo@2.5.6)
       '@keyhive/keyhive': 0.1.0-alpha.5
       '@types/debug': 4.1.13
@@ -2329,7 +2328,7 @@ snapshots:
       solid-js: 1.9.15
       tinyargs: 0.1.4
     optionalDependencies:
-      '@automerge/automerge': 3.4.1(patch_hash=27fd5125c0df9cac14a523d212e2604fe06892a57241100c03f63abb7a71f4dc)
+      '@automerge/automerge': 3.5.0(patch_hash=1b451d5888023b0f28b6ef72a15ce4962bed3fbd8d4acabe83fd063e50bd4992)
       '@automerge/automerge-repo': 2.5.6
     transitivePeerDependencies:
       - '@types/react'
@@ -2338,11 +2337,11 @@ snapshots:
       - supports-color
       - utf-8-validate
 
-  '@inkandswitch/patchwork-elements@6.0.0(@automerge/automerge-repo@2.5.6)(@inkandswitch/patchwork-filesystem@0.2.5(@automerge/automerge-repo@2.5.6)(@automerge/automerge@3.4.1(patch_hash=27fd5125c0df9cac14a523d212e2604fe06892a57241100c03f63abb7a71f4dc)))(@inkandswitch/patchwork-plugins@1.2.0(@automerge/automerge-repo@2.5.6)(@automerge/automerge@3.4.1(patch_hash=27fd5125c0df9cac14a523d212e2604fe06892a57241100c03f63abb7a71f4dc))(@inkandswitch/patchwork-filesystem@0.2.5(@automerge/automerge-repo@2.5.6)(@automerge/automerge@3.4.1(patch_hash=27fd5125c0df9cac14a523d212e2604fe06892a57241100c03f63abb7a71f4dc))))(@inkandswitch/patchwork-providers@0.5.0(@automerge/automerge-repo@2.5.6))(@types/react@18.3.18)(react@18.3.1)(solid-js@1.9.15)':
+  '@inkandswitch/patchwork-elements@6.0.0(@automerge/automerge-repo@2.5.6)(@inkandswitch/patchwork-filesystem@0.2.5(@automerge/automerge-repo@2.5.6)(@automerge/automerge@3.5.0(patch_hash=1b451d5888023b0f28b6ef72a15ce4962bed3fbd8d4acabe83fd063e50bd4992)))(@inkandswitch/patchwork-plugins@1.2.0(@automerge/automerge-repo@2.5.6)(@automerge/automerge@3.5.0(patch_hash=1b451d5888023b0f28b6ef72a15ce4962bed3fbd8d4acabe83fd063e50bd4992))(@inkandswitch/patchwork-filesystem@0.2.5(@automerge/automerge-repo@2.5.6)(@automerge/automerge@3.5.0(patch_hash=1b451d5888023b0f28b6ef72a15ce4962bed3fbd8d4acabe83fd063e50bd4992))))(@inkandswitch/patchwork-providers@0.5.0(@automerge/automerge-repo@2.5.6))(@types/react@18.3.18)(react@18.3.1)(solid-js@1.9.15)':
     dependencies:
       '@automerge/automerge-repo': 2.5.6
-      '@inkandswitch/patchwork-filesystem': 0.2.5(@automerge/automerge-repo@2.5.6)(@automerge/automerge@3.4.1(patch_hash=27fd5125c0df9cac14a523d212e2604fe06892a57241100c03f63abb7a71f4dc))
-      '@inkandswitch/patchwork-plugins': 1.2.0(@automerge/automerge-repo@2.5.6)(@automerge/automerge@3.4.1(patch_hash=27fd5125c0df9cac14a523d212e2604fe06892a57241100c03f63abb7a71f4dc))(@inkandswitch/patchwork-filesystem@0.2.5(@automerge/automerge-repo@2.5.6)(@automerge/automerge@3.4.1(patch_hash=27fd5125c0df9cac14a523d212e2604fe06892a57241100c03f63abb7a71f4dc)))
+      '@inkandswitch/patchwork-filesystem': 0.2.5(@automerge/automerge-repo@2.5.6)(@automerge/automerge@3.5.0(patch_hash=1b451d5888023b0f28b6ef72a15ce4962bed3fbd8d4acabe83fd063e50bd4992))
+      '@inkandswitch/patchwork-plugins': 1.2.0(@automerge/automerge-repo@2.5.6)(@automerge/automerge@3.5.0(patch_hash=1b451d5888023b0f28b6ef72a15ce4962bed3fbd8d4acabe83fd063e50bd4992))(@inkandswitch/patchwork-filesystem@0.2.5(@automerge/automerge-repo@2.5.6)(@automerge/automerge@3.5.0(patch_hash=1b451d5888023b0f28b6ef72a15ce4962bed3fbd8d4acabe83fd063e50bd4992)))
       '@inkandswitch/patchwork-providers': 0.5.0(@automerge/automerge-repo@2.5.6)
       debug: 4.4.3
     optionalDependencies:
@@ -2352,20 +2351,20 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@inkandswitch/patchwork-filesystem@0.2.5(@automerge/automerge-repo@2.5.6)(@automerge/automerge@3.4.1(patch_hash=27fd5125c0df9cac14a523d212e2604fe06892a57241100c03f63abb7a71f4dc))':
+  '@inkandswitch/patchwork-filesystem@0.2.5(@automerge/automerge-repo@2.5.6)(@automerge/automerge@3.5.0(patch_hash=1b451d5888023b0f28b6ef72a15ce4962bed3fbd8d4acabe83fd063e50bd4992))':
     dependencies:
-      '@automerge/automerge': 3.4.1(patch_hash=27fd5125c0df9cac14a523d212e2604fe06892a57241100c03f63abb7a71f4dc)
+      '@automerge/automerge': 3.5.0(patch_hash=1b451d5888023b0f28b6ef72a15ce4962bed3fbd8d4acabe83fd063e50bd4992)
       '@automerge/automerge-repo': 2.5.6
       debug: 4.4.3
       resolve.exports: 2.0.3
     transitivePeerDependencies:
       - supports-color
 
-  '@inkandswitch/patchwork-plugins@1.2.0(@automerge/automerge-repo@2.5.6)(@automerge/automerge@3.4.1(patch_hash=27fd5125c0df9cac14a523d212e2604fe06892a57241100c03f63abb7a71f4dc))(@inkandswitch/patchwork-filesystem@0.2.5(@automerge/automerge-repo@2.5.6)(@automerge/automerge@3.4.1(patch_hash=27fd5125c0df9cac14a523d212e2604fe06892a57241100c03f63abb7a71f4dc)))':
+  '@inkandswitch/patchwork-plugins@1.2.0(@automerge/automerge-repo@2.5.6)(@automerge/automerge@3.5.0(patch_hash=1b451d5888023b0f28b6ef72a15ce4962bed3fbd8d4acabe83fd063e50bd4992))(@inkandswitch/patchwork-filesystem@0.2.5(@automerge/automerge-repo@2.5.6)(@automerge/automerge@3.5.0(patch_hash=1b451d5888023b0f28b6ef72a15ce4962bed3fbd8d4acabe83fd063e50bd4992)))':
     dependencies:
-      '@automerge/automerge': 3.4.1(patch_hash=27fd5125c0df9cac14a523d212e2604fe06892a57241100c03f63abb7a71f4dc)
+      '@automerge/automerge': 3.5.0(patch_hash=1b451d5888023b0f28b6ef72a15ce4962bed3fbd8d4acabe83fd063e50bd4992)
       '@automerge/automerge-repo': 2.5.6
-      '@inkandswitch/patchwork-filesystem': 0.2.5(@automerge/automerge-repo@2.5.6)(@automerge/automerge@3.4.1(patch_hash=27fd5125c0df9cac14a523d212e2604fe06892a57241100c03f63abb7a71f4dc))
+      '@inkandswitch/patchwork-filesystem': 0.2.5(@automerge/automerge-repo@2.5.6)(@automerge/automerge@3.5.0(patch_hash=1b451d5888023b0f28b6ef72a15ce4962bed3fbd8d4acabe83fd063e50bd4992))
       '@types/debug': 4.1.13
       '@types/node': 20.19.43
       debug: 4.4.3
