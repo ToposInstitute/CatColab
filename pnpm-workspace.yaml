@@ -1,8 +1,7 @@
 # 9 days, in minutes
 minimumReleaseAge: 12960
 minimumReleaseAgeExclude:
-  - wasm-pack
-  - echarts
+  - "@automerge/automerge"
 packages:
   - "dev-docs"
   - "packages/backend/pkg"
@@ -14,17 +13,10 @@ packages:
   - "packages/gaios"
   - "tools/oxlint-plugin-catcolab"
   - "tools/vite-plugin-monorepo-dedupe"
-# Fix Automerge's `applyPatches`: map key insertions/deletions (upstream fix in
-# https://github.com/automerge/automerge/pull/1308) and block markers in rich
-# text (https://github.com/automerge/automerge/issues/1548), which
-# `revertCommit` relies on to invert diffs. Also chunk the large
-# `Array.prototype.splice` calls made by the wasm-bindgen glue when
-# applying large list insert patches, which otherwise exceed the JS
-# engine's limit on function call arguments (upstream fix in
-# https://github.com/automerge/automerge/commit/028d73dc94b9e8eb106677a136a33538cf31453e,
-# closing https://github.com/automerge/automerge/issues/1526). Can be removed
-# once these are fixed upstream and released.
+# Fix Automerge's `applyPatches` for map key insertions/deletions (upstream fix
+# in https://github.com/automerge/automerge/pull/1308), which `revertCommit`
+# relies on to invert diffs. Can be removed once this is released.
 patchedDependencies:
-  "@automerge/automerge@3.4.1": patches/@automerge__automerge@3.4.1.patch
+  "@automerge/automerge@3.5.0": patches/@automerge__automerge@3.5.0.patch
 # Not every workspace package depends on the patched packages.
 allowUnusedPatches: true

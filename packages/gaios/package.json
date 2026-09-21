@@ -20,7 +20,7 @@
         "watch": "nodemon --watch src -e js,tsx,ts,tsx,css,json --exec 'pnpm build && pnpm push'"
     },
     "dependencies": {
-        "@automerge/automerge": "^3.4.1",
+        "@automerge/automerge": "^3.5.0",
         "@automerge/automerge-repo": "^2.5.6",
         "catcolab-document-methods": "link:../document-methods",
         "catlog-wasm": "link:../catlog-wasm/dist/pkg-browser",
