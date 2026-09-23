@@ -68,6 +68,9 @@ importers:
       prosemirror-view:
         specifier: ^1.41.9
         version: 1.42.0
+      solid-automerge:
+        specifier: ^2.0.1
+        version: 2.0.1(@automerge/automerge-repo@2.5.6)(solid-js@1.9.15)
       solid-js:
         specifier: ^1.9.15
         version: 1.9.15
@@ -523,6 +526,11 @@ packages:
     cpu: [x64]
     os: [win32]
 
+  '@solid-primitives/utils@6.4.1':
+    resolution: {integrity: sha512-ISSB5QX1qP2ynrheIpYwc4oKR5Ny4siNuUyf1qZniy+Il+p/PtDB0QK1Dnle8noiHpwRD3gpPdubOC3qI/Zamg==}
+    peerDependencies:
+      solid-js: ^1.6.12
+
   '@standard-schema/spec@1.1.0':
     resolution: {integrity: sha512-l2aFy5jALhniG5HgqrD6jXLi/rUWrKvqN/qJx6yoJsgKhblVd+iqqU4RCXavm/jPityDo5TCvKMnpjKnOriy0w==}
 
@@ -631,6 +639,9 @@ packages:
   buffer-image-size@0.6.4:
     resolution: {integrity: sha512-nEh+kZOPY1w+gcCMobZ6ETUp9WfibndnosbpwB1iJk/8Gt5ZF2bhS6+B6bPYz424KtwsR6Rflc3tCz1/ghX2dQ==}
     engines: {node: '>=4.0'}
+
+  cabbages@0.2.10:
+    resolution: {integrity: sha512-8wiugEP2u9kYCxK978Opc1UbAx1WcEGxVscGwW6IT4A4e2MeT90i5M67A2RGloeK1Fhact13QGHHcsdiFSSnSQ==}
 
   caniuse-lite@1.0.30001810:
     resolution: {integrity: sha512-TITQPUkaz+aVk5GL6NhOdwk1aEaNTSDPsGFWrTuhKGtjTF70jL/Oht2W4c6rXUe5fu7Ie19VIahAXHIIiWWNeg==}
@@ -851,6 +862,12 @@ packages:
 
   siginfo@2.0.0:
     resolution: {integrity: sha512-ybx0WO1/8bSBLEWXZvEd7gMW3Sn3JFlW3TvX1nREbDLRNQNaeNN8WK0meBwPdAaOI7TtRRRJn/Es1zhrrCHu7g==}
+
+  solid-automerge@2.0.1:
+    resolution: {integrity: sha512-GhYw6/KGYH5q2a44UMnGOFdJ91YW8TGa4S5UFFRw/IC2Q6B0lfLGizUNitqYu39zt1citmILxqFrGhHThqNlOQ==}
+    peerDependencies:
+      '@automerge/automerge-repo': ^2.6.0-subduction.34
+      solid-js: ^1.9.13
 
   solid-js@1.9.15:
     resolution: {integrity: sha512-EeiY2xfpZJqPLjXspVEKjAII4yv8NyG//NxZ3IpOFHdUNnnTyL0uJOeS9LWGvA7cFCz5y94cjFwYlmw5Luncsg==}
@@ -1372,6 +1389,10 @@ snapshots:
   '@rollup/rollup-win32-x64-msvc@4.62.2':
     optional: true
 
+  '@solid-primitives/utils@6.4.1(solid-js@1.9.15)':
+    dependencies:
+      solid-js: 1.9.15
+
   '@standard-schema/spec@1.1.0': {}
 
   '@tsconfig/strictest@2.0.8': {}
@@ -1501,6 +1522,12 @@ snapshots:
   buffer-image-size@0.6.4:
     dependencies:
       '@types/node': 24.13.3
+
+  cabbages@0.2.10:
+    dependencies:
+      debug: 4.4.3
+    transitivePeerDependencies:
+      - supports-color
 
   caniuse-lite@1.0.30001810: {}
 
@@ -1748,6 +1775,15 @@ snapshots:
   seroval@1.5.6: {}
 
   siginfo@2.0.0: {}
+
+  solid-automerge@2.0.1(@automerge/automerge-repo@2.5.6)(solid-js@1.9.15):
+    dependencies:
+      '@automerge/automerge-repo': 2.5.6
+      '@solid-primitives/utils': 6.4.1(solid-js@1.9.15)
+      cabbages: 0.2.10
+      solid-js: 1.9.15
+    transitivePeerDependencies:
+      - supports-color
 
   solid-js@1.9.15:
     dependencies:

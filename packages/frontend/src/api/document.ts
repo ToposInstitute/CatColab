@@ -1,13 +1,7 @@
-import type {
-    AnyDocumentId,
-    ChangeFn,
-    DocHandle,
-    DocHandleChangePayload,
-    Repo,
-} from "@automerge/automerge-repo";
+import type { AnyDocumentId, ChangeFn, DocHandle, Repo } from "@automerge/automerge-repo";
 import jsonpatch from "fast-json-patch";
+import { makeDocumentProjection } from "solid-automerge";
 import { type Accessor, createEffect, createSignal } from "solid-js";
-import { createStore, reconcile } from "solid-js/store";
 import invariant from "tiny-invariant";
 
 import type { Permissions } from "catcolab-api";
@@ -128,24 +122,9 @@ export function makeLiveDoc<Doc extends Document>(
     }
     const docHandle = unknownDocHandle as DocHandle<Doc>;
 
-    const doc = makeDocHandleReactive(docHandle);
+    const doc = makeDocumentProjection(docHandle);
     const changeDoc = (f: ChangeFn<Doc>) => docHandle.change(f);
     return { doc, changeDoc, docHandle };
-}
-
-/** Create a Solid Store that tracks an Automerge document. */
-export function makeDocHandleReactive<T extends object>(handle: DocHandle<T>): T {
-    const [store, setStore] = createStore<T>(handle.doc());
-
-    const onChange = (payload: DocHandleChangePayload<T>) => {
-        // Use [`reconcile`](https://www.solidjs.com/tutorial/stores_immutable)
-        // function to diff the data and thus avoid re-rendering the whole DOM.
-        setStore(reconcile(payload.doc));
-    };
-
-    handle.on("change", onChange);
-
-    return store;
 }
 
 /** Create a boolean signal for whether an Automerge document handle is ready. */

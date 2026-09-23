@@ -166,6 +166,9 @@ importers:
       simple-icons:
         specifier: ^16.28.0
         version: 16.28.0
+      solid-automerge:
+        specifier: ^2.0.1
+        version: 2.0.1(@automerge/automerge-repo@2.5.6)(solid-js@1.9.15)
       solid-firebase:
         specifier: ^0.3.0
         version: 0.3.0(firebase@10.14.0)(solid-js@1.9.15)
@@ -1411,6 +1414,9 @@ packages:
     resolution: {integrity: sha512-nEh+kZOPY1w+gcCMobZ6ETUp9WfibndnosbpwB1iJk/8Gt5ZF2bhS6+B6bPYz424KtwsR6Rflc3tCz1/ghX2dQ==}
     engines: {node: '>=4.0'}
 
+  cabbages@0.2.10:
+    resolution: {integrity: sha512-8wiugEP2u9kYCxK978Opc1UbAx1WcEGxVscGwW6IT4A4e2MeT90i5M67A2RGloeK1Fhact13QGHHcsdiFSSnSQ==}
+
   callsites@3.1.0:
     resolution: {integrity: sha512-P8BjAsXvZS+VIDUI11hHCQEv74YT67YUi5JJFNWIqL235sBmjX4+qx9Muvls5ivyNENctx46xQLQ3aTuE7ssaQ==}
     engines: {node: '>=6'}
@@ -2463,6 +2469,12 @@ packages:
   simple-icons@16.28.0:
     resolution: {integrity: sha512-sQPR5AtK/ijRjou7zw7mlLp08oB6FH7i0lOy5XJ2zp9mJs/yejgiOn7KvQoe2q4YJIx6VmgUSW5AOefebPt5kg==}
     engines: {node: '>=0.12.18'}
+
+  solid-automerge@2.0.1:
+    resolution: {integrity: sha512-GhYw6/KGYH5q2a44UMnGOFdJ91YW8TGa4S5UFFRw/IC2Q6B0lfLGizUNitqYu39zt1citmILxqFrGhHThqNlOQ==}
+    peerDependencies:
+      '@automerge/automerge-repo': ^2.6.0-subduction.34
+      solid-js: ^1.9.13
 
   solid-dismissible@0.1.1:
     resolution: {integrity: sha512-9kcKBJIMdS+586cA1g63HYWxKh3h89leeNHbPZ1csYjuni+NvPBtNr11l0iEX2AKKEt6FHk6qNhc/gjoYAW1pA==}
@@ -4209,6 +4221,12 @@ snapshots:
     dependencies:
       '@types/node': 24.10.0
 
+  cabbages@0.2.10:
+    dependencies:
+      debug: 4.4.3
+    transitivePeerDependencies:
+      - supports-color
+
   callsites@3.1.0: {}
 
   camelcase@6.3.0: {}
@@ -5638,6 +5656,15 @@ snapshots:
   signal-exit@4.1.0: {}
 
   simple-icons@16.28.0: {}
+
+  solid-automerge@2.0.1(@automerge/automerge-repo@2.5.6)(solid-js@1.9.15):
+    dependencies:
+      '@automerge/automerge-repo': 2.5.6
+      '@solid-primitives/utils': 6.4.1(solid-js@1.9.15)
+      cabbages: 0.2.10
+      solid-js: 1.9.15
+    transitivePeerDependencies:
+      - supports-color
 
   solid-dismissible@0.1.1(solid-js@1.9.15):
     dependencies:
