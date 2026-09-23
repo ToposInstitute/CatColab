@@ -205,12 +205,12 @@ export function createApiDocumentStore(api: Api, userState: UserState): ApiDocum
             const after = getHeads(handle.automergeHandle.doc());
 
             handles.delete(draft.automergeHandle.documentId);
-            draft.automergeHandle.delete();
+            void draft.automergeHandle.whenReady().then(() => draft.automergeHandle.delete());
             return { before, after };
         },
         discardDraft: (draft) => {
             handles.delete(draft.automergeHandle.documentId);
-            draft.automergeHandle.delete();
+            void draft.automergeHandle.whenReady().then(() => draft.automergeHandle.delete());
         },
         revertCommit: (handle, change: DocumentChange<Heads>) => {
             // Trust automerge to figure this out.
