@@ -18,7 +18,7 @@ const firebaseOptions = JSON.parse(import.meta.env.VITE_FIREBASE_OPTIONS) as Fir
 const firebaseApp = initializeApp(firebaseOptions);
 const rpc = createRpcClient(serverUrl, createFetchWithAuth(firebaseApp));
 
-const testModel = "openai/gpt-oss-20b:free";
+const testModel = "openrouter/free";
 
 describe("chat turn over OpenRouter", () => {
     const auth = getAuth(firebaseApp);
