@@ -1,4 +1,4 @@
-import { applyPatches, clone, diff, getHeads, type Heads } from "@automerge/automerge";
+import { applyPatches, diff, getHeads, type Heads, load, save } from "@automerge/automerge";
 import { DocHandle, generateAutomergeUrl, parseAutomergeUrl } from "@automerge/automerge-repo";
 import type { RelationInfo, UserState } from "catcolab-api/src/user_state";
 import { createStore, reconcile, unwrap } from "solid-js/store";
@@ -151,7 +151,8 @@ export function createApiDocumentStore(api: Api, userState: UserState): ApiDocum
         const draft = new DocHandle<Document>(documentId, () => {
             throw new Error("Document refs are not supported on drafts.");
         });
-        draft.update(() => clone(source.doc()));
+        // We `save` and `load` rather than `clone` due to how solidjs and automerge interact: https://github.com/chee/solid-automerge/pull/8
+        draft.update(() => load<Document>(save(source.doc())));
         draft.doneLoading();
         return draft;
     };
