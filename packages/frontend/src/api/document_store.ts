@@ -2,7 +2,7 @@ import { applyPatches, diff, getHeads, type Heads, load, save } from "@automerge
 import { DocHandle, generateAutomergeUrl, parseAutomergeUrl } from "@automerge/automerge-repo";
 import type { RelationInfo, UserState } from "catcolab-api/src/user_state";
 import { makeDocumentProjection } from "solid-automerge";
-import { createStore, reconcile, unwrap } from "solid-js/store";
+import { unwrap } from "solid-js/store";
 import { stringify as uuidStringify } from "uuid";
 
 import type { Document, LinkType } from "catcolab-document-types";
@@ -167,6 +167,7 @@ export function createApiDocumentStore(api: Api, userState: UserState): ApiDocum
             );
         },
         getDocumentView: (handle) => handle.docView,
+        getDocumentSnapshot: (handle) => load<Document>(save(handle.automergeHandle.doc())),
         changeDocument: (handle, fn) => handle.automergeHandle.change(fn),
         subscribe: (handle, callback) => {
             handle.automergeHandle.on("change", callback);
@@ -175,15 +176,6 @@ export function createApiDocumentStore(api: Api, userState: UserState): ApiDocum
             };
         },
         copyValue: (_handle, value) => structuredClone(unwrap(value)),
-        createReactiveView(initial) {
-            const [current, setCurrent] = createStore(initial);
-            return {
-                current,
-                replace(next) {
-                    setCurrent(reconcile(next));
-                },
-            };
-        },
         getDocumentRef: (handle) => handle.ref,
         async listUsedBy(handle) {
             return resolveLinked(userState.documents[handle.ref.id]?.usedBy ?? []);
