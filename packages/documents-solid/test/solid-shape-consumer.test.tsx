@@ -155,6 +155,7 @@ function ModelNotebookEditor(props: { notebook: Notebook<typeof GenericShape> })
     );
 }
 
+// oxlint-disable-next-line vitest/no-disabled-tests
 describe.skip("SolidJS shape consumer", () => {
     test("a generic editor renders a Petri net notebook and mutates it reactively", async () => {
         const solidBinder = createBinder(solidStore);

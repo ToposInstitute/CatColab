@@ -1,14 +1,12 @@
 import { monorepoDedupe } from "@catcolab-dev-tools/vite-plugin-monorepo-dedupe";
+import solid from "vite-plugin-solid";
 import wasm from "vite-plugin-wasm";
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
-    plugins: [monorepoDedupe(), wasm()],
+    plugins: [monorepoDedupe(), wasm(), solid()],
     test: {
         environment: "happy-dom",
-        typecheck: {
-            enabled: true,
-            tsconfig: "./tsconfig.test.json",
-        },
+        typecheck: { enabled: true, tsconfig: "./tsconfig.test.json" },
     },
 });

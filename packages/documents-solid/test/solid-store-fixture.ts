@@ -77,15 +77,6 @@ export const solidStore: DocumentStore<SolidStoreHandle> = {
         };
     },
     copyValue: (_handle, value) => structuredClone(unwrap(value)),
-    createReactiveView(initial) {
-        const [current, setCurrent] = createStore(initial);
-        return {
-            current,
-            replace(next) {
-                setCurrent(reconcile(next));
-            },
-        };
-    },
     getDocumentView: (handle) => handle.docView,
     getDocumentRef: (handle) => ({ id: solidStoreIdFor(handle), version: null, server: "" }),
     listUsedBy: async (handle) => {

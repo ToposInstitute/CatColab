@@ -30,7 +30,7 @@ import {
     RichText,
 } from "catcolab-documents";
 import type { DblModel, ObType, QualifiedName } from "catlog-wasm";
-import { selfResolving } from "./helpers/self_resolving";
+import { selfResolving } from "../../documents/test/helpers/self_resolving";
 
 type SolidStoreHandle = {
     draftDoc: Document;
@@ -223,6 +223,7 @@ async function until(predicate: () => boolean) {
     }
 }
 
+// oxlint-disable-next-line vitest/no-disabled-tests
 describe.skip("SolidJS validation & completions", () => {
     test("the validated model feeds completions and codomain selection", async () => {
         const notebook = await solidBinder.createNotebook(SimpleSchema, {

@@ -87,8 +87,8 @@ export function LLMConversationPane(props: {
     const onDeleteLLMConversation = async (conversation: ApiDocumentHandle) => {
         const deleted = await actions.showDeleteDialog({
             refId: conversation.ref.id,
-            name: conversation.docView.name,
-            typeName: documentTypeLabel(conversation.docView.type),
+            name: binder.store.getDocumentView(conversation).name,
+            typeName: documentTypeLabel(binder.store.getDocumentView(conversation).type),
         });
         if (deleted && props.selectedRefId === conversation.ref.id) {
             const nextConversation = conversations()?.find(
@@ -160,7 +160,7 @@ export function LLMConversationPane(props: {
                                     onFocusIn={() => props.onSelect(conversation.ref.id)}
                                 >
                                     <InlineInput
-                                        text={conversation.docView.name}
+                                        text={binder.store.getDocumentView(conversation).name}
                                         setText={(title) =>
                                             conversation.automergeHandle.change((doc) => {
                                                 doc.name = title;
@@ -171,13 +171,18 @@ export function LLMConversationPane(props: {
                                 </div>
                                 <div
                                     class={styles.rowAttachment}
-                                    title={`On ${documentTypeLabel(attachment.docView.type)} "${attachment.docView.name || "Untitled"}"`}
+                                    title={`On ${documentTypeLabel(binder.store.getDocumentView(attachment).type)} "${binder.store.getDocumentView(attachment).name || "Untitled"}"`}
                                 >
                                     <DocumentTypeIcon
-                                        documentType={attachment.docView.type}
-                                        letters={iconLettersOf(attachment.docView)}
+                                        documentType={binder.store.getDocumentView(attachment).type}
+                                        letters={iconLettersOf(
+                                            binder.store.getDocumentView(attachment),
+                                        )}
                                     />
-                                    <span>{attachment.docView.name || "Untitled"}</span>
+                                    <span>
+                                        {binder.store.getDocumentView(attachment).name ||
+                                            "Untitled"}
+                                    </span>
                                 </div>
                                 <Show when={canDeleteLLMConversation(conversation)}>
                                     <div

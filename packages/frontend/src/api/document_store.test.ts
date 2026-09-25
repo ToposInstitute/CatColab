@@ -4,6 +4,7 @@
 import { getObjectId, spans, splice, splitBlock } from "@automerge/automerge";
 import { Repo } from "@automerge/automerge-repo";
 import type { UserState } from "catcolab-api/src/user_state";
+import { createSolidDocumentStore } from "catcolab-documents-solid";
 import { SimpleOlog, Type } from "catcolab-logics/simple-olog";
 import { createRenderEffect, createRoot } from "solid-js";
 import { unwrap } from "solid-js/store";
@@ -69,7 +70,7 @@ function createFixture() {
             throw new Error(`Unknown document ref: ${refId}`);
         },
     } as unknown as Api;
-    const store = createApiDocumentStore(api, userState);
+    const store = createSolidDocumentStore(createApiDocumentStore(api, userState));
 
     return {
         binder: createBinder(store),

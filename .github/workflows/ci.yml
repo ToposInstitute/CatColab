@@ -118,6 +118,7 @@ jobs:
       - name: Typescript documents package tests
         run: |
           pnpm --filter catcolab-documents test
+          pnpm --filter catcolab-documents-solid test
 
       - name: Typescript logic package tests
         run: |
