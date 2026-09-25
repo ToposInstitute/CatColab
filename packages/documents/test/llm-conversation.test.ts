@@ -2,9 +2,10 @@ import { SimpleOlog } from "catcolab-logics/simple-olog";
 import { describe, expect, test } from "vitest";
 
 import { LLMConversation as LLMConversationMethods } from "catcolab-document-methods";
-import { createBinder, llmConversationFromStore } from "catcolab-documents";
+import type { Document } from "catcolab-document-types";
+import { type Binder, createBinder } from "catcolab-documents";
 
-async function createConversation(binder: ReturnType<typeof createBinder>, title: string) {
+async function createConversation(binder: Binder<Document, Document>, title: string) {
     const model = await binder.createNotebook(SimpleOlog, { title: "Attached model" });
     return binder.createLLMConversation(model, "test-model", { title });
 }
@@ -22,7 +23,7 @@ describe("LLM conversation documents", () => {
         expect(conversation.document.type).toBe("llmconversation");
         expect(conversation.document.llmModel).toBe("test-model");
 
-        const modelRef = binder.store.getDocumentRef(model.handle);
+        const modelRef = binder.getDocumentRef(model.handle);
         expect(conversation.document.llmConversationOf).toMatchObject({
             _id: modelRef.id,
             _version: modelRef.version,
@@ -31,7 +32,7 @@ describe("LLM conversation documents", () => {
         expect(conversation.interactions()).toHaveLength(0);
 
         // The link can be resolved back to the attachment's handle through the store.
-        const resolved = await binder.store.getHandle({
+        const resolved = await binder.getHandle({
             id: conversation.document.llmConversationOf._id,
             version: null,
         });
@@ -150,16 +151,44 @@ describe("LLM conversation documents", () => {
         expect(notifications).toBe(2);
     });
 
-    test("llmConversationFromStore wraps an existing handle", async () => {
+    test("loadLLMConversationFromRef wraps an existing conversation", async () => {
         const binder = createBinder();
         const created = await createConversation(binder, "A conversation");
 
-        const conversation = llmConversationFromStore(
-            binder.store,
-            created.handle,
+        const result = await binder.loadLLMConversationFromRef(
             created.attachment,
+            binder.getDocumentRef(created.handle),
         );
+        expect(result.tag).toBe("Ok");
+        if (result.tag !== "Ok") {
+            throw new Error("Expected the conversation to load");
+        }
+        const conversation = result.content;
         expect(conversation.title).toBe("A conversation");
         expect(conversation.document.llmModel).toBe("test-model");
+    });
+
+    test("loadLLMConversationFromRef rejects a non-conversation", async () => {
+        const binder = createBinder();
+        const notebook = await binder.createNotebook(SimpleOlog, { title: "Model" });
+        const result = await binder.loadLLMConversationFromRef(
+            notebook,
+            binder.getDocumentRef(notebook.handle),
+        );
+        expect(result).toMatchObject({ tag: "Err", content: [{ path: ["type"] }] });
+    });
+
+    test("loadLLMConversationFromRef rejects the wrong attachment", async () => {
+        const binder = createBinder();
+        const conversation = await createConversation(binder, "Conversation");
+        const other = await binder.createNotebook(SimpleOlog, { title: "Other model" });
+        const result = await binder.loadLLMConversationFromRef(
+            other,
+            binder.getDocumentRef(conversation.handle),
+        );
+        expect(result).toMatchObject({
+            tag: "Err",
+            content: [{ path: ["llmConversationOf"] }],
+        });
     });
 });

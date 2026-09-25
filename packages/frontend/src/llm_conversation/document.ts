@@ -1,7 +1,7 @@
 import { LLMConversation } from "catcolab-document-methods";
 import type { InlineFile, LLMInteraction } from "catcolab-document-types";
 import type {
-    DocumentStore,
+    Binder,
     LLMConversation as LLMConversationAPI,
     Shape,
     SupportedDocument,
@@ -73,7 +73,7 @@ export async function runLLMConversationTurn<
     Attachment extends SupportedDocument<Shape, Handle, Version>,
 >(
     conversation: LLMConversationAPI<Attachment, Handle>,
-    store: DocumentStore<Handle, Version>,
+    binder: Binder<Handle, Version>,
     inferenceKey: InferenceKeyResult,
     userInput: LLMConversationUserInput,
     onEvent?: (event: ChatTurnEvent) => void,
@@ -92,7 +92,7 @@ export async function runLLMConversationTurn<
         conversation.appendInteraction(
             LLMConversation.newUserMessage(userInput.content, userInput.files),
         );
-        return generateLLMConversationResponse(conversation, store, inferenceKey, onEvent);
+        return generateLLMConversationResponse(conversation, binder, inferenceKey, onEvent);
     } catch (error) {
         return { tag: "Failed", error: errorMessage(error) };
     }
@@ -105,7 +105,7 @@ export async function retryLastLLMConversationResponse<
     Attachment extends SupportedDocument<Shape, Handle, Version>,
 >(
     conversation: LLMConversationAPI<Attachment, Handle>,
-    store: DocumentStore<Handle, Version>,
+    binder: Binder<Handle, Version>,
     inferenceKey: InferenceKeyResult,
     onEvent?: (event: ChatTurnEvent) => void,
 ): Promise<LLMConversationTurnResult> {
@@ -117,7 +117,7 @@ export async function retryLastLLMConversationResponse<
         return { tag: "Failed", error: "The latest interaction is not a user message." };
     }
 
-    return generateLLMConversationResponse(conversation, store, inferenceKey, onEvent);
+    return generateLLMConversationResponse(conversation, binder, inferenceKey, onEvent);
 }
 
 async function generateLLMConversationResponse<
@@ -126,13 +126,13 @@ async function generateLLMConversationResponse<
     Attachment extends SupportedDocument<Shape, Handle, Version>,
 >(
     conversation: LLMConversationAPI<Attachment, Handle>,
-    store: DocumentStore<Handle, Version>,
+    binder: Binder<Handle, Version>,
     inferenceKey: Extract<InferenceKeyResult, { tag: "Ready" }>,
     onEvent?: (event: ChatTurnEvent) => void,
 ): Promise<LLMConversationTurnResult> {
     let createdScope: LLMConversationExecutionScope | undefined;
     try {
-        const executionScope = await createLLMConversationExecutionScope(conversation, store);
+        const executionScope = await createLLMConversationExecutionScope(conversation, binder);
         createdScope = executionScope;
         const context = LLMConversationAdapter.prepareLLMConversationInference(conversation.dump());
         const client = createInferenceClient(inferenceKey.key);

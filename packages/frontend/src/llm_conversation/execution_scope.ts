@@ -3,8 +3,6 @@ import { cellTypesForTheory } from "catcolab-logics/cell-types";
 import type { LinkType } from "catcolab-document-types";
 import {
     type Binder,
-    createBinder,
-    type DocumentStore,
     type LLMConversation,
     type Shape,
     type SupportedDocument,
@@ -33,9 +31,8 @@ export async function createLLMConversationExecutionScope<
     Attachment extends SupportedDocument<Shape, Handle, Version>,
 >(
     conversation: LLMConversation<Attachment, Handle>,
-    store: DocumentStore<Handle, Version>,
+    binder: Binder<Handle, Version>,
 ): Promise<LLMConversationExecutionScope> {
-    const binder = createBinder(store);
     const { documents, theories, tx } = await createScopedDocuments(conversation, binder);
 
     // Every theory in scope brings its cell types with it: both as bindings
@@ -91,18 +88,17 @@ async function createScopedDocuments<
     theories: ReadonlyArray<string>;
     tx: Transaction<Handle, Version>;
 }> {
-    const store = binder.store;
     const origin = conversation.attachment;
 
     const [dependsOn, usedBy] = await Promise.all([
-        store.listDependsOn(origin.handle),
-        store.listUsedBy(origin.handle),
+        binder.listDependsOn(origin.handle),
+        binder.listUsedBy(origin.handle),
     ]);
 
     // Stage the origin together with every document it depends on and every
     // document that depends on it. The running conversation is the one
     // exception: we don't put it into the scope.
-    const conversationRefId = store.getDocumentRef(conversation.handle).id;
+    const conversationRefId = binder.getDocumentRef(conversation.handle).id;
     const entries: Array<ScopeEntry<Handle>> = [];
     for (const [link, handles] of Object.entries(dependsOn) as Array<
         [LinkType, ReadonlyArray<Handle>]
@@ -116,7 +112,7 @@ async function createScopedDocuments<
         [LinkType, ReadonlyArray<Handle>]
     >) {
         for (const handle of handles) {
-            if (store.getDocumentRef(handle).id === conversationRefId) {
+            if (binder.getDocumentRef(handle).id === conversationRefId) {
                 continue;
             }
             entries.push({ kind: "dependent", link, handle });
@@ -135,7 +131,7 @@ async function createScopedDocuments<
         const document =
             entry.kind === "attachment"
                 ? origin
-                : (await resolveSupportedDocument(store, entry.handle))?.document;
+                : (await resolveSupportedDocument(binder, entry.handle))?.document;
         if (document === undefined) {
             continue;
         }
