@@ -50,12 +50,6 @@ export interface DocumentChange<Version> {
     after: Version;
 }
 
-/** A replaceable view of a value that may be reactive in the host application. */
-export interface ReactiveView<T extends object> {
-    readonly current: Readonly<T>;
-    replace(next: T): void;
-}
-
 export interface DocumentStore<Handle, Version = unknown> {
     // An async function to create a document handle from initial data.
     createHandle(initialDoc: Document): Promise<Handle>;
@@ -73,6 +67,8 @@ export interface DocumentStore<Handle, Version = unknown> {
     getDocumentRef(handle: Handle): DocumentRef;
     // Get a document view from a handle
     getDocumentView(handle: Handle): Readonly<Document>;
+    // An unproxied snapshot, if the store can obtain one more directly than copyValue.
+    getDocumentSnapshot?(handle: Handle): Readonly<Document>;
     // List the documents that depend on the document at `handle`, indexed by
     // the type of the link through which each depends on it.
     listUsedBy(handle: Handle): Promise<HandlesByLinkType<Handle>>;
@@ -88,27 +84,14 @@ export interface DocumentStore<Handle, Version = unknown> {
     discardDraft(draft: Handle): void;
     // Undo the changes recorded in a change returned by `commitDraft`.
     revertCommit(handle: Handle, change: DocumentChange<Version>): void;
-    // Create a reactive view for values derived from documents. Stores may
-    // use this hook to integrate their host application's reactive primitives.
-    createReactiveView?<T extends object>(initial: T): ReactiveView<T>;
 }
 
-/** Create a store-native reactive view, falling back to a plain replaceable value. */
-export function createReactiveView<Handle, T extends object>(
+export function getDocumentSnapshot<Handle>(
     store: DocumentStore<Handle>,
-    initial: T,
-): ReactiveView<T> {
-    if (store.createReactiveView) {
-        return store.createReactiveView(initial);
-    }
-
-    let current: T = initial;
-    return {
-        get current(): Readonly<T> {
-            return current;
-        },
-        replace(next: T): void {
-            current = next;
-        },
-    };
+    handle: Handle,
+): Readonly<Document> {
+    return (
+        store.getDocumentSnapshot?.(handle) ??
+        store.copyValue(handle, store.getDocumentView(handle))
+    );
 }
