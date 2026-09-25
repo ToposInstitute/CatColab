@@ -2,14 +2,19 @@ import Tooltip from "@corvu/tooltip";
 import ChevronDown from "lucide-solid/icons/chevron-down";
 import Minus from "lucide-solid/icons/minus";
 import {
+    type Accessor,
     batch,
     type ComponentProps,
     createEffect,
     createMemo,
+    createSelector,
     createSignal,
+    getOwner,
     Index,
     onCleanup,
+    runWithOwner,
     Show,
+    untrack,
 } from "solid-js";
 
 import type {
@@ -54,9 +59,27 @@ type CellKey = `${string}\u0000${string}`;
 /** The cell being edited, by ID, and the live text of its editor. */
 type EditState = { rowId: string; headerId: string; text: string };
 
+/** A committed value shown until the stored field changes or the write settles. */
+type PendingField = { key: CellKey; previousText: string; text: string };
+
 type PendingAppend = { headerId: string; previousRowIds: ReadonlySet<string> };
 
 type PendingDelete = { rowId: string };
+
+type IndexedTable = { table: InstanceTable; rowsById: ReadonlyMap<string, TableRow> };
+
+type TableIndex = {
+    tablesById: ReadonlyMap<string, IndexedTable>;
+    rowsById: ReadonlyMap<string, { table: InstanceTable; row: TableRow }>;
+};
+
+type IssueIndex = {
+    rows: ReadonlyMap<string, TableIssue[]>;
+    fields: ReadonlyMap<string, ReadonlyMap<string, TableIssue[]>>;
+};
+
+const NO_ISSUES: ReadonlyArray<TableIssue> = Object.freeze([]);
+const NO_FIELD_ISSUES: ReadonlyMap<string, TableIssue[]> = new Map();
 
 /** Direction to move the selection after leaving a cell editor. */
 type MoveDirection = "up" | "down" | "left" | "right" | "forward" | "backward" | "stay";
@@ -81,9 +104,15 @@ export type TableEditorProps = {
 
     /** Called when the user edits a cell.
 
-    A `TableRow` value sets a row reference; `null` clears the field.
+    A `TableRow` value sets a row reference; `null` clears the field. The new
+    value is shown optimistically until the row snapshot changes or, if a
+    promise is returned, until it settles.
      */
-    onSetField: (row: TableRow, header: TableHeader, value: LiteralValue | TableRow) => void;
+    onSetField: (
+        row: TableRow,
+        header: TableHeader,
+        value: LiteralValue | TableRow,
+    ) => void | Promise<unknown>;
 
     /** Called when the user adds a row. */
     onAddRow: () => void;
@@ -110,6 +139,9 @@ export function TableEditor(props: TableEditorProps) {
     const [pendingDelete, setPendingDelete] = createSignal<PendingDelete | null>(null);
     const [suppressedFocus, setSuppressedFocus] = createSignal<CellKey | null>(null);
     const [focusRequest, setFocusRequest] = createSignal(0);
+    const [pendingField, setPendingField] = createSignal<PendingField | null>(null);
+    const pendingFieldKey = createMemo(() => pendingField()?.key ?? null);
+    const isPendingField = createSelector(pendingFieldKey);
     // Column whose delete button is hovered, highlighted like a row about to be deleted.
     const [deletingColumnId, setDeletingColumnId] = createSignal<string | null>(null);
 
@@ -121,11 +153,15 @@ export function TableEditor(props: TableEditorProps) {
     // No active child means the first cell is selected.
     const focus = useChildFocus<CellKey>(parentFocus);
 
-    const rows = () => props.table.rows;
-    const headers = () => props.table.headers;
+    // Snapshots share identity across validations when unchanged, so a change
+    // to one row does not reach the cells through the headers.
+    const rows = createMemo(() => props.table.rows);
+    const headers = createMemo(() => props.table.headers);
 
     const headerIndex = createMemo(
         () => new Map(headers().map((header, index) => [header.id, index] as const)),
+        undefined,
+        { equals: mapsEqual },
     );
 
     const keyOf = (cell: Cell): CellKey => makeCellKey(cell.header.id, cell.row.id);
@@ -178,17 +214,61 @@ export function TableEditor(props: TableEditorProps) {
         return row && header ? { row, header } : undefined;
     };
 
-    const isFirstCell = (cell: Cell) => neighbor(cell, "backward") === undefined;
+    const isFirstCell = (cell: Cell) =>
+        cell.row.index === 0 && headerIndex().get(cell.header.id) === 0;
 
     const isEditable = (cell: Cell) => cell.header.type.tag !== "Unknown";
 
+    // Indexes over all tables, so that row references resolve in constant time.
+    // Indexes of unchanged tables are reused from the previous run.
+    const tableIndex = createMemo((prev: TableIndex | undefined): TableIndex => {
+        const tablesById = new Map<string, IndexedTable>();
+        const rowsById = new Map<string, { table: InstanceTable; row: TableRow }>();
+        for (const table of props.tables) {
+            let indexed = prev?.tablesById.get(table.id);
+            if (indexed?.table !== table) {
+                const rows = new Map<string, TableRow>();
+                for (const row of table.rows) {
+                    rows.set(row.id, row);
+                }
+                indexed = { table, rowsById: rows };
+            }
+            tablesById.set(table.id, indexed);
+            for (const row of indexed.rowsById.values()) {
+                if (!rowsById.has(row.id)) {
+                    rowsById.set(row.id, { table, row });
+                }
+            }
+        }
+        return { tablesById, rowsById };
+    });
+
+    // One memo per referenced table, so that cells referencing a table are
+    // only notified when that table changes.
+    const owner = getOwner();
+    const indexedTableMemos = new Map<string, Accessor<IndexedTable | undefined>>();
+    const indexedTable = (tableId: string): IndexedTable | undefined => {
+        let memo = indexedTableMemos.get(tableId);
+        if (!memo) {
+            memo = runWithOwner(owner, () => {
+                const indexed = createMemo(() => tableIndex().tablesById.get(tableId));
+                return indexed;
+            });
+            if (!memo) {
+                return tableIndex().tablesById.get(tableId);
+            }
+            indexedTableMemos.set(tableId, memo);
+        }
+        return memo();
+    };
+
     /** The table referenced by a `RowRef` column, if it can be resolved. */
-    const codomainOf = (header: TableHeader): InstanceTable | undefined => {
+    const codomainOf = (header: TableHeader): IndexedTable | undefined => {
         const type = header.type;
         if (type.tag !== "RowRef") {
             return undefined;
         }
-        return props.tables.find((table) => table.id === type.content.id);
+        return indexedTable(type.content.id);
     };
 
     /** The selected cell, resolved against the current table.
@@ -221,20 +301,26 @@ export function TableEditor(props: TableEditorProps) {
         return { row, header };
     }, null);
 
-    const isSelected = (cell: Cell): boolean => {
+    // Selection and editing state as keys, so that only the cells whose
+    // status changes are notified rather than every cell in the table.
+    const selectedKey = createMemo((): CellKey | null => {
         const sel = selectedCell();
-        return sel !== null && sel.row.id === cell.row.id && sel.header.id === cell.header.id;
-    };
-
-    const isEditing = (cell: Cell): boolean => {
+        return sel === null ? null : keyOf(sel);
+    });
+    const editingKey = createMemo((): CellKey | null => {
         const state = edit();
-        return (
-            state !== null &&
-            isSelected(cell) &&
-            cell.row.id === state.rowId &&
-            cell.header.id === state.headerId
-        );
-    };
+        if (state === null) {
+            return null;
+        }
+        const key = makeCellKey(state.headerId, state.rowId);
+        return key === selectedKey() ? key : null;
+    });
+    const isSelectedKey = createSelector(selectedKey);
+    const isEditingKey = createSelector(editingKey);
+
+    const isSelected = (cell: Cell): boolean => isSelectedKey(keyOf(cell));
+
+    const isEditing = (cell: Cell): boolean => isEditingKey(keyOf(cell));
 
     createEffect(() => {
         const state = edit();
@@ -311,33 +397,76 @@ export function TableEditor(props: TableEditorProps) {
 
     const cellText = (cell: Cell): string => fieldText(fieldOf(cell), cell.header);
 
-    const issuesByPath = createMemo(() => {
-        const index = new Map<string, TableIssue[]>();
-        for (const issue of props.issues ?? []) {
-            const key = pathKey(issue.path);
-            const messages = index.get(key) ?? [];
-            messages.push(issue);
-            index.set(key, messages);
+    // Memoized so that the index is only rebuilt when the list itself changes.
+    const issues = createMemo((): ReadonlyArray<TableIssue> => props.issues ?? NO_ISSUES);
+
+    // Issues indexed by row ID, and by row and header ID for field issues.
+    // Entries of rows whose issues are unchanged keep their identity, so
+    // that only the affected rows are notified.
+    const issueIndex = createMemo((prev: IssueIndex | undefined): IssueIndex => {
+        const rows = new Map<string, TableIssue[]>();
+        const fields = new Map<string, Map<string, TableIssue[]>>();
+        for (const issue of issues()) {
+            const path = issue.path;
+            if (path.length === 3) {
+                const list = rows.get(path[2]) ?? [];
+                list.push(issue);
+                rows.set(path[2], list);
+            } else if (path.length === 5) {
+                const byHeader = fields.get(path[2]) ?? new Map<string, TableIssue[]>();
+                const list = byHeader.get(path[4]) ?? [];
+                list.push(issue);
+                byHeader.set(path[4], list);
+                fields.set(path[2], byHeader);
+            }
         }
-        return index;
+        const sharedFields = new Map<string, ReadonlyMap<string, TableIssue[]>>(fields);
+        if (prev) {
+            for (const [rowId, list] of rows) {
+                const old = prev.rows.get(rowId);
+                if (old && arraysEqual(old, list)) {
+                    rows.set(rowId, old);
+                }
+            }
+            for (const [rowId, byHeader] of fields) {
+                const old = prev.fields.get(rowId);
+                if (!old) {
+                    continue;
+                }
+                for (const [headerId, list] of byHeader) {
+                    const oldList = old.get(headerId);
+                    if (oldList && arraysEqual(oldList, list)) {
+                        byHeader.set(headerId, oldList);
+                    }
+                }
+                if (mapsEqual(old, byHeader)) {
+                    sharedFields.set(rowId, old);
+                }
+            }
+        }
+        return { rows, fields: sharedFields };
     });
 
     const tableIssueMessages = createMemo(() =>
-        (props.issues ?? [])
+        issues()
             .filter((issue) => issue.issueType === "OrphanedTable")
             .map((issue) => issue.message),
     );
 
-    const rowIssues = (row: TableRow): TableIssue[] =>
-        issuesByPath().get(pathKey([props.table.id, "rows", row.id])) ?? [];
+    const rowIssues = (row: TableRow): ReadonlyArray<TableIssue> =>
+        issueIndex().rows.get(row.id) ?? NO_ISSUES;
 
-    const cellIssues = (cell: Cell): TableIssue[] => {
-        const field = fieldOf(cell);
-        return field ? (issuesByPath().get(pathKey(field.content.path)) ?? []) : [];
-    };
+    /** Field issues of a row by header ID; a shared empty map when there are none. */
+    const rowFieldIssues = (row: TableRow): ReadonlyMap<string, TableIssue[]> =>
+        issueIndex().fields.get(row.id) ?? NO_FIELD_ISSUES;
 
-    const cellIsInvalid = (cell: Cell): boolean => {
-        if (cellIssues(cell).length > 0) {
+    const cellIssues = (
+        fieldIssues: ReadonlyMap<string, TableIssue[]>,
+        cell: Cell,
+    ): ReadonlyArray<TableIssue> => fieldIssues.get(cell.header.id) ?? NO_ISSUES;
+
+    const cellIsInvalid = (fieldIssues: ReadonlyMap<string, TableIssue[]>, cell: Cell): boolean => {
+        if (cellIssues(fieldIssues, cell).length > 0) {
             return true;
         }
         const header = cell.header;
@@ -349,8 +478,8 @@ export function TableEditor(props: TableEditorProps) {
             const codomain = codomainOf(header);
             return (
                 field.tag !== "RowRef" ||
-                codomain?.label === null ||
-                !codomain?.rows.some((row) => row.id === field.content.id)
+                codomain?.table.label === null ||
+                !codomain?.rowsById.has(field.content.id)
             );
         }
         return field.tag !== header.type.tag;
@@ -362,17 +491,15 @@ export function TableEditor(props: TableEditorProps) {
         }
         if (field.tag === "RowRef") {
             const codomain = codomainOf(header);
-            const target = codomain?.rows.find((row) => row.id === field.content.id);
+            const target = codomain?.rowsById.get(field.content.id);
             if (codomain && target) {
-                return defaultRowLabel(codomain, target);
+                return defaultRowLabel(codomain.table, target);
             }
-            for (const table of props.tables) {
-                const mistypedTarget = table.rows.find((row) => row.id === field.content.id);
-                if (mistypedTarget) {
-                    return defaultRowLabel(table, mistypedTarget);
-                }
+            const mistyped = tableIndex().rowsById.get(field.content.id);
+            if (mistyped) {
+                return defaultRowLabel(mistyped.table, mistyped.row);
             }
-            return codomain ? `${tableDisplayName(codomain)} ?` : "?";
+            return codomain ? `${tableDisplayName(codomain.table)} ?` : "?";
         }
         if (field.tag === "Bool") {
             return field.content.value ? "true" : "false";
@@ -405,7 +532,7 @@ export function TableEditor(props: TableEditorProps) {
                     ? { ok: true, value: trimmed === "true" }
                     : { ok: false };
             case "RowRef": {
-                const codomain = codomainOf(header);
+                const codomain = codomainOf(header)?.table;
                 const target = codomain?.rows.find(
                     (row) => defaultRowLabel(codomain, row) === trimmed,
                 );
@@ -419,8 +546,44 @@ export function TableEditor(props: TableEditorProps) {
     const validateText = (header: TableHeader, text: string): boolean =>
         parseValue(header, text).ok;
 
+    /** The text a value will display as once stored, mirroring `fieldText`. */
+    const valueText = (header: TableHeader, value: LiteralValue | TableRow): string => {
+        if (value === null) {
+            return "";
+        }
+        if (typeof value === "object") {
+            const codomain = codomainOf(header)?.table;
+            return codomain ? defaultRowLabel(codomain, value) : "?";
+        }
+        return String(value);
+    };
+
     const setField = (cell: Cell, value: LiteralValue | TableRow) => {
-        props.onSetField(cell.row, cell.header, value);
+        const key = keyOf(cell);
+        const pending: PendingField = {
+            key,
+            previousText: cellText(cell),
+            text: valueText(cell.header, value),
+        };
+        setPendingField(pending);
+        const result = props.onSetField(cell.row, cell.header, value);
+        if (result) {
+            const clear = () => {
+                if (untrack(pendingField) === pending) {
+                    setPendingField(null);
+                }
+            };
+            result.then(clear, clear);
+        }
+    };
+
+    /** The pending text of a cell, if its row snapshot has not caught up yet. */
+    const pendingText = (cell: Cell): string | undefined => {
+        if (!isPendingField(keyOf(cell))) {
+            return undefined;
+        }
+        const pending = pendingField();
+        return pending && cellText(cell) === pending.previousText ? pending.text : undefined;
     };
 
     const startEditing = (cell: Cell, text: string) => {
@@ -504,7 +667,7 @@ export function TableEditor(props: TableEditorProps) {
         if (cell.header.type.tag !== "RowRef") {
             return undefined;
         }
-        const codomain = codomainOf(cell.header);
+        const codomain = codomainOf(cell.header)?.table;
         if (!codomain) {
             return [];
         }
@@ -717,151 +880,182 @@ export function TableEditor(props: TableEditorProps) {
                 </thead>
                 <tbody>
                     <Index each={rows()}>
-                        {(row) => (
-                            <tr>
-                                <RowHeader issues={rowIssues(row())} />
-                                <Show
-                                    when={headers().length > 0}
-                                    fallback={<td class={styles.cell} role="gridcell" />}
-                                >
-                                    <Index each={headers()}>
-                                        {(header) => {
-                                            // The row and header at this slot change, so
-                                            // resolve the cell lazily.
-                                            const cell = (): Cell => ({
-                                                row: row(),
-                                                header: header(),
-                                            });
-                                            const cellFocus: FocusHandle = {
-                                                hasFocus: () => isSelected(cell()),
-                                                setFocused: (focused) =>
-                                                    focus
-                                                        .childFocus(keyOf(cell()))
-                                                        .setFocused(focused),
-                                            };
-                                            let cellRef!: HTMLTableCellElement;
+                        {(row) => {
+                            // Issues are indexed per row so that rows without
+                            // issues are not notified when the issues change.
+                            const fieldIssues = createMemo(() => rowFieldIssues(row()));
+                            const ownIssues = createMemo(() => rowIssues(row()));
+                            return (
+                                <tr>
+                                    <RowHeader issues={ownIssues()} />
+                                    <Show
+                                        when={headers().length > 0}
+                                        fallback={<td class={styles.cell} role="gridcell" />}
+                                    >
+                                        <Index each={headers()}>
+                                            {(header) => {
+                                                // The row and header at this slot change, so
+                                                // resolve the cell lazily.
+                                                const cell = (): Cell => ({
+                                                    row: row(),
+                                                    header: header(),
+                                                });
+                                                // Derived per-cell state, each computed once per
+                                                // update; primitive results skip unchanged DOM writes.
+                                                const selected = createMemo(() =>
+                                                    isSelected(cell()),
+                                                );
+                                                const editing = createMemo(() => isEditing(cell()));
+                                                // A committed value not yet in the snapshot is
+                                                // shown as valid until validated.
+                                                const pending = createMemo(() =>
+                                                    pendingText(cell()),
+                                                );
+                                                const invalid = createMemo(
+                                                    () =>
+                                                        pending() === undefined &&
+                                                        cellIsInvalid(fieldIssues(), cell()),
+                                                );
+                                                const issueTitle = createMemo(() =>
+                                                    pending() === undefined
+                                                        ? cellIssues(fieldIssues(), cell())
+                                                              .map(issueMessage)
+                                                              .join("\n") || undefined
+                                                        : undefined,
+                                                );
+                                                const text = createMemo(
+                                                    () => pending() ?? cellText(cell()),
+                                                );
+                                                const first = createMemo(() => isFirstCell(cell()));
+                                                const tabbable = createMemo(
+                                                    () =>
+                                                        !editing() &&
+                                                        (selected() ||
+                                                            (selectedKey() === null && first())),
+                                                );
 
-                                            createEffect(() => {
-                                                focusRequest();
-                                                if (
-                                                    cellFocus.hasFocus() &&
-                                                    !isEditing(cell()) &&
-                                                    suppressedFocus() !== keyOf(cell()) &&
-                                                    document.activeElement !== cellRef
-                                                ) {
-                                                    cellRef.focus();
-                                                }
-                                            });
+                                                const cellFocus: FocusHandle = {
+                                                    hasFocus: selected,
+                                                    setFocused: (focused) =>
+                                                        focus
+                                                            .childFocus(keyOf(cell()))
+                                                            .setFocused(focused),
+                                                };
+                                                let cellRef!: HTMLTableCellElement;
 
-                                            return (
-                                                <td
-                                                    ref={cellRef}
-                                                    class={styles.cell}
-                                                    role="gridcell"
-                                                    classList={{
-                                                        [styles.selected]: isSelected(cell()),
-                                                        [styles.invalid]: cellIsInvalid(cell()),
-                                                        [styles.columnDeleting]:
-                                                            deletingColumnId() === header().id,
-                                                    }}
-                                                    tabindex={
-                                                        !isEditing(cell()) &&
-                                                        (isSelected(cell()) ||
-                                                            (!selectedCell() &&
-                                                                isFirstCell(cell())))
-                                                            ? 0
-                                                            : -1
+                                                createEffect(() => {
+                                                    focusRequest();
+                                                    if (
+                                                        selected() &&
+                                                        !editing() &&
+                                                        suppressedFocus() !== keyOf(cell()) &&
+                                                        document.activeElement !== cellRef
+                                                    ) {
+                                                        cellRef.focus();
                                                     }
-                                                    aria-selected={isSelected(cell())}
-                                                    aria-invalid={cellIsInvalid(cell())}
-                                                    title={
-                                                        cellIssues(cell())
-                                                            .map(issueMessage)
-                                                            .join("\n") || undefined
-                                                    }
-                                                    onFocus={() => select(cell())}
-                                                    onMouseDown={(evt) => {
-                                                        // Focus explicitly: not all browsers
-                                                        // focus a tabindex ancestor on click.
-                                                        // Focus before selecting: focusing
-                                                        // blurs, and thereby commits, any open
-                                                        // cell editor, while selecting first
-                                                        // would unmount it without a commit.
-                                                        if (!isEditing(cell())) {
-                                                            evt.currentTarget.focus();
+                                                });
+
+                                                return (
+                                                    <td
+                                                        ref={cellRef}
+                                                        class={styles.cell}
+                                                        role="gridcell"
+                                                        classList={{
+                                                            [styles.selected]: selected(),
+                                                            [styles.invalid]: invalid(),
+                                                            [styles.columnDeleting]:
+                                                                deletingColumnId() === header().id,
+                                                        }}
+                                                        tabindex={tabbable() ? 0 : -1}
+                                                        aria-selected={selected()}
+                                                        aria-invalid={invalid()}
+                                                        title={issueTitle()}
+                                                        onFocus={() => select(cell())}
+                                                        onMouseDown={(evt) => {
+                                                            // Focus explicitly: not all browsers
+                                                            // focus a tabindex ancestor on click.
+                                                            // Focus before selecting: focusing
+                                                            // blurs, and thereby commits, any open
+                                                            // cell editor, while selecting first
+                                                            // would unmount it without a commit.
+                                                            if (!editing()) {
+                                                                evt.currentTarget.focus();
+                                                            }
+                                                        }}
+                                                        onDblClick={() => {
+                                                            if (header().type.tag === "Bool") {
+                                                                toggleBool(cell());
+                                                            } else {
+                                                                startEditing(cell(), text());
+                                                            }
+                                                        }}
+                                                        onKeyDown={(evt) =>
+                                                            onCellKeyDown(evt, cell())
                                                         }
-                                                    }}
-                                                    onDblClick={() => {
-                                                        if (header().type.tag === "Bool") {
-                                                            toggleBool(cell());
-                                                        } else {
-                                                            startEditing(cell(), cellText(cell()));
-                                                        }
-                                                    }}
-                                                    onKeyDown={(evt) => onCellKeyDown(evt, cell())}
-                                                >
-                                                    <Show
-                                                        when={isEditing(cell())}
-                                                        fallback={
-                                                            <CellContent
-                                                                text={cellText(cell())}
-                                                                isBool={
-                                                                    header().type.tag === "Bool"
-                                                                }
+                                                    >
+                                                        <Show
+                                                            when={editing()}
+                                                            fallback={
+                                                                <CellContent
+                                                                    text={text()}
+                                                                    isBool={
+                                                                        header().type.tag === "Bool"
+                                                                    }
+                                                                    isRowRef={
+                                                                        header().type.tag ===
+                                                                        "RowRef"
+                                                                    }
+                                                                    onOpenRowRef={() =>
+                                                                        startEditing(cell(), text())
+                                                                    }
+                                                                    onToggle={() =>
+                                                                        toggleBool(cell())
+                                                                    }
+                                                                />
+                                                            }
+                                                        >
+                                                            <CellEditor
+                                                                focus={cellFocus}
+                                                                text={edit()?.text ?? ""}
+                                                                setText={setEditText}
                                                                 isRowRef={
                                                                     header().type.tag === "RowRef"
                                                                 }
-                                                                onOpenRowRef={() =>
-                                                                    startEditing(
-                                                                        cell(),
-                                                                        cellText(cell()),
-                                                                    )
+                                                                validate={(text) =>
+                                                                    validateText(header(), text)
                                                                 }
-                                                                onToggle={() => toggleBool(cell())}
+                                                                completions={completionsFor(cell())}
+                                                                onCommit={(dir) => {
+                                                                    const state = edit();
+                                                                    if (state) {
+                                                                        commitEdit(state, dir);
+                                                                    }
+                                                                }}
+                                                                onCancel={cancelEdit}
+                                                                canExitBackward={!first()}
                                                             />
-                                                        }
-                                                    >
-                                                        <CellEditor
-                                                            focus={cellFocus}
-                                                            text={edit()?.text ?? ""}
-                                                            setText={setEditText}
-                                                            isRowRef={
-                                                                header().type.tag === "RowRef"
-                                                            }
-                                                            validate={(text) =>
-                                                                validateText(header(), text)
-                                                            }
-                                                            completions={completionsFor(cell())}
-                                                            onCommit={(dir) => {
-                                                                const state = edit();
-                                                                if (state) {
-                                                                    commitEdit(state, dir);
-                                                                }
-                                                            }}
-                                                            onCancel={cancelEdit}
-                                                            canExitBackward={!isFirstCell(cell())}
-                                                        />
-                                                    </Show>
-                                                </td>
-                                            );
-                                        }}
-                                    </Index>
-                                </Show>
-                                <td class={styles.deleteCell}>
-                                    <button
-                                        type="button"
-                                        class={styles.deleteRow}
-                                        title="Delete row"
-                                        aria-label="Delete row"
-                                        tabindex={-1}
-                                        onMouseDown={(evt) => evt.preventDefault()}
-                                        onClick={() => deleteRow(row())}
-                                    >
-                                        ×
-                                    </button>
-                                </td>
-                            </tr>
-                        )}
+                                                        </Show>
+                                                    </td>
+                                                );
+                                            }}
+                                        </Index>
+                                    </Show>
+                                    <td class={styles.deleteCell}>
+                                        <button
+                                            type="button"
+                                            class={styles.deleteRow}
+                                            title="Delete row"
+                                            aria-label="Delete row"
+                                            tabindex={-1}
+                                            onMouseDown={(evt) => evt.preventDefault()}
+                                            onClick={() => deleteRow(row())}
+                                        >
+                                            ×
+                                        </button>
+                                    </td>
+                                </tr>
+                            );
+                        }}
                     </Index>
                 </tbody>
             </table>
@@ -1066,12 +1260,24 @@ function CellEditor(props: {
     );
 }
 
-function pathKey(path: ReadonlyArray<string>): string {
-    return path.join("\u0000");
-}
-
 function makeCellKey(headerId: string, rowId: string): CellKey {
     return `${headerId}\u0000${rowId}`;
+}
+
+function mapsEqual<K, V>(a: ReadonlyMap<K, V>, b: ReadonlyMap<K, V>): boolean {
+    if (a.size !== b.size) {
+        return false;
+    }
+    for (const [key, value] of a) {
+        if (!b.has(key) || b.get(key) !== value) {
+            return false;
+        }
+    }
+    return true;
+}
+
+function arraysEqual<T>(a: ReadonlyArray<T>, b: ReadonlyArray<T>): boolean {
+    return a.length === b.length && a.every((item, i) => item === b[i]);
 }
 
 function parseCellKey(key: CellKey): { headerId: string; rowId: string } {
