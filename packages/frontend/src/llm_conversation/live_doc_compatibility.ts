@@ -6,7 +6,6 @@ import type {
     Shape,
     SupportedDocument,
 } from "catcolab-documents";
-import { llmConversationFromStore } from "catcolab-documents";
 import type {
     Api,
     ApiBinder,
@@ -47,7 +46,7 @@ export type LiveLLMConversationDoc = {
 };
 
 async function getHandle(binder: ApiBinder, ref: DocumentRef) {
-    const result = await binder.store.getHandle(ref);
+    const result = await binder.getHandle(ref);
     if (result.tag === "Err") {
         throw new Error(result.content.map((issue) => issue.message).join("\n"));
     }
@@ -89,20 +88,23 @@ export async function getLiveLLMConversation(
         version: null,
         server: api.serverHost,
     });
-    const resolved = await resolveSupportedDocument(binder.store, attachmentHandle);
+    const resolved = await resolveSupportedDocument(binder, attachmentHandle);
     if (resolved === undefined) {
         throw new Error(
-            `Cannot attach an LLM conversation to a "${binder.store.getDocumentView(attachmentHandle).type}" document.`,
+            `Cannot attach an LLM conversation to a "${binder.getDocumentView(attachmentHandle).type}" document.`,
         );
     }
     const { document: attachment, modelRefId } = resolved;
     const liveModel = await models.getLiveModel(modelRefId);
-    const conversationHandle = await getHandle(binder, {
+    const conversationResult = await binder.loadLLMConversationFromRef(attachment, {
         id: refId,
         version: null,
         server: api.serverHost,
     });
-    const conversation = llmConversationFromStore(binder.store, conversationHandle, attachment);
+    if (conversationResult.tag === "Err") {
+        throw new Error(conversationResult.content.map((issue) => issue.message).join("\n"));
+    }
+    const conversation = conversationResult.content;
 
     return {
         liveConversation: {
@@ -128,7 +130,7 @@ export async function createLLMConversation(
         version: null,
         server: api.serverHost,
     });
-    const resolved = await resolveSupportedDocument(binder.store, handle);
+    const resolved = await resolveSupportedDocument(binder, handle);
     if (resolved === undefined) {
         throw new Error(
             `Cannot attach an LLM conversation to a "${attachTo.liveDoc.doc.type}" document.`,
