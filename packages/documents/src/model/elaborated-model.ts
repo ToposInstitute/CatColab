@@ -92,19 +92,6 @@ export interface ModelValidation<out S extends Shape> {
     readonly issues: ReadonlyArray<Issue>;
 }
 
-/** A live view of a notebook's validation state.
-
-While the view is active, the notebook revalidates whenever its document
-changes; `model` and `issues` reflect the latest outcome. Before the first
-elaboration completes, `model` is empty and `issues` reports that validation is
-pending. The caller must dispose the view when it is no longer needed.
-
-In the case of an empty model the `model.judgments` and `model.judgmentsOf`
-methods return empty arrays. */
-export interface ModelValidationView<out S extends Shape> extends ModelValidation<S> {
-    dispose(): void;
-}
-
 /** Create an elaborated model over a (possibly changing) model presentation. */
 export function elaboratedModelFromPresentation<S extends Shape>(
     shape: S,

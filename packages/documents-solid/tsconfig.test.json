@@ -1,0 +1,16 @@
+{
+    "extends": "./tsconfig.json",
+    "compilerOptions": {
+        "jsx": "preserve",
+        "jsxImportSource": "solid-js",
+        "types": ["node"],
+        "lib": ["ES2023", "DOM", "DOM.Iterable"]
+    },
+    "include": [
+        "src",
+        "test/validation.test.ts",
+        "test/document-store.test.ts",
+        "test/solid-completions-view.test.tsx",
+        "vite.config.ts"
+    ]
+}

@@ -1,5 +1,5 @@
 {
-    "name": "catcolab-documents",
+    "name": "catcolab-documents-solid",
     "version": "0.1.0",
     "private": true,
     "license": "MIT",
@@ -8,34 +8,34 @@
         ".": "./src/index.ts"
     },
     "scripts": {
-        "build:doc-types": "pnpm --prefix ../document-methods run build:wasm",
         "format": "oxfmt .",
         "lint": "oxlint --fix && oxfmt .",
         "test": "vitest run",
-        "test:db-dump": "vitest --config vitest.db-dump.config.ts --run",
-        "test:watch": "vitest",
-        "check": "pnpm run build:doc-types && tsc -p tsconfig.test.json && pnpm run lint",
+        "check": "tsc -p tsconfig.test.json && pnpm run lint",
         "ci": "tsc -p tsconfig.test.json && oxlint --deny-warnings && oxfmt --check ."
     },
     "dependencies": {
-        "catcolab-document-methods": "link:../document-methods",
         "catcolab-document-types": "link:../document-types/pkg",
-        "catlog-wasm": "link:../catlog-wasm/dist/pkg-browser",
-        "uuid": "^13.0.0"
+        "catcolab-documents": "link:../documents",
+        "solid-js": "^1.9.15"
     },
     "devDependencies": {
         "@automerge/automerge": "^3.5.0",
         "@automerge/automerge-repo": "^2.5.6",
+        "@automerge/prosemirror": "^0.2.0",
         "@catcolab-dev-tools/vite-plugin-monorepo-dedupe": "link:../../tools/vite-plugin-monorepo-dedupe",
-        "@standard-schema/spec": "^1.1.0",
         "@tsconfig/strictest": "^2.0.8",
         "@types/node": "^24.0.0",
-        "@types/uuid": "^10.0.0",
         "catcolab-logics": "link:../logics",
-        "fast-check": "^4.9.0",
+        "catlog-wasm": "link:../catlog-wasm/dist/pkg-browser",
         "happy-dom": "^20.0.0",
+        "prosemirror-model": "^1.25.9",
+        "prosemirror-state": "^1.4.4",
+        "prosemirror-view": "^1.41.9",
+        "solid-automerge": "^2.0.1",
         "typescript": "^6.0.3",
         "vite": "^7.2.2",
+        "vite-plugin-solid": "^2.11.14",
         "vite-plugin-wasm": "^3.5.0",
         "vitest": "4.1.10"
     }

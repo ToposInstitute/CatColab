@@ -1,3 +1,4 @@
+// oxlint-disable vitest/no-disabled-tests
 // RFC-0006 "An Automerge and SolidJS binder for our backend".
 //
 // An approximation of a binder working with the CatColab backend and frontend
@@ -19,7 +20,7 @@ import {
     emptyHandlesByLinkType,
     Instantiation,
 } from "catcolab-documents";
-import { FakeBackend } from "../helpers/fake_backend";
+import { FakeBackend } from "../../documents/test/helpers/fake_backend";
 
 const backend = new FakeBackend();
 const repo = backend.repo;

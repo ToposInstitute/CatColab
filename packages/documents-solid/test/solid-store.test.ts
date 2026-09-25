@@ -5,6 +5,7 @@ import { describe, expect, test } from "vitest";
 import { createBinder } from "catcolab-documents";
 import { solidStore } from "./solid-store-fixture";
 
+// oxlint-disable-next-line vitest/no-disabled-tests
 describe.skip("SolidJS binder", () => {
     test("a binder over a Solid store is used just as the default binder", async () => {
         const solidBinder = createBinder(solidStore);

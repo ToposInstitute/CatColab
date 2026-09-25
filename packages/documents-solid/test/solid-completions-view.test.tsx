@@ -1,15 +1,16 @@
 import { Attr, AttrType, Entity, SimpleSchema } from "catcolab-logics/simple-schema";
-import { type Accessor, createSignal, For, onCleanup } from "solid-js";
+import { type Accessor, createSignal, For } from "solid-js";
 import { render } from "solid-js/web";
 import { describe, expect, test } from "vitest";
 
-// An extension to RFC-0006 "SolidJS example with validation & completions".
-// This functionality was not described in the RFC.
-// view (`createValidationView`) feeds completions to a Solid component. The
-// view's elaborated model is fine-grained reactive through the Solid store's
-// `createReactiveView`, so no signals need to be wired by hand.
-import { createBinder, type MorphismCell, type Notebook } from "catcolab-documents";
-import { solidStore } from "./solid-store-fixture";
+// Validation accessors feed completions to a Solid component.
+import {
+    createBinder,
+    createInMemoryStore,
+    type MorphismCell,
+    type Notebook,
+} from "catcolab-documents";
+import { createNotebookValidation, createSolidDocumentStore } from "../src";
 
 /** Shows an attribute's codomain and offers completions for replacing it,
 drawn from the validated model's attribute types. */
@@ -19,14 +20,13 @@ function CodomainPicker(props: {
     text: Accessor<string>;
     onSelect: (label: string) => void;
 }) {
-    const view = props.notebook.createValidationView();
-    onCleanup(() => view.dispose());
+    const validation = createNotebookValidation(props.notebook);
 
     const completions = () =>
-        view.model
-            .judgmentsOf(AttrType)
+        validation()
+            ?.model.judgmentsOf(AttrType)
             .map((judgment) => judgment.label.join("."))
-            .filter((label) => label.toLowerCase().includes(props.text().toLowerCase()));
+            .filter((label) => label.toLowerCase().includes(props.text().toLowerCase())) ?? [];
 
     return (
         <span>
@@ -42,7 +42,8 @@ function CodomainPicker(props: {
 
 describe("SolidJS completions from a validation view", { timeout: 20000 }, () => {
     test("the validated model feeds completions and codomain selection", async () => {
-        const binder = createBinder(solidStore);
+        const store = createSolidDocumentStore(createInMemoryStore());
+        const binder = createBinder(store);
         const notebook = await binder.createNotebook(SimpleSchema, { title: "Company schema" });
 
         const person = notebook.add(Entity, { label: "Person" });
@@ -94,5 +95,6 @@ describe("SolidJS completions from a validation view", { timeout: 20000 }, () =>
 
         dispose();
         container.remove();
+        store.dispose();
     });
 });
