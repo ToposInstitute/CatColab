@@ -8,6 +8,7 @@
 import { getBackend, getObjectId } from "@automerge/automerge";
 import type { DocHandle, DocumentId } from "@automerge/automerge-repo";
 import { SimpleOlog, Type } from "catcolab-logics/simple-olog";
+import { makeDocumentProjection } from "solid-automerge";
 import { describe, expect, test } from "vitest";
 
 import type { Document } from "catcolab-document-types";
@@ -19,7 +20,6 @@ import {
     Instantiation,
 } from "catcolab-documents";
 import { FakeBackend } from "../helpers/fake_backend";
-import { makeDocHandleReactive } from "../helpers/reactive_doc_handle";
 
 const backend = new FakeBackend();
 const repo = backend.repo;
@@ -31,7 +31,7 @@ type StoreHandle = {
 
 const makeHandle = (docHandle: DocHandle<Document>): StoreHandle => ({
     docHandle,
-    docView: makeDocHandleReactive(docHandle),
+    docView: makeDocumentProjection(docHandle),
 });
 
 const refByDocId = new Map<DocumentId, string>();

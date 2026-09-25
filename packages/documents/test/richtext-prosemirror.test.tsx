@@ -16,6 +16,7 @@ import { basicSchemaAdapter, init } from "@automerge/prosemirror";
 import { SimpleOlog } from "catcolab-logics/simple-olog";
 import { EditorState } from "prosemirror-state";
 import { EditorView } from "prosemirror-view";
+import { makeDocumentProjection } from "solid-automerge";
 import { createEffect, createSignal, For, onCleanup } from "solid-js";
 import { render } from "solid-js/web";
 import { describe, expect, test } from "vitest";
@@ -28,7 +29,6 @@ import {
     RichText,
     type RichTextCell,
 } from "catcolab-documents";
-import { makeDocHandleReactive } from "./helpers/reactive_doc_handle";
 
 type StoreHandle = {
     readonly docHandle: DocHandle<Document>;
@@ -40,7 +40,7 @@ function makeAutomergeRichTextStore(): DocumentStore<StoreHandle> {
     return {
         createHandle: async (initialDoc) => {
             const docHandle = repo.create<Document>(initialDoc as Document);
-            return { docHandle, docView: makeDocHandleReactive(docHandle) };
+            return { docHandle, docView: makeDocumentProjection(docHandle) };
         },
         getDocumentView: (handle) => handle.docView,
         changeDocument: (handle, fn) => handle.docHandle.change(fn),

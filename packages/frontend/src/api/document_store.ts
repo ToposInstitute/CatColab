@@ -1,6 +1,7 @@
 import { applyPatches, diff, getHeads, type Heads, load, save } from "@automerge/automerge";
 import { DocHandle, generateAutomergeUrl, parseAutomergeUrl } from "@automerge/automerge-repo";
 import type { RelationInfo, UserState } from "catcolab-api/src/user_state";
+import { makeDocumentProjection } from "solid-automerge";
 import { createStore, reconcile, unwrap } from "solid-js/store";
 import { stringify as uuidStringify } from "uuid";
 
@@ -14,7 +15,6 @@ import {
     type HandlesByLinkType,
     type Result,
 } from "catcolab-documents";
-import { makeDocHandleReactive } from "./document";
 import type { Api } from "./types";
 
 export type ApiDocumentHandle = {
@@ -59,14 +59,14 @@ export function createApiDocumentStore(api: Api, userState: UserState): ApiDocum
             existing.ref = ref;
             return existing;
         }
-        const handle = { automergeHandle, docView: makeDocHandleReactive(automergeHandle), ref };
+        const handle = { automergeHandle, docView: makeDocumentProjection(automergeHandle), ref };
         handles.set(ref.id, handle);
         return handle;
     };
 
     const draftHandle = (automergeDraft: DocHandle<Document>): ApiDocumentHandle => ({
         automergeHandle: automergeDraft,
-        docView: makeDocHandleReactive(automergeDraft),
+        docView: makeDocumentProjection(automergeDraft),
         ref: {
             id: automergeDraft.documentId,
             version: null,
@@ -205,12 +205,12 @@ export function createApiDocumentStore(api: Api, userState: UserState): ApiDocum
             const after = getHeads(handle.automergeHandle.doc());
 
             handles.delete(draft.automergeHandle.documentId);
-            draft.automergeHandle.delete();
+            void draft.automergeHandle.whenReady().then(() => draft.automergeHandle.delete());
             return { before, after };
         },
         discardDraft: (draft) => {
             handles.delete(draft.automergeHandle.documentId);
-            draft.automergeHandle.delete();
+            void draft.automergeHandle.whenReady().then(() => draft.automergeHandle.delete());
         },
         revertCommit: (handle, change: DocumentChange<Heads>) => {
             // Trust automerge to figure this out.
