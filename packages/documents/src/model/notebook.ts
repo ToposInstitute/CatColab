@@ -27,7 +27,7 @@ import {
     type ObjectCell,
 } from "./cell";
 import type { ModelDocument } from "./document";
-import type { ModelValidation, ModelValidationView } from "./elaborated-model";
+import type { ModelValidation } from "./elaborated-model";
 import { morphismTypesEqual, objectTypesEqual } from "./equality";
 import { getEquationCell, type EquationCell, type EquationSide } from "./equation";
 import { morFromSide } from "./equation-translate";
@@ -195,9 +195,6 @@ export interface Notebook<
     onChange(callback: () => void): () => void;
     validate(): Promise<ModelValidation<S>>;
     onValidate(callback: (result: ModelValidation<S>) => void): () => void;
-    /** Create a live, reactive view of the notebook's validation state. The
-     * caller must dispose the view when it is no longer needed. */
-    createValidationView(): ModelValidationView<S>;
 
     /** Undo the changes this notebook's document received in a commit. */
     revert(commit: Commit<H, V>): void;
@@ -313,7 +310,6 @@ export function modelNotebookFromStore<Handle, S extends Shape, Version>(
         },
         validate: validator.validate,
         onValidate: validator.onValidate,
-        createValidationView: validator.createValidationView,
         revert(commit) {
             const change = commit.documents.get(handle);
             if (change === undefined) {
