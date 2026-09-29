@@ -181,6 +181,8 @@ export interface Notebook<
     H = unknown,
     V = unknown,
 > {
+    /** The document's type, discriminating `SupportedDocument`. */
+    readonly type: D["type"];
     readonly shape: S;
     readonly document: Readonly<D>;
     readonly title: string;
@@ -221,6 +223,9 @@ export function modelNotebookFromStore<Handle, S extends Shape, Version>(
     return {
         shape,
         handle,
+        get type() {
+            return (store.getDocumentView(handle) as Readonly<ModelDocument>).type;
+        },
         get document() {
             return store.getDocumentView(handle) as Readonly<ModelDocument>;
         },

@@ -10,6 +10,8 @@ import type { SupportedDocument } from "./supported-document";
 export type { LLMConversationDocument } from "catcolab-document-methods";
 
 export interface LLMConversation<A, H> {
+    /** The document's type, discriminating `SupportedDocument`. */
+    readonly type: "llmconversation";
     readonly handle: H;
     readonly attachment: A;
     readonly document: Readonly<LLMConversationDocument>;
@@ -57,6 +59,7 @@ export function llmConversationFromStore<
     }
 
     return {
+        type: "llmconversation",
         handle,
         attachment,
         get document(): Readonly<LLMConversationDocument> {
