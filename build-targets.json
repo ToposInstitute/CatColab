@@ -1,0 +1,50 @@
+{
+    "document-types-wasm": {
+        "crate": "packages/document-types",
+        "command": "wasm-pack build packages/document-types",
+        "inputs": [
+            "Cargo.lock",
+            "Cargo.toml",
+            "rust-toolchain.toml",
+            "packages/document-types/.cargo/config.toml",
+            "packages/document-types/Cargo.toml",
+            "packages/document-types/README.md",
+            "packages/document-types/src"
+        ],
+        "outputs": [
+            "packages/document-types/pkg/package.json",
+            "packages/document-types/pkg/catcolab_document_types.js",
+            "packages/document-types/pkg/catcolab_document_types_bg.js",
+            "packages/document-types/pkg/catcolab_document_types.d.ts",
+            "packages/document-types/pkg/catcolab_document_types_bg.wasm",
+            "packages/document-types/pkg/catcolab_document_types_bg.wasm.d.ts",
+            "packages/document-types/pkg/README.md"
+        ]
+    },
+    "catlog-wasm-browser": {
+        "crate": "packages/catlog-wasm",
+        "command": "wasm-pack build packages/catlog-wasm --target browser -d dist/pkg-browser --debug",
+        "inputs": [
+            "Cargo.lock",
+            "Cargo.toml",
+            "rust-toolchain.toml",
+            "packages/catlog/Cargo.toml",
+            "packages/catlog/examples",
+            "packages/catlog/src",
+            "packages/catlog-wasm/.cargo/config.toml",
+            "packages/catlog-wasm/Cargo.toml",
+            "packages/catlog-wasm/src",
+            "packages/document-types/.cargo/config.toml",
+            "packages/document-types/Cargo.toml",
+            "packages/document-types/src"
+        ],
+        "outputs": [
+            "packages/catlog-wasm/dist/pkg-browser/package.json",
+            "packages/catlog-wasm/dist/pkg-browser/catlog_wasm.js",
+            "packages/catlog-wasm/dist/pkg-browser/catlog_wasm_bg.js",
+            "packages/catlog-wasm/dist/pkg-browser/catlog_wasm.d.ts",
+            "packages/catlog-wasm/dist/pkg-browser/catlog_wasm_bg.wasm",
+            "packages/catlog-wasm/dist/pkg-browser/catlog_wasm_bg.wasm.d.ts"
+        ]
+    }
+}

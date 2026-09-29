@@ -5,8 +5,8 @@
     "license": "MIT",
     "type": "module",
     "scripts": {
-        "build:doc-types": "pnpm --prefix ../document-methods run build:wasm",
-        "build:wasm": "pnpm --prefix ../catlog-wasm run build:browser",
+        "build:doc-types": "../../build.py document-types-wasm",
+        "build:wasm": "../../build.py catlog-wasm-browser",
         "build:bindings": "cargo run -p backend -- generate-bindings",
         "build:tcm": "tcm -p 'src/**/*.module.css' . && pnpm --prefix ../ui-components run build:tcm",
         "build:deps": "pnpm run build:doc-types && pnpm run build:wasm && pnpm run build:bindings && pnpm run build:tcm",
