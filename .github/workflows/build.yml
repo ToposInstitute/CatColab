@@ -100,8 +100,8 @@ jobs:
         if: github.event_name == 'release' || steps.cache-frontend-build.outputs.cache-hit != 'true'
         uses: cachix/cachix-action@v17
         with:
-          name: catcolab-jmoggr
-          authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
+          name: topos-institute
+          authToken: '${{ secrets.CACHIX_TOPOS_AUTH_TOKEN }}'
 
       - name: Build for Staging
         if: (github.event_name == 'push' || github.event_name == 'pull_request') && steps.cache-frontend-build.outputs.cache-hit != 'true'
@@ -174,8 +174,8 @@ jobs:
       - name: Configure Cachix
         uses: cachix/cachix-action@v17
         with:
-          name: catcolab-jmoggr
-          authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
+          name: topos-institute
+          authToken: '${{ secrets.CACHIX_TOPOS_AUTH_TOKEN }}'
 
       - name: Build Rust docs
         run: |
@@ -345,8 +345,8 @@ jobs:
         if: steps.cache-gaios-build.outputs.cache-hit != 'true'
         uses: cachix/cachix-action@v17
         with:
-          name: catcolab-jmoggr
-          authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
+          name: topos-institute
+          authToken: '${{ secrets.CACHIX_TOPOS_AUTH_TOKEN }}'
 
       - name: Build gaios plugin
         if: steps.cache-gaios-build.outputs.cache-hit != 'true'

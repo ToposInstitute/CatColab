@@ -78,8 +78,8 @@ jobs:
       - name: Configure Cachix
         uses: cachix/cachix-action@v17
         with:
-          name: catcolab-jmoggr
-          authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
+          name: topos-institute
+          authToken: '${{ secrets.CACHIX_TOPOS_AUTH_TOKEN }}'
 
       - name: Check Rust docs
         run: |
@@ -98,8 +98,8 @@ jobs:
       - name: Configure Cachix
         uses: cachix/cachix-action@v17
         with:
-          name: catcolab-jmoggr
-          authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
+          name: topos-institute
+          authToken: '${{ secrets.CACHIX_TOPOS_AUTH_TOKEN }}'
 
       - name: Install NodeJS dependencies
         run: |
@@ -132,8 +132,8 @@ jobs:
     - name: Configure Cachix
       uses: cachix/cachix-action@v17
       with:
-        name: catcolab-jmoggr
-        authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
+        name: topos-institute
+        authToken: '${{ secrets.CACHIX_TOPOS_AUTH_TOKEN }}'
 
     - name: Build the NixOS system for catcolab-next
       run: nix build .#nixosConfigurations.catcolab-next.config.system.build.toplevel
@@ -220,8 +220,8 @@ jobs:
     - name: Configure Cachix
       uses: cachix/cachix-action@v17
       with:
-        name: catcolab-jmoggr
-        authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
+        name: topos-institute
+        authToken: '${{ secrets.CACHIX_TOPOS_AUTH_TOKEN }}'
 
     - name: Run frontend tests with VM
       run: |
