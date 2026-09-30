@@ -40,6 +40,7 @@ craneLib.buildPackage {
         [
           "build.py"
           "build-targets.json"
+          "tools/build_system"
         ]
         ++ spec.inputs
       )

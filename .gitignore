@@ -113,3 +113,5 @@ CHANGELOG.html
 
 # VSCode
 .vscode/*
+
+__pycache__/
