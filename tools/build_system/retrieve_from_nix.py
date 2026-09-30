@@ -16,7 +16,7 @@ def retrieve_from_nix(root: Path, targets: dict, names: list[str]) -> None:
         result = subprocess.run(
             ["nix", "build", f"{root}#{name}", "--no-link", "--print-out-paths"],
             check=True,
-            capture_output=True,
+            stdout=subprocess.PIPE,
             text=True,
         )
         store_path = Path(result.stdout.strip().splitlines()[-1])

@@ -23,6 +23,7 @@ craneLib.buildPackage {
 
   nativeBuildInputs = [
     (pkgs.python3.withPackages (ps: [ ps.ninja ]))
+    pkgs.pkg-config
     pkgs.wasm-pack
     pkgs.wasm-bindgen-cli
     pkgs.binaryen

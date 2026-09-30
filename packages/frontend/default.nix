@@ -150,7 +150,7 @@ let
 
         # Set up generated API bindings
         mkdir -p packages/backend/pkg/src
-        cp -r ${self.packages.${pkgs.stdenv.hostPlatform.system}.catcolabApi}/src packages/backend/pkg/
+        cp ${self.packages.${pkgs.stdenv.hostPlatform.system}.backend-bindings}/* packages/backend/pkg/src/
 
         cd packages/frontend
         # Generate CSS module type declarations
@@ -205,7 +205,7 @@ let
 
         # Bindings must be copied into source tree BEFORE the cp below copies backend to $out
         mkdir -p packages/backend/pkg/src
-        cp -r ${self.packages.${pkgs.stdenv.hostPlatform.system}.catcolabApi}/src packages/backend/pkg/
+        cp ${self.packages.${pkgs.stdenv.hostPlatform.system}.backend-bindings}/* packages/backend/pkg/src/
 
         cp -r packages/backend $out/packages/
         cp -r packages/frontend $out/packages/
