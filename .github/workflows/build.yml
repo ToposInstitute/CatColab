@@ -99,6 +99,10 @@ jobs:
       - name: Install Nix
         if: github.event_name == 'release' || steps.cache-frontend-build.outputs.cache-hit != 'true'
         uses: cachix/install-nix-action@v25
+        with:
+          extra_nix_config: |
+            fallback = true
+            download-attempts = 5
 
       - name: Configure Cachix
         if: github.event_name == 'release' || steps.cache-frontend-build.outputs.cache-hit != 'true'
@@ -174,6 +178,10 @@ jobs:
 
       - name: Install Nix
         uses: cachix/install-nix-action@v25
+        with:
+          extra_nix_config: |
+            fallback = true
+            download-attempts = 5
 
       - name: Configure Cachix
         uses: cachix/cachix-action@v17
@@ -348,6 +356,10 @@ jobs:
       - name: Install Nix
         if: steps.cache-gaios-build.outputs.cache-hit != 'true'
         uses: cachix/install-nix-action@v25
+        with:
+          extra_nix_config: |
+            fallback = true
+            download-attempts = 5
 
       - name: Configure Cachix
         if: steps.cache-gaios-build.outputs.cache-hit != 'true'

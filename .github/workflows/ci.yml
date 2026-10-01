@@ -74,6 +74,10 @@ jobs:
 
       - name: Install Nix
         uses: cachix/install-nix-action@v25
+        with:
+          extra_nix_config: |
+            fallback = true
+            download-attempts = 5
 
       - name: Configure Cachix
         uses: cachix/cachix-action@v17
@@ -98,6 +102,10 @@ jobs:
 
       - name: Install Nix
         uses: cachix/install-nix-action@v25
+        with:
+          extra_nix_config: |
+            fallback = true
+            download-attempts = 5
 
       - name: Configure Cachix
         uses: cachix/cachix-action@v17
@@ -132,6 +140,10 @@ jobs:
 
     - name: Install Nix
       uses: cachix/install-nix-action@v25
+      with:
+        extra_nix_config: |
+          fallback = true
+          download-attempts = 5
 
     - name: Configure Cachix
       uses: cachix/cachix-action@v17
@@ -220,6 +232,9 @@ jobs:
       uses: cachix/install-nix-action@v25
       with:
         install_url: https://releases.nixos.org/nix/nix-2.29.2/install
+        extra_nix_config: |
+          fallback = true
+          download-attempts = 5
 
     - name: Configure Cachix
       uses: cachix/cachix-action@v17
