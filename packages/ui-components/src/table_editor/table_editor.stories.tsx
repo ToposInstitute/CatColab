@@ -860,6 +860,119 @@ export const RemoteDeleteOfEditedRow: Story = {
     },
 };
 
+export const DeleteRowWithLiveIndex: Story = {
+    render: () => {
+        const initial = toInstanceTable(concurrentSpec);
+        const [rowIds, setRowIds] = createSignal(initial.rows.map((row) => row.id));
+        const table: InstanceTable = {
+            ...initial,
+            get rows() {
+                return initial.rows
+                    .filter((row) => rowIds().includes(row.id))
+                    .map((row) => ({
+                        id: row.id,
+                        fields: row.fields,
+                        // Like document-backed rows, removed rows report -1.
+                        get index() {
+                            return rowIds().indexOf(row.id);
+                        },
+                    }));
+            },
+        };
+        const focus = useChildFocus<string>(rootFocus);
+        return (
+            <TableEditor
+                table={table}
+                tables={[table]}
+                focus={focus.childFocus(table.id)}
+                onSetField={() => {}}
+                onAddRow={() => {}}
+                onDeleteRow={(row) => setRowIds((ids) => ids.filter((id) => id !== row.id))}
+            />
+        );
+    },
+    play: async ({ canvasElement }: { canvasElement: HTMLElement }) => {
+        const canvas = within(canvasElement);
+        await userEvent.click(canvas.getAllByRole("gridcell")[1]!);
+        await userEvent.click(canvas.getAllByRole("button", { name: "Delete row" })[1]!);
+        await waitFor(() => expect(canvas.getAllByRole("gridcell")).toHaveLength(2));
+        await expect(canvas.getByText("Third").closest("td")).toHaveFocus();
+
+        await userEvent.click(canvas.getAllByRole("button", { name: "Delete row" })[1]!);
+        await waitFor(() => expect(canvas.getAllByRole("gridcell")).toHaveLength(1));
+        await expect(canvas.getAllByRole("gridcell")[0]).toHaveFocus();
+
+        await userEvent.click(canvas.getByRole("button", { name: "Delete row" }));
+        await waitFor(() => expect(canvas.queryAllByRole("gridcell")).toHaveLength(0));
+    },
+};
+
+export const VirtualizedRows: Story = {
+    render: () => (
+        <EditableTables
+            initialSpecs={[
+                {
+                    id: "large",
+                    label: "Large table",
+                    columns: [{ id: "value", label: "Value", type: "String" }],
+                    rows: Array.from({ length: 10000 }, (_, index) => ({
+                        id: `row-${index}`,
+                        values: { value: `Value ${index}` },
+                    })),
+                },
+            ]}
+        />
+    ),
+    play: async ({ canvasElement }: { canvasElement: HTMLElement }) => {
+        const canvas = within(canvasElement);
+        const table = canvas.getByRole("grid");
+        const scrollArea = table.parentElement!;
+        await waitFor(() => expect(canvas.getAllByRole("gridcell").length).toBeLessThan(100));
+        const first = canvas.getAllByRole("gridcell")[0]!;
+        await expect(first.closest("tr")!.getBoundingClientRect().height).toBe(29);
+        await userEvent.click(first);
+        // Moving past the rendered window mounts the next row before focusing it.
+        await userEvent.keyboard("{ArrowDown>40/}");
+        await waitFor(() => expect(canvas.getByText("Value 40").closest("td")).toHaveFocus());
+        // Manual scrolling may recycle the focused row, but keeps keyboard focus
+        // in the grid rather than losing it to the document body.
+        scrollArea.scrollTop = scrollArea.scrollHeight;
+        scrollArea.dispatchEvent(new Event("scroll"));
+        await waitFor(() => expect(canvas.getByText("Value 9999")).toBeInTheDocument());
+        await expect(scrollArea).toHaveFocus();
+        await expect(canvas.getAllByRole("gridcell").length).toBeLessThan(100);
+        await userEvent.keyboard("{ArrowUp}");
+        await waitFor(() => expect(canvas.getByText("Value 39").closest("td")).toHaveFocus());
+        await userEvent.dblClick(canvas.getByText("Value 39").closest("td")!);
+        await userEvent.keyboard(" updated");
+        scrollArea.scrollTop = scrollArea.scrollHeight;
+        scrollArea.dispatchEvent(new Event("scroll"));
+        await waitFor(() => expect(canvas.getByText("Value 9999")).toBeInTheDocument());
+        await expect(scrollArea).toHaveFocus();
+        scrollArea.scrollTop = 39 * 29;
+        scrollArea.dispatchEvent(new Event("scroll"));
+        await waitFor(() => expect(canvas.getByText("Value 39 updated")).toBeInTheDocument());
+        scrollArea.scrollTop = scrollArea.scrollHeight;
+        scrollArea.dispatchEvent(new Event("scroll"));
+        await waitFor(() => expect(canvas.getByText("Value 9999")).toBeInTheDocument());
+        await userEvent.dblClick(canvas.getByText("Value 9999").closest("td")!);
+        await userEvent.keyboard("{Enter}");
+        await waitFor(() => expect(table).toHaveAttribute("aria-rowcount", "10002"));
+        await waitFor(() => expect(canvas.getAllByRole("gridcell").at(-1)).toHaveFocus());
+        await userEvent.click(canvas.getAllByRole("button", { name: "Delete row" }).at(-1)!);
+        await waitFor(() => expect(table).toHaveAttribute("aria-rowcount", "10001"));
+        await waitFor(() => expect(canvas.getByText("Value 9999").closest("td")).toHaveFocus());
+        // The scrolled table must still offer a Tab stop after focus leaves it.
+        canvasElement.tabIndex = -1;
+        canvasElement.focus();
+        await waitFor(() =>
+            expect(
+                canvas.getAllByRole("gridcell").filter((cell) => cell.tabIndex === 0),
+            ).toHaveLength(1),
+        );
+    },
+};
+
 export const StableColumnWidths: Story = {
     render: () => (
         <>

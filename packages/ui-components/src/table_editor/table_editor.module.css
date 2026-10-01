@@ -3,7 +3,6 @@
     flex-direction: column;
     width: fit-content;
     max-width: 100%;
-    overflow-x: auto;
     border: 1px solid var(--color-gray-450);
     background: var(--color-background);
 }
@@ -42,6 +41,19 @@
     line-height: 1.4;
 }
 
+.scrollArea {
+    overflow: auto;
+    max-height: var(--table-editor-max-height, 70vh);
+    outline: none;
+}
+
+.spacer,
+.spacer td {
+    padding: 0;
+    border: none;
+    line-height: 0;
+}
+
 .grid {
     width: max-content;
     border-collapse: collapse;
@@ -49,6 +61,9 @@
 }
 
 .columnHeader {
+    position: sticky;
+    top: 0;
+    z-index: 2;
     height: 28px;
     padding: 0 0.5rem;
     border: 1px solid var(--color-gray-450);
@@ -257,7 +272,7 @@ on the last row. Inset shadows leave the collapsed borders alone. */
         inset 0 3px 0 #d87878;
 }
 
-.grid tbody tr:last-child .cell.columnDeleting {
+.grid tbody tr.lastRow .cell.columnDeleting {
     box-shadow:
         inset 3px 0 0 #d87878,
         inset -3px 0 0 #d87878,
