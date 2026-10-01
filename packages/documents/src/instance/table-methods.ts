@@ -19,17 +19,55 @@ import type {
 } from "./tables";
 import { atomicTypeOfAttributeType } from "./validation";
 
+/** Parse results cached per store and handle.
+
+Parsing walks every table and row of the stored document through the store's
+view, which may be an expensive proxy, so the lazily reading table views below
+would otherwise re-parse the whole document on every property access. Entries
+are invalidated by the store's own change notifications; the subscription
+lives as long as the handle, which the stores keep alive anyway. */
+interface ParsedTablesCacheEntry {
+    dirty: boolean;
+    parsed: ParsedTables | undefined;
+}
+const parsedTablesCaches = new WeakMap<object, WeakMap<object, ParsedTablesCacheEntry>>();
+
 /** The stored tables of the document at `handle`, parsed.
 
 Parsing repairs structural problems, so readers get a well-formed view even of
 a malformed document; the repairs themselves are reported by the instance
-validator. */
+validator. The result is cached until the store reports a change to the
+document. */
 export function parsedTablesOfHandle<Handle, Version>(
     store: DocumentStore<Handle, Version>,
     handle: Handle,
 ): ParsedTables {
-    const document = store.getDocumentView(handle) as Readonly<InstanceDocument>;
-    return parseInstanceTables(document.tables).value;
+    const parse = () => {
+        const document = store.getDocumentView(handle) as Readonly<InstanceDocument>;
+        return parseInstanceTables(document.tables).value;
+    };
+    if (typeof handle !== "object" || handle === null) {
+        return parse();
+    }
+    let entriesByHandle = parsedTablesCaches.get(store);
+    if (entriesByHandle === undefined) {
+        entriesByHandle = new WeakMap();
+        parsedTablesCaches.set(store, entriesByHandle);
+    }
+    let entry = entriesByHandle.get(handle);
+    if (entry === undefined) {
+        const newEntry: ParsedTablesCacheEntry = { dirty: true, parsed: undefined };
+        entriesByHandle.set(handle, newEntry);
+        store.subscribe(handle, () => {
+            newEntry.dirty = true;
+        });
+        entry = newEntry;
+    }
+    if (entry.dirty || entry.parsed === undefined) {
+        entry.parsed = parse();
+        entry.dirty = false;
+    }
+    return entry.parsed;
 }
 
 /** Read one table, row, or field from prepared tables.

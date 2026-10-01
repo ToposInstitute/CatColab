@@ -6,7 +6,7 @@ once a commitment to the mathematical account of instances has been made. */
 import type { ElaboratedModel, EquationJudgmentSide } from "../model/elaborated-model";
 import { PathEquation, type Shape } from "../shape";
 import type { EquationViolationIssue } from "./errors";
-import type { LiteralFieldValue, InstanceTable, TableRow } from "./tables";
+import type { FieldValue, LiteralFieldValue, InstanceTable, TableRow } from "./tables";
 import { isLiteralField } from "./tables";
 
 /** Maximum number of counterexamples reported per equation; any further
@@ -18,6 +18,53 @@ of a table, or a literal. */
 type SideValue =
     | { readonly kind: "row"; readonly table: InstanceTable; readonly row: TableRow }
     | { readonly kind: "literal"; readonly field: LiteralFieldValue };
+
+/** Memoized access to the lazily reading table views.
+
+The `rows` and `fields` properties of the table views re-read the stored
+document on every access, so the equation checker, which revisits rows and
+fields many times, materializes each of them at most once. */
+class TableIndex {
+    private readonly tableById: ReadonlyMap<string, InstanceTable>;
+    private readonly rowsByTable = new Map<string, ReadonlyArray<TableRow>>();
+    private readonly rowById = new Map<string, ReadonlyMap<string, TableRow>>();
+    private readonly fieldsByRow = new Map<TableRow, ReadonlyArray<FieldValue>>();
+
+    constructor(tables: ReadonlyArray<InstanceTable>) {
+        this.tableById = new Map(tables.map((table) => [table.id, table]));
+    }
+
+    table(tableId: string): InstanceTable | undefined {
+        return this.tableById.get(tableId);
+    }
+
+    rowsOf(table: InstanceTable): ReadonlyArray<TableRow> {
+        let rows = this.rowsByTable.get(table.id);
+        if (rows === undefined) {
+            rows = table.rows;
+            this.rowsByTable.set(table.id, rows);
+        }
+        return rows;
+    }
+
+    row(table: InstanceTable, rowId: string): TableRow | undefined {
+        let byId = this.rowById.get(table.id);
+        if (byId === undefined) {
+            byId = new Map(this.rowsOf(table).map((row) => [row.id, row]));
+            this.rowById.set(table.id, byId);
+        }
+        return byId.get(rowId);
+    }
+
+    fieldsOf(row: TableRow): ReadonlyArray<FieldValue> {
+        let fields = this.fieldsByRow.get(row);
+        if (fields === undefined) {
+            fields = row.fields;
+            this.fieldsByRow.set(row, fields);
+        }
+        return fields;
+    }
+}
 
 /** Check that the instance's stored data upholds the equations of its schema.
 
@@ -35,7 +82,7 @@ export function validatePathEquations<S extends Shape>(
     tables: ReadonlyArray<InstanceTable>,
     schemaModel: ElaboratedModel<S>,
 ): EquationViolationIssue[] {
-    const tableById = new Map(tables.map((table) => [table.id, table]));
+    const index = new TableIndex(tables);
     const issues: EquationViolationIssue[] = [];
 
     for (const judgment of schemaModel.judgmentsOf(PathEquation)) {
@@ -43,7 +90,7 @@ export function validatePathEquations<S extends Shape>(
         if (sourceId === null || sourceId !== sideSource(judgment.rhs)) {
             continue;
         }
-        const sourceTable = tableById.get(sourceId);
+        const sourceTable = index.table(sourceId);
         if (sourceTable === undefined) {
             continue; // the source object has no table
         }
@@ -53,10 +100,10 @@ export function validatePathEquations<S extends Shape>(
             equationLabel === "" ? "Unnamed equation" : `Equation \`${equationLabel}\``;
 
         let violations = 0;
-        for (const row of sourceTable.rows) {
+        for (const row of index.rowsOf(sourceTable)) {
             const source = { table: sourceTable, row };
-            const left = evaluateSide(tableById, judgment.lhs, source);
-            const right = evaluateSide(tableById, judgment.rhs, source);
+            const left = evaluateSide(index, judgment.lhs, source);
+            const right = evaluateSide(index, judgment.rhs, source);
             if (left === undefined || right === undefined || sideValuesEqual(left, right)) {
                 continue;
             }
@@ -100,7 +147,7 @@ function sideSource<S extends Shape>(side: EquationJudgmentSide<S>): string | nu
 }
 
 function evaluateSide<S extends Shape>(
-    tableById: ReadonlyMap<string, InstanceTable>,
+    index: TableIndex,
     side: EquationJudgmentSide<S>,
     source: { table: InstanceTable; row: TableRow },
 ): SideValue | undefined {
@@ -125,7 +172,7 @@ function evaluateSide<S extends Shape>(
                     return undefined; // no such column
                 }
                 const header = current.table.headers[headerIndex]!;
-                const field = current.row.fields[headerIndex];
+                const field = index.fieldsOf(current.row)[headerIndex];
                 if (field === undefined || field.tag === "Null") {
                     return undefined;
                 }
@@ -134,8 +181,8 @@ function evaluateSide<S extends Shape>(
                     if (field.tag !== "RowRef") {
                         return undefined; // mistyped, reported elsewhere
                     }
-                    const target = tableById.get(header.type.content.id);
-                    const row = target?.rows.find((row) => row.id === field.content.id);
+                    const target = index.table(header.type.content.id);
+                    const row = target && index.row(target, field.content.id);
                     if (target === undefined || row === undefined) {
                         return undefined; // dangling or mistyped, reported elsewhere
                     }
