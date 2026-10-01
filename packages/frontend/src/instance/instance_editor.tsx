@@ -4,6 +4,7 @@ import type { Result, TableIssue } from "catcolab-documents";
 import { type FocusHandle, Spinner, TableEditor, useChildFocus } from "catcolab-ui-components";
 import { createInstanceValidation } from "../documents/validation";
 import type { ApiInstance } from "./live_doc_compatibility";
+import { createInstanceTableData } from "./table_data";
 import { useTableList } from "./table_list";
 
 import styles from "./instance_editor.module.css";
@@ -20,8 +21,9 @@ export function InstanceEditor(props: {
     // Wait for the first schema validation before rendering tables.
     const ready = () => validation() !== undefined;
 
-    const issues = createMemo(() => validation()?.issues ?? []);
-    const tables = createMemo(() => validation()?.tables ?? []);
+    const data = createInstanceTableData(validation);
+    const issues = () => data.issues;
+    const tables = () => data.tables;
 
     const tableList = useTableList();
     createEffect(() => {
