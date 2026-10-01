@@ -1,0 +1,210 @@
+import { Aspect, SimpleOlog, Type } from "catcolab-logics/simple-olog";
+import { describe, expect, test } from "vitest";
+
+import type { Document } from "catcolab-document-types";
+// The per-handle document cache: structural validation of the underlying JSON
+// document, recomputed on every change, plus memoization of derived data.
+import {
+    createBinder,
+    createInMemoryStore,
+    documentCacheFor,
+    modelNotebookFromStore,
+    validateDocumentStructure,
+} from "catcolab-documents";
+
+function emptyModelDocument(): Document {
+    return {
+        type: "model",
+        name: "An Olog",
+        theory: "simple-olog",
+        version: "1",
+        notebook: { cellContents: {}, cellOrder: [] },
+    };
+}
+
+describe("validateDocumentStructure", () => {
+    test("a well-formed model document has no issues", () => {
+        expect(validateDocumentStructure(emptyModelDocument())).toEqual([]);
+    });
+
+    test("a cell listed in the order without contents is an issue", () => {
+        const document = emptyModelDocument();
+        if (document.type === "model") {
+            document.notebook.cellOrder.push("ghost");
+        }
+        const issues = validateDocumentStructure(document);
+        expect(issues.length).toBe(1);
+        expect(issues[0]?.message).toContain("ghost");
+        expect(issues[0]?.path).toEqual(["notebook", "cellOrder", 0]);
+    });
+
+    test("a formal cell without a judgment id is an issue", () => {
+        const document = emptyModelDocument();
+        if (document.type === "model") {
+            document.notebook.cellOrder.push("cell-1");
+            document.notebook.cellContents["cell-1"] = {
+                tag: "formal",
+                id: "cell-1",
+                // @ts-expect-error deliberately malformed judgment
+                content: { tag: "object", name: "A" },
+            };
+        }
+        const issues = validateDocumentStructure(document);
+        expect(issues.map((issue) => issue.message)).toEqual(["A model judgment must have an id"]);
+    });
+
+    test("a malformed instance table is an issue", () => {
+        const document = {
+            type: "instance",
+            name: "Data",
+            version: "1",
+            instanceOf: { _id: "abc", _version: null, _server: "", type: "instance-of" },
+            tables: { entity: { rowOrder: "not-an-array", rows: {} } },
+        } as unknown as Document;
+        const issues = validateDocumentStructure(document);
+        expect(issues.length).toBe(1);
+        expect(issues[0]?.path).toEqual(["tables", "entity", "rowOrder"]);
+    });
+
+    test("an unknown document type is an issue", () => {
+        const document = { type: "mystery" } as unknown as Document;
+        const issues = validateDocumentStructure(document);
+        expect(issues.length).toBe(1);
+        expect(issues[0]?.path).toEqual(["type"]);
+    });
+});
+
+describe("documentCacheFor", () => {
+    test("one cache is shared per handle and recomputes only on change", async () => {
+        const store = createInMemoryStore();
+        const handle = await store.createHandle(emptyModelDocument());
+
+        const cache = documentCacheFor(store, handle);
+        expect(documentCacheFor(store, handle)).toBe(cache);
+
+        let computations = 0;
+        const compute = () => cache.memo("key", () => (computations += 1));
+        compute();
+        compute();
+        expect(computations).toBe(1);
+
+        const generation = cache.generation();
+        store.changeDocument(handle, (document) => {
+            document.name = "Renamed";
+        });
+        expect(cache.generation()).toBe(generation + 1);
+        compute();
+        expect(computations).toBe(2);
+    });
+
+    test("snapshots are unproxied, shared, and refreshed on change", async () => {
+        const store = createInMemoryStore();
+        const handle = await store.createHandle(emptyModelDocument());
+        const cache = documentCacheFor(store, handle);
+
+        const first = cache.snapshot();
+        expect(cache.snapshot()).toBe(first);
+        expect(first).not.toBe(store.getDocumentView(handle));
+
+        store.changeDocument(handle, (document) => {
+            document.name = "Renamed";
+        });
+        const second = cache.snapshot();
+        expect(second).not.toBe(first);
+        expect(second.name).toBe("Renamed");
+    });
+
+    test("structural issues are revalidated on every change", async () => {
+        const store = createInMemoryStore();
+        const handle = await store.createHandle(emptyModelDocument());
+        const cache = documentCacheFor(store, handle);
+
+        expect(cache.structuralIssues()).toEqual([]);
+        expect(cache.tryDocument("model")).toBeDefined();
+        expect(cache.tryDocument("instance")).toBeUndefined();
+
+        store.changeDocument(handle, (document) => {
+            if (document.type === "model") {
+                document.notebook.cellOrder.push("ghost");
+            }
+        });
+        expect(cache.structuralIssues().length).toBe(1);
+        expect(cache.tryDocument("model")).toBeUndefined();
+
+        store.changeDocument(handle, (document) => {
+            if (document.type === "model") {
+                document.notebook.cellOrder.pop();
+            }
+        });
+        expect(cache.structuralIssues()).toEqual([]);
+    });
+
+    test("the generator index maps judgment ids to cell ids", async () => {
+        const store = createInMemoryStore();
+        const handle = await store.createHandle(emptyModelDocument());
+        const notebook = modelNotebookFromStore(SimpleOlog, store, handle);
+
+        const a = notebook.add(Type, { label: "A" });
+        const cache = documentCacheFor(store, handle);
+        const index = cache.generatorIndex();
+        expect(index).toBeDefined();
+        expect(index?.size).toBe(1);
+
+        const document = store.getDocumentView(handle);
+        const cellId = index?.values().next().value;
+        expect(cellId).toBe(a.id);
+        expect(document.type).toBe("model");
+    });
+});
+
+// the first time tests run we incur the cost of loading the catlog-wasm bundle,
+// so these tests have longer timeouts
+describe("cached validation", { timeout: 20000 }, () => {
+    test("repeated validation of an unchanged notebook returns the same result", async () => {
+        const binder = createBinder();
+        const notebook = await binder.createNotebook(SimpleOlog, { title: "An Olog" });
+        const a = notebook.add(Type, { label: "A" });
+        const b = notebook.add(Type, { label: "B" });
+        notebook.add(Aspect, { label: "has", from: a, to: b });
+
+        const first = await notebook.validate();
+        const second = await notebook.validate();
+        expect(second).toBe(first);
+
+        notebook.add(Type, { label: "C" });
+        const third = await notebook.validate();
+        expect(third).not.toBe(first);
+        expect(third.model.judgmentsOf(Type).length).toBe(3);
+    });
+
+    test("a structurally invalid document reports issues without elaborating", async () => {
+        const store = createInMemoryStore();
+        const handle = await store.createHandle(emptyModelDocument());
+        const notebook = modelNotebookFromStore(SimpleOlog, store, handle);
+        notebook.add(Type, { label: "A" });
+
+        store.changeDocument(handle, (document) => {
+            if (document.type === "model") {
+                document.notebook.cellOrder.push("ghost");
+            }
+        });
+
+        const result = await notebook.validate();
+        expect(result.issues.length).toBe(1);
+        expect(result.issues[0]?.message).toContain("ghost");
+        expect(result.model.judgments()).toEqual([]);
+    });
+
+    test("loading a structurally invalid dump is an error", async () => {
+        const binder = createBinder();
+        const malformed = emptyModelDocument();
+        if (malformed.type === "model") {
+            malformed.notebook.cellOrder.push("ghost");
+        }
+
+        const result = await binder.loadSupportedDocument([SimpleOlog], malformed);
+        expect(result.tag).toBe("Err");
+        const issues = result.tag === "Err" ? result.content : [];
+        expect(issues[0]?.message).toContain("ghost");
+    });
+});

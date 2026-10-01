@@ -1,5 +1,5 @@
 import type { Mor } from "catcolab-document-types";
-import type { DocumentStore } from "../document-store";
+import { documentCacheFor, type DocumentStore } from "../document-store";
 import { findMorphismType } from "../shape";
 import type { MorphismType, MorphismTypesOf, Shape } from "../shape";
 import { getMorphismCell, obFromObjectCell, objectCellFromOb, type MorphismCell } from "./cell";
@@ -68,18 +68,18 @@ function morphismCellFromBasicMor<Handle, S extends Shape, Version>(
     handle: Handle,
     morId: string,
 ): MorphismCell<S, MorphismTypesOf<S>> | null {
-    const document = store.getDocumentView(handle) as Readonly<ModelDocument>;
-    for (const cellId of document.notebook.cellOrder) {
-        const cell = document.notebook.cellContents[cellId];
-        if (cell?.tag !== "formal" || cell.content.tag !== "morphism") {
-            continue;
-        }
-        if (cell.content.id === morId) {
-            const type = findMorphismType(shape, cell.content.morType);
-            return type ? getMorphismCell(shape, store, handle, cellId, type) : null;
-        }
+    const cache = documentCacheFor(store, handle);
+    const cellId = cache.generatorIndex()?.get(morId);
+    if (cellId === undefined) {
+        return null;
     }
-    return null;
+    const document = store.getDocumentView(handle) as Readonly<ModelDocument>;
+    const cell = document.notebook.cellContents[cellId];
+    if (cell?.tag !== "formal" || cell.content.tag !== "morphism") {
+        return null;
+    }
+    const type = findMorphismType(shape, cell.content.morType);
+    return type ? getMorphismCell(shape, store, handle, cellId, type) : null;
 }
 
 function morFromMorphismCell(

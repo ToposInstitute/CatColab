@@ -5,7 +5,7 @@ import {
 } from "catcolab-document-methods";
 import type { Document } from "catcolab-document-types";
 import type { DocumentRef, DocumentStore, HandlesByLinkType } from "./document-store";
-import { createInMemoryStore } from "./document-store";
+import { createInMemoryStore, documentCacheFor } from "./document-store";
 import type { DocumentChange } from "./document-store";
 import { instanceFromStore, type Instance } from "./instance/instance";
 import { type LLMConversation, llmConversationFromStore } from "./llm-conversation";
@@ -193,6 +193,11 @@ function binderFromStore<Handle, Version>(
                 return result;
             }
 
+            const structuralIssues = documentCacheFor(store, result.content).structuralIssues();
+            if (structuralIssues.length > 0) {
+                return { tag: "Err" as const, content: structuralIssues };
+            }
+
             const document = store.getDocumentView(result.content);
             if (document.type !== "model") {
                 return {
@@ -280,6 +285,10 @@ function binderFromStore<Handle, Version>(
             if (result.tag === "Err") {
                 return result;
             }
+            const structuralIssues = documentCacheFor(store, result.content).structuralIssues();
+            if (structuralIssues.length > 0) {
+                return { tag: "Err" as const, content: structuralIssues };
+            }
             const document = store.getDocumentView(result.content);
             if (document.type !== "llmconversation") {
                 return {
@@ -331,6 +340,11 @@ function binderFromStore<Handle, Version>(
             const result = await store.getHandle(ref);
             if (result.tag === "Err") {
                 return result;
+            }
+
+            const structuralIssues = documentCacheFor(store, result.content).structuralIssues();
+            if (structuralIssues.length > 0) {
+                return { tag: "Err" as const, content: structuralIssues };
             }
 
             const document = store.getDocumentView(result.content);

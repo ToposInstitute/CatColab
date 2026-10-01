@@ -1,6 +1,6 @@
 import { Nb } from "catcolab-document-methods";
 import type { Ob } from "catcolab-document-types";
-import type { DocumentStore } from "../document-store";
+import { documentCacheFor, type DocumentStore } from "../document-store";
 import { deleteNotebookCell } from "../notebook-document";
 import { getRichTextCell, type RichTextCell } from "../rich-text";
 import { findMorphismType, findObjectType } from "../shape";
@@ -111,23 +111,22 @@ export function objectCellFromOb<Handle, S extends Shape, Version>(
     handle: Handle,
     endpoint: Ob | null,
 ): ObjectCell<ObjectTypesOf<S>> | null {
-    const document = store.getDocumentView(handle) as Readonly<ModelDocument>;
     if (endpoint?.tag !== "Basic") {
         return null;
     }
 
-    for (const cellId of document.notebook.cellOrder) {
-        const cell = Nb.getCellById(document.notebook, cellId);
-        if (cell.tag !== "formal" || cell.content.tag !== "object") {
-            continue;
-        }
-        if (cell.content.id === endpoint.content) {
-            const type = findObjectType(shape, cell.content.obType);
-            return type ? getObjectCell(store, handle, cellId, type) : null;
-        }
+    const cache = documentCacheFor(store, handle);
+    const cellId = cache.generatorIndex()?.get(endpoint.content);
+    if (cellId === undefined) {
+        return null;
     }
-
-    return null;
+    const document = store.getDocumentView(handle) as Readonly<ModelDocument>;
+    const cell = document.notebook.cellContents[cellId];
+    if (cell?.tag !== "formal" || cell.content.tag !== "object") {
+        return null;
+    }
+    const type = findObjectType(shape, cell.content.obType);
+    return type ? getObjectCell(store, handle, cellId, type) : null;
 }
 
 export function obFromObjectCell(
