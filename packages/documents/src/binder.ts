@@ -8,6 +8,7 @@ import type { DocumentRef, DocumentStore, HandlesByLinkType } from "./document-s
 import { createInMemoryStore } from "./document-store";
 import type { DocumentChange } from "./document-store";
 import { instanceFromStore, type Instance } from "./instance/instance";
+import { parseInstanceDocument } from "./instance/parsed-document";
 import { type LLMConversation, llmConversationFromStore } from "./llm-conversation";
 import type { ModelDocument } from "./model/document";
 import { modelNotebookFromStore, type Notebook } from "./model/notebook";
@@ -346,18 +347,27 @@ function binderFromStore<Handle, Version>(
                 };
             }
 
+            // Parse the document: fatal structural problems block loading,
+            // while repairable problems with the stored tables surface later
+            // as `MalformedDocument` issues when the instance is validated.
+            const parseResult = parseInstanceDocument(document);
+            if (parseResult.tag === "Err") {
+                return { tag: "Err" as const, content: parseResult.content };
+            }
+            const parsedDocument = parseResult.content.value;
+
             const schemaRef = store.getDocumentRef(schema.handle);
             if (
-                document.instanceOf._id !== schemaRef.id ||
-                document.instanceOf._version !== schemaRef.version ||
-                document.instanceOf._server !== (schemaRef.server ?? "")
+                parsedDocument.instanceOf._id !== schemaRef.id ||
+                parsedDocument.instanceOf._version !== schemaRef.version ||
+                parsedDocument.instanceOf._server !== (schemaRef.server ?? "")
             ) {
                 return {
                     tag: "Err",
                     content: [
                         {
                             message:
-                                `Cannot load instance of schema "${document.instanceOf._id}" ` +
+                                `Cannot load instance of schema "${parsedDocument.instanceOf._id}" ` +
                                 `using schema "${schemaRef.id}".`,
                             path: ["instanceOf"],
                         },
@@ -463,7 +473,20 @@ function binderFromStore<Handle, Version>(
             const pending = [...sources];
             try {
                 while (pending.length > 0) {
-                    const drafted = await Promise.all(pending.map((doc) => draftDoc(doc)));
+                    // Wait for all constructions, even if one fails, so every
+                    // instance owner can be released by the failure cleanup.
+                    const results = await Promise.allSettled(pending.map((doc) => draftDoc(doc)));
+                    for (const [index, result] of results.entries()) {
+                        if (result.status === "fulfilled" && result.value !== undefined) {
+                            drafts.set(pending[index]!.handle, result.value);
+                        }
+                    }
+                    const drafted = results.map((result) => {
+                        if (result.status === "rejected") {
+                            throw result.reason;
+                        }
+                        return result.value;
+                    });
                     const remaining = pending.filter((_, index) => drafted[index] === undefined);
                     if (remaining.length === pending.length) {
                         throw new Error(
@@ -471,17 +494,16 @@ function binderFromStore<Handle, Version>(
                                 "so no draft order exists.",
                         );
                     }
-                    for (const [index, doc] of pending.entries()) {
-                        const draft = drafted[index];
-                        if (draft !== undefined) {
-                            drafts.set(doc.handle, draft);
-                        }
-                    }
                     pending.splice(0, pending.length, ...remaining);
                 }
             } catch (error) {
                 // Constructing the drafts failed: discard the staged drafts so
                 // that they do not linger in the store.
+                for (const draft of drafts.values()) {
+                    if (draft.type === "instance") {
+                        draft.dispose();
+                    }
+                }
                 for (const draftHandle of draftHandleBySource.values()) {
                     store.discardDraft(draftHandle);
                 }
@@ -504,6 +526,11 @@ function binderFromStore<Handle, Version>(
                         throw new Error(`The transaction has already been ${state}.`);
                     }
                     state = "committed";
+                    for (const draft of drafts.values()) {
+                        if (draft.type === "instance") {
+                            draft.dispose();
+                        }
+                    }
 
                     const documents = new Map<Handle, DocumentChange<Version>>();
                     for (const { sourceHandle, draftHandle } of staged) {
@@ -516,6 +543,11 @@ function binderFromStore<Handle, Version>(
                         throw new Error(`The transaction has already been ${state}.`);
                     }
                     state = "aborted";
+                    for (const draft of drafts.values()) {
+                        if (draft.type === "instance") {
+                            draft.dispose();
+                        }
+                    }
                     for (const { draftHandle } of staged) {
                         store.discardDraft(draftHandle);
                     }
