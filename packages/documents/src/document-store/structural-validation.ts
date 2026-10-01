@@ -1,140 +1,53 @@
 import type { Document } from "catcolab-document-types";
 import type { Issue } from "../result";
 
-/* Structural validation of the underlying JSON document.
+/* Structural validation of the underlying JSON of an instance document.
 
-Checks that a document is well-formed enough for the operations in this
-package to work without defensive per-access checks: the discriminant and
-required fields are present, notebooks are internally consistent, and stored
-instance tables have the expected shape. Validation is deliberately tolerant
-of extra fields and of semantic problems (those are the elaborator's job). */
+Checks that an instance document is well-formed enough for the operations in
+this package to work without defensive per-access checks: the required
+fields are present and stored tables have the expected shape. In particular,
+the row order of every table must list exactly the rows of the table, each
+once, so readers can use it without reconciling it against the rows.
+Validation is deliberately tolerant of extra fields and of semantic problems
+(those are the instance validator's job). */
 
 type Path = ReadonlyArray<PropertyKey>;
 
-const documentTypes: ReadonlySet<string> = new Set([
-    "model",
-    "diagram",
-    "analysis",
-    "instance",
-    "llmconversation",
-]);
-
-const modelJudgmentTags: ReadonlySet<string> = new Set([
-    "object",
-    "morphism",
-    "equation",
-    "instantiation",
-]);
+/** An issue reported by structural validation; its path is always present. */
+export interface StructuralIssue extends Issue {
+    readonly path: Path;
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
     return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function issue(message: string, path: Path): Issue {
+function issue(message: string, path: Path): StructuralIssue {
     return { message, path };
 }
 
-function validateLink(value: unknown, path: Path, issues: Issue[]): void {
+function validateLink(value: unknown, path: Path, issues: StructuralIssue[]): void {
     if (!isRecord(value) || typeof value["_id"] !== "string") {
         issues.push(issue("Expected a link to another document", path));
     }
 }
 
-/** Validate the content of a formal cell in a model notebook. */
-function validateModelJudgment(value: Record<string, unknown>, path: Path, issues: Issue[]): void {
-    if (typeof value["tag"] !== "string" || !modelJudgmentTags.has(value["tag"])) {
-        issues.push(
-            issue(`Unknown model judgment tag "${String(value["tag"])}"`, [...path, "tag"]),
-        );
-        return;
-    }
-    if (typeof value["id"] !== "string") {
-        issues.push(issue("A model judgment must have an id", [...path, "id"]));
-    }
-    if (typeof value["name"] !== "string") {
-        issues.push(issue("A model judgment must have a name", [...path, "name"]));
-    }
-}
+/** Check that the stored tables of an instance document are well-formed.
 
-function validateNotebook(
-    value: unknown,
-    path: Path,
-    issues: Issue[],
-    validateJudgment?: (value: Record<string, unknown>, path: Path, issues: Issue[]) => void,
-): void {
+Issue paths are relative to the document's `tables` map, i.e. they start at
+the table id, matching the paths of the instance validator's table issues.
+Returns an empty array when the tables are valid. */
+export function validateInstanceTablesStructure(value: unknown): StructuralIssue[] {
+    const issues: StructuralIssue[] = [];
     if (!isRecord(value)) {
-        issues.push(issue("A notebook must be an object", path));
-        return;
-    }
-    const cellContents = value["cellContents"];
-    const cellOrder = value["cellOrder"];
-    if (!isRecord(cellContents)) {
-        issues.push(issue("A notebook must have cell contents", [...path, "cellContents"]));
-        return;
-    }
-    if (!Array.isArray(cellOrder)) {
-        issues.push(issue("A notebook must have a cell order", [...path, "cellOrder"]));
-        return;
-    }
-    for (const [index, cellId] of cellOrder.entries()) {
-        if (typeof cellId !== "string") {
-            issues.push(issue("Cell ids must be strings", [...path, "cellOrder", index]));
-            continue;
-        }
-        if (cellContents[cellId] === undefined) {
-            issues.push(
-                issue(`Cell \`${cellId}\` is listed in the cell order but has no contents`, [
-                    ...path,
-                    "cellOrder",
-                    index,
-                ]),
-            );
-        }
-    }
-    for (const [cellId, cell] of Object.entries(cellContents)) {
-        const cellPath = [...path, "cellContents", cellId];
-        if (!isRecord(cell) || typeof cell["id"] !== "string") {
-            issues.push(issue(`Cell \`${cellId}\` is not a well-formed cell`, cellPath));
-            continue;
-        }
-        if (cell["tag"] === "rich-text") {
-            if (cell["content"] === undefined) {
-                issues.push(
-                    issue(`Rich text cell \`${cellId}\` has no content`, [...cellPath, "content"]),
-                );
-            }
-        } else if (cell["tag"] === "formal") {
-            if (!isRecord(cell["content"])) {
-                issues.push(
-                    issue(`Formal cell \`${cellId}\` has no content`, [...cellPath, "content"]),
-                );
-                continue;
-            }
-            validateJudgment?.(cell["content"], [...cellPath, "content"], issues);
-        } else {
-            issues.push(
-                issue(`Cell \`${cellId}\` has unknown tag "${String(cell["tag"])}"`, [
-                    ...cellPath,
-                    "tag",
-                ]),
-            );
-        }
-    }
-}
-
-function validateTables(value: unknown, path: Path, issues: Issue[]): void {
-    if (!isRecord(value)) {
-        issues.push(issue("An instance document must have tables", path));
-        return;
+        return [issue("An instance document must have tables", [])];
     }
     for (const [tableId, table] of Object.entries(value)) {
-        const tablePath = [...path, tableId];
+        const tablePath = [tableId];
         if (!isRecord(table) || !isRecord(table["rows"])) {
             issues.push(issue(`Table \`${tableId}\` is not a well-formed table`, tablePath));
             continue;
         }
-        // The row order must list exactly the rows of the table, each once,
-        // so readers can use it without reconciling it against the rows.
         const rowOrder = table["rowOrder"];
         if (Array.isArray(rowOrder)) {
             validateRowOrder(rowOrder, table["rows"], tableId, tablePath, issues);
@@ -155,6 +68,7 @@ function validateTables(value: unknown, path: Path, issues: Issue[]): void {
             }
         }
     }
+    return issues;
 }
 
 /** Validate that a row order lists exactly the rows of the table. */
@@ -163,7 +77,7 @@ function validateRowOrder(
     rows: Record<string, unknown>,
     tableId: string,
     tablePath: Path,
-    issues: Issue[],
+    issues: StructuralIssue[],
 ): void {
     const seen = new Set<string>();
     for (const [index, rowId] of rowOrder.entries()) {
@@ -203,50 +117,26 @@ function validateRowOrder(
     }
 }
 
-/** Check that a document is structurally well-formed for its type.
+/** Check that an instance document is structurally well-formed.
 
-Returns an empty array when the document is valid. */
-export function validateDocumentStructure(document: Readonly<Document>): Issue[] {
+Issue paths are relative to the document root. Returns an empty array when
+the document is valid. */
+export function validateInstanceDocumentStructure(document: Readonly<Document>): StructuralIssue[] {
     const value: unknown = document;
     if (!isRecord(value)) {
         return [issue("A document must be an object", [])];
     }
-    if (typeof value["type"] !== "string" || !documentTypes.has(value["type"])) {
-        return [issue(`Unknown document type "${String(value["type"])}"`, ["type"])];
+    if (value["type"] !== "instance") {
+        return [issue(`Expected a document of type "instance"`, ["type"])];
     }
 
-    const issues: Issue[] = [];
+    const issues: StructuralIssue[] = [];
     if (typeof value["name"] !== "string") {
         issues.push(issue("A document must have a name", ["name"]));
     }
-    switch (value["type"]) {
-        case "model":
-            if (typeof value["theory"] !== "string") {
-                issues.push(issue("A model document must have a theory", ["theory"]));
-            }
-            validateNotebook(value["notebook"], ["notebook"], issues, validateModelJudgment);
-            break;
-        case "diagram":
-            validateLink(value["diagramIn"], ["diagramIn"], issues);
-            validateNotebook(value["notebook"], ["notebook"], issues);
-            break;
-        case "analysis":
-            validateLink(value["analysisOf"], ["analysisOf"], issues);
-            validateNotebook(value["notebook"], ["notebook"], issues);
-            break;
-        case "instance":
-            validateLink(value["instanceOf"], ["instanceOf"], issues);
-            validateTables(value["tables"], ["tables"], issues);
-            break;
-        case "llmconversation":
-            validateLink(value["llmConversationOf"], ["llmConversationOf"], issues);
-            if (typeof value["llmModel"] !== "string") {
-                issues.push(issue("An LLM conversation must name its model", ["llmModel"]));
-            }
-            if (!Array.isArray(value["interactions"])) {
-                issues.push(issue("An LLM conversation must have interactions", ["interactions"]));
-            }
-            break;
+    validateLink(value["instanceOf"], ["instanceOf"], issues);
+    for (const tableIssue of validateInstanceTablesStructure(value["tables"])) {
+        issues.push({ message: tableIssue.message, path: ["tables", ...(tableIssue.path ?? [])] });
     }
     return issues;
 }

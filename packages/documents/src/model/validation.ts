@@ -7,27 +7,26 @@ import type {
     InvalidModelEqn,
     ModelPresentation,
 } from "catlog-wasm";
-import { documentCacheFor, type DocumentStore } from "../document-store";
+import { getDocumentSnapshot, type DocumentStore } from "../document-store";
 import type { Issue } from "../result";
 import type { Shape } from "../shape";
 import { elaboratedModelFromPresentation, type ModelValidation } from "./elaborated-model";
 
-/** An index of the formal cells of a notebook by the generator they declare. */
-type GeneratorIndex = ReadonlyMap<string, FormalCell<ModelJudgment>>;
-
-function formalCellsByGeneratorId(notebook: Notebook<ModelJudgment>): GeneratorIndex {
-    const index = new Map<string, FormalCell<ModelJudgment>>();
+function formalCellForGenerator(
+    notebook: Notebook<ModelJudgment>,
+    generatorId: string,
+): FormalCell<ModelJudgment> | undefined {
     for (const cellId of notebook.cellOrder) {
         const cell = notebook.cellContents[cellId];
-        if (cell?.tag === "formal" && "id" in cell.content && !index.has(cell.content.id)) {
-            index.set(cell.content.id, cell);
+        if (cell?.tag === "formal" && "id" in cell.content && cell.content.id === generatorId) {
+            return cell;
         }
     }
-    return index;
+    return undefined;
 }
 
-function generatorName(index: GeneratorIndex, generatorId: string): string {
-    const cell = index.get(generatorId);
+function generatorName(notebook: Notebook<ModelJudgment>, generatorId: string): string {
+    const cell = formalCellForGenerator(notebook, generatorId);
     if (!cell || !cell.content.name) {
         return generatorId;
     }
@@ -35,11 +34,11 @@ function generatorName(index: GeneratorIndex, generatorId: string): string {
 }
 
 function generatorPath(
-    index: GeneratorIndex,
+    notebook: Notebook<ModelJudgment>,
     generatorId: string,
     property?: string,
 ): PropertyKey[] | undefined {
-    const cell = index.get(generatorId);
+    const cell = formalCellForGenerator(notebook, generatorId);
     if (!cell) {
         return undefined;
     }
@@ -66,44 +65,44 @@ function eqnErrorMessage(error: InvalidModelEqn): string {
     }
 }
 
-function invalidModelIssue(index: GeneratorIndex, error: InvalidDblModel): Issue {
+function invalidModelIssue(notebook: Notebook<ModelJudgment>, error: InvalidDblModel): Issue {
     switch (error.tag) {
         case "Dom":
             return {
-                message: `Morphism \`${generatorName(index, error.content)}\` has no domain`,
-                path: generatorPath(index, error.content, "dom"),
+                message: `Morphism \`${generatorName(notebook, error.content)}\` has no domain`,
+                path: generatorPath(notebook, error.content, "dom"),
             };
         case "Cod":
             return {
-                message: `Morphism \`${generatorName(index, error.content)}\` has no codomain`,
-                path: generatorPath(index, error.content, "cod"),
+                message: `Morphism \`${generatorName(notebook, error.content)}\` has no codomain`,
+                path: generatorPath(notebook, error.content, "cod"),
             };
         case "ObType":
             return {
-                message: `Object \`${generatorName(index, error.content)}\` has an invalid type`,
-                path: generatorPath(index, error.content, "obType"),
+                message: `Object \`${generatorName(notebook, error.content)}\` has an invalid type`,
+                path: generatorPath(notebook, error.content, "obType"),
             };
         case "MorType":
             return {
-                message: `Morphism \`${generatorName(index, error.content)}\` has an invalid type`,
-                path: generatorPath(index, error.content, "morType"),
+                message: `Morphism \`${generatorName(notebook, error.content)}\` has an invalid type`,
+                path: generatorPath(notebook, error.content, "morType"),
             };
         case "DomType":
             return {
-                message: `Morphism \`${generatorName(index, error.content)}\` has a mistyped domain`,
-                path: generatorPath(index, error.content, "dom"),
+                message: `Morphism \`${generatorName(notebook, error.content)}\` has a mistyped domain`,
+                path: generatorPath(notebook, error.content, "dom"),
             };
         case "CodType":
             return {
-                message: `Morphism \`${generatorName(index, error.content)}\` has a mistyped codomain`,
-                path: generatorPath(index, error.content, "cod"),
+                message: `Morphism \`${generatorName(notebook, error.content)}\` has a mistyped codomain`,
+                path: generatorPath(notebook, error.content, "cod"),
             };
         case "Eqn": {
             const [name, errors] = error.content;
             const details = (errors ?? []).map(eqnErrorMessage).join("; ");
             return {
-                message: `Equation \`${generatorName(index, name)}\` is invalid: ${details}`,
-                path: generatorPath(index, name),
+                message: `Equation \`${generatorName(notebook, name)}\` is invalid: ${details}`,
+                path: generatorPath(notebook, name),
             };
         }
         case "UnsupportedFeature": {
@@ -114,8 +113,8 @@ function invalidModelIssue(index: GeneratorIndex, error: InvalidDblModel): Issue
         }
         case "InvalidLink":
             return {
-                message: `Instantiation \`${generatorName(index, error.content)}\` is invalid`,
-                path: generatorPath(index, error.content),
+                message: `Instantiation \`${generatorName(notebook, error.content)}\` is invalid`,
+                path: generatorPath(notebook, error.content),
             };
     }
 }
@@ -154,11 +153,10 @@ export async function validateModelDocument(
     try {
         const presentation = model.presentation();
         const validation = model.validate();
-        let issues: Issue[] = [];
-        if (validation.tag === "Err") {
-            const index = formalCellsByGeneratorId(document.notebook);
-            issues = validation.content.map((error) => invalidModelIssue(index, error));
-        }
+        const issues =
+            validation.tag === "Err"
+                ? validation.content.map((error) => invalidModelIssue(document.notebook, error))
+                : [];
         return { presentation, issues };
     } finally {
         model.free();
@@ -173,45 +171,18 @@ export interface NotebookValidator<S extends Shape> {
 
 /** Create the validation machinery for a notebook over a document store.
 
-The result is cached per generation of the handle's shared document cache,
-so the document is elaborated and validated at most once per change no
-matter how many consumers ask. */
+All consumers share one code path and one source of truth: the document is
+revalidated at most once per change and the store is only subscribed while at
+least one listener is active. */
 export function createNotebookValidator<Handle, S extends Shape>(
     shape: S,
     store: DocumentStore<Handle>,
     handle: Handle,
 ): NotebookValidator<S> {
-    const cache = documentCacheFor(store, handle);
     let coreTheory: Promise<DblTheory> | undefined;
 
-    /** Elaborate and validate the current document.
-
-    A structurally invalid document reports its structural issues and is not
-    elaborated. */
-    async function elaborateAndValidate(): Promise<ModelValidation<S>> {
-        const state = await stateFromDocument();
-        return {
-            model: elaboratedModelFromPresentation(shape, () => state.presentation),
-            issues: state.issues,
-        };
-    }
-
-    async function stateFromDocument(): Promise<ModelValidationState> {
-        const structuralIssues = cache.structuralIssues();
-        if (structuralIssues.length > 0) {
-            return { issues: structuralIssues };
-        }
-        const documentType = store.getDocumentView(handle).type;
-        if (documentType !== "model") {
-            return {
-                issues: [
-                    {
-                        message: `Cannot validate a document of type "${documentType}" as a model.`,
-                        path: ["type"],
-                    },
-                ],
-            };
-        }
+    /** Elaborate and validate the current document. */
+    async function elaborateAndValidate(): Promise<ModelValidationState> {
         if (!shape.getCoreTheory) {
             let shapeName = "unnamed";
             if (shape.theory) {
@@ -226,7 +197,7 @@ export function createNotebookValidator<Handle, S extends Shape>(
                 coreTheory = shape.getCoreTheory();
             }
             const theory = await coreTheory;
-            const document = cache.snapshot() as Readonly<ModelDocument>;
+            const document = getDocumentSnapshot(store, handle) as Readonly<ModelDocument>;
             return await validateModelDocument(document, theory, store.getDocumentRef(handle).id);
         } catch (error) {
             return {
@@ -235,57 +206,71 @@ export function createNotebookValidator<Handle, S extends Shape>(
         }
     }
 
-    /** The validation result for the current generation, computed at most
-    once per change, so unchanged documents yield identical results. */
-    let current: { generation: number; validation: Promise<ModelValidation<S>> } | undefined;
-    function currentValidation(): Promise<ModelValidation<S>> {
-        const generation = cache.generation();
-        if (current === undefined || current.generation !== generation) {
-            current = { generation, validation: elaborateAndValidate() };
-        }
-        return current.validation;
+    /** Convert internal validation state into the public snapshot. */
+    function modelValidationFromState({
+        presentation,
+        issues,
+    }: ModelValidationState): ModelValidation<S> {
+        return {
+            model: elaboratedModelFromPresentation(shape, () => presentation),
+            issues,
+        };
     }
 
-    const listeners = new Set<(result: ModelValidation<S>) => void>();
-    let unsubscribe: (() => void) | undefined;
+    const validationStateListeners = new Set<(state: ModelValidationState) => void>();
+    let unsubscribeValidationSource: (() => void) | undefined;
+    let revalidationCounter = 0;
 
-    /** Revalidate the document and publish the outcome to listeners. When the
-    document changes while validation is in flight, the stale outcome is not
-    published: the change triggers another revalidation whose outcome is.
-    Every caller still receives its own outcome. */
-    async function revalidate(): Promise<ModelValidation<S>> {
-        const generation = cache.generation();
-        const validation = await currentValidation();
-        if (generation === cache.generation()) {
-            for (const listener of listeners) {
-                listener(validation);
-            }
+    function publishValidationState(state: ModelValidationState): void {
+        for (const listener of validationStateListeners) {
+            listener(state);
         }
-        return validation;
+    }
+
+    /** Revalidate the document and publish the outcome to listeners. When
+    revalidations overlap, only the latest-started one publishes, so listeners
+    never observe stale state; every caller still receives its own outcome. */
+    async function revalidate(): Promise<ModelValidationState> {
+        const ticket = ++revalidationCounter;
+        const state = await elaborateAndValidate();
+        if (ticket === revalidationCounter) {
+            publishValidationState(state);
+        }
+        return state;
+    }
+
+    /** Subscribe to validation state, revalidating on every document change.
+    The listener receives an initial publish once revalidation completes. */
+    function subscribeToValidationState(
+        listener: (state: ModelValidationState) => void,
+    ): () => void {
+        validationStateListeners.add(listener);
+        if (unsubscribeValidationSource === undefined) {
+            unsubscribeValidationSource = store.subscribe(handle, () => {
+                void revalidate();
+            });
+        }
+        void revalidate();
+
+        return () => {
+            if (!validationStateListeners.delete(listener)) {
+                return;
+            }
+            if (validationStateListeners.size === 0) {
+                unsubscribeValidationSource?.();
+                unsubscribeValidationSource = undefined;
+            }
+        };
     }
 
     return {
-        validate: revalidate,
-        /** Subscribe to validation, revalidating on every document change. The
-        callback receives an initial result once revalidation completes. */
+        async validate() {
+            return modelValidationFromState(await revalidate());
+        },
         onValidate(callback) {
-            listeners.add(callback);
-            if (unsubscribe === undefined) {
-                unsubscribe = store.subscribe(handle, () => {
-                    void revalidate();
-                });
-            }
-            void revalidate();
-
-            return () => {
-                if (!listeners.delete(callback)) {
-                    return;
-                }
-                if (listeners.size === 0) {
-                    unsubscribe?.();
-                    unsubscribe = undefined;
-                }
-            };
+            return subscribeToValidationState((state) => {
+                callback(modelValidationFromState(state));
+            });
         },
     };
 }

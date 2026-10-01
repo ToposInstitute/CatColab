@@ -41,5 +41,20 @@ export interface EquationViolationIssue extends Issue {
     readonly equationLabel: QualifiedLabel;
 }
 
+/** A structural problem with the stored tables of an instance document.
+
+Reported when the underlying JSON is malformed, for example when a table's
+row order does not list exactly its rows. Such documents are not validated
+further. */
+export interface MalformedDocumentIssue extends Issue {
+    /** Path to the malformed data, relative to the document's `tables` map. */
+    readonly path: ReadonlyArray<PropertyKey>;
+    readonly issueType: "MalformedDocument";
+}
+
 /** A problem found while validating an instance's tables. */
-export type TableIssue = TableFieldIssue | OrphanedTableIssue | EquationViolationIssue;
+export type TableIssue =
+    | TableFieldIssue
+    | OrphanedTableIssue
+    | EquationViolationIssue
+    | MalformedDocumentIssue;

@@ -10,16 +10,15 @@ export type {
 export type { Issue, PathSegment, Result } from "./result";
 export {
     createInMemoryStore,
-    documentCacheFor,
     documentLinks,
     emptyHandlesByLinkType,
     getDocumentSnapshot,
-    validateDocumentStructure,
+    validateInstanceDocumentStructure,
 } from "./document-store";
-export type { DocumentCache } from "./document-store";
 export { atomicTypeOfAttributeType } from "./instance/validation";
 export type {
     FieldPath,
+    MalformedDocumentIssue,
     OrphanedTableIssue,
     EquationViolationIssue,
     TableFieldIssue,
