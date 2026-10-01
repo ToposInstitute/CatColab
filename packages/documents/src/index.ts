@@ -13,8 +13,14 @@ export {
     documentLinks,
     emptyHandlesByLinkType,
     getDocumentSnapshot,
-    validateInstanceDocumentStructure,
 } from "./document-store";
+export { parseInstanceDocument, parseInstanceTables } from "./instance/parsed-document";
+export type {
+    Parsed,
+    ParsedInstanceDocument,
+    ParsedTables,
+    StructuralIssue,
+} from "./instance/parsed-document";
 export { atomicTypeOfAttributeType } from "./instance/validation";
 export type {
     FieldPath,

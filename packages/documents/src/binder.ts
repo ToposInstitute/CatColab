@@ -5,9 +5,10 @@ import {
 } from "catcolab-document-methods";
 import type { Document } from "catcolab-document-types";
 import type { DocumentRef, DocumentStore, HandlesByLinkType } from "./document-store";
-import { createInMemoryStore, validateInstanceDocumentStructure } from "./document-store";
+import { createInMemoryStore } from "./document-store";
 import type { DocumentChange } from "./document-store";
 import { instanceFromStore, type Instance } from "./instance/instance";
+import { parseInstanceDocument } from "./instance/parsed-document";
 import { type LLMConversation, llmConversationFromStore } from "./llm-conversation";
 import type { ModelDocument } from "./model/document";
 import { modelNotebookFromStore, type Notebook } from "./model/notebook";
@@ -346,23 +347,27 @@ function binderFromStore<Handle, Version>(
                 };
             }
 
-            const structuralIssues = validateInstanceDocumentStructure(document);
-            if (structuralIssues.length > 0) {
-                return { tag: "Err" as const, content: structuralIssues };
+            // Parse the document: fatal structural problems block loading,
+            // while repairable problems with the stored tables surface later
+            // as `MalformedDocument` issues when the instance is validated.
+            const parseResult = parseInstanceDocument(document);
+            if (parseResult.tag === "Err") {
+                return { tag: "Err" as const, content: parseResult.content };
             }
+            const parsedDocument = parseResult.content.value;
 
             const schemaRef = store.getDocumentRef(schema.handle);
             if (
-                document.instanceOf._id !== schemaRef.id ||
-                document.instanceOf._version !== schemaRef.version ||
-                document.instanceOf._server !== (schemaRef.server ?? "")
+                parsedDocument.instanceOf._id !== schemaRef.id ||
+                parsedDocument.instanceOf._version !== schemaRef.version ||
+                parsedDocument.instanceOf._server !== (schemaRef.server ?? "")
             ) {
                 return {
                     tag: "Err",
                     content: [
                         {
                             message:
-                                `Cannot load instance of schema "${document.instanceOf._id}" ` +
+                                `Cannot load instance of schema "${parsedDocument.instanceOf._id}" ` +
                                 `using schema "${schemaRef.id}".`,
                             path: ["instanceOf"],
                         },

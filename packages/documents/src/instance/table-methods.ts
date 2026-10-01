@@ -8,6 +8,7 @@ import type { ElaboratedModel, ObjectJudgment } from "../model/elaborated-model"
 import type { Issue, Result } from "../result";
 import type { InstanceCapableShape, ObjectType, Shape } from "../shape";
 import type { FieldPath } from "./errors";
+import { parseInstanceTables, type ParsedTables } from "./parsed-document";
 import type {
     FieldValue,
     InstancePath,
@@ -17,6 +18,19 @@ import type {
     TableRow,
 } from "./tables";
 import { atomicTypeOfAttributeType } from "./validation";
+
+/** The stored tables of the document at `handle`, parsed.
+
+Parsing repairs structural problems, so readers get a well-formed view even of
+a malformed document; the repairs themselves are reported by the instance
+validator. */
+export function parsedTablesOfHandle<Handle, Version>(
+    store: DocumentStore<Handle, Version>,
+    handle: Handle,
+): ParsedTables {
+    const document = store.getDocumentView(handle) as Readonly<InstanceDocument>;
+    return parseInstanceTables(document.tables).value;
+}
 
 /** Read one table, row, or field from prepared tables.
 
@@ -28,7 +42,7 @@ export function readInstancePath<Handle, Version>(
     path: InstancePath,
 ): Result<InstanceTable | TableRow | FieldValue> {
     const tableById = new Map(tables.map((table) => [table.id, table]));
-    const document = store.getDocumentView(handle) as Readonly<InstanceDocument>;
+    const storedTables = parsedTablesOfHandle(store, handle);
     const [tableId, rowsSegment, rowId, fieldsSegment, fieldId, ...rest] = path;
     const table = tableById.get(tableId);
     if (table === undefined) {
@@ -40,7 +54,7 @@ export function readInstancePath<Handle, Version>(
     if (rowsSegment !== "rows" || rowId === undefined) {
         return pathError("An instance path after a table must address a row");
     }
-    const storedRow = document.tables[tableId]?.rows[rowId];
+    const storedRow = storedTables[tableId]?.rows[rowId];
     if (storedRow === undefined) {
         return pathError(`Row \`${rowId}\` does not exist in table \`${tableId}\``);
     }
@@ -333,12 +347,12 @@ function encodeFieldValue(
     return { RowRef: value.id };
 }
 
-function requireRawRow(
-    document: Readonly<InstanceDocument>,
+function requireParsedRow(
+    tables: ParsedTables,
     tableId: string,
     rowId: string,
 ): Readonly<DocumentTypes.TableRow> {
-    const row = document.tables[tableId]?.rows[rowId];
+    const row = tables[tableId]?.rows[rowId];
     if (row === undefined) {
         throw new Error(`Row \`${rowId}\` does not exist in table \`${tableId}\``);
     }
@@ -354,12 +368,12 @@ function makeRow<Handle, Version>(
     return {
         id: rowId,
         get index() {
-            const document = store.getDocumentView(handle) as Readonly<InstanceDocument>;
-            return orderedRowIds(document.tables[schemaTable.id]).indexOf(rowId);
+            const tables = parsedTablesOfHandle(store, handle);
+            return (tables[schemaTable.id]?.rowOrder ?? []).indexOf(rowId);
         },
         get fields() {
-            const document = store.getDocumentView(handle) as Readonly<InstanceDocument>;
-            const storedRow = requireRawRow(document, schemaTable.id, rowId);
+            const tables = parsedTablesOfHandle(store, handle);
+            const storedRow = requireParsedRow(tables, schemaTable.id, rowId);
             return schemaTable.headers.map((header) =>
                 fieldValueFromStored(
                     [schemaTable.id, "rows", rowId, "fields", header.id],
@@ -382,8 +396,8 @@ function makeTable<Handle, Version>(
         label,
         headers,
         get rows() {
-            const document = store.getDocumentView(handle) as Readonly<InstanceDocument>;
-            return orderedRowIds(document.tables[id]).map((rowId) =>
+            const tables = parsedTablesOfHandle(store, handle);
+            return (tables[id]?.rowOrder ?? []).map((rowId) =>
                 makeRow(store, handle, table, rowId),
             );
         },
@@ -446,12 +460,12 @@ export function tablesWithOrphanedData<Handle, Version>(
     handle: Handle,
     schemaTables: ReadonlyArray<InstanceTable>,
 ): ReadonlyArray<InstanceTable> {
-    const document = store.getDocumentView(handle) as Readonly<InstanceDocument>;
+    const storedTables = parsedTablesOfHandle(store, handle);
     const schemaTableIds = new Set(schemaTables.map((table) => table.id));
 
     const tables = schemaTables.map((table) => {
         const orphanedFieldIds = storedFieldIds(
-            document.tables[table.id],
+            storedTables[table.id],
             new Set(table.headers.map((header) => header.id)),
         );
         if (orphanedFieldIds.length === 0) {
@@ -463,7 +477,7 @@ export function tablesWithOrphanedData<Handle, Version>(
         ]);
     });
 
-    const orphanedTables = Object.keys(document.tables)
+    const orphanedTables = Object.keys(storedTables)
         .filter((tableId) => !schemaTableIds.has(tableId))
         .map((tableId) =>
             makeTable(
@@ -471,14 +485,14 @@ export function tablesWithOrphanedData<Handle, Version>(
                 handle,
                 tableId,
                 null,
-                storedFieldIds(document.tables[tableId], new Set()).map(unknownHeader),
+                storedFieldIds(storedTables[tableId], new Set()).map(unknownHeader),
             ),
         );
 
     return [...tables, ...orphanedTables];
 }
 
-/** Collect stored field ids not in `knownIds`, in first-seen row order. */
+/** Collect parsed field ids not in `knownIds`, in first-seen row order. */
 function storedFieldIds(
     table: Readonly<DocumentTypes.Table> | undefined,
     knownIds: ReadonlySet<string>,
@@ -488,7 +502,7 @@ function storedFieldIds(
     }
     const fieldIds: string[] = [];
     const seen = new Set(knownIds);
-    for (const rowId of orderedRowIds(table)) {
+    for (const rowId of table.rowOrder) {
         for (const fieldId of Object.keys(table.rows[rowId]?.fields ?? {})) {
             if (!seen.has(fieldId)) {
                 seen.add(fieldId);
@@ -524,14 +538,6 @@ function fieldValueFromStored(path: FieldPath, value: DocumentTypes.FieldValue):
         return { tag: "String", content: { path, value: value.String } };
     }
     return { tag: "RowRef", content: { path, id: value.RowRef } };
-}
-
-/** The ordered row ids of a stored table.
-
-Structural validation guarantees that the row order lists exactly the rows
-of the table. */
-function orderedRowIds(table: Readonly<DocumentTypes.Table> | undefined): ReadonlyArray<string> {
-    return table?.rowOrder ?? [];
 }
 
 function pathError(message: string) {

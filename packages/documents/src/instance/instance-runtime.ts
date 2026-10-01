@@ -1,5 +1,5 @@
 import type { InstanceDocument } from "catcolab-document-methods";
-import { validateInstanceTablesStructure, type DocumentStore } from "../document-store";
+import type { DocumentStore } from "../document-store";
 import type { ModelDocument } from "../model/document";
 import type { ElaboratedModel, ModelValidation } from "../model/elaborated-model";
 import type { Notebook } from "../model/notebook";
@@ -7,6 +7,7 @@ import type { Result } from "../result";
 import type { InstanceCapableShape, Shape } from "../shape";
 import { validatePathEquations } from "./equation-validation";
 import type { InstanceValidation } from "./instance";
+import { parseInstanceTables } from "./parsed-document";
 import {
     addInstanceRowsToStore,
     deleteOrphanedFieldFromStore,
@@ -182,24 +183,10 @@ export function createInstanceValidator<Handle, S extends Shape, Version>(
     return (schemaValidation) => {
         const document = store.getDocumentView(handle) as Readonly<InstanceDocument>;
 
-        // A structurally malformed document is not validated further: its
-        // stored tables cannot be trusted, so none are derived from it.
-        const structuralIssues = validateInstanceTablesStructure(document.tables);
-        if (structuralIssues.length > 0) {
-            return {
-                modelValidation: schemaValidation,
-                tables: [],
-                issues: structuralIssues.map((issue) => ({
-                    message: issue.message,
-                    path: issue.path,
-                    issueType: "MalformedDocument" as const,
-                })),
-                get: () => ({
-                    tag: "Err",
-                    content: [{ message: "The instance document is malformed" }],
-                }),
-            };
-        }
+        // Parsing repairs structural problems with the stored tables, so
+        // validation continues against the repaired view; the repairs
+        // themselves are reported as `MalformedDocument` issues.
+        const parsedTables = parseInstanceTables(document.tables);
 
         const schemaTables = instanceTablesFromModel(
             instanceCapableShape(schema),
@@ -209,7 +196,12 @@ export function createInstanceValidator<Handle, S extends Shape, Version>(
         );
         const tables = tablesWithOrphanedData(store, handle, schemaTables);
         const issues = [
-            ...validateInstanceTables(document, schemaTables),
+            ...parsedTables.issues.map((issue) => ({
+                message: issue.message,
+                path: issue.path,
+                issueType: "MalformedDocument" as const,
+            })),
+            ...validateInstanceTables(parsedTables.value, schemaTables),
             ...validatePathEquations(tables, schemaValidation.model),
         ];
         return {

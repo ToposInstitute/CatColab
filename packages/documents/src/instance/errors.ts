@@ -44,8 +44,8 @@ export interface EquationViolationIssue extends Issue {
 /** A structural problem with the stored tables of an instance document.
 
 Reported when the underlying JSON is malformed, for example when a table's
-row order does not list exactly its rows. Such documents are not validated
-further. */
+row order does not list exactly its rows. Parsing repairs such problems, so
+the rest of validation runs against the repaired view. */
 export interface MalformedDocumentIssue extends Issue {
     /** Path to the malformed data, relative to the document's `tables` map. */
     readonly path: ReadonlyArray<PropertyKey>;
