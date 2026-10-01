@@ -2,6 +2,7 @@ import { applyPatches, diff, getHeads, type Heads, load, save } from "@automerge
 import { DocHandle, generateAutomergeUrl, parseAutomergeUrl } from "@automerge/automerge-repo";
 import type { RelationInfo, UserState } from "catcolab-api/src/user_state";
 import { makeDocumentProjection } from "solid-automerge";
+import { createSignal, type Accessor } from "solid-js";
 import { unwrap } from "solid-js/store";
 import { stringify as uuidStringify } from "uuid";
 
@@ -52,6 +53,24 @@ may update while the store lives.
  */
 export function createApiDocumentStore(api: Api, userState: UserState): ApiDocumentStore {
     const handles = new Map<string, ApiDocumentHandle>();
+    const revisions = new WeakMap<
+        ApiDocumentHandle,
+        { read: Accessor<number>; bump: () => void }
+    >();
+    const revisionOf = (handle: ApiDocumentHandle) => {
+        let revision = revisions.get(handle);
+        if (revision === undefined) {
+            const [read, write] = createSignal(0);
+            revision = {
+                read,
+                bump: () => {
+                    write((value) => value + 1);
+                },
+            };
+            revisions.set(handle, revision);
+        }
+        return revision;
+    };
 
     const cacheHandle = (ref: DocumentRef, automergeHandle: DocHandle<Document>) => {
         const existing = handles.get(ref.id);
@@ -168,11 +187,17 @@ export function createApiDocumentStore(api: Api, userState: UserState): ApiDocum
         },
         getDocumentView: (handle) => handle.docView,
         getDocumentSnapshot: (handle) => load<Document>(save(handle.automergeHandle.doc())),
+        getDocumentRevision: (handle) => revisionOf(handle).read(),
         changeDocument: (handle, fn) => handle.automergeHandle.change(fn),
         subscribe: (handle, callback) => {
-            handle.automergeHandle.on("change", callback);
+            const onChange = () => {
+                callback();
+                // Cached readers must rerun after their parsed state is refreshed.
+                revisionOf(handle).bump();
+            };
+            handle.automergeHandle.on("change", onChange);
             return () => {
-                handle.automergeHandle.off("change", callback);
+                handle.automergeHandle.off("change", onChange);
             };
         },
         copyValue: (_handle, value) => structuredClone(unwrap(value)),
