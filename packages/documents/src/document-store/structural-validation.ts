@@ -133,11 +133,14 @@ function validateTables(value: unknown, path: Path, issues: Issue[]): void {
             issues.push(issue(`Table \`${tableId}\` is not a well-formed table`, tablePath));
             continue;
         }
-        // Legacy documents may lack a row order; readers tolerate that, so a
-        // missing row order is not an issue, but a mistyped one is.
-        if (table["rowOrder"] !== undefined && !Array.isArray(table["rowOrder"])) {
+        // The row order must list exactly the rows of the table, each once,
+        // so readers can use it without reconciling it against the rows.
+        const rowOrder = table["rowOrder"];
+        if (Array.isArray(rowOrder)) {
+            validateRowOrder(rowOrder, table["rows"], tableId, tablePath, issues);
+        } else {
             issues.push(
-                issue(`Table \`${tableId}\` has a malformed row order`, [...tablePath, "rowOrder"]),
+                issue(`Table \`${tableId}\` must have a row order`, [...tablePath, "rowOrder"]),
             );
         }
         for (const [rowId, row] of Object.entries(table["rows"])) {
@@ -150,6 +153,52 @@ function validateTables(value: unknown, path: Path, issues: Issue[]): void {
                     ]),
                 );
             }
+        }
+    }
+}
+
+/** Validate that a row order lists exactly the rows of the table. */
+function validateRowOrder(
+    rowOrder: ReadonlyArray<unknown>,
+    rows: Record<string, unknown>,
+    tableId: string,
+    tablePath: Path,
+    issues: Issue[],
+): void {
+    const seen = new Set<string>();
+    for (const [index, rowId] of rowOrder.entries()) {
+        const entryPath = [...tablePath, "rowOrder", index];
+        if (typeof rowId !== "string") {
+            issues.push(issue("Row ids must be strings", entryPath));
+            continue;
+        }
+        if (rows[rowId] === undefined) {
+            issues.push(
+                issue(
+                    `Row \`${rowId}\` is listed in the row order of table \`${tableId}\` but has no contents`,
+                    entryPath,
+                ),
+            );
+        }
+        if (seen.has(rowId)) {
+            issues.push(
+                issue(
+                    `Row \`${rowId}\` is listed in the row order of table \`${tableId}\` more than once`,
+                    entryPath,
+                ),
+            );
+        }
+        seen.add(rowId);
+    }
+    for (const rowId of Object.keys(rows)) {
+        if (!seen.has(rowId)) {
+            issues.push(
+                issue(`Row \`${rowId}\` is missing from the row order of table \`${tableId}\``, [
+                    ...tablePath,
+                    "rows",
+                    rowId,
+                ]),
+            );
         }
     }
 }

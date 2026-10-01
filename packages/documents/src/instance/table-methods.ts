@@ -483,10 +483,13 @@ function storedFieldIds(
     table: Readonly<DocumentTypes.Table> | undefined,
     knownIds: ReadonlySet<string>,
 ): string[] {
+    if (table === undefined) {
+        return [];
+    }
     const fieldIds: string[] = [];
     const seen = new Set(knownIds);
     for (const rowId of orderedRowIds(table)) {
-        for (const fieldId of Object.keys(table?.rows[rowId]?.fields ?? {})) {
+        for (const fieldId of Object.keys(table.rows[rowId]?.fields ?? {})) {
             if (!seen.has(fieldId)) {
                 seen.add(fieldId);
                 fieldIds.push(fieldId);
@@ -523,24 +526,12 @@ function fieldValueFromStored(path: FieldPath, value: DocumentTypes.FieldValue):
     return { tag: "RowRef", content: { path, id: value.RowRef } };
 }
 
-function orderedRowIds(table: Readonly<DocumentTypes.Table> | undefined): string[] {
-    if (table === undefined) {
-        return [];
-    }
-    const seen = new Set<string>();
-    const ordered: string[] = [];
-    for (const id of table.rowOrder ?? []) {
-        if (table.rows[id] !== undefined && !seen.has(id)) {
-            seen.add(id);
-            ordered.push(id);
-        }
-    }
-    for (const id of Object.keys(table.rows)) {
-        if (!seen.has(id)) {
-            ordered.push(id);
-        }
-    }
-    return ordered;
+/** The ordered row ids of a stored table.
+
+Structural validation guarantees that the row order lists exactly the rows
+of the table. */
+function orderedRowIds(table: Readonly<DocumentTypes.Table> | undefined): ReadonlyArray<string> {
+    return table?.rowOrder ?? [];
 }
 
 function pathError(message: string) {

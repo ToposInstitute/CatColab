@@ -66,6 +66,47 @@ describe("validateDocumentStructure", () => {
         expect(issues[0]?.path).toEqual(["tables", "entity", "rowOrder"]);
     });
 
+    test("a row listed in the row order without contents is an issue", () => {
+        const document = {
+            type: "instance",
+            name: "Data",
+            version: "1",
+            instanceOf: { _id: "abc", _version: null, _server: "", type: "instance-of" },
+            tables: { entity: { rowOrder: ["ghost"], rows: {} } },
+        } as unknown as Document;
+        const issues = validateDocumentStructure(document);
+        expect(issues.length).toBe(1);
+        expect(issues[0]?.message).toContain("ghost");
+        expect(issues[0]?.path).toEqual(["tables", "entity", "rowOrder", 0]);
+    });
+
+    test("a row missing from the row order is an issue", () => {
+        const document = {
+            type: "instance",
+            name: "Data",
+            version: "1",
+            instanceOf: { _id: "abc", _version: null, _server: "", type: "instance-of" },
+            tables: { entity: { rowOrder: [], rows: { stray: { fields: {} } } } },
+        } as unknown as Document;
+        const issues = validateDocumentStructure(document);
+        expect(issues.length).toBe(1);
+        expect(issues[0]?.message).toContain("stray");
+        expect(issues[0]?.path).toEqual(["tables", "entity", "rows", "stray"]);
+    });
+
+    test("a table without a row order is an issue", () => {
+        const document = {
+            type: "instance",
+            name: "Data",
+            version: "1",
+            instanceOf: { _id: "abc", _version: null, _server: "", type: "instance-of" },
+            tables: { entity: { rows: {} } },
+        } as unknown as Document;
+        const issues = validateDocumentStructure(document);
+        expect(issues.length).toBe(1);
+        expect(issues[0]?.path).toEqual(["tables", "entity", "rowOrder"]);
+    });
+
     test("an unknown document type is an issue", () => {
         const document = { type: "mystery" } as unknown as Document;
         const issues = validateDocumentStructure(document);
