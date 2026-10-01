@@ -18,6 +18,7 @@ import {
     createUpdateRowsMethod,
     createUpdateRowMethod,
 } from "./instance-runtime";
+import { retainParsedInstance } from "./parsed-source";
 import type { FieldValue, InstancePath, InstanceTable, LiteralValue, TableRow } from "./tables";
 
 export type { InstanceDocument } from "catcolab-document-methods";
@@ -80,6 +81,10 @@ export interface Instance<H, S extends Shape, V> {
     /** Revalidate initially and whenever either the instance or its schema changes. */
     onValidate(callback: (validation: InstanceValidation<S>) => void): () => void;
 
+    /** Release this owner's parsed view and all its change/validation subscriptions.
+    Call when the instance is no longer used. Idempotent. */
+    dispose(): void;
+
     /** Undo the changes this instance's document received in a commit. */
     revert(commit: Commit<H, V>): void;
 }
@@ -105,6 +110,24 @@ export function instanceFromStore<Handle, S extends Shape, Version>(
     store: DocumentStore<Handle, Version>,
     handle: Handle,
 ): Instance<Handle, S, Version> {
+    const releaseParsedInstance = retainParsedInstance(store, handle);
+    const subscriptions = new Set<() => void>();
+    let disposed = false;
+
+    function trackSubscription(unsubscribe: () => void): () => void {
+        if (disposed) {
+            unsubscribe();
+            return () => {};
+        }
+        const stop = () => {
+            if (subscriptions.delete(stop)) {
+                unsubscribe();
+            }
+        };
+        subscriptions.add(stop);
+        return stop;
+    }
+
     function currentDocument(): Readonly<InstanceDocument> {
         return store.getDocumentView(handle) as Readonly<InstanceDocument>;
     }
@@ -179,10 +202,10 @@ export function instanceFromStore<Handle, S extends Shape, Version>(
         onChange(callback: () => void): () => void {
             const unsubscribeInstance: () => void = store.subscribe(handle, callback);
             const unsubscribeSchema: () => void = schema.onChange(callback);
-            return (): void => {
+            return trackSubscription((): void => {
                 unsubscribeInstance();
                 unsubscribeSchema();
-            };
+            });
         },
         onValidate(callback: (validation: InstanceValidation<S>) => void): () => void {
             let active: boolean = true;
@@ -204,11 +227,21 @@ export function instanceFromStore<Handle, S extends Shape, Version>(
                 notify(validateInstance(modelValidation));
             });
 
-            return (): void => {
+            return trackSubscription((): void => {
                 active = false;
                 unsubscribeInstance();
                 unsubscribeSchema();
-            };
+            });
+        },
+        dispose(): void {
+            if (disposed) {
+                return;
+            }
+            disposed = true;
+            for (const unsubscribe of subscriptions) {
+                unsubscribe();
+            }
+            releaseParsedInstance();
         },
         revert(commit: Commit<Handle, Version>): void {
             const change = commit.documents.get(handle);
