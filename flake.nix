@@ -263,7 +263,7 @@
       # nix build .#packages.x86_64-linux.automerge
       # node ./result/main.cjs
       #
-      # The frontend and its rust-derived dependencies (catcolabApi,
+      # The frontend and its rust-derived dependencies (backend-bindings,
       # catlog-wasm-browser, document-types-wasm) are exposed for every
       # `devShellSystems` entry so macOS developers can `nix build .#frontend`
       # natively. Linux-only outputs (backend, migrator, julia-fhs, rust-docs,
@@ -286,7 +286,9 @@
               };
             in
             {
-              catcolabApi = pkgs.callPackage ./infrastructure/catcolab-api.nix craneArgs;
+              backend-bindings = pkgs.callPackage ./infrastructure/ninja-target.nix (
+                craneArgs // { target = "backend-bindings"; }
+              );
               catlog-wasm-browser = pkgs.callPackage ./infrastructure/ninja-target.nix (
                 craneArgs // { target = "catlog-wasm-browser"; }
               );

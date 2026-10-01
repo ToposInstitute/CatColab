@@ -8,4 +8,4 @@ This is a minimal build system that can be used to:
   a Nix flake build (i.e. from cache if already built). This works because we
   set up flake packages with the same name as the targets.
 
-We currently only use this build system for our wasm targets.
+We currently only use this build system for our wasm targets and generated TypeScript bindings.

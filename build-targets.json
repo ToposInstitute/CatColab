@@ -46,5 +46,26 @@
             "packages/catlog-wasm/dist/pkg-browser/catlog_wasm_bg.wasm",
             "packages/catlog-wasm/dist/pkg-browser/catlog_wasm_bg.wasm.d.ts"
         ]
+    },
+    "backend-bindings": {
+        "crate": "packages/backend",
+        "command": "cargo run -p backend -- generate-bindings",
+        "inputs": [
+            "Cargo.lock",
+            "Cargo.toml",
+            "rust-toolchain.toml",
+            "packages/backend/Cargo.toml",
+            "packages/backend/src",
+            "packages/backend/.sqlx",
+            "packages/migrator/Cargo.toml",
+            "packages/migrator/src",
+            "packages/document-types/Cargo.toml",
+            "packages/document-types/src"
+        ],
+        "outputs": [
+            "packages/backend/pkg/src/index.ts",
+            "packages/backend/pkg/src/PermissionLevel.ts",
+            "packages/backend/pkg/src/user_state.ts"
+        ]
     }
 }
