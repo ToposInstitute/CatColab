@@ -28,9 +28,54 @@ are invalidated by the store's own change notifications; the subscription
 lives as long as the handle, which the stores keep alive anyway. */
 interface ParsedTablesCacheEntry {
     dirty: boolean;
+    generation: number;
     parsed: ParsedTables | undefined;
 }
 const parsedTablesCaches = new WeakMap<object, WeakMap<object, ParsedTablesCacheEntry>>();
+
+/* Generations for uncacheable (non-object) handles: every access gets a fresh
+   generation, so derived caches keyed on the generation always recompute. */
+let uncachedGeneration = -1;
+
+/** The parsed tables together with a generation number.
+
+The generation increments whenever the document is re-parsed after a change,
+so derived values (such as materialized rows) can be memoized against it. The
+parsed tables themselves cannot serve as the memoization key because, for a
+well-formed document, parsing returns the store's live view, whose identity is
+stable across changes. */
+function versionedParsedTables<Handle, Version>(
+    store: DocumentStore<Handle, Version>,
+    handle: Handle,
+): { tables: ParsedTables; generation: number } {
+    const parse = () => {
+        const document = store.getDocumentView(handle) as Readonly<InstanceDocument>;
+        return parseInstanceTables(document.tables).value;
+    };
+    if (typeof handle !== "object" || handle === null) {
+        return { tables: parse(), generation: uncachedGeneration-- };
+    }
+    let entriesByHandle = parsedTablesCaches.get(store);
+    if (entriesByHandle === undefined) {
+        entriesByHandle = new WeakMap();
+        parsedTablesCaches.set(store, entriesByHandle);
+    }
+    let entry = entriesByHandle.get(handle);
+    if (entry === undefined) {
+        const newEntry: ParsedTablesCacheEntry = { dirty: true, generation: 0, parsed: undefined };
+        entriesByHandle.set(handle, newEntry);
+        store.subscribe(handle, () => {
+            newEntry.dirty = true;
+        });
+        entry = newEntry;
+    }
+    if (entry.dirty || entry.parsed === undefined) {
+        entry.parsed = parse();
+        entry.dirty = false;
+        entry.generation += 1;
+    }
+    return { tables: entry.parsed, generation: entry.generation };
+}
 
 /** The stored tables of the document at `handle`, parsed.
 
@@ -42,32 +87,7 @@ export function parsedTablesOfHandle<Handle, Version>(
     store: DocumentStore<Handle, Version>,
     handle: Handle,
 ): ParsedTables {
-    const parse = () => {
-        const document = store.getDocumentView(handle) as Readonly<InstanceDocument>;
-        return parseInstanceTables(document.tables).value;
-    };
-    if (typeof handle !== "object" || handle === null) {
-        return parse();
-    }
-    let entriesByHandle = parsedTablesCaches.get(store);
-    if (entriesByHandle === undefined) {
-        entriesByHandle = new WeakMap();
-        parsedTablesCaches.set(store, entriesByHandle);
-    }
-    let entry = entriesByHandle.get(handle);
-    if (entry === undefined) {
-        const newEntry: ParsedTablesCacheEntry = { dirty: true, parsed: undefined };
-        entriesByHandle.set(handle, newEntry);
-        store.subscribe(handle, () => {
-            newEntry.dirty = true;
-        });
-        entry = newEntry;
-    }
-    if (entry.dirty || entry.parsed === undefined) {
-        entry.parsed = parse();
-        entry.dirty = false;
-    }
-    return entry.parsed;
+    return versionedParsedTables(store, handle).tables;
 }
 
 /** Read one table, row, or field from prepared tables.
@@ -397,27 +417,44 @@ function requireParsedRow(
     return row;
 }
 
+/** Make a lazily reading row view.
+
+When `knownIndex` is given (rows materialized from the row order, which knows
+each row's position), the `index` property is that position; otherwise it is
+looked up in the row order on each access. The decoded `fields` are memoized
+against the parse generation, since readers such as the table editor access
+them once per cell. */
 function makeRow<Handle, Version>(
     store: DocumentStore<Handle, Version>,
     handle: Handle,
     schemaTable: InstanceTable,
     rowId: string,
+    knownIndex?: number,
 ): TableRow {
+    let cachedFields: ReadonlyArray<FieldValue> | undefined;
+    let cachedGeneration = Number.NaN;
     return {
         id: rowId,
         get index() {
+            if (knownIndex !== undefined) {
+                return knownIndex;
+            }
             const tables = parsedTablesOfHandle(store, handle);
             return (tables[schemaTable.id]?.rowOrder ?? []).indexOf(rowId);
         },
         get fields() {
-            const tables = parsedTablesOfHandle(store, handle);
-            const storedRow = requireParsedRow(tables, schemaTable.id, rowId);
-            return schemaTable.headers.map((header) =>
-                fieldValueFromStored(
-                    [schemaTable.id, "rows", rowId, "fields", header.id],
-                    storedRow.fields[header.id] ?? "Null",
-                ),
-            );
+            const { tables, generation } = versionedParsedTables(store, handle);
+            if (cachedFields === undefined || generation !== cachedGeneration) {
+                const storedRow = requireParsedRow(tables, schemaTable.id, rowId);
+                cachedFields = schemaTable.headers.map((header) =>
+                    fieldValueFromStored(
+                        [schemaTable.id, "rows", rowId, "fields", header.id],
+                        storedRow.fields[header.id] ?? "Null",
+                    ),
+                );
+                cachedGeneration = generation;
+            }
+            return cachedFields;
         },
     };
 }
@@ -429,15 +466,23 @@ function makeTable<Handle, Version>(
     label: string | null,
     headers: ReadonlyArray<TableHeader>,
 ): InstanceTable {
+    // Materialized rows are memoized against the parse generation: readers
+    // call `rows` many times per render, and each row allocates its views.
+    let cachedRows: ReadonlyArray<TableRow> | undefined;
+    let cachedGeneration = Number.NaN;
     const table: InstanceTable = {
         id,
         label,
         headers,
         get rows() {
-            const tables = parsedTablesOfHandle(store, handle);
-            return (tables[id]?.rowOrder ?? []).map((rowId) =>
-                makeRow(store, handle, table, rowId),
-            );
+            const { tables, generation } = versionedParsedTables(store, handle);
+            if (cachedRows === undefined || generation !== cachedGeneration) {
+                cachedRows = (tables[id]?.rowOrder ?? []).map((rowId, index) =>
+                    makeRow(store, handle, table, rowId, index),
+                );
+                cachedGeneration = generation;
+            }
+            return cachedRows;
         },
     };
     return table;
