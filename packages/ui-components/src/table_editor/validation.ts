@@ -14,14 +14,14 @@ export function createIssueIndex(issues: Accessor<ReadonlyArray<TableIssue>>) {
         }
         return result;
     });
-    return (path: ReadonlyArray<string>): ReadonlyArray<TableIssue> =>
+    return (path: ReadonlyArray<PropertyKey>): ReadonlyArray<TableIssue> =>
         index().get(pathKey(path)) ?? [];
 }
 
 export type IssueLookup = ReturnType<typeof createIssueIndex>;
 
-function pathKey(path: ReadonlyArray<string>): string {
-    return path.join("\u0000");
+function pathKey(path: ReadonlyArray<PropertyKey>): string {
+    return path.map(String).join("\u0000");
 }
 
 export function issueMessage(issue: TableIssue): string {

@@ -13,6 +13,7 @@ import {
     createResource,
     createSignal,
     Match,
+    onCleanup,
     Show,
     Switch,
     useContext,
@@ -125,9 +126,39 @@ export default function DocumentPage() {
         }
     });
 
+    const createDisposingDocumentLoader = () => {
+        let currentInstance: LiveInstanceDoc["instance"] | undefined;
+        let generation = 0;
+        let active = true;
+        onCleanup(() => {
+            active = false;
+            currentInstance?.dispose();
+        });
+        return async (refId: string | undefined, kind: DocumentType) => {
+            const ticket = ++generation;
+            const loaded =
+                refId === undefined
+                    ? undefined
+                    : await getLiveDocument(refId, api, models, binder, kind);
+            if (loaded?.liveDoc.type === "instance") {
+                const loadedInstance = loaded.liveDoc.instance;
+                // It may have become in-active during await of getLiveDocument
+                if (!active || ticket !== generation) {
+                    loadedInstance?.dispose();
+                } else {
+                    currentInstance?.dispose();
+                    currentInstance = loadedInstance;
+                }
+            }
+            return loaded;
+        };
+    };
+    const loadPrimary = createDisposingDocumentLoader();
+    const loadSecondary = createDisposingDocumentLoader();
+
     const [primaryLiveDoc, { refetch: refetchPrimaryDoc }] = createResource(
-        () => (documentIsVisible(params.kind) ? params.ref : undefined),
-        (refId) => getLiveDocument(refId, api, models, binder, params.kind as DocumentType),
+        () => ({ ref: documentIsVisible(params.kind) ? params.ref : undefined, kind: params.kind }),
+        (source) => loadPrimary(source.ref, source.kind as DocumentType),
     );
 
     createEffect(() => {
@@ -162,15 +193,15 @@ export default function DocumentPage() {
         async (source) => {
             // Return undefined to clear resource when there's no secondary in URL
             if (!source.kind || !source.ref || !source.visible) {
-                return undefined;
+                return loadSecondary(undefined, source.kind as DocumentType);
             }
 
             // Prevent fetching right before redirect for matching refs (maximizing)
             if (source.ref === source.primaryRef) {
-                return undefined;
+                return loadSecondary(undefined, source.kind as DocumentType);
             }
 
-            return getLiveDocument(source.ref, api, models, binder, source.kind as DocumentType);
+            return loadSecondary(source.ref, source.kind as DocumentType);
         },
     );
 
