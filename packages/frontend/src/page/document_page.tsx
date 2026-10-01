@@ -13,6 +13,7 @@ import {
     createResource,
     createSignal,
     Match,
+    onCleanup,
     Show,
     Switch,
     useContext,
@@ -125,9 +126,42 @@ export default function DocumentPage() {
         }
     });
 
+    // Resource fetches can finish after replacement or unmount. Release both
+    // superseded instances and late results, not just the currently rendered pane.
+    const ownedDocumentLoader = () => {
+        let current: AnyLiveDocWithRef | undefined;
+        let generation = 0;
+        let active = true;
+        const dispose = (doc: AnyLiveDocWithRef | undefined) => {
+            if (doc?.liveDoc.type === "instance") {
+                doc.liveDoc.instance.dispose();
+            }
+        };
+        onCleanup(() => {
+            active = false;
+            dispose(current);
+        });
+        return async (refId: string | undefined, kind: DocumentType) => {
+            const ticket = ++generation;
+            const loaded =
+                refId === undefined
+                    ? undefined
+                    : await getLiveDocument(refId, api, models, binder, kind);
+            if (!active || ticket !== generation) {
+                dispose(loaded);
+            } else {
+                dispose(current);
+                current = loaded;
+            }
+            return loaded;
+        };
+    };
+    const loadPrimary = ownedDocumentLoader();
+    const loadSecondary = ownedDocumentLoader();
+
     const [primaryLiveDoc, { refetch: refetchPrimaryDoc }] = createResource(
-        () => (documentIsVisible(params.kind) ? params.ref : undefined),
-        (refId) => getLiveDocument(refId, api, models, binder, params.kind as DocumentType),
+        () => ({ ref: documentIsVisible(params.kind) ? params.ref : undefined, kind: params.kind }),
+        (source) => loadPrimary(source.ref, source.kind as DocumentType),
     );
 
     createEffect(() => {
@@ -162,15 +196,15 @@ export default function DocumentPage() {
         async (source) => {
             // Return undefined to clear resource when there's no secondary in URL
             if (!source.kind || !source.ref || !source.visible) {
-                return undefined;
+                return loadSecondary(undefined, source.kind as DocumentType);
             }
 
             // Prevent fetching right before redirect for matching refs (maximizing)
             if (source.ref === source.primaryRef) {
-                return undefined;
+                return loadSecondary(undefined, source.kind as DocumentType);
             }
 
-            return getLiveDocument(source.ref, api, models, binder, source.kind as DocumentType);
+            return loadSecondary(source.ref, source.kind as DocumentType);
         },
     );
 
