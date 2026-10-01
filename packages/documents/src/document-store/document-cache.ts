@@ -5,19 +5,15 @@ import { validateDocumentStructure } from "./structural-validation";
 
 /* A per-handle cache over a document store.
 
-The cache subscribes to the store once and bumps a generation counter whenever
-the document changes, from any source: local edits, commits, reverts, or
-remote sync. Derived data (snapshots, structural validation, indexes, and any
-consumer-supplied computations) is recomputed lazily, at most once per
-generation, so operations can read validated data without re-deriving or
-re-checking it on every access. */
+The cache subscribes to the store once and bumps a generation counter
+whenever the document changes, from any source: local edits, commits,
+reverts, or remote sync. Derived data is recomputed lazily, at most once per
+generation. */
 
-/** A cache of data derived from one document, invalidated on every change. */
+/** Cached data derived from one document, recomputed after every change. */
 export interface DocumentCache {
     /** Monotonic counter, bumped whenever the document changes. */
     generation(): number;
-    /** The store's current (possibly proxied) view of the document. */
-    view(): Readonly<Document>;
     /** An unproxied snapshot, computed at most once per generation.
 
     The snapshot is shared: callers must not mutate it. */
@@ -25,134 +21,63 @@ export interface DocumentCache {
     /** Structural validation of the document, computed at most once per
     generation. Empty when the document is well-formed. */
     structuralIssues(): ReadonlyArray<Issue>;
-    /** The view, typed, when the document is structurally valid and of the
-    given type; `undefined` otherwise. */
-    tryDocument<T extends Document["type"]>(
-        type: T,
-    ): Readonly<Extract<Document, { type: T }>> | undefined;
-    /** For structurally valid model documents: a map from generator
-    (judgment) id to the id of the cell declaring it, in cell order. Computed
-    at most once per generation. `undefined` when the document is not a
-    structurally valid model document. */
-    generatorIndex(): ReadonlyMap<string, string> | undefined;
-    /** Memoize a computation under `key` for the current generation. The
-    computation reruns the first time it is requested after a change. */
-    memo<T>(key: unknown, compute: () => T): T;
-    /** Subscribe to invalidation. Returns a function to unsubscribe. */
-    onInvalidate(callback: () => void): () => void;
 }
 
-const snapshotKey = Symbol("document-cache snapshot");
-const structureKey = Symbol("document-cache structure");
-const generatorIndexKey = Symbol("document-cache generator index");
+type Cached<T> = { generation: number; value: T } | undefined;
 
-/** Create a document cache over a handle.
-
-Prefer [`documentCacheFor`], which shares one cache (and one store
-subscription) per handle. */
-export function createDocumentCache<Handle, Version>(
+function createDocumentCache<Handle, Version>(
     store: DocumentStore<Handle, Version>,
     handle: Handle,
 ): DocumentCache {
     let generation = 0;
-    const memoEntries = new Map<unknown, { generation: number; value: unknown }>();
-    const invalidateListeners = new Set<() => void>();
+    let snapshot: Cached<Readonly<Document>>;
+    let issues: Cached<ReadonlyArray<Issue>>;
 
     store.subscribe(handle, () => {
         generation += 1;
-        memoEntries.clear();
-        for (const listener of Array.from(invalidateListeners)) {
-            listener();
-        }
     });
 
-    const cache: DocumentCache = {
+    return {
         generation: () => generation,
-        view: () => store.getDocumentView(handle),
-        snapshot: () => cache.memo(snapshotKey, () => getDocumentSnapshot(store, handle)),
-        structuralIssues: () =>
-            cache.memo(structureKey, () =>
-                validateDocumentStructure(store.getDocumentView(handle)),
-            ),
-        tryDocument<T extends Document["type"]>(type: T) {
-            if (cache.structuralIssues().length > 0) {
-                return undefined;
+        snapshot() {
+            if (snapshot === undefined || snapshot.generation !== generation) {
+                snapshot = { generation, value: getDocumentSnapshot(store, handle) };
             }
-            const document = store.getDocumentView(handle);
-            if (document.type !== type) {
-                return undefined;
-            }
-            return document as Readonly<Extract<Document, { type: T }>>;
+            return snapshot.value;
         },
-        generatorIndex() {
-            const document = cache.tryDocument("model");
-            if (document === undefined) {
-                return undefined;
+        structuralIssues() {
+            if (issues === undefined || issues.generation !== generation) {
+                issues = {
+                    generation,
+                    value: validateDocumentStructure(store.getDocumentView(handle)),
+                };
             }
-            return cache.memo(generatorIndexKey, () => {
-                const index = new Map<string, string>();
-                for (const cellId of document.notebook.cellOrder) {
-                    const cell = document.notebook.cellContents[cellId];
-                    if (cell?.tag === "formal" && !index.has(cell.content.id)) {
-                        index.set(cell.content.id, cellId);
-                    }
-                }
-                return index;
-            });
-        },
-        memo<T>(key: unknown, compute: () => T): T {
-            const entry = memoEntries.get(key);
-            if (entry !== undefined && entry.generation === generation) {
-                return entry.value as T;
-            }
-            const value = compute();
-            memoEntries.set(key, { generation, value });
-            return value;
-        },
-        onInvalidate(callback) {
-            invalidateListeners.add(callback);
-            return () => {
-                invalidateListeners.delete(callback);
-            };
+            return issues.value;
         },
     };
-    return cache;
 }
 
-interface CacheRegistry {
-    /** Caches for object handles, weakly held so drafts can be collected. */
-    objectHandles: WeakMap<object, DocumentCache>;
-    /** Caches for primitive handles (none of the current stores use them). */
-    otherHandles: Map<unknown, DocumentCache>;
-}
-
-const registriesByStore = new WeakMap<object, CacheRegistry>();
+const cachesByStore = new WeakMap<object, WeakMap<object, DocumentCache>>();
 
 /** The shared document cache for a handle.
 
-All consumers of the same handle (notebooks, cells, instances, validators)
-share one cache and one store subscription. */
+All consumers of the same handle share one cache and one store subscription.
+Caches are held weakly, so they are collected with their handles. (Handles
+are assumed to be objects, as they are in every store implementation.) */
 export function documentCacheFor<Handle, Version>(
     store: DocumentStore<Handle, Version>,
     handle: Handle,
 ): DocumentCache {
-    let registry = registriesByStore.get(store);
-    if (registry === undefined) {
-        registry = { objectHandles: new WeakMap(), otherHandles: new Map() };
-        registriesByStore.set(store, registry);
+    let caches = cachesByStore.get(store);
+    if (caches === undefined) {
+        caches = new WeakMap();
+        cachesByStore.set(store, caches);
     }
-    if ((typeof handle === "object" && handle !== null) || typeof handle === "function") {
-        let cache = registry.objectHandles.get(handle);
-        if (cache === undefined) {
-            cache = createDocumentCache(store, handle);
-            registry.objectHandles.set(handle, cache);
-        }
-        return cache;
-    }
-    let cache = registry.otherHandles.get(handle);
+    const key = handle as object;
+    let cache = caches.get(key);
     if (cache === undefined) {
         cache = createDocumentCache(store, handle);
-        registry.otherHandles.set(handle, cache);
+        caches.set(key, cache);
     }
     return cache;
 }

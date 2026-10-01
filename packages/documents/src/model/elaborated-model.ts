@@ -97,28 +97,8 @@ export function elaboratedModelFromPresentation<S extends Shape>(
     shape: S,
     getPresentation: () => Readonly<ModelPresentation> | undefined,
 ): ElaboratedModel<S> {
-    // Judgments are derived data: memoize them per presentation so repeated
-    // queries against an unchanged model do not rebuild them.
-    let memo:
-        | {
-              presentation: Readonly<ModelPresentation> | undefined;
-              judgments: ReadonlyArray<JudgmentOf<S>>;
-          }
-        | undefined;
-
     function judgments(): ReadonlyArray<JudgmentOf<S>> {
         const presentation = getPresentation();
-        if (memo !== undefined && memo.presentation === presentation) {
-            return memo.judgments;
-        }
-        const computed = computeJudgments(presentation);
-        memo = { presentation, judgments: computed };
-        return computed;
-    }
-
-    function computeJudgments(
-        presentation: Readonly<ModelPresentation> | undefined,
-    ): ReadonlyArray<JudgmentOf<S>> {
         if (presentation === undefined) {
             return [];
         }

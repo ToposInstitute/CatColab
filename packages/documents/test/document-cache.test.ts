@@ -3,7 +3,7 @@ import { describe, expect, test } from "vitest";
 
 import type { Document } from "catcolab-document-types";
 // The per-handle document cache: structural validation of the underlying JSON
-// document, recomputed on every change, plus memoization of derived data.
+// document, recomputed on every change, plus cached derived data.
 import {
     createBinder,
     createInMemoryStore,
@@ -75,26 +75,12 @@ describe("validateDocumentStructure", () => {
 });
 
 describe("documentCacheFor", () => {
-    test("one cache is shared per handle and recomputes only on change", async () => {
+    test("one cache is shared per handle", async () => {
         const store = createInMemoryStore();
         const handle = await store.createHandle(emptyModelDocument());
 
         const cache = documentCacheFor(store, handle);
         expect(documentCacheFor(store, handle)).toBe(cache);
-
-        let computations = 0;
-        const compute = () => cache.memo("key", () => (computations += 1));
-        compute();
-        compute();
-        expect(computations).toBe(1);
-
-        const generation = cache.generation();
-        store.changeDocument(handle, (document) => {
-            document.name = "Renamed";
-        });
-        expect(cache.generation()).toBe(generation + 1);
-        compute();
-        expect(computations).toBe(2);
     });
 
     test("snapshots are unproxied, shared, and refreshed on change", async () => {
@@ -106,9 +92,11 @@ describe("documentCacheFor", () => {
         expect(cache.snapshot()).toBe(first);
         expect(first).not.toBe(store.getDocumentView(handle));
 
+        const generation = cache.generation();
         store.changeDocument(handle, (document) => {
             document.name = "Renamed";
         });
+        expect(cache.generation()).toBe(generation + 1);
         const second = cache.snapshot();
         expect(second).not.toBe(first);
         expect(second.name).toBe("Renamed");
@@ -120,8 +108,6 @@ describe("documentCacheFor", () => {
         const cache = documentCacheFor(store, handle);
 
         expect(cache.structuralIssues()).toEqual([]);
-        expect(cache.tryDocument("model")).toBeDefined();
-        expect(cache.tryDocument("instance")).toBeUndefined();
 
         store.changeDocument(handle, (document) => {
             if (document.type === "model") {
@@ -129,7 +115,6 @@ describe("documentCacheFor", () => {
             }
         });
         expect(cache.structuralIssues().length).toBe(1);
-        expect(cache.tryDocument("model")).toBeUndefined();
 
         store.changeDocument(handle, (document) => {
             if (document.type === "model") {
@@ -137,23 +122,6 @@ describe("documentCacheFor", () => {
             }
         });
         expect(cache.structuralIssues()).toEqual([]);
-    });
-
-    test("the generator index maps judgment ids to cell ids", async () => {
-        const store = createInMemoryStore();
-        const handle = await store.createHandle(emptyModelDocument());
-        const notebook = modelNotebookFromStore(SimpleOlog, store, handle);
-
-        const a = notebook.add(Type, { label: "A" });
-        const cache = documentCacheFor(store, handle);
-        const index = cache.generatorIndex();
-        expect(index).toBeDefined();
-        expect(index?.size).toBe(1);
-
-        const document = store.getDocumentView(handle);
-        const cellId = index?.values().next().value;
-        expect(cellId).toBe(a.id);
-        expect(document.type).toBe("model");
     });
 });
 

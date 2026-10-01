@@ -171,36 +171,42 @@ export interface NotebookValidator<S extends Shape> {
     onValidate(callback: (result: ModelValidation<S>) => void): () => void;
 }
 
-/** Core theory promises, shared by every validator over the same shape. */
-const coreTheoryByShape = new WeakMap<Shape, Promise<DblTheory>>();
-
 /** Create the validation machinery for a notebook over a document store.
 
-All consumers share one code path and one source of truth: results are cached
-in the handle's shared document cache, so the document is elaborated and
-validated at most once per change no matter how many consumers ask. */
+The result is cached per generation of the handle's shared document cache,
+so the document is elaborated and validated at most once per change no
+matter how many consumers ask. */
 export function createNotebookValidator<Handle, S extends Shape>(
     shape: S,
     store: DocumentStore<Handle>,
     handle: Handle,
 ): NotebookValidator<S> {
     const cache = documentCacheFor(store, handle);
-    const validationByState = new WeakMap<ModelValidationState, ModelValidation<S>>();
+    let coreTheory: Promise<DblTheory> | undefined;
 
     /** Elaborate and validate the current document.
 
     A structurally invalid document reports its structural issues and is not
     elaborated. */
-    async function elaborateAndValidate(): Promise<ModelValidationState> {
+    async function elaborateAndValidate(): Promise<ModelValidation<S>> {
+        const state = await stateFromDocument();
+        return {
+            model: elaboratedModelFromPresentation(shape, () => state.presentation),
+            issues: state.issues,
+        };
+    }
+
+    async function stateFromDocument(): Promise<ModelValidationState> {
         const structuralIssues = cache.structuralIssues();
         if (structuralIssues.length > 0) {
             return { issues: structuralIssues };
         }
-        if (cache.tryDocument("model") === undefined) {
+        const documentType = store.getDocumentView(handle).type;
+        if (documentType !== "model") {
             return {
                 issues: [
                     {
-                        message: `Cannot validate a document of type "${cache.view().type}" as a model.`,
+                        message: `Cannot validate a document of type "${documentType}" as a model.`,
                         path: ["type"],
                     },
                 ],
@@ -216,10 +222,8 @@ export function createNotebookValidator<Handle, S extends Shape>(
             };
         }
         try {
-            let coreTheory = coreTheoryByShape.get(shape);
             if (!coreTheory) {
                 coreTheory = shape.getCoreTheory();
-                coreTheoryByShape.set(shape, coreTheory);
             }
             const theory = await coreTheory;
             const document = cache.snapshot() as Readonly<ModelDocument>;
@@ -231,81 +235,57 @@ export function createNotebookValidator<Handle, S extends Shape>(
         }
     }
 
-    /** The validation state for the current generation, computed at most once
-    per change and shared across all consumers of the handle. The shape is the
-    memo key, so wrappers with distinct shapes validate independently. */
-    function currentValidationState(): Promise<ModelValidationState> {
-        return cache.memo(shape, elaborateAndValidate);
-    }
-
-    /** Convert internal validation state into the public snapshot, memoized
-    per state so unchanged documents yield identical results. */
-    function modelValidationFromState(state: ModelValidationState): ModelValidation<S> {
-        let validation = validationByState.get(state);
-        if (validation === undefined) {
-            validation = {
-                model: elaboratedModelFromPresentation(shape, () => state.presentation),
-                issues: state.issues,
-            };
-            validationByState.set(state, validation);
+    /** The validation result for the current generation, computed at most
+    once per change, so unchanged documents yield identical results. */
+    let current: { generation: number; validation: Promise<ModelValidation<S>> } | undefined;
+    function currentValidation(): Promise<ModelValidation<S>> {
+        const generation = cache.generation();
+        if (current === undefined || current.generation !== generation) {
+            current = { generation, validation: elaborateAndValidate() };
         }
-        return validation;
+        return current.validation;
     }
 
-    const validationStateListeners = new Set<(state: ModelValidationState) => void>();
-    let unsubscribeValidationSource: (() => void) | undefined;
-
-    function publishValidationState(state: ModelValidationState): void {
-        for (const listener of validationStateListeners) {
-            listener(state);
-        }
-    }
+    const listeners = new Set<(result: ModelValidation<S>) => void>();
+    let unsubscribe: (() => void) | undefined;
 
     /** Revalidate the document and publish the outcome to listeners. When the
     document changes while validation is in flight, the stale outcome is not
     published: the change triggers another revalidation whose outcome is.
     Every caller still receives its own outcome. */
-    async function revalidate(): Promise<ModelValidationState> {
+    async function revalidate(): Promise<ModelValidation<S>> {
         const generation = cache.generation();
-        const state = await currentValidationState();
+        const validation = await currentValidation();
         if (generation === cache.generation()) {
-            publishValidationState(state);
-        }
-        return state;
-    }
-
-    /** Subscribe to validation state, revalidating on every document change.
-    The listener receives an initial publish once revalidation completes. */
-    function subscribeToValidationState(
-        listener: (state: ModelValidationState) => void,
-    ): () => void {
-        validationStateListeners.add(listener);
-        if (unsubscribeValidationSource === undefined) {
-            unsubscribeValidationSource = cache.onInvalidate(() => {
-                void revalidate();
-            });
-        }
-        void revalidate();
-
-        return () => {
-            if (!validationStateListeners.delete(listener)) {
-                return;
+            for (const listener of listeners) {
+                listener(validation);
             }
-            if (validationStateListeners.size === 0) {
-                unsubscribeValidationSource?.();
-                unsubscribeValidationSource = undefined;
-            }
-        };
+        }
+        return validation;
     }
 
     return {
-        async validate() {
-            return modelValidationFromState(await revalidate());
-        },
+        validate: revalidate,
+        /** Subscribe to validation, revalidating on every document change. The
+        callback receives an initial result once revalidation completes. */
         onValidate(callback) {
-            return subscribeToValidationState((state) => {
-                callback(modelValidationFromState(state));
-            });
+            listeners.add(callback);
+            if (unsubscribe === undefined) {
+                unsubscribe = store.subscribe(handle, () => {
+                    void revalidate();
+                });
+            }
+            void revalidate();
+
+            return () => {
+                if (!listeners.delete(callback)) {
+                    return;
+                }
+                if (listeners.size === 0) {
+                    unsubscribe?.();
+                    unsubscribe = undefined;
+                }
+            };
         },
     };
 }

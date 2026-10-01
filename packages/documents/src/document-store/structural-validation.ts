@@ -154,22 +154,6 @@ function validateTables(value: unknown, path: Path, issues: Issue[]): void {
     }
 }
 
-function validateInteractions(value: unknown, path: Path, issues: Issue[]): void {
-    if (!Array.isArray(value)) {
-        issues.push(issue("An LLM conversation must have interactions", path));
-        return;
-    }
-    for (const [index, interaction] of value.entries()) {
-        if (
-            !isRecord(interaction) ||
-            typeof interaction["tag"] !== "string" ||
-            typeof interaction["id"] !== "string"
-        ) {
-            issues.push(issue("Malformed interaction", [...path, index]));
-        }
-    }
-}
-
 /** Check that a document is structurally well-formed for its type.
 
 Returns an empty array when the document is valid. */
@@ -210,7 +194,9 @@ export function validateDocumentStructure(document: Readonly<Document>): Issue[]
             if (typeof value["llmModel"] !== "string") {
                 issues.push(issue("An LLM conversation must name its model", ["llmModel"]));
             }
-            validateInteractions(value["interactions"], ["interactions"], issues);
+            if (!Array.isArray(value["interactions"])) {
+                issues.push(issue("An LLM conversation must have interactions", ["interactions"]));
+            }
             break;
     }
     return issues;

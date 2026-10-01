@@ -9,7 +9,6 @@ export type {
 } from "./document-store";
 export type { Issue, PathSegment, Result } from "./result";
 export {
-    createDocumentCache,
     createInMemoryStore,
     documentCacheFor,
     documentLinks,
