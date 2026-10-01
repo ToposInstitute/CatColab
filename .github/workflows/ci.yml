@@ -88,6 +88,10 @@ jobs:
   npm_checks:
     name: npm checks
     runs-on: ubuntu-latest
+    env:
+      # Fetch build outputs from the nix binary cache (Cachix) instead of
+      # rebuilding them; see tools/build_system.
+      CATCOLAB_BUILD_SYSTEM_RETRIEVE_FROM_NIX: "true"
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
