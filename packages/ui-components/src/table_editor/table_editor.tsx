@@ -213,7 +213,7 @@ export function TableEditor(props: TableEditorProps) {
         return row && header ? { row, header } : undefined;
     };
 
-    const isFirstCell = (cell: Cell) => neighbor(cell, "backward") === undefined;
+    const isFirstCell = (cell: Cell) => cell.row.index === 0 && cell.header.id === headers()[0]?.id;
 
     const isEditable = (cell: Cell) => cell.header.type.tag !== "Unknown";
 
