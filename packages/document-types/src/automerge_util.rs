@@ -400,16 +400,8 @@ mod property_tests {
     #[proptest(cases = 64)]
     fn copy_doc_at_heads_restores_to_empty(notebook: ModelNotebook) {
         let json = serde_json::to_value(&notebook.0).expect("serialize to JSON");
-        let mut doc = automerge::Automerge::new();
-        let empty_heads = doc.get_heads();
-
-        // Populate the doc.
-        doc.transact(|tx| {
-            crate::automerge_json::populate_automerge_from_json(tx, automerge::ROOT, &json)
-                .unwrap();
-            Ok::<_, automerge::AutomergeError>(())
-        })
-        .unwrap();
+        let mut doc = crate::automerge_json::auomerge_doc_from_json(&json).unwrap();
+        let empty_heads = Vec::new();
 
         // Restore to empty.
         doc.transact(|tx| {
