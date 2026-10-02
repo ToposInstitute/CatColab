@@ -260,14 +260,9 @@ async fn create_doc_in_repo(
     repo: &samod::Repo,
     content: &serde_json::Value,
 ) -> Result<(Vec<automerge::ChangeHash>, String), Error> {
-    use catcolab_document_types::automerge_json::populate_automerge_from_json;
+    use catcolab_document_types::automerge_json::auomerge_doc_from_json;
 
-    let mut doc = automerge::Automerge::new();
-    doc.transact(|tx| {
-        populate_automerge_from_json(tx, automerge::ROOT, content)?;
-        Ok::<_, automerge::AutomergeError>(())
-    })
-    .map_err(|e| -> Error {
+    let doc = auomerge_doc_from_json(content).map_err(|e| -> Error {
         Box::<dyn std::error::Error + Send + Sync>::from(format!(
             "Failed to create automerge doc from JSON: {:?}",
             e
