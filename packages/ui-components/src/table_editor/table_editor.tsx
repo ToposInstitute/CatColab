@@ -10,6 +10,7 @@ import {
     Index,
     onCleanup,
     Show,
+    untrack,
 } from "solid-js";
 
 import type {
@@ -25,6 +26,7 @@ import type { Completion } from "../completions";
 import { IconButton } from "../icon_button";
 import { TextInput } from "../text_input";
 import { type FocusHandle, useChildFocus } from "../util/focus";
+import { createVirtualList } from "../virtual_list";
 
 import styles from "./table_editor.module.css";
 
@@ -38,6 +40,9 @@ const COLUMN_WIDTHS = {
     Unknown: 220,
 } as const;
 
+// Cell height plus the collapsed border shared by adjacent rows.
+const ROW_HEIGHT = 29;
+const OVERSCAN_COUNT = 5;
 const DELETE_COLUMN_WIDTH = 36;
 const EMPTY_COLUMN_WIDTH = 180;
 
@@ -123,6 +128,36 @@ export function TableEditor(props: TableEditorProps) {
 
     const rows = () => props.table.rows;
     const headers = () => props.table.headers;
+    const [viewportHeight, setViewportHeight] = createSignal(300);
+    const [headerHeight, setHeaderHeight] = createSignal(29);
+    const [virtualRows, onVirtualScroll] = createVirtualList({
+        items: rows,
+        rootHeight: viewportHeight,
+        rowHeight: () => ROW_HEIGHT,
+        overscanCount: OVERSCAN_COUNT,
+    });
+    let scrollArea!: HTMLDivElement;
+    let tableHead!: HTMLTableSectionElement;
+
+    const measureScrollArea = (el: HTMLDivElement) => {
+        scrollArea = el;
+        const measure = () => {
+            setViewportHeight(el.clientHeight);
+            if (tableHead) {
+                setHeaderHeight(tableHead.getBoundingClientRect().height);
+            }
+        };
+        const observer = new ResizeObserver(measure);
+        observer.observe(el);
+        queueMicrotask(measure);
+        onCleanup(() => observer.disconnect());
+    };
+
+    const updateVirtualScroll = () => {
+        // The sticky column header occupies the start of the viewport: the
+        // body-relative viewport starts at scrollTop, not scrollTop - headerHeight.
+        onVirtualScroll({ target: scrollArea });
+    };
 
     const headerIndex = createMemo(
         () => new Map(headers().map((header, index) => [header.id, index] as const)),
@@ -178,7 +213,7 @@ export function TableEditor(props: TableEditorProps) {
         return row && header ? { row, header } : undefined;
     };
 
-    const isFirstCell = (cell: Cell) => neighbor(cell, "backward") === undefined;
+    const isFirstCell = (cell: Cell) => cell.row.index === 0 && cell.header.id === headers()[0]?.id;
 
     const isEditable = (cell: Cell) => cell.header.type.tag !== "Unknown";
 
@@ -196,7 +231,10 @@ export function TableEditor(props: TableEditorProps) {
     Nothing is selected while a row is being appended: the selection lands on
     the new row once it appears.
      */
-    const selectedCell = createMemo((prev: Cell | null): Cell | null => {
+    // Row indices may be live getters that return -1 after deletion. Keep a
+    // snapshot so the fallback uses the selection's last known position.
+    type Selection = Cell & { rowIndex: number };
+    const selectedCell = createMemo((prev: Selection | null): Selection | null => {
         const allRows = rows();
         const allHeaders = headers();
         if (
@@ -209,17 +247,40 @@ export function TableEditor(props: TableEditorProps) {
         }
         const key = focus.activeChild();
         if (key === null) {
-            return { row: allRows[0]!, header: allHeaders[0]! };
+            return { row: allRows[0]!, header: allHeaders[0]!, rowIndex: 0 };
         }
         const { headerId, rowId } = parseCellKey(key);
         // If the selected row is gone, stay at the same position; if the
         // selected column is gone, move to the first one.
         const row =
             allRows.find((row) => row.id === rowId) ??
-            allRows[Math.min(prev?.row.index ?? 0, allRows.length - 1)]!;
+            allRows[Math.max(0, Math.min(prev?.rowIndex ?? 0, allRows.length - 1))]!;
         const header = allHeaders.find((header) => header.id === headerId) ?? allHeaders[0]!;
-        return { row, header };
+        return { row, header, rowIndex: row.index };
     }, null);
+
+    // Table updates may replace row objects without moving the selection.
+    // Only scroll when its position changes, not when a field is committed.
+    const selectedRowIndex = createMemo(() => selectedCell()?.rowIndex ?? null);
+    createEffect(() => {
+        const index = selectedRowIndex();
+        focusRequest();
+        if (index === null || !scrollArea) {
+            return;
+        }
+        untrack(() => {
+            const top = index * ROW_HEIGHT;
+            const bottom = top + ROW_HEIGHT;
+            const availableHeight = scrollArea.clientHeight - headerHeight();
+            if (top < scrollArea.scrollTop) {
+                scrollArea.scrollTop = top;
+            } else if (bottom > scrollArea.scrollTop + availableHeight) {
+                scrollArea.scrollTop = bottom - availableHeight;
+            }
+            // Mount the target immediately, before its DOM focus effect runs.
+            updateVirtualScroll();
+        });
+    });
 
     const isSelected = (cell: Cell): boolean => {
         const sel = selectedCell();
@@ -635,236 +696,342 @@ export function TableEditor(props: TableEditorProps) {
                     )}
                 </Show>
             </div>
-            <table class={styles.grid} role="grid">
-                <colgroup>
-                    <col class={styles.rowHeaderColumn} />
-                    <Show
-                        when={headers().length > 0}
-                        fallback={<col style={{ width: `${EMPTY_COLUMN_WIDTH}px` }} />}
-                    >
-                        <Index each={headers()}>
-                            {(header) => (
-                                <col style={{ width: `${COLUMN_WIDTHS[header().type.tag]}px` }} />
-                            )}
-                        </Index>
-                    </Show>
-                    <col style={{ width: `${DELETE_COLUMN_WIDTH}px` }} />
-                </colgroup>
-                <thead>
-                    <tr>
-                        <th class={styles.columnHeader} scope="col" />
+            <div
+                ref={measureScrollArea}
+                class={styles.scrollArea}
+                tabindex={-1}
+                onScroll={() =>
+                    batch(() => {
+                        const cell = selectedCell();
+                        const active = document.activeElement;
+                        if (
+                            cell &&
+                            active &&
+                            scrollArea.contains(active) &&
+                            active !== scrollArea
+                        ) {
+                            const first = Math.max(
+                                0,
+                                Math.floor(scrollArea.scrollTop / ROW_HEIGHT) - OVERSCAN_COUNT,
+                            );
+                            const last =
+                                Math.floor(scrollArea.scrollTop / ROW_HEIGHT) +
+                                Math.ceil(viewportHeight() / ROW_HEIGHT) +
+                                OVERSCAN_COUNT;
+                            if (cell.row.index < first || cell.row.index >= last) {
+                                // Keep keyboard focus inside the table before recycling
+                                // the focused row. An open editor commits through blur.
+                                scrollArea.focus({ preventScroll: true });
+                            }
+                        }
+                        updateVirtualScroll();
+                    })
+                }
+                onKeyDown={(evt) => {
+                    const cell = selectedCell();
+                    if (evt.target === scrollArea && cell) {
+                        onCellKeyDown(evt, cell);
+                    }
+                }}
+            >
+                <table class={styles.grid} role="grid" aria-rowcount={rows().length + 1}>
+                    <colgroup>
+                        <col class={styles.rowHeaderColumn} />
                         <Show
                             when={headers().length > 0}
-                            fallback={<th class={styles.columnHeader} scope="col" />}
+                            fallback={<col style={{ width: `${EMPTY_COLUMN_WIDTH}px` }} />}
                         >
                             <Index each={headers()}>
                                 {(header) => (
-                                    <th
-                                        class={styles.columnHeader}
-                                        classList={{
-                                            [styles.columnDeleting]:
-                                                deletingColumnId() === header().id,
-                                        }}
-                                        scope="col"
-                                    >
-                                        <div class={styles.columnContent}>
-                                            <span class={styles.columnLabel}>
-                                                <Show
-                                                    when={header().label}
-                                                    fallback={
-                                                        <span class={styles.unnamed}>
-                                                            {header().label === null
-                                                                ? "Unknown column"
-                                                                : "Unnamed column"}
-                                                        </span>
-                                                    }
-                                                >
-                                                    {header().label}
-                                                </Show>
-                                            </span>
-                                            <Show
-                                                when={
-                                                    isOrphanedColumn(header()) &&
-                                                    props.onDeleteOrphanedColumn
-                                                }
-                                            >
-                                                <Button
-                                                    variant="danger"
-                                                    outline
-                                                    class={styles.deleteColumn}
-                                                    aria-label="Delete column"
-                                                    tabindex={-1}
-                                                    onMouseDown={(evt) => evt.preventDefault()}
-                                                    onMouseEnter={() =>
-                                                        setDeletingColumnId(header().id)
-                                                    }
-                                                    onMouseLeave={() => setDeletingColumnId(null)}
-                                                    onClick={() => {
-                                                        setDeletingColumnId(null);
-                                                        props.onDeleteOrphanedColumn?.(header());
-                                                    }}
-                                                >
-                                                    Delete
-                                                </Button>
-                                            </Show>
-                                        </div>
-                                    </th>
+                                    <col
+                                        style={{ width: `${COLUMN_WIDTHS[header().type.tag]}px` }}
+                                    />
                                 )}
                             </Index>
                         </Show>
-                        <th class={styles.columnHeader} scope="col" />
-                    </tr>
-                </thead>
-                <tbody>
-                    <Index each={rows()}>
-                        {(row) => (
-                            <tr>
-                                <RowHeader issues={rowIssues(row())} />
-                                <Show
-                                    when={headers().length > 0}
-                                    fallback={<td class={styles.cell} role="gridcell" />}
-                                >
-                                    <Index each={headers()}>
-                                        {(header) => {
-                                            // The row and header at this slot change, so
-                                            // resolve the cell lazily.
-                                            const cell = (): Cell => ({
-                                                row: row(),
-                                                header: header(),
-                                            });
-                                            const cellFocus: FocusHandle = {
-                                                hasFocus: () => isSelected(cell()),
-                                                setFocused: (focused) =>
-                                                    focus
-                                                        .childFocus(keyOf(cell()))
-                                                        .setFocused(focused),
-                                            };
-                                            let cellRef!: HTMLTableCellElement;
-
-                                            createEffect(() => {
-                                                focusRequest();
-                                                if (
-                                                    cellFocus.hasFocus() &&
-                                                    !isEditing(cell()) &&
-                                                    suppressedFocus() !== keyOf(cell()) &&
-                                                    document.activeElement !== cellRef
-                                                ) {
-                                                    cellRef.focus();
-                                                }
-                                            });
-
-                                            return (
-                                                <td
-                                                    ref={cellRef}
-                                                    class={styles.cell}
-                                                    role="gridcell"
-                                                    classList={{
-                                                        [styles.selected]: isSelected(cell()),
-                                                        [styles.invalid]: cellIsInvalid(cell()),
-                                                        [styles.columnDeleting]:
-                                                            deletingColumnId() === header().id,
-                                                    }}
-                                                    tabindex={
-                                                        !isEditing(cell()) &&
-                                                        (isSelected(cell()) ||
-                                                            (!selectedCell() &&
-                                                                isFirstCell(cell())))
-                                                            ? 0
-                                                            : -1
-                                                    }
-                                                    aria-selected={isSelected(cell())}
-                                                    aria-invalid={cellIsInvalid(cell())}
-                                                    title={
-                                                        cellIssues(cell())
-                                                            .map(issueMessage)
-                                                            .join("\n") || undefined
-                                                    }
-                                                    onFocus={() => select(cell())}
-                                                    onMouseDown={(evt) => {
-                                                        // Focus explicitly: not all browsers
-                                                        // focus a tabindex ancestor on click.
-                                                        // Focus before selecting: focusing
-                                                        // blurs, and thereby commits, any open
-                                                        // cell editor, while selecting first
-                                                        // would unmount it without a commit.
-                                                        if (!isEditing(cell())) {
-                                                            evt.currentTarget.focus();
-                                                        }
-                                                    }}
-                                                    onDblClick={() => {
-                                                        if (header().type.tag === "Bool") {
-                                                            toggleBool(cell());
-                                                        } else {
-                                                            startEditing(cell(), cellText(cell()));
-                                                        }
-                                                    }}
-                                                    onKeyDown={(evt) => onCellKeyDown(evt, cell())}
-                                                >
+                        <col style={{ width: `${DELETE_COLUMN_WIDTH}px` }} />
+                    </colgroup>
+                    <thead ref={tableHead}>
+                        <tr>
+                            <th class={styles.columnHeader} scope="col" />
+                            <Show
+                                when={headers().length > 0}
+                                fallback={<th class={styles.columnHeader} scope="col" />}
+                            >
+                                <Index each={headers()}>
+                                    {(header) => (
+                                        <th
+                                            class={styles.columnHeader}
+                                            classList={{
+                                                [styles.columnDeleting]:
+                                                    deletingColumnId() === header().id,
+                                            }}
+                                            scope="col"
+                                        >
+                                            <div class={styles.columnContent}>
+                                                <span class={styles.columnLabel}>
                                                     <Show
-                                                        when={isEditing(cell())}
+                                                        when={header().label}
                                                         fallback={
-                                                            <CellContent
-                                                                text={cellText(cell())}
-                                                                isBool={
-                                                                    header().type.tag === "Bool"
-                                                                }
+                                                            <span class={styles.unnamed}>
+                                                                {header().label === null
+                                                                    ? "Unknown column"
+                                                                    : "Unnamed column"}
+                                                            </span>
+                                                        }
+                                                    >
+                                                        {header().label}
+                                                    </Show>
+                                                </span>
+                                                <Show
+                                                    when={
+                                                        isOrphanedColumn(header()) &&
+                                                        props.onDeleteOrphanedColumn
+                                                    }
+                                                >
+                                                    <Button
+                                                        variant="danger"
+                                                        outline
+                                                        class={styles.deleteColumn}
+                                                        aria-label="Delete column"
+                                                        tabindex={-1}
+                                                        onMouseDown={(evt) => evt.preventDefault()}
+                                                        onMouseEnter={() =>
+                                                            setDeletingColumnId(header().id)
+                                                        }
+                                                        onMouseLeave={() =>
+                                                            setDeletingColumnId(null)
+                                                        }
+                                                        onClick={() => {
+                                                            setDeletingColumnId(null);
+                                                            props.onDeleteOrphanedColumn?.(
+                                                                header(),
+                                                            );
+                                                        }}
+                                                    >
+                                                        Delete
+                                                    </Button>
+                                                </Show>
+                                            </div>
+                                        </th>
+                                    )}
+                                </Index>
+                            </Show>
+                            <th class={styles.columnHeader} scope="col" />
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <Show when={virtualRows().viewerTop > 0}>
+                            <tr aria-hidden="true" class={styles.spacer}>
+                                <td
+                                    colspan={Math.max(headers().length, 1) + 2}
+                                    style={{ height: `${virtualRows().viewerTop}px` }}
+                                />
+                            </tr>
+                        </Show>
+                        <Index each={virtualRows().visibleItems}>
+                            {(row) => (
+                                <tr
+                                    aria-rowindex={row().index + 2}
+                                    classList={{
+                                        [styles.lastRow]: row().index === rows().length - 1,
+                                    }}
+                                >
+                                    <RowHeader issues={rowIssues(row())} />
+                                    <Show
+                                        when={headers().length > 0}
+                                        fallback={<td class={styles.cell} role="gridcell" />}
+                                    >
+                                        <Index each={headers()}>
+                                            {(header) => {
+                                                // The row and header at this slot change, so
+                                                // resolve the cell lazily.
+                                                const cell = (): Cell => ({
+                                                    row: row(),
+                                                    header: header(),
+                                                });
+                                                const cellFocus: FocusHandle = {
+                                                    hasFocus: () => isSelected(cell()),
+                                                    setFocused: (focused) =>
+                                                        focus
+                                                            .childFocus(keyOf(cell()))
+                                                            .setFocused(focused),
+                                                };
+                                                let cellRef!: HTMLTableCellElement;
+
+                                                createEffect(() => {
+                                                    focusRequest();
+                                                    if (
+                                                        cellFocus.hasFocus() &&
+                                                        !isEditing(cell()) &&
+                                                        suppressedFocus() !== keyOf(cell()) &&
+                                                        document.activeElement !== cellRef
+                                                    ) {
+                                                        cellRef.focus({ preventScroll: true });
+                                                        const cellBounds =
+                                                            cellRef.getBoundingClientRect();
+                                                        const viewport =
+                                                            scrollArea.getBoundingClientRect();
+                                                        if (cellBounds.left < viewport.left) {
+                                                            scrollArea.scrollLeft -=
+                                                                viewport.left - cellBounds.left;
+                                                        } else if (
+                                                            cellBounds.right >
+                                                            viewport.left + scrollArea.clientWidth
+                                                        ) {
+                                                            scrollArea.scrollLeft +=
+                                                                cellBounds.right -
+                                                                viewport.left -
+                                                                scrollArea.clientWidth;
+                                                        }
+                                                    }
+                                                });
+
+                                                return (
+                                                    <td
+                                                        ref={cellRef}
+                                                        class={styles.cell}
+                                                        role="gridcell"
+                                                        classList={{
+                                                            [styles.selected]: isSelected(cell()),
+                                                            [styles.invalid]: cellIsInvalid(cell()),
+                                                            [styles.columnDeleting]:
+                                                                deletingColumnId() === header().id,
+                                                        }}
+                                                        tabindex={
+                                                            !isEditing(cell()) &&
+                                                            (isSelected(cell()) ||
+                                                                (!selectedCell() &&
+                                                                    row().id ===
+                                                                        virtualRows()
+                                                                            .visibleItems[0]?.id &&
+                                                                    headerIndex().get(
+                                                                        header().id,
+                                                                    ) === 0))
+                                                                ? 0
+                                                                : -1
+                                                        }
+                                                        aria-selected={isSelected(cell())}
+                                                        aria-invalid={cellIsInvalid(cell())}
+                                                        title={
+                                                            cellIssues(cell())
+                                                                .map(issueMessage)
+                                                                .join("\n") || undefined
+                                                        }
+                                                        onFocus={() => select(cell())}
+                                                        onMouseDown={(evt) => {
+                                                            // Focus explicitly: not all browsers
+                                                            // focus a tabindex ancestor on click.
+                                                            // Focus before selecting: focusing
+                                                            // blurs, and thereby commits, any open
+                                                            // cell editor, while selecting first
+                                                            // would unmount it without a commit.
+                                                            if (!isEditing(cell())) {
+                                                                evt.currentTarget.focus();
+                                                            }
+                                                        }}
+                                                        onDblClick={() => {
+                                                            if (header().type.tag === "Bool") {
+                                                                toggleBool(cell());
+                                                            } else {
+                                                                startEditing(
+                                                                    cell(),
+                                                                    cellText(cell()),
+                                                                );
+                                                            }
+                                                        }}
+                                                        onKeyDown={(evt) =>
+                                                            onCellKeyDown(evt, cell())
+                                                        }
+                                                    >
+                                                        <Show
+                                                            when={isEditing(cell())}
+                                                            fallback={
+                                                                <CellContent
+                                                                    text={cellText(cell())}
+                                                                    isBool={
+                                                                        header().type.tag === "Bool"
+                                                                    }
+                                                                    isRowRef={
+                                                                        header().type.tag ===
+                                                                        "RowRef"
+                                                                    }
+                                                                    onOpenRowRef={() =>
+                                                                        startEditing(
+                                                                            cell(),
+                                                                            cellText(cell()),
+                                                                        )
+                                                                    }
+                                                                    onToggle={() =>
+                                                                        toggleBool(cell())
+                                                                    }
+                                                                />
+                                                            }
+                                                        >
+                                                            <CellEditor
+                                                                focus={cellFocus}
+                                                                text={edit()?.text ?? ""}
+                                                                setText={setEditText}
                                                                 isRowRef={
                                                                     header().type.tag === "RowRef"
                                                                 }
-                                                                onOpenRowRef={() =>
-                                                                    startEditing(
-                                                                        cell(),
-                                                                        cellText(cell()),
-                                                                    )
+                                                                validate={(text) =>
+                                                                    validateText(header(), text)
                                                                 }
-                                                                onToggle={() => toggleBool(cell())}
+                                                                completions={completionsFor(cell())}
+                                                                onCommit={(dir) => {
+                                                                    const state = edit();
+                                                                    if (state) {
+                                                                        commitEdit(state, dir);
+                                                                    }
+                                                                }}
+                                                                onCancel={cancelEdit}
+                                                                canExitBackward={
+                                                                    !isFirstCell(cell())
+                                                                }
                                                             />
-                                                        }
-                                                    >
-                                                        <CellEditor
-                                                            focus={cellFocus}
-                                                            text={edit()?.text ?? ""}
-                                                            setText={setEditText}
-                                                            isRowRef={
-                                                                header().type.tag === "RowRef"
-                                                            }
-                                                            validate={(text) =>
-                                                                validateText(header(), text)
-                                                            }
-                                                            completions={completionsFor(cell())}
-                                                            onCommit={(dir) => {
-                                                                const state = edit();
-                                                                if (state) {
-                                                                    commitEdit(state, dir);
-                                                                }
-                                                            }}
-                                                            onCancel={cancelEdit}
-                                                            canExitBackward={!isFirstCell(cell())}
-                                                        />
-                                                    </Show>
-                                                </td>
-                                            );
-                                        }}
-                                    </Index>
-                                </Show>
-                                <td class={styles.deleteCell}>
-                                    <button
-                                        type="button"
-                                        class={styles.deleteRow}
-                                        title="Delete row"
-                                        aria-label="Delete row"
-                                        tabindex={-1}
-                                        onMouseDown={(evt) => evt.preventDefault()}
-                                        onClick={() => deleteRow(row())}
-                                    >
-                                        ×
-                                    </button>
-                                </td>
+                                                        </Show>
+                                                    </td>
+                                                );
+                                            }}
+                                        </Index>
+                                    </Show>
+                                    <td class={styles.deleteCell}>
+                                        <button
+                                            type="button"
+                                            class={styles.deleteRow}
+                                            title="Delete row"
+                                            aria-label="Delete row"
+                                            tabindex={-1}
+                                            onMouseDown={(evt) => evt.preventDefault()}
+                                            onClick={() => deleteRow(row())}
+                                        >
+                                            ×
+                                        </button>
+                                    </td>
+                                </tr>
+                            )}
+                        </Index>
+                        <Show
+                            when={
+                                virtualRows().containerHeight -
+                                    virtualRows().viewerTop -
+                                    virtualRows().visibleItems.length * ROW_HEIGHT >
+                                0
+                            }
+                        >
+                            <tr aria-hidden="true" class={styles.spacer}>
+                                <td
+                                    colspan={Math.max(headers().length, 1) + 2}
+                                    style={{
+                                        height: `${virtualRows().containerHeight - virtualRows().viewerTop - virtualRows().visibleItems.length * ROW_HEIGHT}px`,
+                                    }}
+                                />
                             </tr>
-                        )}
-                    </Index>
-                </tbody>
-            </table>
+                        </Show>
+                    </tbody>
+                </table>
+            </div>
             <Show when={props.table.label !== null}>
                 <div class={styles.footer}>
                     <button
