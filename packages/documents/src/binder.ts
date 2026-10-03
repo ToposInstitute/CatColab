@@ -4,7 +4,7 @@ import {
     Model,
 } from "catcolab-document-methods";
 import type { Document } from "catcolab-document-types";
-import type { DocumentRef, DocumentStore } from "./document-store";
+import type { DocumentRef, DocumentStore, HandlesByLinkType } from "./document-store";
 import { createInMemoryStore } from "./document-store";
 import type { DocumentChange } from "./document-store";
 import { instanceFromStore, type Instance } from "./instance/instance";
@@ -17,8 +17,11 @@ import type { SupportedDocument } from "./supported-document";
 import type { Commit, Transaction } from "./transaction";
 
 export interface Binder<Handle, Version> {
-    /** The document store backing this binder. */
-    readonly store: DocumentStore<Handle, Version>;
+    getHandle(ref: DocumentRef): Promise<Result<Handle>>;
+    getDocumentRef(handle: Handle): DocumentRef;
+    getDocumentView(handle: Handle): Readonly<Document>;
+    listUsedBy(handle: Handle): Promise<HandlesByLinkType<Handle>>;
+    listDependsOn(handle: Handle): Promise<HandlesByLinkType<Handle>>;
 
     createNotebook<S extends Shape & { readonly theory: string }>(
         shape: S,
@@ -40,6 +43,11 @@ export interface Binder<Handle, Version> {
         llmModel: string,
         options: { title: string },
     ): Promise<LLMConversation<Attachment, Handle>>;
+
+    loadLLMConversationFromRef<Attachment extends SupportedDocument<Shape, Handle, Version>>(
+        attachment: Attachment,
+        ref: DocumentRef,
+    ): Promise<Result<LLMConversation<Attachment, Handle>>>;
 
     loadInstanceFromRef<S extends Shape>(
         schema: Notebook<S, ModelDocument, Handle, Version>,
@@ -73,7 +81,11 @@ function binderFromStore<Handle, Version>(
     store: DocumentStore<Handle, Version>,
 ): Binder<Handle, Version> {
     return {
-        store,
+        getHandle: (ref) => store.getHandle(ref),
+        getDocumentRef: (handle) => store.getDocumentRef(handle),
+        getDocumentView: (handle) => store.getDocumentView(handle),
+        listUsedBy: (handle) => store.listUsedBy(handle),
+        listDependsOn: (handle) => store.listDependsOn(handle),
         async createNotebook<S extends Shape & { readonly theory: string }>(
             shape: S,
             options: { title: string },
@@ -175,6 +187,46 @@ function binderFromStore<Handle, Version>(
 
             const handle = await store.createHandle(document);
             return llmConversationFromStore(store, handle, attachment);
+        },
+        async loadLLMConversationFromRef<
+            Attachment extends SupportedDocument<Shape, Handle, Version>,
+        >(attachment: Attachment, ref: DocumentRef) {
+            const result = await store.getHandle(ref);
+            if (result.tag === "Err") {
+                return result;
+            }
+            const document = store.getDocumentView(result.content);
+            if (document.type !== "llmconversation") {
+                return {
+                    tag: "Err",
+                    content: [
+                        {
+                            message: `Cannot load document of type "${document.type}" as an LLM conversation.`,
+                            path: ["type"],
+                        },
+                    ],
+                };
+            }
+            const attachmentRef = store.getDocumentRef(attachment.handle);
+            if (
+                document.llmConversationOf._id !== attachmentRef.id ||
+                document.llmConversationOf._version !== attachmentRef.version ||
+                document.llmConversationOf._server !== (attachmentRef.server ?? "")
+            ) {
+                return {
+                    tag: "Err",
+                    content: [
+                        {
+                            message: `Cannot load conversation attached to "${document.llmConversationOf._id}" using attachment "${attachmentRef.id}".`,
+                            path: ["llmConversationOf"],
+                        },
+                    ],
+                };
+            }
+            return {
+                tag: "Ok",
+                content: llmConversationFromStore(store, result.content, attachment),
+            };
         },
         async loadInstanceFromRef<S extends Shape>(
             schema: Notebook<S, ModelDocument, Handle, Version>,
