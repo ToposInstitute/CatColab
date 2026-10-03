@@ -1066,8 +1066,8 @@ function CellEditor(props: {
     );
 }
 
-function pathKey(path: ReadonlyArray<string>): string {
-    return path.join("\u0000");
+function pathKey(path: ReadonlyArray<PropertyKey>): string {
+    return path.map(String).join("\u0000");
 }
 
 function makeCellKey(headerId: string, rowId: string): CellKey {
