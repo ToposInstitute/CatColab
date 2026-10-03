@@ -31,8 +31,8 @@ const createdHandles = new Set<SolidStoreHandle>();
 
 export const solidStore: DocumentStore<SolidStoreHandle> = {
     async createHandle(initialDoc) {
-        const draftDoc = structuredClone(initialDoc as Document);
-        const [docView, setDocView] = createStore<Document>(initialDoc as Document);
+        const draftDoc = structuredClone(initialDoc);
+        const [docView, setDocView] = createStore<Document>(initialDoc);
         const handle = { draftDoc, docView, setDocView, listeners: new Set<() => void>() };
         createdHandles.add(handle);
         return handle;
@@ -77,15 +77,6 @@ export const solidStore: DocumentStore<SolidStoreHandle> = {
         };
     },
     copyValue: (_handle, value) => structuredClone(unwrap(value)),
-    createReactiveView(initial) {
-        const [current, setCurrent] = createStore(initial);
-        return {
-            current,
-            replace(next) {
-                setCurrent(reconcile(next));
-            },
-        };
-    },
     getDocumentView: (handle) => handle.docView,
     getDocumentRef: (handle) => ({ id: solidStoreIdFor(handle), version: null, server: "" }),
     listUsedBy: async (handle) => {

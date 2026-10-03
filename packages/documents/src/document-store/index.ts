@@ -3,7 +3,6 @@ export type {
     DocumentRef,
     DocumentStore,
     HandlesByLinkType,
-    ReactiveView,
 } from "./document-store";
-export { createReactiveView, documentLinks, emptyHandlesByLinkType } from "./document-store";
+export { documentLinks, emptyHandlesByLinkType, getDocumentSnapshot } from "./document-store";
 export { createInMemoryStore } from "./in-memory";

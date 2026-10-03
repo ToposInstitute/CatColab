@@ -6,10 +6,14 @@ export type {
     DocumentRef,
     DocumentStore,
     HandlesByLinkType,
-    ReactiveView,
 } from "./document-store";
 export type { Issue, PathSegment, Result } from "./result";
-export { createInMemoryStore, documentLinks, emptyHandlesByLinkType } from "./document-store";
+export {
+    createInMemoryStore,
+    documentLinks,
+    emptyHandlesByLinkType,
+    getDocumentSnapshot,
+} from "./document-store";
 export { atomicTypeOfAttributeType } from "./instance/validation";
 export type {
     FieldPath,
@@ -19,12 +23,7 @@ export type {
     TableIssue,
 } from "./instance/errors";
 export { instanceFromStore } from "./instance/instance";
-export type {
-    Instance,
-    InstanceDocument,
-    InstanceValidation,
-    InstanceValidationView,
-} from "./instance/instance";
+export type { Instance, InstanceDocument, InstanceValidation } from "./instance/instance";
 export { llmConversationFromStore } from "./llm-conversation";
 export type { LLMConversation, LLMConversationDocument } from "./llm-conversation";
 export type {
@@ -47,7 +46,6 @@ export type {
     ObjectJudgment,
     ElaboratedModel,
     ModelValidation,
-    ModelValidationView,
     EquationJudgment,
     EquationJudgmentSide,
 } from "./model/elaborated-model";
