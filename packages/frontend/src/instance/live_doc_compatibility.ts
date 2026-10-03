@@ -103,21 +103,12 @@ export async function createInstance(
     modelRefId: string,
 ): Promise<string> {
     const ref = { id: modelRefId, version: null, server: api.serverHost };
-    const handle = await binder.getHandle(ref);
-    if (handle.tag === "Err") {
-        throw new Error(handle.content.map((issue) => issue.message).join("\n"));
-    }
-    const document = binder.getDocumentView(handle.content);
-    if (document.type !== "model") {
-        throw new Error(`Cannot create a data instance of a "${document.type}" document.`);
-    }
-    const shape = shapeForTheory(document.theory);
-    if (!shape) {
-        throw new Error(`Data instances are not supported for theory "${document.theory}".`);
-    }
-    const model = await binder.loadNotebookFromRef(shape, ref);
+    const model = await binder.loadSupportedDocumentFromRef(instanceShapes, ref);
     if (model.tag === "Err") {
         throw new Error(model.content.map((issue) => issue.message).join("\n"));
+    }
+    if (model.content.type !== "model") {
+        throw new Error(`Cannot create a data instance of a "${model.content.type}" document.`);
     }
     const instance = await binder.createInstance(model.content, { title: "" });
     if (instance.tag === "Err") {
