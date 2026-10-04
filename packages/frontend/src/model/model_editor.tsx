@@ -128,22 +128,24 @@ export function ModelCellEditor(props: FormalCellEditorProps<ModelJudgment>) {
     );
 }
 
-function modelCellConstructors(theory: Theory): CellConstructor<ModelJudgment>[] {
-    const constructors: CellConstructor<ModelJudgment>[] = [];
-    constructors.push({
-        name: "Instantiate",
-        description: "Instantiate an existing model into this one",
-        shortcut: ["I"],
-        construct() {
-            return Nb.newFormalCell(Model.newInstantiatedModel());
+export function modelCellConstructors(theory: Theory): CellConstructor<ModelJudgment>[] {
+    const generalConstructors: CellConstructor<ModelJudgment>[] = [
+        {
+            name: "Instantiate",
+            description: "Instantiate an existing model into this one",
+            shortcut: ["I"],
+            construct() {
+                return Nb.newFormalCell(Model.newInstantiatedModel());
+            },
         },
-    });
+    ];
+    const theoryConstructors: CellConstructor<ModelJudgment>[] = [];
     for (const meta of theory.modelTypes ?? []) {
-        constructors.push(modelCellConstructor(meta));
+        theoryConstructors.push(modelCellConstructor(meta));
     }
     const eqMeta = theory.equationCellMeta;
     if (eqMeta) {
-        constructors.push({
+        theoryConstructors.push({
             name: eqMeta.name,
             description: eqMeta.description,
             shortcut: eqMeta.shortcut,
@@ -152,7 +154,11 @@ function modelCellConstructors(theory: Theory): CellConstructor<ModelJudgment>[]
             },
         });
     }
-    return constructors;
+    const firstTheory = theoryConstructors[0];
+    if (firstTheory) {
+        firstTheory.separatorBefore = true;
+    }
+    return [...generalConstructors, ...theoryConstructors];
 }
 
 function modelCellConstructor(meta: ModelTypeMeta): CellConstructor<ModelJudgment> {

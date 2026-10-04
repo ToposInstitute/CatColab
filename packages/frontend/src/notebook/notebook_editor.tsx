@@ -66,6 +66,9 @@ export type CellConstructor<T> = {
 
     /** Called to construct a new cell. */
     construct: () => Cell<T>;
+
+    /** Whether to render a visual separator before this cell constructor in menus. */
+    separatorBefore?: boolean;
 };
 
 /** Notebook editor based on Automerge.
@@ -112,11 +115,12 @@ export function NotebookEditor<T>(props: {
     // Set up commands and their keyboard shortcuts.
     const insertCommands = (): Completion[] =>
         cellConstructors().map((cc) => {
-            const { name, description, shortcut } = cc;
+            const { name, description, shortcut, separatorBefore } = cc;
             return {
                 name,
                 description,
                 shortcut: shortcut && [cellShortcutModifier, ...shortcut],
+                separatorBefore,
                 onComplete: () => {
                     const activeCellId = cellFocus.activeChild();
                     const activeIndex = activeCellId ? cellOrder().indexOf(activeCellId) : -1;
@@ -147,11 +151,12 @@ export function NotebookEditor<T>(props: {
     /** Completions for creating a new cell below position `i`. */
     const createBelowCommands = (i: number): Completion[] =>
         cellConstructors().map((cc) => {
-            const { name, description, shortcut } = cc;
+            const { name, description, shortcut, separatorBefore } = cc;
             return {
                 name,
                 description,
                 shortcut: shortcut && [cellShortcutModifier, ...shortcut],
+                separatorBefore,
                 onComplete: () => {
                     const index = i + 1;
                     const newCell = cc.construct();
@@ -167,11 +172,12 @@ export function NotebookEditor<T>(props: {
     /** Completions for appending a new cell at the end. */
     const appendCommands = (): Completion[] =>
         cellConstructors().map((cc) => {
-            const { name, description, shortcut } = cc;
+            const { name, description, shortcut, separatorBefore } = cc;
             return {
                 name,
                 description,
                 shortcut: shortcut && [cellShortcutModifier, ...shortcut],
+                separatorBefore,
                 onComplete: () => {
                     const newCell = cc.construct();
                     props.changeNotebook((nb) => {

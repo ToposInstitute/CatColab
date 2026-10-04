@@ -26,6 +26,9 @@ export type Completion = {
 
     /** Whether this completion is the current value, and so highlighted initially. */
     selected?: boolean;
+
+    /** Whether to render a visual separator before this completion. */
+    separatorBefore?: boolean;
 };
 
 export type CompletionsRef = {
@@ -65,6 +68,10 @@ export function Completions(props: {
         return remaining;
     });
 
+    const separatedIndices = createMemo(() =>
+        getSeparatedIndices(remainingCompletions(), props.completions ?? []),
+    );
+
     const resetPresumptive = () => setPresumptive(defaultPresumptive(remainingCompletions()));
 
     const selectPresumptive = () => {
@@ -102,7 +109,10 @@ export function Completions(props: {
                 {(c, i) => (
                     <li
                         role="option"
-                        classList={{ active: i() === presumptive() }}
+                        classList={{
+                            active: i() === presumptive(),
+                            separated: separatedIndices().has(i()),
+                        }}
                         onMouseOver={() => setPresumptive(i())}
                         onMouseDown={(evt) => {
                             // Prevent the input from blurring so focus stays in
@@ -145,3 +155,58 @@ const KbdShortcut = (props: { shortcut: KbdKey[] }) => (
         <For each={props.shortcut}>{(key) => <kbd class="key">{key}</kbd>}</For>
     </kbd>
 );
+
+/**
+ * Maps each completion to its group index based on `separatorBefore` boundaries
+ * in the original completions list.
+ */
+function getCompletionGroups(completions: readonly Completion[]) {
+    const groupsByRef = new Map<Completion, number>();
+    const groupsByName = new Map<string, number>();
+    let group = 0;
+    for (let i = 0; i < completions.length; i++) {
+        const c = completions[i];
+        if (c) {
+            if (i > 0 && c.separatorBefore) {
+                group++;
+            }
+            groupsByRef.set(c, group);
+            if (!groupsByName.has(c.name)) {
+                groupsByName.set(c.name, group);
+            }
+        }
+    }
+    return (c: Completion): number => {
+        return groupsByRef.get(c) ?? groupsByName.get(c.name) ?? 0;
+    };
+}
+
+/**
+ * Computes the indices in the visible list before which a separator should be rendered.
+ *
+ * A separator is rendered before a visible item if:
+ * 1. It is not the first visible item (`i > 0`), AND
+ * 2. It belongs to a strictly higher group than the immediately preceding visible item.
+ */
+export function getSeparatedIndices(
+    visible: readonly Completion[],
+    allCompletions: readonly Completion[],
+): Set<number> {
+    const indices = new Set<number>();
+    if (visible.length <= 1 || allCompletions.length === 0) {
+        return indices;
+    }
+    const getGroup = getCompletionGroups(allCompletions);
+    for (let i = 1; i < visible.length; i++) {
+        const prev = visible[i - 1];
+        const curr = visible[i];
+        if (prev && curr) {
+            const prevGroup = getGroup(prev);
+            const currGroup = getGroup(curr);
+            if (currGroup > prevGroup) {
+                indices.add(i);
+            }
+        }
+    }
+    return indices;
+}

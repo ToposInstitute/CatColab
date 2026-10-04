@@ -107,6 +107,72 @@ export const WithShortcuts: Story = {
     },
 };
 
+export const WithSeparator: Story = {
+    render: () => {
+        const completions = [
+            {
+                name: "Text",
+                description: "Start writing text",
+                shortcut: ["T"],
+            },
+            {
+                name: "Instantiate",
+                description: "Instantiate an existing model into this one",
+                shortcut: ["I"],
+            },
+            {
+                name: "Object",
+                description: "Theory object type",
+                separatorBefore: true,
+            },
+            {
+                name: "Morphism",
+                description: "Theory morphism type",
+            },
+        ];
+        return <Completions completions={completions} />;
+    },
+};
+
+export const WithSeparatorAndFiltering: Story = {
+    render: () => {
+        const [text, setText] = createSignal("i");
+        const completions = [
+            {
+                name: "Text",
+                description: "Start writing text",
+                shortcut: ["T"],
+            },
+            {
+                name: "Instantiate",
+                description: "Instantiate an existing model into this one",
+                shortcut: ["I"],
+            },
+            {
+                name: "Object",
+                description: "Theory object type",
+                separatorBefore: true,
+            },
+            {
+                name: "Morphism",
+                description: "Theory morphism type",
+            },
+        ];
+        return (
+            <div>
+                <input
+                    type="text"
+                    value={text()}
+                    onInput={(e) => setText(e.currentTarget.value)}
+                    placeholder="Type to filter..."
+                    style={{ "margin-bottom": "8px", padding: "4px" }}
+                />
+                <Completions completions={completions} text={text()} />
+            </div>
+        );
+    },
+};
+
 export const WithFiltering: Story = {
     render: () => {
         const [text, setText] = createSignal("");
