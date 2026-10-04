@@ -1,0 +1,117 @@
+{
+  "diagramIn": {
+    "_id": "019df1c9-1c72-72d3-a0f7-9de7af7db5d5",
+    "_server": "backend-next.catcolab.org",
+    "_version": null,
+    "type": "diagram-in"
+  },
+  "name": "Klausmeier",
+  "notebook": {
+    "cellContents": {
+      "019eb903-3b40-7469-8e77-7f0d150775e5": {
+        "content": {
+          "diagram": {
+            "_id": "019eb37e-eb26-7283-8c68-63d4cb8cd1f7",
+            "_server": "backend-next.catcolab.org",
+            "_version": null,
+            "type": "instantiation"
+          },
+          "id": "019eb903-3b40-7469-8e77-7b7019bd82ac",
+          "name": "Hydrodynamics",
+          "specializations": [
+            {
+              "id": "019eb746-8257-751b-bd10-1963c8921101",
+              "ob": {
+                "content": "019eb916-dad1-71bc-bc0a-e1f22763b31f",
+                "tag": "Basic"
+              }
+            },
+            {
+              "id": "019eb746-8606-7423-a8e5-b83e191cca53",
+              "ob": {
+                "content": "019eb916-f032-75e9-b7b5-8a3a08324a02",
+                "tag": "Basic"
+              }
+            }
+          ],
+          "tag": "instantiation"
+        },
+        "id": "019eb903-3b40-7469-8e77-7f0d150775e5",
+        "tag": "formal"
+      },
+      "019eb916-9299-7489-836f-84a1eb4bc9eb": {
+        "content": {
+          "diagram": {
+            "_id": "019eb288-c310-7f33-b2c3-171279589942",
+            "_server": "backend-next.catcolab.org",
+            "_version": null,
+            "type": "instantiation"
+          },
+          "id": "019eb916-9299-7489-836f-80bd1830f913",
+          "name": "Phytodynamics",
+          "specializations": [
+            {
+              "id": "019eb28c-ceec-779a-b09d-67307cb2d5c2",
+              "ob": {
+                "content": "019eb916-dad1-71bc-bc0a-e1f22763b31f",
+                "tag": "Basic"
+              }
+            },
+            {
+              "id": "019eb289-de33-7179-8cb8-4d3ec8facbea",
+              "ob": {
+                "content": "019eb916-f032-75e9-b7b5-8a3a08324a02",
+                "tag": "Basic"
+              }
+            }
+          ],
+          "tag": "instantiation"
+        },
+        "id": "019eb916-9299-7489-836f-84a1eb4bc9eb",
+        "tag": "formal"
+      },
+      "019eb916-dad1-71bc-bc0a-e68649ea9d60": {
+        "content": {
+          "id": "019eb916-dad1-71bc-bc0a-e1f22763b31f",
+          "name": "n",
+          "obType": {
+            "content": "Object",
+            "tag": "Basic"
+          },
+          "over": {
+            "content": "019df3f4-3ec3-7069-94bd-5f5097133079",
+            "tag": "Basic"
+          },
+          "tag": "object"
+        },
+        "id": "019eb916-dad1-71bc-bc0a-e68649ea9d60",
+        "tag": "formal"
+      },
+      "019eb916-f032-75e9-b7b5-8fe879ae1ca6": {
+        "content": {
+          "id": "019eb916-f032-75e9-b7b5-8a3a08324a02",
+          "name": "w",
+          "obType": {
+            "content": "Object",
+            "tag": "Basic"
+          },
+          "over": {
+            "content": "019df3f4-3ec3-7069-94bd-5f5097133079",
+            "tag": "Basic"
+          },
+          "tag": "object"
+        },
+        "id": "019eb916-f032-75e9-b7b5-8fe879ae1ca6",
+        "tag": "formal"
+      }
+    },
+    "cellOrder": [
+      "019eb903-3b40-7469-8e77-7f0d150775e5",
+      "019eb916-9299-7489-836f-84a1eb4bc9eb",
+      "019eb916-dad1-71bc-bc0a-e68649ea9d60",
+      "019eb916-f032-75e9-b7b5-8fe879ae1ca6"
+    ]
+  },
+  "type": "diagram",
+  "version": "2"
+}
