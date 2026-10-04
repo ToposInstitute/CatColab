@@ -167,6 +167,7 @@ export function createApiDocumentStore(api: Api, userState: UserState): ApiDocum
             );
         },
         getDocumentView: (handle) => handle.docView,
+        getDocumentSnapshot: (handle) => unwrap(handle.docView),
         changeDocument: (handle, fn) => handle.automergeHandle.change(fn),
         subscribe: (handle, callback) => {
             handle.automergeHandle.on("change", callback);

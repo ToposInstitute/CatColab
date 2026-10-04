@@ -530,7 +530,11 @@ const focusSpec: TableSpec = {
 };
 
 /** Renders a single editable table backed by an in-memory table spec. */
-function SingleTable(props: { initialSpec: TableSpec; addRowDelay?: number }) {
+function SingleTable(props: {
+    initialSpec: TableSpec;
+    addRowDelay?: number;
+    setFieldDelay?: number;
+}) {
     // Initial story data, intentionally captured on mount.
     const [spec, setSpec] = createSignal(props.initialSpec);
     const table = () => toInstanceTable(spec());
@@ -547,9 +551,14 @@ function SingleTable(props: { initialSpec: TableSpec; addRowDelay?: number }) {
             table={table()}
             tables={[table()]}
             focus={focus.childFocus("table")}
-            onSetField={(row, header, value) =>
-                setSpec((spec) => setSpecField(spec, row, header, value))
-            }
+            onSetField={(row, header, value) => {
+                const apply = () => setSpec((spec) => setSpecField(spec, row, header, value));
+                if (props.setFieldDelay === undefined) {
+                    apply();
+                } else {
+                    setTimeout(apply, props.setFieldDelay);
+                }
+            }}
             onAddRow={() =>
                 props.addRowDelay === undefined ? addRow() : setTimeout(addRow, props.addRowDelay)
             }
@@ -693,6 +702,22 @@ export const ContinueEditingAfterAsyncAdd: Story = {
             await expect(cells[1]).toHaveTextContent("Updated second row");
             await expect(cells[2]).toHaveFocus();
         });
+    },
+};
+
+export const OptimisticCommit: Story = {
+    render: () => <SingleTable initialSpec={focusSpec} setFieldDelay={300} />,
+    play: async ({ canvasElement }: { canvasElement: HTMLElement }) => {
+        const canvas = within(canvasElement);
+        const cell = canvas.getByRole("gridcell");
+        await userEvent.dblClick(cell);
+        const input = canvas.getByRole("textbox");
+        await userEvent.clear(input);
+        await userEvent.type(input, "Optimistic value");
+        await userEvent.keyboard("{Enter}");
+
+        await expect(cell).toHaveTextContent("Optimistic value");
+        await waitFor(() => expect(cell).toHaveTextContent("Optimistic value"));
     },
 };
 

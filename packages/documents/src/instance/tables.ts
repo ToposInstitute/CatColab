@@ -6,6 +6,9 @@ export type InstancePath = [string] | [string, "rows", string] | FieldPath;
 export type LiteralValue = boolean | number | string | null;
 export type LiteralType = "Bool" | "Int" | "Float" | "String";
 
+/** A snapshot of an instance table at the time it was read.
+
+Tables and rows do not track later document changes; revalidate to observe them. */
 export interface InstanceTable {
     /** The stored table id; when the schema entity exists (non-orphaned) then
      * this is that entity's id. */

@@ -87,6 +87,7 @@ export const solidStore: DocumentStore<SolidStoreHandle> = {
         };
     },
     getDocumentView: (handle) => handle.docView,
+    getDocumentSnapshot: (handle) => unwrap(handle.docView),
     getDocumentRef: (handle) => ({ id: solidStoreIdFor(handle), version: null, server: "" }),
     listUsedBy: async (handle) => {
         const linked = emptyHandlesByLinkType<SolidStoreHandle>();
