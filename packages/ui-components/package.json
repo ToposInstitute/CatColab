@@ -8,7 +8,7 @@
         "./*": "./src/*"
     },
     "scripts": {
-        "build:tcm": "tcm -p 'src/**/*.module.css' .",
+        "build:tcm": "tcm --silent -p 'src/**/*.module.css' .",
         "format": "oxfmt .",
         "lint": "oxlint --fix && oxfmt . &&  stylelint 'src/**/*.css' --fix",
         "check": "pnpm run build:tcm && pnpm run lint && tsc",
