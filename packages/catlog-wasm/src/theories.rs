@@ -347,7 +347,7 @@ impl ThCategoryLinks {
     pub fn mass_action(
         &self,
         model: &DblModel,
-        data: analyses::ode::RestrictedMassActionProblemData,
+        data: analyses::ode::MassActionProblemData,
     ) -> Result<ODEResultWithEquations, String> {
         match data.variant {
             analyses::ode::MassActionVariant::Balanced => {
@@ -379,7 +379,7 @@ impl ThCategoryLinks {
     pub fn mass_action_equations(
         &self,
         model: &DblModel,
-        data: analyses::ode::RestrictedMassActionProblemData,
+        data: analyses::ode::MassActionProblemData,
     ) -> Result<LatexEquations, String> {
         match data.variant {
             analyses::ode::MassActionVariant::Balanced => {
