@@ -43,9 +43,9 @@ Each place is given an **initial value**.
 Since this is mass-action dynamics, we make the assumption that transitions depend only on their input places; we also make the assumption that transitions are determined by constants (namely their rate coefficients).
 Equations governing transitions are also _non-linear_, depending multiplicatively on their inputs.
 
-The rest of the analysis depends on whether **mass conservation** is checked as true or false.
+The rest of the analysis depends on the setting of **rate granularity**.
 
-- If **mass conservation** is checked as _true_, a transition $A\xrightarrow{T}B$ between places $A$ and $B$ is interpreted as the equations $\{\dot{A}=-r_TA,\dot{B}=r_TA\}$, i.e. the transition $T$ goes out of $A$ and into $B$. Here, $r_T$ is the **rate coefficient** of the transition.
+- If **rate granularity** is set to _mass conserving_, then a transition $A\xrightarrow{T}B$ between places $A$ and $B$ is interpreted as the equations $\{\dot{A}=-r_TA,\dot{B}=r_TA\}$, i.e. the transition $T$ goes out of $A$ and into $B$. Here, $r_T$ is the **rate coefficient** of the transition.
 
     A transition $[A,B]\xrightarrow{T}[X,Y]$ gives the equations
     - $\dot{A}=-r_T AB$
@@ -53,7 +53,7 @@ The rest of the analysis depends on whether **mass conservation** is checked as 
     - $\dot{X}=r_T AB$
     - $\dot{Y}=r_T AB$
 
-- If **mass conservation** is checked as _false_, and **rate granularity** is set to _per transition_, then a transition $A\xrightarrow{T}B$ between places $A$ and $B$ is interpreted as the equations $\{\dot{A}=-\kappa_T,\dot{B}=\rho_T\}$. Here $\kappa_T$ and $\rho_T$ are the **consumption** and **production** rate coefficients of the transition.
+- If **rate granularity** is set to _unbalanced_, then a transition $A\xrightarrow{T}B$ between places $A$ and $B$ is interpreted as the equations $\{\dot{A}=-\kappa_T,\dot{B}=\rho_T\}$. Here $\kappa_T$ and $\rho_T$ are the **consumption** and **production** rate coefficients of the transition.
 
     A transition $[A,B]\xrightarrow{T}[X,Y]$ gives the equations
     - $\dot{A}=-\kappa_T AB$
@@ -61,7 +61,7 @@ The rest of the analysis depends on whether **mass conservation** is checked as 
     - $\dot{X}=\rho_T AB$
     - $\dot{Y}=\rho_T AB$
 
-- If **mass conservation** is checked as _false_, and **rate granularity** is set to _per place_, then a transition $A\xrightarrow{T}B$ between places $A$ and $B$ is interpreted as the equations $\{\dot{A}=-\kappa_T^A,\dot{B}=\rho_T^B\}$. Here $\kappa_T^A$ and $\rho_T^B$ are the **consumption** and **production** rate coefficients of the objects $A$ and $B$ with respect to the transition $T$.
+- If **rate granularity** is set to _per place_, then a transition $A\xrightarrow{T}B$ between places $A$ and $B$ is interpreted as the equations $\{\dot{A}=-\kappa_T^A,\dot{B}=\rho_T^B\}$. Here $\kappa_T^A$ and $\rho_T^B$ are the **consumption** and **production** rate coefficients of the objects $A$ and $B$ with respect to the transition $T$.
 
     A transition $[A,B]\xrightarrow{T}[X,Y]$ gives the equations
     - $\dot{A}=-\kappa_T^A AB$
