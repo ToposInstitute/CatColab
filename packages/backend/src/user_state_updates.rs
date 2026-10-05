@@ -93,6 +93,7 @@ async fn update_initialized_users(state: &AppState, user_ids: Vec<String>) {
         .into_iter()
         .filter(|uid| initialized.contains_key(uid))
         .collect();
+    drop(initialized);
 
     for user_id in to_update {
         if let Err(e) = update_user_state(state, &user_id).await {
