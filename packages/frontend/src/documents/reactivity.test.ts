@@ -1,10 +1,16 @@
 // @vitest-environment happy-dom
+import { Repo } from "@automerge/automerge-repo";
 import { createComputed, createRoot, createSignal } from "solid-js";
 import { describe, expect, test, vi } from "vitest";
 
 import type { Document } from "catcolab-document-types";
 import { createInMemoryStore } from "catcolab-documents";
-import { createDocumentAccessor, createDocumentSelector, createDocumentView } from "./reactivity";
+import {
+    createAutomergeDocumentView,
+    createDocumentAccessor,
+    createDocumentSelector,
+    createDocumentView,
+} from "./reactivity";
 
 const document = (): Document => ({
     type: "instance",
@@ -15,6 +21,83 @@ const document = (): Document => ({
 });
 
 describe("explicit Solid document adapters", () => {
+    test("Automerge projections share identity and apply fine-grained patches", async () => {
+        const repo = new Repo();
+        const handle = repo.create({ items: [{ id: "first", name: "Initial" }], unrelated: 0 });
+        await handle.whenReady();
+        expect(() => createAutomergeDocumentView(() => handle)).toThrow("Solid owner");
+        const off = vi.spyOn(handle, "off");
+        const received: string[] = [];
+        let view!: ReturnType<typeof handle.doc>;
+        const dispose = createRoot((dispose) => {
+            const projection = createAutomergeDocumentView(() => handle);
+            view = projection();
+            createComputed(() => received.push(projection().items[0]?.name ?? "Deleted"));
+            return dispose;
+        });
+        const disposeShared = createRoot((dispose) => {
+            expect(createAutomergeDocumentView(() => handle)()).toBe(view);
+            return dispose;
+        });
+        // Let the projection's readiness initialization finish before editing.
+        await Promise.resolve();
+        const first = view.items[0];
+        handle.change((doc) => {
+            doc.unrelated = 1;
+        });
+        expect(received).toEqual(["Initial"]);
+        handle.change((doc) => {
+            doc.items[0]!.name = "Updated";
+        });
+        expect(view.items[0]).toBe(first);
+        expect(received).toEqual(["Initial", "Updated"]);
+        disposeShared();
+        expect(off).not.toHaveBeenCalled();
+        handle.change((doc) => {
+            doc.items.splice(0, 1);
+        });
+        expect(received).toEqual(["Initial", "Updated", "Deleted"]);
+        dispose();
+        expect(off).toHaveBeenCalledWith("change", expect.any(Function));
+        handle.change((doc) => {
+            doc.items.push({ id: "second", name: "Released" });
+        });
+        expect(received).toEqual(["Initial", "Updated", "Deleted"]);
+    });
+
+    test("Automerge projections release replaced handles and unmounted views", async () => {
+        const repo = new Repo();
+        const first = repo.create({ name: "First" });
+        const second = repo.create({ name: "Second" });
+        await Promise.all([first.whenReady(), second.whenReady()]);
+        const firstOff = vi.spyOn(first, "off");
+        const secondOff = vi.spyOn(second, "off");
+        const [handle, setHandle] = createSignal(first);
+        const received: string[] = [];
+        const dispose = createRoot((dispose) => {
+            const view = createAutomergeDocumentView(handle);
+            createComputed(() => received.push(view().name));
+            return dispose;
+        });
+        await Promise.resolve();
+        setHandle(second);
+        await Promise.resolve();
+        expect(firstOff).toHaveBeenCalledWith("change", expect.any(Function));
+        first.change((doc) => {
+            doc.name = "Ignored";
+        });
+        second.change((doc) => {
+            doc.name = "Latest";
+        });
+        expect(received).toEqual(["First", "Second", "Latest"]);
+        dispose();
+        expect(secondOff).toHaveBeenCalledWith("change", expect.any(Function));
+        second.change((doc) => {
+            doc.name = "Released";
+        });
+        expect(received).toEqual(["First", "Second", "Latest"]);
+    });
+
     test("snapshot accessors require ownership and unsubscribe on cleanup", async () => {
         const store = createInMemoryStore();
         const handle = await store.createHandle(document());

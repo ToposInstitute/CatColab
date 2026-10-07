@@ -1,14 +1,17 @@
 import { A } from "@solidjs/router";
 
-import { createDocumentSelector } from "../documents/reactivity";
+import { createAutomergeDocumentView } from "../documents/reactivity";
 import type { LiveInstanceDoc } from "./live_doc_compatibility";
 
 /** Parent model link shown in an instance document head. */
 export function InstanceInfo(props: { liveInstance: LiveInstanceDoc }) {
-    const modelRefId = createDocumentSelector(
-        () => props.liveInstance.instance,
-        () => props.liveInstance.instance.document.instanceOf._id,
+    const document = createAutomergeDocumentView(
+        () => props.liveInstance.instance.handle.automergeHandle,
     );
+    const modelRefId = () => {
+        const current = document();
+        return current.type === "instance" ? current.instanceOf._id : undefined;
+    };
 
     return (
         <>

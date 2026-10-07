@@ -1,6 +1,9 @@
+import type { DocHandle } from "@automerge/automerge-repo";
+import { makeDocumentProjection } from "solid-automerge";
 import {
     type Accessor,
     createComputed,
+    createMemo,
     createSignal,
     getOwner,
     onCleanup,
@@ -17,6 +20,15 @@ function requireOwner(): void {
     if (!getOwner()) {
         throw new Error("Document accessors must be created within a Solid owner.");
     }
+}
+
+/** Patch-backed raw document reads, owned exclusively by the frontend.
+ * Replacing the handle releases the previous projection; writes belong to command facades. */
+export function createAutomergeDocumentView<T extends object>(
+    handle: Accessor<DocHandle<T>>,
+): Accessor<Store<T>> {
+    requireOwner();
+    return createMemo(() => makeDocumentProjection(handle()));
 }
 
 /** Translate the explicit storage subscription into a Solid dependency. */
@@ -50,7 +62,8 @@ export function createDocumentSelector<T>(source: Source, select: () => T): Acce
     };
 }
 
-/** Reconcile plain snapshot data into a frontend-owned projection. IDs retain
+/** Reconcile derived or non-Automerge snapshot data into a frontend-owned projection.
+ * Unlike createAutomergeDocumentView, this clones/reconciles selected data on each change. IDs retain
  * object identity across versions; unrelated fields do not invalidate their
  * readers. Select data only, not command facades containing functions. */
 export function createDocumentView<T extends object>(source: Source, select: () => T): Store<T> {

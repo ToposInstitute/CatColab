@@ -10,7 +10,7 @@ import type { Document } from "catcolab-document-types";
 import type { DeepReadonly } from "catcolab-documents";
 import { DocumentTypeIcon, IconButton, InlineInput } from "catcolab-ui-components";
 import { documentTypeLabel, type LiveDocWithRef, useApi, useBinder } from "../api";
-import { createDocumentSelector } from "../documents/reactivity";
+import { createAutomergeDocumentView } from "../documents/reactivity";
 import { DEFAULT_LLM_MODEL } from "../inference/chat";
 import { ModelLibraryContext } from "../model";
 import { PageActionsContext } from "../page/context";
@@ -145,13 +145,11 @@ export function LLMConversationPane(props: {
                 >
                     <For each={conversations()}>
                         {({ conversation, attachment }) => {
-                            const title = createDocumentSelector(
-                                conversation,
-                                () => conversation.title,
+                            const conversationDocument = createAutomergeDocumentView(
+                                () => conversation.handle.automergeHandle,
                             );
-                            const attachmentDocument = createDocumentSelector(
-                                attachment,
-                                () => attachment.document,
+                            const attachmentDocument = createAutomergeDocumentView(
+                                () => attachment.handle.automergeHandle,
                             );
                             return (
                                 <div
@@ -168,7 +166,7 @@ export function LLMConversationPane(props: {
                                         onFocusIn={() => props.onSelect(conversation.handle.ref.id)}
                                     >
                                         <InlineInput
-                                            text={title()}
+                                            text={conversationDocument().name}
                                             setText={(title) => conversation.update({ title })}
                                             placeholder="Untitled"
                                         />
