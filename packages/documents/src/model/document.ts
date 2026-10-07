@@ -4,7 +4,7 @@ import type { ModelJudgment } from "catcolab-document-types";
 export type { ModelDocument } from "catcolab-document-methods";
 
 export function tryGetModelJudgment(
-    document: Readonly<ModelDocument>,
+    document: ModelDocument,
     cellId: string,
 ): ModelJudgment | undefined {
     const cell = document.notebook.cellContents[cellId];

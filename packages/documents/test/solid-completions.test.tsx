@@ -8,11 +8,9 @@ import {
     Show,
     useContext,
 } from "solid-js";
-import { createStore, reconcile, type SetStoreFunction, unwrap } from "solid-js/store";
 import { render } from "solid-js/web";
 import { describe, expect, test } from "vitest";
 
-import type { Document } from "catcolab-document-types";
 // RFC-0006 "SolidJS example with validation & completions".
 //
 // `onValidate` feeds a signal with validation results; the validated model is
@@ -23,45 +21,13 @@ import {
     defineMorphism,
     defineObject,
     defineShape,
-    type DocumentStore,
     type ModelValidation,
     type Notebook,
     type NotebookCell,
     RichText,
 } from "catcolab-documents";
 import type { DblModel, ObType, QualifiedName } from "catlog-wasm";
-import { selfResolving } from "./helpers/self_resolving";
-
-type SolidStoreHandle = {
-    draftDoc: Document;
-    docView: Document;
-    setDocView: SetStoreFunction<Document>;
-    listeners: Set<() => void>;
-};
-
-const solidStore: DocumentStore<SolidStoreHandle> = {
-    async createHandle(initialDoc) {
-        const draftDoc = structuredClone(initialDoc);
-        const [docView, setDocView] = createStore<Document>(initialDoc);
-        return { draftDoc, docView, setDocView, listeners: new Set() };
-    },
-    getDocumentView: (handle) => handle.docView,
-    changeDocument: (handle, fn) => {
-        fn(handle.draftDoc);
-        handle.setDocView(reconcile(structuredClone(handle.draftDoc), { key: "id" }));
-        for (const listener of Array.from(handle.listeners)) {
-            listener();
-        }
-    },
-    subscribe: (handle, callback) => {
-        handle.listeners.add(callback);
-        return () => {
-            handle.listeners.delete(callback);
-        };
-    },
-    copyValue: (_handle, value) => structuredClone(unwrap(value)),
-    ...selfResolving<SolidStoreHandle>(),
-};
+import { solidStore } from "./stores/solid-store-fixture";
 
 const solidBinder = createBinder(solidStore);
 

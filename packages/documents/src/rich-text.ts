@@ -1,5 +1,7 @@
 import type { RichTextContent } from "catcolab-document-types";
+import type { DeepReadonly } from "./deep-freeze";
 import type { DocumentStore } from "./document-store";
+import { createCellReadView } from "./model/cell-reads";
 import { deleteNotebookCell, type NotebookDocument } from "./notebook-document";
 
 export interface RichTextCell {
@@ -11,7 +13,7 @@ export interface RichTextCell {
     delete(): void;
 }
 
-function tryGetStoredRichTextCell(document: Readonly<NotebookDocument>, cellId: string) {
+function tryGetStoredRichTextCell(document: NotebookDocument, cellId: string) {
     const cell = document.notebook.cellContents[cellId];
     if (!cell) {
         return undefined;
@@ -27,32 +29,34 @@ export function getRichTextCell<Handle, Version>(
     handle: Handle,
     cellId: string,
 ): RichTextCell {
-    return {
-        kind: "rich-text",
-        id: cellId,
-        get content() {
-            const document = store.getDocumentView(handle) as Readonly<NotebookDocument>;
-            return tryGetStoredRichTextCell(document, cellId)?.content;
-        },
-        update(patch) {
-            const content = patch.content;
-            if (content === undefined) {
-                return;
-            }
-            const document = store.getDocumentView(handle) as Readonly<NotebookDocument>;
-            if (!tryGetStoredRichTextCell(document, cellId)) {
-                return;
-            }
-
-            store.changeDocument(handle, (storedDocument) => {
-                const cell = tryGetStoredRichTextCell(storedDocument as NotebookDocument, cellId);
-                if (cell) {
-                    cell.content = content;
+    return createCellReadView<RichTextCell>(
+        {
+            kind: "rich-text",
+            id: cellId,
+            update(patch) {
+                const content = patch.content;
+                if (content === undefined) {
+                    return;
                 }
-            });
+                const document = store.getDocumentSnapshot(handle) as NotebookDocument;
+                if (!tryGetStoredRichTextCell(document, cellId)) {
+                    return;
+                }
+
+                store.changeDocument(handle, (storedDocument) => {
+                    const cell = tryGetStoredRichTextCell(
+                        storedDocument as NotebookDocument,
+                        cellId,
+                    );
+                    if (cell) {
+                        cell.content = content;
+                    }
+                });
+            },
+            delete() {
+                deleteNotebookCell(store, handle, cellId);
+            },
         },
-        delete() {
-            deleteNotebookCell(store, handle, cellId);
-        },
-    };
+        () => store.getDocumentSnapshot(handle) as DeepReadonly<NotebookDocument>,
+    );
 }
