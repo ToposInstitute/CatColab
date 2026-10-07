@@ -1,6 +1,6 @@
 import { Nb } from "catcolab-document-methods";
 import type { Ob } from "catcolab-document-types";
-import type { DocumentStore } from "../document-store";
+import type { DeepReadonly, DocumentStore } from "../document-store";
 import { deleteNotebookCell } from "../notebook-document";
 import { getRichTextCell, type RichTextCell } from "../rich-text";
 import { findMorphismType, findObjectType } from "../shape";
@@ -13,6 +13,7 @@ import type {
     ObjectTypesOf,
     Shape,
 } from "../shape";
+import { createCellReadView, describeModelCell } from "./cell-reads";
 import { tryGetModelJudgment, type ModelDocument } from "./document";
 import { getEquationCell, type EquationCell } from "./equation";
 
@@ -64,70 +65,38 @@ export function getObjectCell<Handle, O extends ObjectType, Version>(
     cellId: string,
     type: O,
 ): ObjectCell<O> {
-    return {
-        kind: "object",
-        id: cellId,
-        type,
-        get label() {
-            const document = store.getDocumentView(handle) as Readonly<ModelDocument>;
-            const judgment = tryGetModelJudgment(document, cellId);
-            if (!judgment) {
-                return undefined;
-            }
-            if (judgment.tag !== "object") {
-                throw new Error(`Cell ${cellId} is not an object.`);
-            }
-            return judgment.name;
-        },
-        update(patch) {
-            if (patch.label === undefined) {
-                return;
-            }
-            const document = store.getDocumentView(handle) as Readonly<ModelDocument>;
-            if (!tryGetModelJudgment(document, cellId)) {
-                return;
-            }
-
-            store.changeDocument(handle, (storedDocument) => {
-                const judgment = tryGetModelJudgment(storedDocument as ModelDocument, cellId);
-                if (!judgment) {
+    return createCellReadView<ObjectCell<O>>(
+        {
+            kind: "object",
+            id: cellId,
+            type,
+            update(patch) {
+                if (patch.label === undefined) {
                     return;
                 }
-                if (judgment.tag !== "object") {
-                    throw new Error(`Cell ${cellId} is not an object.`);
+                const document = store.getDocumentSnapshot(handle)
+                    .document as Readonly<ModelDocument>;
+                if (!tryGetModelJudgment(document, cellId)) {
+                    return;
                 }
-                judgment.name = patch.label ?? "";
-            });
+
+                store.changeDocument(handle, (storedDocument) => {
+                    const judgment = tryGetModelJudgment(storedDocument as ModelDocument, cellId);
+                    if (!judgment) {
+                        return;
+                    }
+                    if (judgment.tag !== "object") {
+                        throw new Error(`Cell ${cellId} is not an object.`);
+                    }
+                    judgment.name = patch.label ?? "";
+                });
+            },
+            delete() {
+                deleteNotebookCell(store, handle, cellId);
+            },
         },
-        delete() {
-            deleteNotebookCell(store, handle, cellId);
-        },
-    };
-}
-
-export function objectCellFromOb<Handle, S extends Shape, Version>(
-    shape: S,
-    store: DocumentStore<Handle, Version>,
-    handle: Handle,
-    endpoint: Ob | null,
-): ObjectCell<ObjectTypesOf<S>> | null {
-    const document = store.getDocumentView(handle) as Readonly<ModelDocument>;
-    if (endpoint?.tag !== "Basic") {
-        return null;
-    }
-
-    for (const cellId of document.notebook.cellOrder) {
-        const cell = Nb.getCellById(document.notebook, cellId);
-        if (cell.tag !== "formal" || cell.content.tag !== "object") {
-            continue;
-        }
-        if (cell.content.id === endpoint.content) {
-            const type = findObjectType(shape, cell.content.obType);
-            return type ? getObjectCell(store, handle, cellId, type) : null;
-        }
-    }
-
-    return null;
+        () => store.getDocumentSnapshot(handle).document as DeepReadonly<ModelDocument>,
+    );
 }
 
 export function obFromObjectCell(
@@ -154,85 +123,60 @@ export function getMorphismCell<Handle, S extends Shape, M extends MorphismTypes
     cellId: string,
     type: M,
 ): MorphismCell<S, M> {
-    return {
-        kind: "morphism",
-        id: cellId,
-        type,
-        get label() {
-            const document = store.getDocumentView(handle) as Readonly<ModelDocument>;
-            const judgment = tryGetModelJudgment(document, cellId);
-            if (!judgment) {
-                return undefined;
-            }
-            if (judgment.tag !== "morphism") {
-                throw new Error(`Cell ${cellId} is not a morphism.`);
-            }
-            return judgment.name;
-        },
-        get from() {
-            const document = store.getDocumentView(handle) as Readonly<ModelDocument>;
-            const judgment = tryGetModelJudgment(document, cellId);
-            if (!judgment) {
-                return undefined;
-            }
-            if (judgment.tag !== "morphism") {
-                throw new Error(`Cell ${cellId} is not a morphism.`);
-            }
-            return objectCellFromOb(shape, store, handle, judgment.dom) as ObjectCell<
-                DomainObjectTypesOf<S, M>
-            > | null;
-        },
-        get to() {
-            const document = store.getDocumentView(handle) as Readonly<ModelDocument>;
-            const judgment = tryGetModelJudgment(document, cellId);
-            if (!judgment) {
-                return undefined;
-            }
-            if (judgment.tag !== "morphism") {
-                throw new Error(`Cell ${cellId} is not a morphism.`);
-            }
-            return objectCellFromOb(shape, store, handle, judgment.cod) as ObjectCell<
-                CodomainObjectTypesOf<S, M>
-            > | null;
-        },
-        update(patch) {
-            const document = store.getDocumentView(handle) as Readonly<ModelDocument>;
-            if (!tryGetModelJudgment(document, cellId)) {
-                return;
-            }
-
-            store.changeDocument(handle, (storedDocument) => {
-                const modelDocument = storedDocument as ModelDocument;
-                const judgment = tryGetModelJudgment(modelDocument, cellId);
-                if (!judgment) {
+    return createCellReadView<MorphismCell<S, M>>(
+        {
+            kind: "morphism",
+            id: cellId,
+            type,
+            update(patch) {
+                const document = store.getDocumentSnapshot(handle)
+                    .document as Readonly<ModelDocument>;
+                if (!tryGetModelJudgment(document, cellId)) {
                     return;
                 }
-                if (judgment.tag !== "morphism") {
-                    throw new Error(`Cell ${cellId} is not a morphism.`);
-                }
 
-                const dom = Object.hasOwn(patch, "from")
-                    ? obFromObjectCell(modelDocument, patch.from ?? null)
-                    : undefined;
-                const cod = Object.hasOwn(patch, "to")
-                    ? obFromObjectCell(modelDocument, patch.to ?? null)
-                    : undefined;
+                store.changeDocument(handle, (storedDocument) => {
+                    const modelDocument = storedDocument as ModelDocument;
+                    const judgment = tryGetModelJudgment(modelDocument, cellId);
+                    if (!judgment) {
+                        return;
+                    }
+                    if (judgment.tag !== "morphism") {
+                        throw new Error(`Cell ${cellId} is not a morphism.`);
+                    }
 
-                if (patch.label !== undefined) {
-                    judgment.name = patch.label ?? "";
-                }
-                if (dom !== undefined) {
-                    judgment.dom = dom;
-                }
-                if (cod !== undefined) {
-                    judgment.cod = cod;
-                }
-            });
+                    const dom = Object.hasOwn(patch, "from")
+                        ? obFromObjectCell(modelDocument, patch.from ?? null)
+                        : undefined;
+                    const cod = Object.hasOwn(patch, "to")
+                        ? obFromObjectCell(modelDocument, patch.to ?? null)
+                        : undefined;
+
+                    if (patch.label !== undefined) {
+                        judgment.name = patch.label ?? "";
+                    }
+                    if (dom !== undefined) {
+                        judgment.dom = dom;
+                    }
+                    if (cod !== undefined) {
+                        judgment.cod = cod;
+                    }
+                });
+            },
+            delete() {
+                deleteNotebookCell(store, handle, cellId);
+            },
         },
-        delete() {
-            deleteNotebookCell(store, handle, cellId);
-        },
-    };
+        () => store.getDocumentSnapshot(handle).document as DeepReadonly<ModelDocument>,
+        (id) =>
+            describeModelCell(
+                shape,
+                store.getDocumentSnapshot(handle).document as DeepReadonly<ModelDocument>,
+                id,
+            )
+                ? getModelCell(shape, store, handle, id)
+                : undefined,
+    );
 }
 
 export function getModelCell<Handle, S extends Shape, Version>(
@@ -241,7 +185,7 @@ export function getModelCell<Handle, S extends Shape, Version>(
     handle: Handle,
     cellId: string,
 ): CellOf<S> {
-    const document = store.getDocumentView(handle) as Readonly<ModelDocument>;
+    const document = store.getDocumentSnapshot(handle).document as Readonly<ModelDocument>;
     const cell = Nb.getCellById(document.notebook, cellId);
     if (cell.tag === "rich-text") {
         return getRichTextCell(store, handle, cellId);

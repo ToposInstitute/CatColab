@@ -12,6 +12,7 @@ import {
     parseInstanceDocument,
     type Result,
 } from "catcolab-documents";
+import { parsedInstanceTables } from "../src/instance/parsed-source";
 
 function expectOk<T, E>(result: Result<T, E>): T {
     expect(result.tag).toBe("Ok");
@@ -200,34 +201,34 @@ describe("parsing of stored instances", { timeout: 20_000 }, () => {
 
     test("readers stay fresh without validation subscribers and schema edits do not reparse", async () => {
         const store = createInMemoryStore();
-        const copies = vi.spyOn(store, "copyValue");
         const binder = createBinder(store);
         const schema = await binder.createNotebook(SimpleSchema, { title: "Schema" });
         schema.add(Entity, { label: "Company" });
         const instance = expectOk(await binder.createInstance(schema, { title: "Instance" }));
         const validation = await instance.validate();
         const table = validation.tables[0]!;
-        const parseCount = () =>
-            copies.mock.calls.filter(([handle]) => handle === instance.handle).length;
-        const initial = parseCount();
+        const initial = parsedInstanceTables(store, instance.handle);
         expect(table.rows).toEqual([]);
         store.changeDocument(instance.handle, (doc) => {
             if (doc.type === "instance") {
                 doc.tables[table.id] = { rows: { stray: { fields: {} } }, rowOrder: [] };
             }
         });
-        expect(table.rows.map((row) => row.id)).toEqual(["stray"]);
-        expect(table.rows[0]?.index).toBe(0);
-        expect(table.rows[0]?.fields).toEqual([]);
-        expect(validation.get([table.id, "rows", "stray"]).tag).toBe("Ok");
-        expect(parseCount()).toBe(initial + 1);
+        expect(table.rows).toEqual([]);
+        expect(validation.get([table.id, "rows", "stray"]).tag).toBe("Err");
+        const current = await instance.validate();
+        expect(current.tables[0]?.rows.map((row) => row.id)).toEqual(["stray"]);
+        expect(current.tables[0]?.rows[0]?.index).toBe(0);
+        expect(current.tables[0]?.rows[0]?.fields).toEqual([]);
+        const after = parsedInstanceTables(store, instance.handle);
+        expect(after).not.toBe(initial);
         schema.add(Entity, { label: "Other" });
         await instance.validate();
-        expect(parseCount()).toBe(initial + 1);
+        expect(parsedInstanceTables(store, instance.handle)).toBe(after);
         instance.dispose();
     });
 
-    test("shared owners and transaction drafts unsubscribe when disposed", async () => {
+    test("only explicit subscriptions are owned and drafts unsubscribe when disposed", async () => {
         const store = createInMemoryStore();
         const originalSubscribe = store.subscribe;
         const stops: Array<{ handle: Document; stop: ReturnType<typeof vi.fn> }> = [];
@@ -242,15 +243,14 @@ describe("parsing of stored instances", { timeout: 20_000 }, () => {
         const other = expectOk(
             await binder.loadInstanceFromRef(schema, binder.getDocumentRef(instance.handle)),
         );
-        const parsedSubscriptions = stops.filter(({ handle }) => handle === instance.handle);
-        expect(parsedSubscriptions).toHaveLength(1);
+        expect(stops.filter(({ handle }) => handle === instance.handle)).toHaveLength(0);
         instance.dispose();
-        expect(parsedSubscriptions[0]!.stop).not.toHaveBeenCalled();
         const changed = vi.fn<() => void>();
         other.onChange(changed);
+        const instanceStop = stops.find(({ handle }) => handle === instance.handle)!.stop;
         other.dispose();
         other.dispose();
-        expect(parsedSubscriptions[0]!.stop).toHaveBeenCalledTimes(1);
+        expect(instanceStop).toHaveBeenCalledTimes(1);
         store.changeDocument(instance.handle, (doc) => {
             doc.name = "After disposal";
         });
@@ -262,6 +262,7 @@ describe("parsing of stored instances", { timeout: 20_000 }, () => {
                 await binder.loadInstanceFromRef(schema, binder.getDocumentRef(instance.handle)),
             );
             const { tx, draftDocs } = await binder.beginTransaction({ instance: source });
+            draftDocs.instance.onChange(changed);
             const draftStop = stops.find(
                 ({ handle }) => handle === draftDocs.instance.handle,
             )!.stop;

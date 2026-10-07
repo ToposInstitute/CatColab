@@ -1,3 +1,4 @@
+import { makeDocumentProjection } from "solid-automerge";
 import { createMemo } from "solid-js";
 
 import {
@@ -11,10 +12,17 @@ import type { ApiLLMConversation } from "./live_doc_compatibility";
 export function LLMConversationEditor(props: { conversation: ApiLLMConversation }) {
     const inferenceKey = useInferenceKey();
     const controller = createLLMConversationController(() => props.conversation, inferenceKey);
-    const interactions = createMemo(() => [
-        ...props.conversation.interactions(),
-        ...controller.state.liveInteractions,
-    ]);
+    // Memo keeps the view in sync if the bound conversation is replaced.
+    const stored = createMemo(() =>
+        makeDocumentProjection(props.conversation.handle.automergeHandle),
+    );
+    const interactions = createMemo(() => {
+        const document = stored();
+        return [
+            ...(document.type === "llmconversation" ? document.interactions : []),
+            ...controller.state.liveInteractions,
+        ];
+    });
     const submit = async (input: LLMConversationInput): Promise<boolean> => {
         const files = await controller.readAttachments(input.files);
         if (!files) {

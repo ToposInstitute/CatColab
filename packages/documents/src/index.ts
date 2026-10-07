@@ -5,11 +5,14 @@ export type {
     DocumentChange,
     DocumentRef,
     DocumentStore,
+    DocumentSnapshot,
+    DeepReadonly,
     HandlesByLinkType,
 } from "./document-store";
 export type { Issue, PathSegment, Result } from "./result";
 export {
     createInMemoryStore,
+    createDocumentSnapshot,
     documentLinks,
     emptyHandlesByLinkType,
     getDocumentSnapshot,
@@ -46,7 +49,8 @@ export type {
 export type { CellOf as NotebookCell, MorphismCell, ObjectCell } from "./model/cell";
 export type { ModelDocument } from "./model/document";
 export type { EquationCell, EquationSide } from "./model/equation";
-export { modelNotebookFromStore } from "./model/notebook";
+export { modelNotebookFromStore, cellMatchesFilter } from "./model/notebook";
+export { createCellReadView, describeModelCell } from "./model/cell-reads";
 export type { Notebook } from "./model/notebook";
 export type {
     JudgmentOf,
@@ -59,7 +63,15 @@ export type {
 } from "./model/elaborated-model";
 export type { NotebookDocument } from "./notebook-document";
 export type { RichTextCell } from "./rich-text";
-export { defineMorphism, defineObject, defineShape, PathEquation, RichText } from "./shape";
+export {
+    defineMorphism,
+    defineObject,
+    defineShape,
+    findObjectType,
+    findMorphismType,
+    PathEquation,
+    RichText,
+} from "./shape";
 export type {
     EquationType,
     InstanceCapableShape,

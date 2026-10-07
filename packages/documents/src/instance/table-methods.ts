@@ -3,7 +3,7 @@ import { v7 as uuid } from "uuid";
 import type { InstanceDocument } from "catcolab-document-methods";
 import type * as DocumentTypes from "catcolab-document-types";
 import type { QualifiedLabel } from "catlog-wasm";
-import type { DocumentStore } from "../document-store";
+import type { DeepReadonly, DocumentStore } from "../document-store";
 import type { ElaboratedModel, ObjectJudgment } from "../model/elaborated-model";
 import type { Issue, Result } from "../result";
 import type { InstanceCapableShape, ObjectType } from "../shape";
@@ -35,14 +35,12 @@ export function parsedTablesOfHandle<Handle, Version>(
 /** Read one table, row, or field from prepared tables.
 
 Addressing failures are reported as issues. */
-export function readInstancePath<Handle, Version>(
-    store: DocumentStore<Handle, Version>,
-    handle: Handle,
+export function readInstancePath(
+    storedTables: ParsedTables,
     tables: ReadonlyArray<InstanceTable>,
     path: InstancePath,
 ): Result<InstanceTable | TableRow | FieldValue> {
     const tableById = new Map(tables.map((table) => [table.id, table]));
-    const storedTables = parsedTablesOfHandle(store, handle);
     const [tableId, rowsSegment, rowId, fieldsSegment, fieldId, ...rest] = path;
     const table = tableById.get(tableId);
     if (table === undefined) {
@@ -58,7 +56,7 @@ export function readInstancePath<Handle, Version>(
     if (storedRow === undefined) {
         return pathError(`Row \`${rowId}\` does not exist in table \`${tableId}\``);
     }
-    const row = makeRow(store, handle, table, rowId);
+    const row = makeRow(storedTables, table, rowId);
     if (path.length === 3) {
         return { tag: "Ok", content: row };
     }
@@ -89,7 +87,11 @@ export function addInstanceRowsToStore<Handle, Version>(
         values: ReadonlyArray<Record<string, LiteralValue | TableRow>>;
     }>,
 ): Result<ReadonlyArray<TableRow>> {
-    const schemaTables = instanceTablesFromModel(shape, store, handle, schemaModel);
+    const schemaTables = instanceTablesFromModel(
+        shape,
+        parsedTablesOfHandle(store, handle),
+        schemaModel,
+    );
     const schemaTableById = new Map(
         schemaTables.map((schemaTable) => [schemaTable.id, schemaTable]),
     );
@@ -130,7 +132,9 @@ export function addInstanceRowsToStore<Handle, Version>(
     }
     return {
         tag: "Ok",
-        content: addedRows.map(({ schemaTable, id }) => makeRow(store, handle, schemaTable, id)),
+        content: addedRows.map(({ schemaTable, id }) =>
+            makeRow(parsedTablesOfHandle(store, handle), schemaTable, id),
+        ),
     };
 }
 
@@ -148,7 +152,11 @@ export function updateInstanceFieldsByLabelInStore<Handle, Version>(
         values: ReadonlyArray<Record<string, LiteralValue | TableRow>>;
     }>,
 ): Result<void> {
-    const schemaTables = instanceTablesFromModel(shape, store, handle, schemaModel);
+    const schemaTables = instanceTablesFromModel(
+        shape,
+        parsedTablesOfHandle(store, handle),
+        schemaModel,
+    );
 
     const issues: Issue[] = [];
     store.changeDocument(handle, (changedDocument) => {
@@ -187,7 +195,11 @@ export function updateInstanceFieldByIdInStore<Handle, Version>(
     field: { id: string },
     value: LiteralValue | TableRow,
 ): Result<void> {
-    const schemaTables = instanceTablesFromModel(shape, store, handle, schemaModel);
+    const schemaTables = instanceTablesFromModel(
+        shape,
+        parsedTablesOfHandle(store, handle),
+        schemaModel,
+    );
 
     const issues: Issue[] = [];
     store.changeDocument(handle, (changedDocument) => {
@@ -223,11 +235,15 @@ export function deleteOrphanedTableFromStore<Handle, Version>(
     schemaModel: ElaboratedModel,
     tableId: string,
 ): Result<void> {
-    const schemaTables = instanceTablesFromModel(shape, store, handle, schemaModel);
+    const schemaTables = instanceTablesFromModel(
+        shape,
+        parsedTablesOfHandle(store, handle),
+        schemaModel,
+    );
     if (schemaTables.some((schemaTable) => schemaTable.id === tableId)) {
         return pathError(`Table \`${tableId}\` exists in the schema and is not orphaned`);
     }
-    const document = store.getDocumentView(handle) as Readonly<InstanceDocument>;
+    const document = store.getDocumentSnapshot(handle).document as Readonly<InstanceDocument>;
     if (document.tables[tableId] === undefined) {
         return pathError(`Table \`${tableId}\` does not exist`);
     }
@@ -250,7 +266,11 @@ export function deleteOrphanedFieldFromStore<Handle, Version>(
     tableId: string,
     fieldId: string,
 ): Result<void> {
-    const schemaTables = instanceTablesFromModel(shape, store, handle, schemaModel);
+    const schemaTables = instanceTablesFromModel(
+        shape,
+        parsedTablesOfHandle(store, handle),
+        schemaModel,
+    );
     const schemaTable = schemaTables.find((schemaTable) => schemaTable.id === tableId);
     if (schemaTable === undefined) {
         return pathError(`Table \`${tableId}\` does not exist in the schema`);
@@ -359,57 +379,42 @@ function requireParsedRow(
     return row;
 }
 
-function makeRow<Handle, Version>(
-    store: DocumentStore<Handle, Version>,
-    handle: Handle,
-    schemaTable: InstanceTable,
+function makeRow(
+    tables: ParsedTables,
+    schemaTable: Pick<InstanceTable, "id" | "headers">,
     rowId: string,
 ): TableRow {
+    const storedRow = requireParsedRow(tables, schemaTable.id, rowId);
     return {
         id: rowId,
-        get index() {
-            const tables = parsedTablesOfHandle(store, handle);
-            return (tables[schemaTable.id]?.rowOrder ?? []).indexOf(rowId);
-        },
-        get fields() {
-            const tables = parsedTablesOfHandle(store, handle);
-            const storedRow = requireParsedRow(tables, schemaTable.id, rowId);
-            return schemaTable.headers.map((header) =>
-                fieldValueFromStored(
-                    [schemaTable.id, "rows", rowId, "fields", header.id],
-                    storedRow.fields[header.id] ?? "Null",
-                ),
-            );
-        },
+        index: (tables[schemaTable.id]?.rowOrder ?? []).indexOf(rowId),
+        fields: schemaTable.headers.map((header) =>
+            fieldValueFromStored(
+                [schemaTable.id, "rows", rowId, "fields", header.id],
+                storedRow.fields[header.id] ?? "Null",
+            ),
+        ),
     };
 }
 
-function makeTable<Handle, Version>(
-    store: DocumentStore<Handle, Version>,
-    handle: Handle,
+function makeTable(
+    tables: ParsedTables,
     id: string,
     label: string | null,
     headers: ReadonlyArray<TableHeader>,
 ): InstanceTable {
-    const table: InstanceTable = {
+    return {
         id,
         label,
         headers,
-        get rows() {
-            const tables = parsedTablesOfHandle(store, handle);
-            return (tables[id]?.rowOrder ?? []).map((rowId) =>
-                makeRow(store, handle, table, rowId),
-            );
-        },
+        rows: (tables[id]?.rowOrder ?? []).map((rowId) => makeRow(tables, { id, headers }, rowId)),
     };
-    return table;
 }
 
 /** Read the tables using an elaborated schema model. */
-export function instanceTablesFromModel<Handle, Version>(
+export function instanceTablesFromModel(
     shape: InstanceCapableShape,
-    store: DocumentStore<Handle, Version>,
-    handle: Handle,
+    storedTables: ParsedTables,
     schemaModel: ElaboratedModel,
 ): readonly InstanceTable[] {
     const judgments = schemaModel.judgments();
@@ -446,7 +451,7 @@ export function instanceTablesFromModel<Handle, Version>(
                 type: { tag: literalType },
             });
         }
-        return makeTable(store, handle, tableObject.id, displayLabel(tableObject.label), headers);
+        return makeTable(storedTables, tableObject.id, displayLabel(tableObject.label), headers);
     });
 }
 
@@ -455,12 +460,10 @@ export function instanceTablesFromModel<Handle, Version>(
 Orphaned stored fields are appended to their table's headers as `Unknown`-typed
 headers, and stored tables without a schema entity become tables with `null`
 labels whose headers are derived from the stored field ids. */
-export function tablesWithOrphanedData<Handle, Version>(
-    store: DocumentStore<Handle, Version>,
-    handle: Handle,
+export function tablesWithOrphanedData(
+    storedTables: ParsedTables,
     schemaTables: ReadonlyArray<InstanceTable>,
 ): ReadonlyArray<InstanceTable> {
-    const storedTables = parsedTablesOfHandle(store, handle);
     const schemaTableIds = new Set(schemaTables.map((table) => table.id));
 
     const tables = schemaTables.map((table) => {
@@ -471,7 +474,7 @@ export function tablesWithOrphanedData<Handle, Version>(
         if (orphanedFieldIds.length === 0) {
             return table;
         }
-        return makeTable(store, handle, table.id, table.label, [
+        return makeTable(storedTables, table.id, table.label, [
             ...table.headers,
             ...orphanedFieldIds.map(unknownHeader),
         ]);
@@ -481,8 +484,7 @@ export function tablesWithOrphanedData<Handle, Version>(
         .filter((tableId) => !schemaTableIds.has(tableId))
         .map((tableId) =>
             makeTable(
-                store,
-                handle,
+                storedTables,
                 tableId,
                 null,
                 storedFieldIds(storedTables[tableId], new Set()).map(unknownHeader),
@@ -494,7 +496,7 @@ export function tablesWithOrphanedData<Handle, Version>(
 
 /** Collect parsed field ids not in `knownIds`, in first-seen row order. */
 function storedFieldIds(
-    table: Readonly<DocumentTypes.Table> | undefined,
+    table: DeepReadonly<DocumentTypes.Table> | undefined,
     knownIds: ReadonlySet<string>,
 ): string[] {
     if (table === undefined) {

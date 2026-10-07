@@ -1,8 +1,7 @@
-import type { Mor } from "catcolab-document-types";
-import type { DocumentStore } from "../document-store";
-import { findMorphismType } from "../shape";
-import type { MorphismTypesOf, Shape } from "../shape";
-import { getMorphismCell, obFromObjectCell, objectCellFromOb, type MorphismCell } from "./cell";
+import type { Mor, Ob } from "catcolab-document-types";
+import type { DeepReadonly } from "../document-store";
+import type { MorphismTypesOf, ObjectTypesOf, Shape } from "../shape";
+import { obFromObjectCell, type MorphismCell, type ObjectCell } from "./cell";
 import { tryGetModelJudgment, type ModelDocument } from "./document";
 import type { EquationSide } from "./equation";
 
@@ -31,24 +30,23 @@ export function morFromSide<S extends Shape>(
     return { tag: "Composite", content: { tag: "Seq", content: [first, ...rest] } };
 }
 
-/** Converts a stored equation side into its public view. */
-export function sideFromMor<Handle, S extends Shape, Version>(
-    shape: S,
-    store: DocumentStore<Handle, Version>,
-    handle: Handle,
-    side: Mor | null,
+/** Decode a stored side using caller-owned reference resolution (snapshot or frontend view). */
+export function decodeEquationSide<S extends Shape>(
+    side: DeepReadonly<Mor> | null,
+    objectFromOb: (ob: DeepReadonly<Ob>) => ObjectCell<ObjectTypesOf<S>> | null,
+    morphismFromId: (id: string) => MorphismCell<S, MorphismTypesOf<S>> | null,
 ): EquationSide<S> {
     if (side === null) {
         return [];
     }
     if (side.tag === "Composite" && side.content.tag === "Id") {
-        const object = objectCellFromOb(shape, store, handle, side.content.content);
+        const object = objectFromOb(side.content.content);
         if (object === null) {
             return [null];
         }
         return object;
     }
-    let mors: Mor[];
+    let mors: readonly DeepReadonly<Mor>[];
     if (side.tag === "Composite" && side.content.tag === "Seq") {
         mors = side.content.content;
     } else {
@@ -58,28 +56,8 @@ export function sideFromMor<Handle, S extends Shape, Version>(
         if (mor.tag !== "Basic") {
             return null;
         }
-        return morphismCellFromBasicMor(shape, store, handle, mor.content);
+        return morphismFromId(mor.content);
     });
-}
-
-function morphismCellFromBasicMor<Handle, S extends Shape, Version>(
-    shape: S,
-    store: DocumentStore<Handle, Version>,
-    handle: Handle,
-    morId: string,
-): MorphismCell<S, MorphismTypesOf<S>> | null {
-    const document = store.getDocumentView(handle) as Readonly<ModelDocument>;
-    for (const cellId of document.notebook.cellOrder) {
-        const cell = document.notebook.cellContents[cellId];
-        if (cell?.tag !== "formal" || cell.content.tag !== "morphism") {
-            continue;
-        }
-        if (cell.content.id === morId) {
-            const type = findMorphismType(shape, cell.content.morType);
-            return type ? getMorphismCell(shape, store, handle, cellId, type) : null;
-        }
-    }
-    return null;
 }
 
 function morFromMorphismCell(document: Readonly<ModelDocument>, endpoint: MorphismCell): Mor {

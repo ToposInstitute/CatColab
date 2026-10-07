@@ -1,7 +1,8 @@
 import type { MorType, ObType } from "catcolab-document-types";
+import type { DeepReadonly } from "../document-store";
 import { assertExhaustive } from "../util/assert_exhaustive";
 
-export function objectTypesEqual(left: ObType, right: ObType): boolean {
+export function objectTypesEqual(left: DeepReadonly<ObType>, right: DeepReadonly<ObType>): boolean {
     switch (left.tag) {
         case "Basic":
             return right.tag === "Basic" && left.content === right.content;
@@ -18,7 +19,10 @@ export function objectTypesEqual(left: ObType, right: ObType): boolean {
     }
 }
 
-export function morphismTypesEqual(left: MorType, right: MorType): boolean {
+export function morphismTypesEqual(
+    left: DeepReadonly<MorType>,
+    right: DeepReadonly<MorType>,
+): boolean {
     switch (left.tag) {
         case "Basic":
             return right.tag === "Basic" && left.content === right.content;

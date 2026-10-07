@@ -1,12 +1,14 @@
 import { getAuth } from "firebase/auth";
 import Plus from "lucide-solid/icons/plus";
 import X from "lucide-solid/icons/x";
+import { makeDocumentProjection } from "solid-automerge";
 import { useFirebaseApp } from "solid-firebase";
 import { createEffect, createResource, For, Show, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
 import type { UserSettings } from "catcolab-api";
 import type { Document } from "catcolab-document-types";
+import type { DeepReadonly } from "catcolab-documents";
 import { DocumentTypeIcon, IconButton, InlineInput } from "catcolab-ui-components";
 import { documentTypeLabel, type LiveDocWithRef, useApi, useBinder } from "../api";
 import { DEFAULT_LLM_MODEL } from "../inference/chat";
@@ -104,7 +106,7 @@ export function LLMConversationPane(props: {
         );
     };
 
-    const iconLettersOf = (document: Document): [string, string] | undefined => {
+    const iconLettersOf = (document: DeepReadonly<Document>): [string, string] | undefined => {
         if (document.type !== "model" || !theories) {
             return undefined;
         }
@@ -142,55 +144,65 @@ export function LLMConversationPane(props: {
                     fallback={<div class={styles.placeholder}>No LLM conversations yet</div>}
                 >
                     <For each={conversations()}>
-                        {({ conversation, attachment }) => (
-                            <div
-                                class={styles.row}
-                                classList={{
-                                    [styles.active]:
-                                        conversation.handle.ref.id === props.selectedRefId,
-                                }}
-                                onMouseDown={() => props.onSelect(conversation.handle.ref.id)}
-                            >
-                                <DocumentTypeIcon documentType="llmconversation" />
+                        {({ conversation, attachment }) => {
+                            // Keyed rows are stable, so the projections are
+                            // created once per row and released on unmount.
+                            const conversationDocument = makeDocumentProjection(
+                                conversation.handle.automergeHandle,
+                            );
+                            const attachmentDocument = makeDocumentProjection(
+                                attachment.handle.automergeHandle,
+                            );
+                            return (
                                 <div
-                                    class={styles.rowName}
-                                    onFocusIn={() => props.onSelect(conversation.handle.ref.id)}
+                                    class={styles.row}
+                                    classList={{
+                                        [styles.active]:
+                                            conversation.handle.ref.id === props.selectedRefId,
+                                    }}
+                                    onMouseDown={() => props.onSelect(conversation.handle.ref.id)}
                                 >
-                                    <InlineInput
-                                        text={conversation.title}
-                                        setText={(title) => conversation.update({ title })}
-                                        placeholder="Untitled"
-                                    />
-                                </div>
-                                <div
-                                    class={styles.rowAttachment}
-                                    title={`On ${documentTypeLabel(attachment.document.type)} "${attachment.title || "Untitled"}"`}
-                                >
-                                    <DocumentTypeIcon
-                                        documentType={attachment.document.type}
-                                        letters={iconLettersOf(attachment.document)}
-                                    />
-                                    <span>{attachment.title || "Untitled"}</span>
-                                </div>
-                                <Show when={canDeleteLLMConversation(conversation)}>
+                                    <DocumentTypeIcon documentType="llmconversation" />
                                     <div
-                                        class={styles.rowDelete}
-                                        onMouseDown={(event) => event.stopPropagation()}
+                                        class={styles.rowName}
+                                        onFocusIn={() => props.onSelect(conversation.handle.ref.id)}
                                     >
-                                        <IconButton
-                                            variant="danger"
-                                            tooltip="Delete LLM conversation"
-                                            onClick={(event) => {
-                                                event.stopPropagation();
-                                                void onDeleteLLMConversation(conversation);
-                                            }}
-                                        >
-                                            <X size={16} />
-                                        </IconButton>
+                                        <InlineInput
+                                            text={conversationDocument.name}
+                                            setText={(title) => conversation.update({ title })}
+                                            placeholder="Untitled"
+                                        />
                                     </div>
-                                </Show>
-                            </div>
-                        )}
+                                    <div
+                                        class={styles.rowAttachment}
+                                        title={`On ${documentTypeLabel(attachmentDocument.type)} "${attachmentDocument.name || "Untitled"}"`}
+                                    >
+                                        <DocumentTypeIcon
+                                            documentType={attachmentDocument.type}
+                                            letters={iconLettersOf(attachmentDocument)}
+                                        />
+                                        <span>{attachmentDocument.name || "Untitled"}</span>
+                                    </div>
+                                    <Show when={canDeleteLLMConversation(conversation)}>
+                                        <div
+                                            class={styles.rowDelete}
+                                            onMouseDown={(event) => event.stopPropagation()}
+                                        >
+                                            <IconButton
+                                                variant="danger"
+                                                tooltip="Delete LLM conversation"
+                                                onClick={(event) => {
+                                                    event.stopPropagation();
+                                                    void onDeleteLLMConversation(conversation);
+                                                }}
+                                            >
+                                                <X size={16} />
+                                            </IconButton>
+                                        </div>
+                                    </Show>
+                                </div>
+                            );
+                        }}
                     </For>
                 </Show>
             </div>

@@ -91,7 +91,7 @@ export async function getLiveLLMConversation(
     const resolved = await resolveSupportedDocument(binder, attachmentHandle);
     if (resolved === undefined) {
         throw new Error(
-            `Cannot attach an LLM conversation to a "${attachmentHandle.docView.type}" document.`,
+            `Cannot attach an LLM conversation to a "${attachmentHandle.automergeHandle.doc().type}" document.`,
         );
     }
     const { document: attachment, modelRefId } = resolved;

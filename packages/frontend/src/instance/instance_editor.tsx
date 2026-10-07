@@ -2,7 +2,7 @@ import { createEffect, createMemo, Index, onCleanup, Show } from "solid-js";
 
 import type { Result, TableIssue } from "catcolab-documents";
 import { type FocusHandle, Spinner, TableEditor, useChildFocus } from "catcolab-ui-components";
-import { createInstanceValidation } from "../documents/validation";
+import { createInstanceValidationView } from "../documents/validation_view";
 import type { ApiInstance } from "./live_doc_compatibility";
 import { useTableList } from "./table_list";
 
@@ -15,13 +15,12 @@ export function InstanceEditor(props: {
     focus: FocusHandle;
 }) {
     // oxlint-disable-next-line solid/reactivity -- The editor is keyed on the instance.
-    const validation = createInstanceValidation(props.instance);
+    const view = createInstanceValidationView(props.instance);
 
-    // Wait for the first schema validation before rendering tables.
-    const ready = () => validation() !== undefined;
-
-    const issues = createMemo(() => validation()?.issues ?? []);
-    const tables = createMemo(() => validation()?.tables ?? []);
+    // Tables and issues always come from the same published validation.
+    const ready = view.ready;
+    const issues = () => view.data.issues;
+    const tables = () => view.data.tables;
 
     const tableList = useTableList();
     createEffect(() => {

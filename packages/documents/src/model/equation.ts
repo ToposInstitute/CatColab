@@ -1,10 +1,11 @@
 import type { EqnDecl } from "catcolab-document-types";
-import type { DocumentStore } from "../document-store";
+import type { DeepReadonly, DocumentStore } from "../document-store";
 import { deleteNotebookCell } from "../notebook-document";
 import type { MorphismTypesOf, ObjectTypesOf, Shape } from "../shape";
-import type { MorphismCell, ObjectCell } from "./cell";
+import { getModelCell, type MorphismCell, type ObjectCell } from "./cell";
+import { createCellReadView, describeModelCell } from "./cell-reads";
 import type { ModelDocument } from "./document";
-import { morFromSide, sideFromMor } from "./equation-translate";
+import { morFromSide } from "./equation-translate";
 
 /** A side of an equation: the identity on an object, or a composite of
 morphisms. The empty composite means the side is unspecified.
@@ -53,46 +54,44 @@ export function getEquationCell<Handle, S extends Shape, Version>(
     handle: Handle,
     cellId: string,
 ): EquationCell<S> {
-    return {
-        kind: "path-equation",
-        id: cellId,
-        get label() {
-            const document = store.getDocumentView(handle) as Readonly<ModelDocument>;
-            return tryGetEquationDecl(document, cellId)?.name;
-        },
-        get lhs() {
-            const document = store.getDocumentView(handle) as Readonly<ModelDocument>;
-            const decl = tryGetEquationDecl(document, cellId);
-            return sideFromMor(shape, store, handle, decl?.lhs ?? null);
-        },
-        get rhs() {
-            const document = store.getDocumentView(handle) as Readonly<ModelDocument>;
-            const decl = tryGetEquationDecl(document, cellId);
-            return sideFromMor(shape, store, handle, decl?.rhs ?? null);
-        },
-        update(patch) {
-            const document = store.getDocumentView(handle) as Readonly<ModelDocument>;
-            if (!tryGetEquationDecl(document, cellId)) {
-                return;
-            }
-            store.changeDocument(handle, (storedDocument) => {
-                const decl = tryGetEquationDecl(storedDocument as ModelDocument, cellId);
-                if (!decl) {
+    return createCellReadView<EquationCell<S>>(
+        {
+            kind: "path-equation",
+            id: cellId,
+            update(patch) {
+                const document = store.getDocumentSnapshot(handle)
+                    .document as Readonly<ModelDocument>;
+                if (!tryGetEquationDecl(document, cellId)) {
                     return;
                 }
-                if (patch.label !== undefined) {
-                    decl.name = patch.label ?? "";
-                }
-                if (patch.lhs !== undefined) {
-                    decl.lhs = morFromSide(storedDocument as ModelDocument, patch.lhs);
-                }
-                if (patch.rhs !== undefined) {
-                    decl.rhs = morFromSide(storedDocument as ModelDocument, patch.rhs);
-                }
-            });
+                store.changeDocument(handle, (storedDocument) => {
+                    const decl = tryGetEquationDecl(storedDocument as ModelDocument, cellId);
+                    if (!decl) {
+                        return;
+                    }
+                    if (patch.label !== undefined) {
+                        decl.name = patch.label ?? "";
+                    }
+                    if (patch.lhs !== undefined) {
+                        decl.lhs = morFromSide(storedDocument as ModelDocument, patch.lhs);
+                    }
+                    if (patch.rhs !== undefined) {
+                        decl.rhs = morFromSide(storedDocument as ModelDocument, patch.rhs);
+                    }
+                });
+            },
+            delete() {
+                deleteNotebookCell(store, handle, cellId);
+            },
         },
-        delete() {
-            deleteNotebookCell(store, handle, cellId);
-        },
-    };
+        () => store.getDocumentSnapshot(handle).document as DeepReadonly<ModelDocument>,
+        (id) =>
+            describeModelCell(
+                shape,
+                store.getDocumentSnapshot(handle).document as DeepReadonly<ModelDocument>,
+                id,
+            )
+                ? getModelCell(shape, store, handle, id)
+                : undefined,
+    );
 }

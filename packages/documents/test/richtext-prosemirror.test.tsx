@@ -5,7 +5,7 @@
 // defines `getRichTextRef`, which adds an `editorRef` field to `RichText`
 // cells that the editor component makes use of.
 import * as Automerge from "@automerge/automerge";
-import { getBackend, getObjectId, type Patch } from "@automerge/automerge";
+import { toJS, type Patch } from "@automerge/automerge";
 import {
     type DocHandle,
     type DocHandleChangePayload,
@@ -29,6 +29,7 @@ import {
     RichText,
     type RichTextCell,
 } from "catcolab-documents";
+import { createSnapshotReader } from "./helpers/snapshot_reader";
 
 type StoreHandle = {
     readonly docHandle: DocHandle<Document>;
@@ -37,23 +38,20 @@ type StoreHandle = {
 
 function makeAutomergeRichTextStore(): DocumentStore<StoreHandle> {
     const repo = new Repo();
+    const getDocumentSnapshot = createSnapshotReader<StoreHandle>(
+        (handle) => handle.docHandle.doc(),
+        (doc) => toJS<Document>(doc as Document),
+    );
     return {
         createHandle: async (initialDoc) => {
             const docHandle = repo.create<Document>(initialDoc);
             return { docHandle, docView: makeDocumentProjection(docHandle) };
         },
-        getDocumentView: (handle) => handle.docView,
+        getDocumentSnapshot,
         changeDocument: (handle, fn) => handle.docHandle.change(fn),
         subscribe: (handle, callback) => {
             handle.docHandle.on("change", callback);
             return () => handle.docHandle.off("change", callback);
-        },
-        copyValue: (handle, value) => {
-            const objId = getObjectId(value);
-            if (objId === null) {
-                throw new Error("value is not part of the document");
-            }
-            return getBackend(handle.docHandle.doc()).materialize(objId) as typeof value;
         },
         getDocumentRef: (handle) => ({
             id: handle.docHandle.documentId,

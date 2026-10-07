@@ -1,14 +1,14 @@
 import type { Document } from "catcolab-document-types";
-import type { InstanceValidation, Issue, ModelValidation } from "catcolab-documents";
+import type { InstanceValidation, Issue, ModelValidation, DeepReadonly } from "catcolab-documents";
 
-type DocumentValidation = ModelValidation | InstanceValidation;
+type DocumentValidation = ModelValidation | InstanceValidation | InstanceValidation;
 
 /**
  * A draft document staged in the execution scope of an LLM conversation.
  * Conversation drafts have nothing to validate, so they omit `validate`.
  */
 export type DocumentDraft = {
-    readonly document: Readonly<Document>;
+    readonly document: DeepReadonly<Document>;
     readonly title: string;
     validate?(): Promise<DocumentValidation>;
 };

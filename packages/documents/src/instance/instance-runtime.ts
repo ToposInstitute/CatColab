@@ -1,4 +1,4 @@
-import type { DocumentStore } from "../document-store";
+import type { DocumentSnapshot, DocumentStore } from "../document-store";
 import type { ModelDocument } from "../model/document";
 import type { ElaboratedModel, ModelValidation } from "../model/elaborated-model";
 import type { Notebook } from "../model/notebook";
@@ -6,7 +6,7 @@ import type { Result } from "../result";
 import type { InstanceCapableShape, Shape } from "../shape";
 import { validatePathEquations } from "./equation-validation";
 import type { InstanceValidation } from "./instance";
-import { parsedInstanceTables } from "./parsed-source";
+import { parsedSnapshotTables } from "./parsed-source";
 import {
     addInstanceRowsToStore,
     deleteOrphanedFieldFromStore,
@@ -178,17 +178,29 @@ export function createInstanceValidator<Handle, S extends Shape, Version>(
     schema: Notebook<S, ModelDocument, Handle, Version>,
     store: DocumentStore<Handle, Version>,
     handle: Handle,
-): (schemaValidation: ModelValidation<S>) => InstanceValidation<S> {
-    return (schemaValidation) => {
-        const parsedTables = parsedInstanceTables(store, handle);
+): (schemaValidation: ModelValidation<S>, snapshot?: DocumentSnapshot) => InstanceValidation<S> {
+    const validations = new WeakMap<
+        ModelValidation<S>,
+        WeakMap<DocumentSnapshot, InstanceValidation<S>>
+    >();
+    return (schemaValidation, snapshot = store.getDocumentSnapshot(handle)) => {
+        let bySnapshot = validations.get(schemaValidation);
+        if (bySnapshot === undefined) {
+            bySnapshot = new WeakMap();
+            validations.set(schemaValidation, bySnapshot);
+        }
+        const cached = bySnapshot.get(snapshot);
+        if (cached !== undefined) {
+            return cached;
+        }
+        const parsedTables = parsedSnapshotTables(snapshot);
 
         const schemaTables = instanceTablesFromModel(
             instanceCapableShape(schema),
-            store,
-            handle,
+            parsedTables.value,
             schemaValidation.model,
         );
-        const tables = tablesWithOrphanedData(store, handle, schemaTables);
+        const tables = tablesWithOrphanedData(parsedTables.value, schemaTables);
         const issues = [
             ...parsedTables.issues.map((issue) => ({
                 message: issue.message,
@@ -198,11 +210,13 @@ export function createInstanceValidator<Handle, S extends Shape, Version>(
             ...validateInstanceTables(parsedTables.value, schemaTables),
             ...validatePathEquations(tables, schemaValidation.model),
         ];
-        return {
+        const validation: InstanceValidation<S> = {
             modelValidation: schemaValidation,
             tables,
             issues,
-            get: (path) => readInstancePath(store, handle, tables, path),
+            get: (path) => readInstancePath(parsedTables.value, tables, path),
         };
+        bySnapshot.set(snapshot, validation);
+        return validation;
     };
 }

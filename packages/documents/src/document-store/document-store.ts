@@ -50,6 +50,35 @@ export interface DocumentChange<Version> {
     after: Version;
 }
 
+/** A plain, immutable value. No framework proxies cross the storage boundary. */
+export type DeepReadonly<T> = T extends object
+    ? { readonly [K in keyof T]: DeepReadonly<T[K]> }
+    : T;
+
+/** One published version of a document. Equality of revisions is opaque. */
+export interface DocumentSnapshot {
+    readonly revision: object;
+    readonly document: DeepReadonly<Document>;
+}
+
+/** Create a document snapshot. */
+export function createDocumentSnapshot(document: Readonly<Document>): DocumentSnapshot {
+    const copy = structuredClone(document);
+    // Recursively freeze the copy.
+    function freeze(value: unknown): void {
+        if (value !== null && typeof value === "object" && !Object.isFrozen(value)) {
+            for (const child of Object.values(value)) {
+                freeze(child);
+            }
+            Object.freeze(value);
+        }
+    }
+    freeze(copy);
+    // This freezes a newly created object so any previousSnapshot.revision !== thisSnapshot.revision.
+    const revision = Object.freeze({});
+    return Object.freeze({ revision, document: copy });
+}
+
 export interface DocumentStore<Handle, Version = unknown> {
     // An async function to create a document handle from initial data.
     createHandle(initialDoc: Document): Promise<Handle>;
@@ -58,20 +87,15 @@ export interface DocumentStore<Handle, Version = unknown> {
     getHandle(ref: DocumentRef): Promise<Result<Handle>>;
     // Apply modifications to a handle.
     changeDocument(handle: Handle, fn: (doc: Document) => void): void;
-    // Subscribe change callbacks to our store for `onChange`. Returns a
-    // function to unsubscribe.
-    subscribe(handle: Handle, callback: () => void): () => void;
-    // Copy values (with any proxies removed)
-    copyValue<T>(handle: Handle, value: T): T;
+    //  Subscribe a callback to document changes. Although onChange has an
+    //  initial delivery this is handled by catcolab-documents, this subscribe
+    //  does not need to deliver that.
+    subscribe(handle: Handle, callback: (snapshot: DocumentSnapshot) => void): () => void;
     // Get the reference for a handle
     getDocumentRef(handle: Handle): DocumentRef;
-    // Get a document view from a handle
-    getDocumentView(handle: Handle): Readonly<Document>;
-    // Optional reactive revision, updated after change callbacks have run.
-    // Cached readers access it to participate in the store's reactive system.
-    getDocumentRevision?(handle: Handle): unknown;
-    // An unproxied snapshot, if the store can obtain one more directly than copyValue.
-    getDocumentSnapshot?(handle: Handle): Readonly<Document>;
+    // Current snapshot, including when no listeners exist. Repeated unchanged
+    // reads return the same envelope. Previously returned values never mutate.
+    getDocumentSnapshot(handle: Handle): DocumentSnapshot;
     // List the documents that depend on the document at `handle`, indexed by
     // the type of the link through which each depends on it.
     listUsedBy(handle: Handle): Promise<HandlesByLinkType<Handle>>;
@@ -92,9 +116,6 @@ export interface DocumentStore<Handle, Version = unknown> {
 export function getDocumentSnapshot<Handle>(
     store: DocumentStore<Handle>,
     handle: Handle,
-): Readonly<Document> {
-    return (
-        store.getDocumentSnapshot?.(handle) ??
-        store.copyValue(handle, store.getDocumentView(handle))
-    );
+): DeepReadonly<Document> {
+    return store.getDocumentSnapshot(handle).document;
 }
