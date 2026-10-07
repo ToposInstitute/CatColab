@@ -1,5 +1,6 @@
 import { Model, Nb } from "catcolab-document-methods";
 import type { ModelJudgment } from "catcolab-document-types";
+import type { DeepReadonly } from "../deep-readonly";
 import type { DocumentStore } from "../document-store";
 import type { NotebookDocument } from "../notebook-document";
 import { getRichTextCell, type RichTextCell } from "../rich-text";
@@ -17,6 +18,7 @@ import type {
     Shape,
 } from "../shape";
 import type { Commit } from "../transaction";
+import { createSubscriptionScope } from "../util/subscription-scope";
 import {
     getModelCell,
     getMorphismCell,
@@ -124,7 +126,10 @@ function shapeSupportsShape(shape: Shape, required: Shape): boolean {
     return true;
 }
 
-function cellMatchesFilter<S extends Shape>(cell: CellOf<S>, filter: AnyCellType | Shape): boolean {
+export function cellMatchesFilter<S extends Shape>(
+    cell: CellOf<S>,
+    filter: AnyCellType | Shape,
+): boolean {
     if (isCellType(filter)) {
         switch (filter.kind) {
             case "rich-text":
@@ -182,7 +187,9 @@ export interface Notebook<
     V = unknown,
 > {
     readonly shape: S;
-    readonly document: Readonly<D>;
+    /** Current snapshot, not an implicitly reactive projection. Cell facades
+     * read current values on access; subscribe explicitly to rerender them. */
+    readonly document: DeepReadonly<D>;
     readonly title: string;
     readonly handle: H;
 
@@ -195,6 +202,8 @@ export interface Notebook<
     onChange(callback: () => void): () => void;
     validate(): Promise<ModelValidation<S>>;
     onValidate(callback: (result: ModelValidation<S>) => void): () => void;
+    /** Release subscriptions owned by this facade. Idempotent. */
+    dispose(): void;
 
     /** Undo the changes this notebook's document received in a commit. */
     revert(commit: Commit<H, V>): void;
@@ -206,6 +215,7 @@ export function modelNotebookFromStore<Handle, S extends Shape, Version>(
     handle: Handle,
 ): Notebook<S, ModelDocument, Handle, Version> {
     const validator = createNotebookValidator(shape, store, handle);
+    const scope = createSubscriptionScope();
 
     function appendCell(
         cell: ReturnType<typeof Nb.newRichTextCell> | Nb.FormalCell<ModelJudgment>,
@@ -218,11 +228,14 @@ export function modelNotebookFromStore<Handle, S extends Shape, Version>(
     return {
         shape,
         handle,
+        get type() {
+            return (store.getDocumentSnapshot(handle) as DeepReadonly<ModelDocument>).type;
+        },
         get document() {
-            return store.getDocumentView(handle) as Readonly<ModelDocument>;
+            return store.getDocumentSnapshot(handle) as DeepReadonly<ModelDocument>;
         },
         get title() {
-            return (store.getDocumentView(handle) as Readonly<ModelDocument>).name;
+            return (store.getDocumentSnapshot(handle) as DeepReadonly<ModelDocument>).name;
         },
         add<T extends CellTypeOf<S>>(type: T, values: CellValuesOf<S, T>) {
             if (type.kind === "rich-text") {
@@ -255,7 +268,7 @@ export function modelNotebookFromStore<Handle, S extends Shape, Version>(
                 const equation = values as CellValuesOf<S, EquationType>;
                 const decl = Model.newEquationDecl();
                 decl.name = equation.label ?? "";
-                const document = store.getDocumentView(handle) as Readonly<ModelDocument>;
+                const document = store.getDocumentSnapshot(handle) as ModelDocument;
                 decl.lhs = morFromSide(document, equation.lhs ?? []);
                 decl.rhs = morFromSide(document, equation.rhs ?? []);
                 const cell = Nb.newFormalCell<ModelJudgment>(decl);
@@ -266,7 +279,7 @@ export function modelNotebookFromStore<Handle, S extends Shape, Version>(
             const morphism = values as CellValuesOf<S, MorphismTypesOf<S>>;
             const judgment = Model.newMorphismDecl(type.morType);
             judgment.name = morphism.label ?? "";
-            const document = store.getDocumentView(handle) as Readonly<ModelDocument>;
+            const document = store.getDocumentSnapshot(handle) as ModelDocument;
             judgment.dom = obFromObjectCell(document, morphism.from);
             judgment.cod = obFromObjectCell(document, morphism.to);
             const cell = Nb.newFormalCell<ModelJudgment>(judgment);
@@ -280,7 +293,7 @@ export function modelNotebookFromStore<Handle, S extends Shape, Version>(
             ) as AddedCellOf<S, T>;
         },
         cells() {
-            const document = store.getDocumentView(handle) as Readonly<ModelDocument>;
+            const document = store.getDocumentSnapshot(handle) as DeepReadonly<ModelDocument>;
             return document.notebook.cellOrder.map((cellId) =>
                 getModelCell(shape, store, handle, cellId),
             );
@@ -302,14 +315,15 @@ export function modelNotebookFromStore<Handle, S extends Shape, Version>(
             }
         },
         dump() {
-            const document = store.getDocumentView(handle) as Readonly<ModelDocument>;
-            return store.copyValue(handle, document) as ModelDocument;
+            const document = store.getDocumentSnapshot(handle) as DeepReadonly<ModelDocument>;
+            return structuredClone(document) as ModelDocument;
         },
         onChange(callback) {
-            return store.subscribe(handle, callback);
+            return scope.track(store.subscribe(handle, callback));
         },
         validate: validator.validate,
-        onValidate: validator.onValidate,
+        onValidate: (callback) => scope.track(validator.onValidate(callback)),
+        dispose: scope.dispose,
         revert(commit) {
             const change = commit.documents.get(handle);
             if (change === undefined) {

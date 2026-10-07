@@ -1,11 +1,16 @@
 import { A } from "@solidjs/router";
+import { makeDocumentProjection } from "solid-automerge";
+import { createMemo } from "solid-js";
 
 import type { LiveLLMConversationDoc } from "./live_doc_compatibility";
 
 /** Attached document link shown in an LLM conversation document head. */
 export function LLMConversationInfo(props: { liveConversation: LiveLLMConversationDoc }) {
     const attachedRefId = () => props.liveConversation.liveDoc.doc.llmConversationOf._id;
-    const attachedDoc = () => props.liveConversation.attachment.document;
+    // Memo keeps the view in sync if the bound document is replaced.
+    const attachedDoc = createMemo(() =>
+        makeDocumentProjection(props.liveConversation.attachment.handle.automergeHandle),
+    );
 
     return (
         <>

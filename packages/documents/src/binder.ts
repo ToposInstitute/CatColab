@@ -84,7 +84,7 @@ function binderFromStore<Handle, Version>(
     return {
         getHandle: (ref) => store.getHandle(ref),
         getDocumentRef: (handle) => store.getDocumentRef(handle),
-        getDocumentView: (handle) => store.getDocumentView(handle),
+        getDocumentView: (handle) => store.getDocumentSnapshot(handle),
         listUsedBy: (handle) => store.listUsedBy(handle),
         listDependsOn: (handle) => store.listDependsOn(handle),
         async createNotebook<S extends Shape & { readonly theory: string }>(
@@ -109,7 +109,7 @@ function binderFromStore<Handle, Version>(
                 return result;
             }
 
-            const document = store.getDocumentView(result.content);
+            const document = store.getDocumentSnapshot(result.content);
             if (document.type !== "model") {
                 return {
                     tag: "Err",
@@ -196,7 +196,7 @@ function binderFromStore<Handle, Version>(
             if (result.tag === "Err") {
                 return result;
             }
-            const document = store.getDocumentView(result.content);
+            const document = store.getDocumentSnapshot(result.content);
             if (document.type !== "llmconversation") {
                 return {
                     tag: "Err",
@@ -249,7 +249,7 @@ function binderFromStore<Handle, Version>(
                 return result;
             }
 
-            const document = store.getDocumentView(result.content);
+            const document = store.getDocumentSnapshot(result.content);
             if (document.type !== "instance") {
                 return {
                     tag: "Err",
@@ -355,7 +355,7 @@ function binderFromStore<Handle, Version>(
                             }
                             schemaHandle = result.content;
                         }
-                        if (store.getDocumentView(schemaHandle).type !== "model") {
+                        if (store.getDocumentSnapshot(schemaHandle).type !== "model") {
                             throw new Error(
                                 `The schema of instance "${doc.title}" is not a model document.`,
                             );
@@ -420,9 +420,7 @@ function binderFromStore<Handle, Version>(
                 // Constructing the drafts failed: discard the staged drafts so
                 // that they do not linger in the store.
                 for (const draft of drafts.values()) {
-                    if (draft.type === "instance") {
-                        draft.dispose();
-                    }
+                    draft.dispose();
                 }
                 for (const draftHandle of draftHandleBySource.values()) {
                     store.discardDraft(draftHandle);
@@ -447,9 +445,7 @@ function binderFromStore<Handle, Version>(
                     }
                     state = "committed";
                     for (const draft of drafts.values()) {
-                        if (draft.type === "instance") {
-                            draft.dispose();
-                        }
+                        draft.dispose();
                     }
 
                     const documents = new Map<Handle, DocumentChange<Version>>();
@@ -464,9 +460,7 @@ function binderFromStore<Handle, Version>(
                     }
                     state = "aborted";
                     for (const draft of drafts.values()) {
-                        if (draft.type === "instance") {
-                            draft.dispose();
-                        }
+                        draft.dispose();
                     }
                     for (const { draftHandle } of staged) {
                         store.discardDraft(draftHandle);

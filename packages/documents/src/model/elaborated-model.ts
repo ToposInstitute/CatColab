@@ -1,5 +1,6 @@
-import type { Mor } from "catcolab-document-types";
+import type { Document, Mor } from "catcolab-document-types";
 import type { ModelPresentation, MorGenerator, QualifiedLabel } from "catlog-wasm";
+import type { DeepReadonly } from "../deep-readonly";
 import type { Issue } from "../result";
 import {
     findMorphismType,
@@ -87,6 +88,8 @@ Elaboration and validation are separate steps, so `model` is always available:
 it contains the elaborated judgments even when validation fails. The model is
 empty when elaboration fails or the core theory cannot be loaded. */
 export interface ModelValidation<out S extends Shape = Shape> {
+    /** Immutable document that was elaborated; compare by reference for freshness. */
+    readonly document: DeepReadonly<Document>;
     readonly model: ElaboratedModel<S>;
     /** Validation issues; empty when the notebook is valid. */
     readonly issues: ReadonlyArray<Issue>;

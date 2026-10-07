@@ -1,4 +1,5 @@
 import type { Document } from "catcolab-document-types";
+import type { DeepReadonly } from "./deep-readonly";
 import type { DocumentStore } from "./document-store";
 
 /** A document whose primary content is a notebook. */
@@ -10,7 +11,7 @@ export function deleteNotebookCell<Handle, Version>(
     handle: Handle,
     cellId: string,
 ): boolean {
-    const document = store.getDocumentView(handle) as Readonly<NotebookDocument>;
+    const document = store.getDocumentSnapshot(handle) as DeepReadonly<NotebookDocument>;
     const currentIndex = document.notebook.cellOrder.indexOf(cellId);
     if (currentIndex < 0) {
         return false;
