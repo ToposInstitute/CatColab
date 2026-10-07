@@ -1,12 +1,13 @@
 import type { InstanceDocument } from "catcolab-document-methods";
 import type { Document } from "catcolab-document-types";
-import type { DocumentStore } from "../document-store";
+import type { DeepReadonly, DocumentStore } from "../document-store";
 import type { ModelDocument } from "../model/document";
 import type { ModelValidation } from "../model/elaborated-model";
 import type { Notebook } from "../model/notebook";
 import type { Result } from "../result";
 import type { Shape } from "../shape";
 import type { Commit } from "../transaction";
+import { createSubscriptionScope } from "../util/subscription-scope";
 import type { TableIssue } from "./errors";
 import {
     createAddRowsMethod,
@@ -18,7 +19,6 @@ import {
     createUpdateRowsMethod,
     createUpdateRowMethod,
 } from "./instance-runtime";
-import { retainParsedInstance } from "./parsed-source";
 import type { FieldValue, InstancePath, InstanceTable, LiteralValue, TableRow } from "./tables";
 
 export type { InstanceDocument } from "catcolab-document-methods";
@@ -31,7 +31,7 @@ export interface Instance<S extends Shape = Shape, H = unknown, V = unknown> {
     readonly shape: S;
     /** The schema notebook this instance is an instance of. */
     readonly schema: Notebook<S, ModelDocument, H, V>;
-    readonly document: Readonly<InstanceDocument>;
+    readonly document: DeepReadonly<InstanceDocument>;
     readonly title: string;
 
     update(patch: Partial<{ title: string }>): void;
@@ -81,7 +81,7 @@ export interface Instance<S extends Shape = Shape, H = unknown, V = unknown> {
     /** Revalidate initially and whenever either the instance or its schema changes. */
     onValidate(callback: (validation: InstanceValidation<S>) => void): () => void;
 
-    /** Release this owner's parsed view and all its change/validation subscriptions.
+    /** Release this owner's change/validation subscriptions.
     Call when the instance is no longer used. Idempotent. */
     dispose(): void;
 
@@ -93,7 +93,8 @@ export interface Instance<S extends Shape = Shape, H = unknown, V = unknown> {
 export interface InstanceValidation<out S extends Shape = Shape> {
     /** The result of elaborating and validating the instance's schema. */
     readonly modelValidation: ModelValidation<S>;
-    /** The instance's tables, including any orphaned stored data. */
+    /** Snapshot tables, including orphaned data. Rows and fields do not change
+     * after validation; revalidate or subscribe to obtain newer data. */
     readonly tables: ReadonlyArray<InstanceTable>;
     /** Problems with the instance data; empty when the data is valid. */
     readonly issues: ReadonlyArray<TableIssue>;
@@ -110,26 +111,10 @@ export function instanceFromStore<Handle, S extends Shape, Version>(
     store: DocumentStore<Handle, Version>,
     handle: Handle,
 ): Instance<S, Handle, Version> {
-    const releaseParsedInstance = retainParsedInstance(store, handle);
-    const subscriptions = new Set<() => void>();
-    let disposed = false;
+    const scope = createSubscriptionScope();
 
-    function trackSubscription(unsubscribe: () => void): () => void {
-        if (disposed) {
-            unsubscribe();
-            return () => {};
-        }
-        const stop = () => {
-            if (subscriptions.delete(stop)) {
-                unsubscribe();
-            }
-        };
-        subscriptions.add(stop);
-        return stop;
-    }
-
-    function currentDocument(): Readonly<InstanceDocument> {
-        return store.getDocumentView(handle) as Readonly<InstanceDocument>;
+    function currentDocument(): DeepReadonly<InstanceDocument> {
+        return store.getDocumentSnapshot(handle).document as DeepReadonly<InstanceDocument>;
     }
 
     const addRows = createAddRowsMethod(schema, store, handle);
@@ -142,7 +127,8 @@ export function instanceFromStore<Handle, S extends Shape, Version>(
     const validateInstance = createInstanceValidator(schema, store, handle);
 
     async function validateCurrentDocument(): Promise<InstanceValidation<S>> {
-        return validateInstance(await schema.validate());
+        const snapshot = store.getDocumentSnapshot(handle);
+        return validateInstance(await schema.validate(), snapshot);
     }
 
     function deleteStoredRows(rows: ReadonlyArray<{ tableId: string; rowId: string }>): void {
@@ -167,7 +153,7 @@ export function instanceFromStore<Handle, S extends Shape, Version>(
         handle,
         shape: schema.shape,
         schema,
-        get document(): Readonly<InstanceDocument> {
+        get document(): DeepReadonly<InstanceDocument> {
             return currentDocument();
         },
         get title(): string {
@@ -181,7 +167,7 @@ export function instanceFromStore<Handle, S extends Shape, Version>(
             }
         },
         dump(): InstanceDocument {
-            return store.copyValue(handle, currentDocument());
+            return structuredClone(currentDocument()) as InstanceDocument;
         },
         addRow,
         addRows,
@@ -202,7 +188,7 @@ export function instanceFromStore<Handle, S extends Shape, Version>(
         onChange(callback: () => void): () => void {
             const unsubscribeInstance: () => void = store.subscribe(handle, callback);
             const unsubscribeSchema: () => void = schema.onChange(callback);
-            return trackSubscription((): void => {
+            return scope.track((): void => {
                 unsubscribeInstance();
                 unsubscribeSchema();
             });
@@ -210,39 +196,41 @@ export function instanceFromStore<Handle, S extends Shape, Version>(
         onValidate(callback: (validation: InstanceValidation<S>) => void): () => void {
             let active: boolean = true;
             let latestModelValidation: ModelValidation<S> | undefined;
+            let lastPublished: InstanceValidation<S> | undefined;
 
             function notify(validation: InstanceValidation<S>): void {
-                if (active) {
+                if (active && validation !== lastPublished) {
+                    lastPublished = validation;
                     callback(validation);
                 }
             }
 
-            const unsubscribeInstance: () => void = store.subscribe(handle, (): void => {
-                if (latestModelValidation !== undefined) {
-                    notify(validateInstance(latestModelValidation));
+            const unsubscribeInstance: () => void = store.subscribe(handle, (snapshot): void => {
+                // During schema validation, retain the previous coherent result
+                // rather than publish current rows against an obsolete schema.
+                if (
+                    latestModelValidation?.revision ===
+                    store.getDocumentSnapshot(schema.handle).revision
+                ) {
+                    notify(validateInstance(latestModelValidation, snapshot));
                 }
             });
             const unsubscribeSchema: () => void = schema.onValidate((modelValidation): void => {
-                latestModelValidation = modelValidation;
-                notify(validateInstance(modelValidation));
+                if (
+                    modelValidation.revision === store.getDocumentSnapshot(schema.handle).revision
+                ) {
+                    latestModelValidation = modelValidation;
+                    notify(validateInstance(modelValidation));
+                }
             });
 
-            return trackSubscription((): void => {
+            return scope.track((): void => {
                 active = false;
                 unsubscribeInstance();
                 unsubscribeSchema();
             });
         },
-        dispose(): void {
-            if (disposed) {
-                return;
-            }
-            disposed = true;
-            for (const unsubscribe of subscriptions) {
-                unsubscribe();
-            }
-            releaseParsedInstance();
-        },
+        dispose: scope.dispose,
         revert(commit: Commit<Handle, Version>): void {
             const change = commit.documents.get(handle);
             if (change === undefined) {

@@ -1,10 +1,8 @@
 import { PetriNet, Place, Transition } from "catcolab-logics/petri-net";
 import { For } from "solid-js";
-import { createStore, reconcile, type SetStoreFunction, unwrap } from "solid-js/store";
 import { render } from "solid-js/web";
 import { describe, expect, test } from "vitest";
 
-import type { Document } from "catcolab-document-types";
 // RFC-0006 "Use with SolidJS — Shape consumer".
 //
 // Components consume the shape they need: a generic shape over the basic
@@ -16,57 +14,11 @@ import {
     defineMorphism,
     defineObject,
     defineShape,
-    type DocumentStore,
     type Notebook,
     type NotebookCell,
     RichText,
 } from "catcolab-documents";
-
-type SolidStoreHandle = {
-    draftDoc: Document;
-    docView: Document;
-    setDocView: SetStoreFunction<Document>;
-    listeners: Set<() => void>;
-};
-
-const solidStoreIds = new WeakMap<SolidStoreHandle, string>();
-const solidStoreIdFor = (handle: SolidStoreHandle): string => {
-    let id = solidStoreIds.get(handle);
-    if (!id) {
-        id = crypto.randomUUID();
-        solidStoreIds.set(handle, id);
-    }
-    return id;
-};
-
-const solidStore: DocumentStore<SolidStoreHandle> = {
-    async createHandle(initialDoc) {
-        const draftDoc = structuredClone(initialDoc);
-        const [docView, setDocView] = createStore<Document>(initialDoc);
-        return { draftDoc, docView, setDocView, listeners: new Set() };
-    },
-    getDocumentView: (handle) => handle.docView,
-    changeDocument: (handle, fn) => {
-        fn(handle.draftDoc);
-        handle.setDocView(reconcile(structuredClone(handle.draftDoc), { key: "id" }));
-        for (const listener of Array.from(handle.listeners)) {
-            listener();
-        }
-    },
-    subscribe: (handle, callback) => {
-        handle.listeners.add(callback);
-        return () => {
-            handle.listeners.delete(callback);
-        };
-    },
-    copyValue: (_handle, value) => structuredClone(unwrap(value)),
-    getDocumentRef: (handle) => ({ id: solidStoreIdFor(handle), version: null, server: "" }),
-    // Link resolution omitted for brevity.
-    getHandle: async () => ({
-        tag: "Err",
-        content: [{ message: "This store cannot resolve references." }],
-    }),
-};
+import { solidStore } from "./stores/solid-store-fixture";
 
 const basicObject = defineObject({ tag: "Basic", content: "Object" });
 const symmetricListMorphism = defineMorphism(

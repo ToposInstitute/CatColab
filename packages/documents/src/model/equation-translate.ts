@@ -68,7 +68,7 @@ function morphismCellFromBasicMor<Handle, S extends Shape, Version>(
     handle: Handle,
     morId: string,
 ): MorphismCell<S, MorphismTypesOf<S>> | null {
-    const document = store.getDocumentView(handle) as Readonly<ModelDocument>;
+    const document = store.getDocumentSnapshot(handle).document as Readonly<ModelDocument>;
     for (const cellId of document.notebook.cellOrder) {
         const cell = document.notebook.cellContents[cellId];
         if (cell?.tag !== "formal" || cell.content.tag !== "morphism") {

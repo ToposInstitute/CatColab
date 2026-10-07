@@ -1,4 +1,4 @@
-import type { DocumentStore } from "../document-store";
+import type { DocumentSnapshot, DocumentStore } from "../document-store";
 import type { ModelDocument } from "../model/document";
 import type { ElaboratedModel, ModelValidation } from "../model/elaborated-model";
 import type { Notebook } from "../model/notebook";
@@ -6,7 +6,7 @@ import type { Result } from "../result";
 import type { InstanceCapableShape, Shape } from "../shape";
 import { validatePathEquations } from "./equation-validation";
 import type { InstanceValidation } from "./instance";
-import { parsedInstanceTables } from "./parsed-source";
+import { parsedSnapshotTables } from "./parsed-source";
 import {
     addInstanceRowsToStore,
     deleteOrphanedFieldFromStore,
@@ -41,9 +41,15 @@ reported by the operation as addressing failures.
 catch exceptions, so an operation that throws lets that exception propagate. */
 async function withElaboratedSchema<Handle, S extends Shape, Version, T>(
     schema: Notebook<S, ModelDocument, Handle, Version>,
+    store: DocumentStore<Handle, Version>,
     operation: (schemaModel: ElaboratedModel<S>) => Result<T>,
 ): Promise<Result<T>> {
-    const schemaValidation = await schema.validate();
+    let schemaValidation = await schema.validate();
+    // Commands address the current schema, unlike one-shot validation snapshots.
+    // An edit may have landed while the theory/elaboration was being awaited.
+    while (schemaValidation.revision !== store.getDocumentSnapshot(schema.handle).revision) {
+        schemaValidation = await schema.validate();
+    }
     return operation(schemaValidation.model);
 }
 
@@ -58,7 +64,7 @@ export function createAddRowsMethod<Handle, S extends Shape, Version>(
     }>,
 ) => Promise<Result<ReadonlyArray<TableRow>>> {
     return (additions) =>
-        withElaboratedSchema(schema, (schemaModel) =>
+        withElaboratedSchema(schema, store, (schemaModel) =>
             addInstanceRowsToStore(
                 instanceCapableShape(schema),
                 store,
@@ -98,7 +104,7 @@ export function createUpdateRowsMethod<Handle, S extends Shape, Version>(
     }>,
 ) => Promise<Result<void>> {
     return (updates) =>
-        withElaboratedSchema(schema, (schemaModel) =>
+        withElaboratedSchema(schema, store, (schemaModel) =>
             updateInstanceFieldsByLabelInStore(
                 instanceCapableShape(schema),
                 store,
@@ -125,7 +131,7 @@ export function createSetMethod<Handle, S extends Shape, Version>(
     value: LiteralValue | TableRow,
 ) => Promise<Result<void>> {
     return (row, morphism, value) =>
-        withElaboratedSchema(schema, (schemaModel) =>
+        withElaboratedSchema(schema, store, (schemaModel) =>
             updateInstanceFieldByIdInStore(
                 instanceCapableShape(schema),
                 store,
@@ -144,7 +150,7 @@ export function createDeleteOrphanedTableMethod<Handle, S extends Shape, Version
     handle: Handle,
 ): (tableId: string) => Promise<Result<void>> {
     return (tableId) =>
-        withElaboratedSchema(schema, (schemaModel) =>
+        withElaboratedSchema(schema, store, (schemaModel) =>
             deleteOrphanedTableFromStore(
                 instanceCapableShape(schema),
                 store,
@@ -161,7 +167,7 @@ export function createDeleteOrphanedColumnMethod<Handle, S extends Shape, Versio
     handle: Handle,
 ): (tableId: string, fieldId: string) => Promise<Result<void>> {
     return (tableId, fieldId) =>
-        withElaboratedSchema(schema, (schemaModel) =>
+        withElaboratedSchema(schema, store, (schemaModel) =>
             deleteOrphanedFieldFromStore(
                 instanceCapableShape(schema),
                 store,
@@ -178,17 +184,29 @@ export function createInstanceValidator<Handle, S extends Shape, Version>(
     schema: Notebook<S, ModelDocument, Handle, Version>,
     store: DocumentStore<Handle, Version>,
     handle: Handle,
-): (schemaValidation: ModelValidation<S>) => InstanceValidation<S> {
-    return (schemaValidation) => {
-        const parsedTables = parsedInstanceTables(store, handle);
+): (schemaValidation: ModelValidation<S>, snapshot?: DocumentSnapshot) => InstanceValidation<S> {
+    const validations = new WeakMap<
+        ModelValidation<S>,
+        WeakMap<DocumentSnapshot, InstanceValidation<S>>
+    >();
+    return (schemaValidation, snapshot = store.getDocumentSnapshot(handle)) => {
+        let bySnapshot = validations.get(schemaValidation);
+        if (bySnapshot === undefined) {
+            bySnapshot = new WeakMap();
+            validations.set(schemaValidation, bySnapshot);
+        }
+        const cached = bySnapshot.get(snapshot);
+        if (cached !== undefined) {
+            return cached;
+        }
+        const parsedTables = parsedSnapshotTables(snapshot);
 
         const schemaTables = instanceTablesFromModel(
             instanceCapableShape(schema),
-            store,
-            handle,
+            parsedTables.value,
             schemaValidation.model,
         );
-        const tables = tablesWithOrphanedData(store, handle, schemaTables);
+        const tables = tablesWithOrphanedData(parsedTables.value, schemaTables);
         const issues = [
             ...parsedTables.issues.map((issue) => ({
                 message: issue.message,
@@ -198,11 +216,13 @@ export function createInstanceValidator<Handle, S extends Shape, Version>(
             ...validateInstanceTables(parsedTables.value, schemaTables),
             ...validatePathEquations(tables, schemaValidation.model),
         ];
-        return {
+        const validation: InstanceValidation<S> = {
             modelValidation: schemaValidation,
             tables,
             issues,
-            get: (path) => readInstancePath(store, handle, tables, path),
+            get: (path) => readInstancePath(parsedTables.value, tables, path),
         };
+        bySnapshot.set(snapshot, validation);
+        return validation;
     };
 }

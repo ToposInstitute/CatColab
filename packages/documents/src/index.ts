@@ -5,11 +5,15 @@ export type {
     DocumentChange,
     DocumentRef,
     DocumentStore,
+    DocumentSnapshot,
+    DeepReadonly,
     HandlesByLinkType,
 } from "./document-store";
 export type { Issue, PathSegment, Result } from "./result";
 export {
     createInMemoryStore,
+    createDocumentSnapshot,
+    createSnapshotReader,
     documentLinks,
     emptyHandlesByLinkType,
     getDocumentSnapshot,

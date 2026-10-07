@@ -69,7 +69,7 @@ export function getObjectCell<Handle, O extends ObjectType, Version>(
         id: cellId,
         type,
         get label() {
-            const document = store.getDocumentView(handle) as Readonly<ModelDocument>;
+            const document = store.getDocumentSnapshot(handle).document as Readonly<ModelDocument>;
             const judgment = tryGetModelJudgment(document, cellId);
             if (!judgment) {
                 return undefined;
@@ -83,7 +83,7 @@ export function getObjectCell<Handle, O extends ObjectType, Version>(
             if (patch.label === undefined) {
                 return;
             }
-            const document = store.getDocumentView(handle) as Readonly<ModelDocument>;
+            const document = store.getDocumentSnapshot(handle).document as Readonly<ModelDocument>;
             if (!tryGetModelJudgment(document, cellId)) {
                 return;
             }
@@ -111,7 +111,7 @@ export function objectCellFromOb<Handle, S extends Shape, Version>(
     handle: Handle,
     endpoint: Ob | null,
 ): ObjectCell<ObjectTypesOf<S>> | null {
-    const document = store.getDocumentView(handle) as Readonly<ModelDocument>;
+    const document = store.getDocumentSnapshot(handle).document as Readonly<ModelDocument>;
     if (endpoint?.tag !== "Basic") {
         return null;
     }
@@ -159,7 +159,7 @@ export function getMorphismCell<Handle, S extends Shape, M extends MorphismTypes
         id: cellId,
         type,
         get label() {
-            const document = store.getDocumentView(handle) as Readonly<ModelDocument>;
+            const document = store.getDocumentSnapshot(handle).document as Readonly<ModelDocument>;
             const judgment = tryGetModelJudgment(document, cellId);
             if (!judgment) {
                 return undefined;
@@ -170,7 +170,7 @@ export function getMorphismCell<Handle, S extends Shape, M extends MorphismTypes
             return judgment.name;
         },
         get from() {
-            const document = store.getDocumentView(handle) as Readonly<ModelDocument>;
+            const document = store.getDocumentSnapshot(handle).document as Readonly<ModelDocument>;
             const judgment = tryGetModelJudgment(document, cellId);
             if (!judgment) {
                 return undefined;
@@ -183,7 +183,7 @@ export function getMorphismCell<Handle, S extends Shape, M extends MorphismTypes
             > | null;
         },
         get to() {
-            const document = store.getDocumentView(handle) as Readonly<ModelDocument>;
+            const document = store.getDocumentSnapshot(handle).document as Readonly<ModelDocument>;
             const judgment = tryGetModelJudgment(document, cellId);
             if (!judgment) {
                 return undefined;
@@ -196,7 +196,7 @@ export function getMorphismCell<Handle, S extends Shape, M extends MorphismTypes
             > | null;
         },
         update(patch) {
-            const document = store.getDocumentView(handle) as Readonly<ModelDocument>;
+            const document = store.getDocumentSnapshot(handle).document as Readonly<ModelDocument>;
             if (!tryGetModelJudgment(document, cellId)) {
                 return;
             }
@@ -241,7 +241,7 @@ export function getModelCell<Handle, S extends Shape, Version>(
     handle: Handle,
     cellId: string,
 ): CellOf<S> {
-    const document = store.getDocumentView(handle) as Readonly<ModelDocument>;
+    const document = store.getDocumentSnapshot(handle).document as Readonly<ModelDocument>;
     const cell = Nb.getCellById(document.notebook, cellId);
     if (cell.tag === "rich-text") {
         return getRichTextCell(store, handle, cellId);

@@ -1,34 +1,28 @@
+import { toJS } from "@automerge/automerge";
 import { Repo, type DocHandle } from "@automerge/automerge-repo";
-import { makeDocumentProjection } from "solid-automerge";
-import { createSignal } from "solid-js";
-import { unwrap } from "solid-js/store";
 
 import type { Document } from "catcolab-document-types";
-import { type DocumentStore, emptyHandlesByLinkType } from "catcolab-documents";
+import {
+    type DocumentStore,
+    emptyHandlesByLinkType,
+    createSnapshotReader,
+} from "catcolab-documents";
 
-type Handle = {
-    docHandle: DocHandle<Document>;
-    view: Document;
-    revision: () => number;
-    bumpRevision: () => void;
-};
+type Handle = { docHandle: DocHandle<Document> };
 
 export function createProjectedStore(): DocumentStore<Handle> {
     const repo = new Repo();
     const handles = new Map<string, Handle>();
+    const snapshotOf = createSnapshotReader<Document>(
+        (document) => document,
+        (document) => toJS<Document>(document),
+    );
+    const getDocumentSnapshot = (handle: Handle) => snapshotOf(handle.docHandle.doc());
 
     return {
         async createHandle(initialDoc) {
             const docHandle = repo.create(initialDoc);
-            const [revision, setRevision] = createSignal(0);
-            const handle = {
-                docHandle,
-                view: makeDocumentProjection(docHandle),
-                revision,
-                bumpRevision: () => {
-                    setRevision((value) => value + 1);
-                },
-            };
+            const handle = { docHandle };
             handles.set(docHandle.documentId, handle);
             return handle;
         },
@@ -40,18 +34,12 @@ export function createProjectedStore(): DocumentStore<Handle> {
         },
         changeDocument: (handle, fn) => handle.docHandle.change(fn),
         subscribe(handle, callback) {
-            const onChange = () => {
-                callback();
-                handle.bumpRevision();
-            };
+            const onChange = ({ doc }: { doc: Document }) => callback(snapshotOf(doc));
             handle.docHandle.on("change", onChange);
             return () => handle.docHandle.off("change", onChange);
         },
-        copyValue: (_handle, value) => structuredClone(unwrap(value)),
         getDocumentRef: (handle) => ({ id: handle.docHandle.documentId, version: null }),
-        getDocumentView: (handle) => handle.view,
-        getDocumentSnapshot: (handle) => handle.docHandle.doc(),
-        getDocumentRevision: (handle) => handle.revision(),
+        getDocumentSnapshot,
         listUsedBy: async () => emptyHandlesByLinkType(),
         listDependsOn: async () => emptyHandlesByLinkType(),
         createDraft: () => {

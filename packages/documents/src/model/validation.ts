@@ -7,7 +7,7 @@ import type {
     InvalidModelEqn,
     ModelPresentation,
 } from "catlog-wasm";
-import { getDocumentSnapshot, type DocumentStore } from "../document-store";
+import type { DocumentSnapshot, DocumentStore } from "../document-store";
 import type { Issue } from "../result";
 import type { Shape } from "../shape";
 import { elaboratedModelFromPresentation, type ModelValidation } from "./elaborated-model";
@@ -180,9 +180,10 @@ export function createNotebookValidator<Handle, S extends Shape>(
     handle: Handle,
 ): NotebookValidator<S> {
     let coreTheory: Promise<DblTheory> | undefined;
+    const validations = new WeakMap<DocumentSnapshot, Promise<ModelValidation<S>>>();
 
     /** Elaborate and validate the current document. */
-    async function elaborateAndValidate(): Promise<ModelValidationState> {
+    async function elaborateAndValidate(snapshot: DocumentSnapshot): Promise<ModelValidationState> {
         if (!shape.getCoreTheory) {
             let shapeName = "unnamed";
             if (shape.theory) {
@@ -197,7 +198,7 @@ export function createNotebookValidator<Handle, S extends Shape>(
                 coreTheory = shape.getCoreTheory();
             }
             const theory = await coreTheory;
-            const document = getDocumentSnapshot(store, handle) as Readonly<ModelDocument>;
+            const document = snapshot.document as Readonly<ModelDocument>;
             return await validateModelDocument(document, theory, store.getDocumentRef(handle).id);
         } catch (error) {
             return {
@@ -207,21 +208,22 @@ export function createNotebookValidator<Handle, S extends Shape>(
     }
 
     /** Convert internal validation state into the public snapshot. */
-    function modelValidationFromState({
-        presentation,
-        issues,
-    }: ModelValidationState): ModelValidation<S> {
+    function modelValidationFromState(
+        { presentation, issues }: ModelValidationState,
+        revision: object,
+    ): ModelValidation<S> {
         return {
+            revision,
             model: elaboratedModelFromPresentation(shape, () => presentation),
             issues,
         };
     }
 
-    const validationStateListeners = new Set<(state: ModelValidationState) => void>();
+    const validationStateListeners = new Set<(validation: ModelValidation<S>) => void>();
     let unsubscribeValidationSource: (() => void) | undefined;
     let revalidationCounter = 0;
 
-    function publishValidationState(state: ModelValidationState): void {
+    function publishValidationState(state: ModelValidation<S>): void {
         for (const listener of validationStateListeners) {
             listener(state);
         }
@@ -230,10 +232,18 @@ export function createNotebookValidator<Handle, S extends Shape>(
     /** Revalidate the document and publish the outcome to listeners. When
     revalidations overlap, only the latest-started one publishes, so listeners
     never observe stale state; every caller still receives its own outcome. */
-    async function revalidate(): Promise<ModelValidationState> {
+    async function revalidate(): Promise<ModelValidation<S>> {
         const ticket = ++revalidationCounter;
-        const state = await elaborateAndValidate();
-        if (ticket === revalidationCounter) {
+        const snapshot = store.getDocumentSnapshot(handle);
+        let validation = validations.get(snapshot);
+        if (validation === undefined) {
+            validation = elaborateAndValidate(snapshot).then((state) =>
+                modelValidationFromState(state, snapshot.revision),
+            );
+            validations.set(snapshot, validation);
+        }
+        const state = await validation;
+        if (ticket === revalidationCounter && store.getDocumentSnapshot(handle) === snapshot) {
             publishValidationState(state);
         }
         return state;
@@ -241,9 +251,7 @@ export function createNotebookValidator<Handle, S extends Shape>(
 
     /** Subscribe to validation state, revalidating on every document change.
     The listener receives an initial publish once revalidation completes. */
-    function subscribeToValidationState(
-        listener: (state: ModelValidationState) => void,
-    ): () => void {
+    function subscribeToValidationState(listener: (state: ModelValidation<S>) => void): () => void {
         validationStateListeners.add(listener);
         if (unsubscribeValidationSource === undefined) {
             unsubscribeValidationSource = store.subscribe(handle, () => {
@@ -259,18 +267,18 @@ export function createNotebookValidator<Handle, S extends Shape>(
             if (validationStateListeners.size === 0) {
                 unsubscribeValidationSource?.();
                 unsubscribeValidationSource = undefined;
+                // Invalidate work started in a previous subscription lifetime.
+                revalidationCounter += 1;
             }
         };
     }
 
     return {
         async validate() {
-            return modelValidationFromState(await revalidate());
+            return revalidate();
         },
         onValidate(callback) {
-            return subscribeToValidationState((state) => {
-                callback(modelValidationFromState(state));
-            });
+            return subscribeToValidationState(callback);
         },
     };
 }

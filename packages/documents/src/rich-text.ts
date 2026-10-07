@@ -31,7 +31,8 @@ export function getRichTextCell<Handle, Version>(
         kind: "rich-text",
         id: cellId,
         get content() {
-            const document = store.getDocumentView(handle) as Readonly<NotebookDocument>;
+            const document = store.getDocumentSnapshot(handle)
+                .document as Readonly<NotebookDocument>;
             return tryGetStoredRichTextCell(document, cellId)?.content;
         },
         update(patch) {
@@ -39,7 +40,8 @@ export function getRichTextCell<Handle, Version>(
             if (content === undefined) {
                 return;
             }
-            const document = store.getDocumentView(handle) as Readonly<NotebookDocument>;
+            const document = store.getDocumentSnapshot(handle)
+                .document as Readonly<NotebookDocument>;
             if (!tryGetStoredRichTextCell(document, cellId)) {
                 return;
             }

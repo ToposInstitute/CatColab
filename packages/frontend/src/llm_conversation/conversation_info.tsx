@@ -1,11 +1,15 @@
 import { A } from "@solidjs/router";
 
+import { createDocumentSelector } from "../documents/reactivity";
 import type { LiveLLMConversationDoc } from "./live_doc_compatibility";
 
 /** Attached document link shown in an LLM conversation document head. */
 export function LLMConversationInfo(props: { liveConversation: LiveLLMConversationDoc }) {
     const attachedRefId = () => props.liveConversation.liveDoc.doc.llmConversationOf._id;
-    const attachedDoc = () => props.liveConversation.attachment.document;
+    const attachedDoc = createDocumentSelector(
+        () => props.liveConversation.attachment,
+        () => props.liveConversation.attachment.document,
+    );
 
     return (
         <>

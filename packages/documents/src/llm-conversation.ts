@@ -3,9 +3,10 @@ import {
     type LLMConversationDocument,
 } from "catcolab-document-methods";
 import type { FeedbackResolution, LLMInteraction, Uuid } from "catcolab-document-types";
-import type { DocumentStore } from "./document-store";
+import type { DeepReadonly, DocumentStore } from "./document-store";
 import type { Shape } from "./shape";
 import type { SupportedDocument } from "./supported-document";
+import { createSubscriptionScope } from "./util/subscription-scope";
 
 export type { LLMConversationDocument } from "catcolab-document-methods";
 
@@ -14,7 +15,7 @@ export interface LLMConversation<A, H> {
     readonly type: "llmconversation";
     readonly handle: H;
     readonly attachment: A;
-    readonly document: Readonly<LLMConversationDocument>;
+    readonly document: DeepReadonly<LLMConversationDocument>;
     readonly title: string;
 
     interactions(): readonly LLMInteraction[];
@@ -29,6 +30,7 @@ export interface LLMConversation<A, H> {
     update(patch: Partial<{ title: string }>): void;
     dump(): LLMConversationDocument;
     onChange(callback: () => void): () => void;
+    dispose(): void;
 }
 
 export function llmConversationFromStore<
@@ -40,8 +42,10 @@ export function llmConversationFromStore<
     handle: Handle,
     attachment: Attachment,
 ): LLMConversation<Attachment, Handle> {
-    function currentDocument(): Readonly<LLMConversationDocument> {
-        return store.getDocumentView(handle) as Readonly<LLMConversationDocument>;
+    const scope = createSubscriptionScope();
+
+    function currentDocument(): DeepReadonly<LLMConversationDocument> {
+        return store.getDocumentSnapshot(handle).document as DeepReadonly<LLMConversationDocument>;
     }
 
     function appendInteractions(interactions: readonly LLMInteraction[]): void {
@@ -62,14 +66,14 @@ export function llmConversationFromStore<
         type: "llmconversation",
         handle,
         attachment,
-        get document(): Readonly<LLMConversationDocument> {
+        get document(): DeepReadonly<LLMConversationDocument> {
             return currentDocument();
         },
         get title(): string {
             return currentDocument().name;
         },
         interactions(): readonly LLMInteraction[] {
-            return currentDocument().interactions;
+            return currentDocument().interactions as readonly LLMInteraction[];
         },
         appendInteraction(interaction: LLMInteraction): void {
             appendInteractions([interaction]);
@@ -104,10 +108,11 @@ export function llmConversationFromStore<
             }
         },
         dump(): LLMConversationDocument {
-            return store.copyValue(handle, currentDocument());
+            return structuredClone(currentDocument()) as LLMConversationDocument;
         },
+        dispose: scope.dispose,
         onChange(callback: () => void): () => void {
-            return store.subscribe(handle, callback);
+            return scope.track(store.subscribe(handle, callback));
         },
     };
 }

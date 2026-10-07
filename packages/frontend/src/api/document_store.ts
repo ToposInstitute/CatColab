@@ -1,15 +1,13 @@
-import { applyPatches, diff, getHeads, type Heads, load, save } from "@automerge/automerge";
+import { applyPatches, diff, getHeads, type Heads, load, save, toJS } from "@automerge/automerge";
 import { DocHandle, generateAutomergeUrl, parseAutomergeUrl } from "@automerge/automerge-repo";
 import type { RelationInfo, UserState } from "catcolab-api/src/user_state";
-import { makeDocumentProjection } from "solid-automerge";
-import { createSignal, type Accessor } from "solid-js";
-import { unwrap } from "solid-js/store";
 import { stringify as uuidStringify } from "uuid";
 
 import type { Document, LinkType } from "catcolab-document-types";
 import {
     type Binder,
     createBinder,
+    createSnapshotReader,
     type DocumentChange,
     type DocumentRef,
     type DocumentStore,
@@ -20,9 +18,6 @@ import type { Api } from "./types";
 
 export type ApiDocumentHandle = {
     automergeHandle: DocHandle<Document>;
-
-    /** Fine-grained reactive view of the document, for use in SolidJS contexts. */
-    docView: Document;
 
     ref: DocumentRef;
 };
@@ -53,24 +48,10 @@ may update while the store lives.
  */
 export function createApiDocumentStore(api: Api, userState: UserState): ApiDocumentStore {
     const handles = new Map<string, ApiDocumentHandle>();
-    const revisions = new WeakMap<
-        ApiDocumentHandle,
-        { read: Accessor<number>; bump: () => void }
-    >();
-    const revisionOf = (handle: ApiDocumentHandle) => {
-        let revision = revisions.get(handle);
-        if (revision === undefined) {
-            const [read, write] = createSignal(0);
-            revision = {
-                read,
-                bump: () => {
-                    write((value) => value + 1);
-                },
-            };
-            revisions.set(handle, revision);
-        }
-        return revision;
-    };
+    const snapshotOf = createSnapshotReader<Document>(
+        (document) => document,
+        (document) => toJS<Document>(document),
+    );
 
     const cacheHandle = (ref: DocumentRef, automergeHandle: DocHandle<Document>) => {
         const existing = handles.get(ref.id);
@@ -78,14 +59,13 @@ export function createApiDocumentStore(api: Api, userState: UserState): ApiDocum
             existing.ref = ref;
             return existing;
         }
-        const handle = { automergeHandle, docView: makeDocumentProjection(automergeHandle), ref };
+        const handle = { automergeHandle, ref };
         handles.set(ref.id, handle);
         return handle;
     };
 
     const draftHandle = (automergeDraft: DocHandle<Document>): ApiDocumentHandle => ({
         automergeHandle: automergeDraft,
-        docView: makeDocumentProjection(automergeDraft),
         ref: {
             id: automergeDraft.documentId,
             version: null,
@@ -170,7 +150,8 @@ export function createApiDocumentStore(api: Api, userState: UserState): ApiDocum
         const draft = new DocHandle<Document>(documentId, () => {
             throw new Error("Document refs are not supported on drafts.");
         });
-        // We `save` and `load` rather than `clone` due to how solidjs and automerge interact: https://github.com/chee/solid-automerge/pull/8
+        // Keep drafts private to this store rather than registering a clone in
+        // the repo (which could synchronize uncommitted edits).
         draft.update(() => load<Document>(save(source.doc())));
         draft.doneLoading();
         return draft;
@@ -185,22 +166,17 @@ export function createApiDocumentStore(api: Api, userState: UserState): ApiDocum
                 automergeHandle,
             );
         },
-        getDocumentView: (handle) => handle.docView,
-        getDocumentSnapshot: (handle) => load<Document>(save(handle.automergeHandle.doc())),
-        getDocumentRevision: (handle) => revisionOf(handle).read(),
+        getDocumentSnapshot: (handle: ApiDocumentHandle) =>
+            snapshotOf(handle.automergeHandle.doc()),
         changeDocument: (handle, fn) => handle.automergeHandle.change(fn),
         subscribe: (handle, callback) => {
-            const onChange = () => {
-                callback();
-                // Cached readers must rerun after their parsed state is refreshed.
-                revisionOf(handle).bump();
+            const onChange = ({ doc }: { doc: Document }) => {
+                const snapshot = snapshotOf(doc);
+                callback(snapshot);
             };
             handle.automergeHandle.on("change", onChange);
-            return () => {
-                handle.automergeHandle.off("change", onChange);
-            };
+            return () => handle.automergeHandle.off("change", onChange);
         },
-        copyValue: (_handle, value) => structuredClone(unwrap(value)),
         getDocumentRef: (handle) => handle.ref,
         async listUsedBy(handle) {
             return resolveLinked(userState.documents[handle.ref.id]?.usedBy ?? []);

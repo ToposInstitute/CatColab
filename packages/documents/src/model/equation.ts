@@ -57,21 +57,21 @@ export function getEquationCell<Handle, S extends Shape, Version>(
         kind: "path-equation",
         id: cellId,
         get label() {
-            const document = store.getDocumentView(handle) as Readonly<ModelDocument>;
+            const document = store.getDocumentSnapshot(handle).document as Readonly<ModelDocument>;
             return tryGetEquationDecl(document, cellId)?.name;
         },
         get lhs() {
-            const document = store.getDocumentView(handle) as Readonly<ModelDocument>;
+            const document = store.getDocumentSnapshot(handle).document as Readonly<ModelDocument>;
             const decl = tryGetEquationDecl(document, cellId);
             return sideFromMor(shape, store, handle, decl?.lhs ?? null);
         },
         get rhs() {
-            const document = store.getDocumentView(handle) as Readonly<ModelDocument>;
+            const document = store.getDocumentSnapshot(handle).document as Readonly<ModelDocument>;
             const decl = tryGetEquationDecl(document, cellId);
             return sideFromMor(shape, store, handle, decl?.rhs ?? null);
         },
         update(patch) {
-            const document = store.getDocumentView(handle) as Readonly<ModelDocument>;
+            const document = store.getDocumentSnapshot(handle).document as Readonly<ModelDocument>;
             if (!tryGetEquationDecl(document, cellId)) {
                 return;
             }

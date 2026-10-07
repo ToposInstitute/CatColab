@@ -10,7 +10,7 @@ export function deleteNotebookCell<Handle, Version>(
     handle: Handle,
     cellId: string,
 ): boolean {
-    const document = store.getDocumentView(handle) as Readonly<NotebookDocument>;
+    const document = store.getDocumentSnapshot(handle).document as Readonly<NotebookDocument>;
     const currentIndex = document.notebook.cellOrder.indexOf(cellId);
     if (currentIndex < 0) {
         return false;

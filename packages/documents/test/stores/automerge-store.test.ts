@@ -3,7 +3,7 @@
 // A simple Automerge store: handles are `DocHandle`s in a `Repo`, changes go
 // through `DocHandle.change`, and copied values are materialized off the
 // Automerge backend.
-import { getBackend, getObjectId } from "@automerge/automerge";
+import { toJS } from "@automerge/automerge";
 import { type DocHandle, Repo } from "@automerge/automerge-repo";
 import { SimpleOlog, Type } from "catcolab-logics/simple-olog";
 import { describe, expect, test } from "vitest";
@@ -11,6 +11,7 @@ import { describe, expect, test } from "vitest";
 import type { Document } from "catcolab-document-types";
 import {
     createBinder,
+    createSnapshotReader,
     type DocumentStore,
     documentLinks,
     emptyHandlesByLinkType,
@@ -21,27 +22,24 @@ const repo = new Repo();
 // Handles minted by the store, so `listUsedBy` can enumerate them.
 const createdHandles = new Set<DocHandle<Document>>();
 
+const getDocumentSnapshot = createSnapshotReader<DocHandle<Document>>(
+    (handle) => handle.doc(),
+    (doc) => toJS<Document>(doc as Document),
+);
+
 const automergeStore: DocumentStore<DocHandle<Document>> = {
     createHandle: async (initialDoc) => {
         const handle = repo.create<Document>(initialDoc as Document);
         createdHandles.add(handle);
         return handle;
     },
+    getDocumentSnapshot,
     changeDocument: (handle, fn) => handle.change(fn),
     subscribe: (handle, callback) => {
-        const onChange = () => callback();
+        const onChange = () => callback(getDocumentSnapshot(handle));
         handle.on("change", onChange);
         return () => handle.off("change", onChange);
     },
-    copyValue: (handle, value) => {
-        const doc = handle.doc();
-        const objId = getObjectId(value as object);
-        if (objId === null) {
-            throw new Error("value is not part of the document");
-        }
-        return getBackend(doc).materialize(objId) as typeof value;
-    },
-    getDocumentView: (handle) => handle.doc(),
     getDocumentRef: (handle) => ({ id: handle.documentId, version: null, server: "" }),
     listUsedBy: async (handle) => {
         const linked = emptyHandlesByLinkType<DocHandle<Document>>();

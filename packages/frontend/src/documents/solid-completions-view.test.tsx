@@ -7,6 +7,7 @@ import { describe, expect, test } from "vitest";
 // Validation accessors feed completions to a Solid component.
 import { createBinder, type MorphismCell, type Notebook } from "catcolab-documents";
 import { createProjectedStore } from "./projected-store";
+import { createDocumentSelector } from "./reactivity";
 import { createNotebookValidation } from "./validation";
 
 /** Shows an attribute's codomain and offers completions for replacing it,
@@ -19,6 +20,10 @@ function CodomainPicker(props: {
 }) {
     // oxlint-disable-next-line solid/reactivity -- The picker is keyed on the notebook.
     const validation = createNotebookValidation(props.notebook);
+    const selectedLabel = createDocumentSelector(
+        () => props.notebook,
+        () => props.attrCell.to?.label ?? "?",
+    );
 
     const completions = () =>
         validation()
@@ -28,7 +33,7 @@ function CodomainPicker(props: {
 
     return (
         <span>
-            <span class="selected">{props.attrCell.to?.label ?? "?"}</span>
+            <span class="selected">{selectedLabel()}</span>
             <ul class="completion-list">
                 <For each={completions()}>
                     {(label) => <li onClick={() => props.onSelect(label)}>{label}</li>}

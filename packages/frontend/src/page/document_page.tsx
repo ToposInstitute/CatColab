@@ -126,13 +126,22 @@ export default function DocumentPage() {
         }
     });
 
+    // Resource fetches can finish after replacement or unmount. Release both
+    // superseded bound documents and late results, not just the rendered pane.
     const createDisposingDocumentLoader = () => {
-        let currentInstance: LiveInstanceDoc["instance"] | undefined;
+        let current: AnyLiveDocWithRef | undefined;
         let generation = 0;
         let active = true;
+        const dispose = (doc: AnyLiveDocWithRef | undefined) => {
+            if (doc?.liveDoc.type === "instance") {
+                doc.liveDoc.instance.dispose();
+            } else if (doc?.liveDoc.type === "llmconversation") {
+                doc.liveDoc.conversation.dispose();
+            }
+        };
         onCleanup(() => {
             active = false;
-            currentInstance?.dispose();
+            dispose(current);
         });
         return async (refId: string | undefined, kind: DocumentType) => {
             const ticket = ++generation;
@@ -140,15 +149,11 @@ export default function DocumentPage() {
                 refId === undefined
                     ? undefined
                     : await getLiveDocument(refId, api, models, binder, kind);
-            if (loaded?.liveDoc.type === "instance") {
-                const loadedInstance = loaded.liveDoc.instance;
-                // It may have become in-active during await of getLiveDocument
-                if (!active || ticket !== generation) {
-                    loadedInstance?.dispose();
-                } else {
-                    currentInstance?.dispose();
-                    currentInstance = loadedInstance;
-                }
+            if (!active || ticket !== generation) {
+                dispose(loaded);
+            } else {
+                dispose(current);
+                current = loaded;
             }
             return loaded;
         };

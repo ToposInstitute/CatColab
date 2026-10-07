@@ -1,16 +1,17 @@
-import { createStore, reconcile, type SetStoreFunction, unwrap } from "solid-js/store";
+import { createStore, reconcile, type SetStoreFunction } from "solid-js/store";
 
 import type { Document } from "catcolab-document-types";
 // A SolidJS document store: keeps a draft document plus a Solid store view
 // reconciled on every change.
-import type { DocumentStore } from "catcolab-documents";
-import { documentLinks, emptyHandlesByLinkType } from "catcolab-documents";
+import type { DocumentSnapshot, DocumentStore } from "catcolab-documents";
+import { createDocumentSnapshot, documentLinks, emptyHandlesByLinkType } from "catcolab-documents";
 
 export type SolidStoreHandle = {
     draftDoc: Document;
     docView: Document;
     setDocView: SetStoreFunction<Document>;
-    listeners: Set<() => void>;
+    listeners: Set<(snapshot: DocumentSnapshot) => void>;
+    snapshot: DocumentSnapshot;
 };
 
 // Every store mints a stable reference for its handles; this one assigns an id
@@ -33,21 +34,35 @@ export const solidStore: DocumentStore<SolidStoreHandle> = {
     async createHandle(initialDoc) {
         const draftDoc = structuredClone(initialDoc);
         const [docView, setDocView] = createStore<Document>(initialDoc);
-        const handle = { draftDoc, docView, setDocView, listeners: new Set<() => void>() };
+        const handle = {
+            draftDoc,
+            docView,
+            setDocView,
+            listeners: new Set<(snapshot: DocumentSnapshot) => void>(),
+            snapshot: createDocumentSnapshot(draftDoc),
+        };
         createdHandles.add(handle);
         return handle;
     },
     changeDocument: (handle, fn) => {
         fn(handle.draftDoc);
         handle.setDocView(reconcile(structuredClone(handle.draftDoc), { key: "id" }));
+        const snapshot = createDocumentSnapshot(handle.draftDoc);
+        handle.snapshot = snapshot;
         for (const listener of Array.from(handle.listeners)) {
-            listener();
+            listener(snapshot);
         }
     },
     createDraft: (handle) => {
         const draftDoc = structuredClone(handle.draftDoc);
         const [docView, setDocView] = createStore<Document>(draftDoc);
-        return { draftDoc, docView, setDocView, listeners: new Set() };
+        return {
+            draftDoc,
+            docView,
+            setDocView,
+            listeners: new Set<(snapshot: DocumentSnapshot) => void>(),
+            snapshot: createDocumentSnapshot(draftDoc),
+        };
     },
     commitDraft: (handle, draft) => {
         const before = structuredClone(handle.draftDoc);
@@ -76,8 +91,7 @@ export const solidStore: DocumentStore<SolidStoreHandle> = {
             handle.listeners.delete(callback);
         };
     },
-    copyValue: (_handle, value) => structuredClone(unwrap(value)),
-    getDocumentView: (handle) => handle.docView,
+    getDocumentSnapshot: (handle) => handle.snapshot,
     getDocumentRef: (handle) => ({ id: solidStoreIdFor(handle), version: null, server: "" }),
     listUsedBy: async (handle) => {
         const linked = emptyHandlesByLinkType<SolidStoreHandle>();

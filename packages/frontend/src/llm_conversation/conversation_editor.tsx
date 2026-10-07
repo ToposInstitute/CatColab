@@ -4,6 +4,7 @@ import {
     type LLMConversationInput,
     LLMConversationEditor as LLMConversationEditorView,
 } from "catcolab-ui-components";
+import { createDocumentView } from "../documents/reactivity";
 import { useInferenceKey } from "../user/inference_key_context";
 import { createLLMConversationController } from "./conversation_controller";
 import type { ApiLLMConversation } from "./live_doc_compatibility";
@@ -11,8 +12,12 @@ import type { ApiLLMConversation } from "./live_doc_compatibility";
 export function LLMConversationEditor(props: { conversation: ApiLLMConversation }) {
     const inferenceKey = useInferenceKey();
     const controller = createLLMConversationController(() => props.conversation, inferenceKey);
+    const stored = createDocumentView(
+        () => props.conversation,
+        () => ({ interactions: props.conversation.interactions() }),
+    );
     const interactions = createMemo(() => [
-        ...props.conversation.interactions(),
+        ...stored.interactions,
         ...controller.state.liveInteractions,
     ]);
     const submit = async (input: LLMConversationInput): Promise<boolean> => {

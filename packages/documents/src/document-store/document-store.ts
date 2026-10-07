@@ -50,6 +50,51 @@ export interface DocumentChange<Version> {
     after: Version;
 }
 
+/** A plain, immutable value. No framework proxies cross the storage boundary. */
+export type DeepReadonly<T> = T extends object
+    ? { readonly [K in keyof T]: DeepReadonly<T[K]> }
+    : T;
+
+/** One published version of a document. Equality of revisions is opaque. */
+export interface DocumentSnapshot {
+    readonly revision: object;
+    readonly document: DeepReadonly<Document>;
+}
+
+/** Create a document snapshot. */
+export function createDocumentSnapshot(document: Readonly<Document>): DocumentSnapshot {
+    const copy = structuredClone(document);
+    // Recursively freeze the copy.
+    function freeze(value: unknown): void {
+        if (value !== null && typeof value === "object" && !Object.isFrozen(value)) {
+            for (const child of Object.values(value)) {
+                freeze(child);
+            }
+            Object.freeze(value);
+        }
+    }
+    freeze(copy);
+    return Object.freeze({ revision: Object.freeze({}), document: copy });
+}
+
+/** Adapt an immutable backend read (e.g. Automerge's doc()). Mutable backends
+ * must instead materialize and publish a new snapshot after each change. */
+export function createSnapshotReader<Handle>(
+    read: (handle: Handle) => Readonly<Document>,
+    materialize: (document: Readonly<Document>) => Readonly<Document> = (document) => document,
+): (handle: Handle) => DocumentSnapshot {
+    const snapshots = new WeakMap<Readonly<Document>, DocumentSnapshot>();
+    return (handle) => {
+        const document = read(handle);
+        let snapshot = snapshots.get(document);
+        if (snapshot === undefined) {
+            snapshot = createDocumentSnapshot(materialize(document));
+            snapshots.set(document, snapshot);
+        }
+        return snapshot;
+    };
+}
+
 export interface DocumentStore<Handle, Version = unknown> {
     // An async function to create a document handle from initial data.
     createHandle(initialDoc: Document): Promise<Handle>;
@@ -58,20 +103,17 @@ export interface DocumentStore<Handle, Version = unknown> {
     getHandle(ref: DocumentRef): Promise<Result<Handle>>;
     // Apply modifications to a handle.
     changeDocument(handle: Handle, fn: (doc: Document) => void): void;
-    // Subscribe change callbacks to our store for `onChange`. Returns a
-    // function to unsubscribe.
-    subscribe(handle: Handle, callback: () => void): () => void;
-    // Copy values (with any proxies removed)
-    copyValue<T>(handle: Handle, value: T): T;
+    /** Subscribe without an initial delivery. Publish the snapshot before calling
+     * listeners. Local changes, commits and undo publish synchronously; remote
+     * edits publish when applied. Reentrant notifications are queued until the
+     * current event finishes; each event carries its own snapshot, even if a
+     * listener has already published a newer value. Unsubscribe is idempotent. */
+    subscribe(handle: Handle, callback: (snapshot: DocumentSnapshot) => void): () => void;
+    /** Current snapshot, including when no listeners exist. Repeated unchanged
+     * reads return the same envelope. Previously returned values never mutate. */
+    getDocumentSnapshot(handle: Handle): DocumentSnapshot;
     // Get the reference for a handle
     getDocumentRef(handle: Handle): DocumentRef;
-    // Get a document view from a handle
-    getDocumentView(handle: Handle): Readonly<Document>;
-    // Optional reactive revision, updated after change callbacks have run.
-    // Cached readers access it to participate in the store's reactive system.
-    getDocumentRevision?(handle: Handle): unknown;
-    // An unproxied snapshot, if the store can obtain one more directly than copyValue.
-    getDocumentSnapshot?(handle: Handle): Readonly<Document>;
     // List the documents that depend on the document at `handle`, indexed by
     // the type of the link through which each depends on it.
     listUsedBy(handle: Handle): Promise<HandlesByLinkType<Handle>>;
@@ -92,9 +134,6 @@ export interface DocumentStore<Handle, Version = unknown> {
 export function getDocumentSnapshot<Handle>(
     store: DocumentStore<Handle>,
     handle: Handle,
-): Readonly<Document> {
-    return (
-        store.getDocumentSnapshot?.(handle) ??
-        store.copyValue(handle, store.getDocumentView(handle))
-    );
+): DeepReadonly<Document> {
+    return store.getDocumentSnapshot(handle).document;
 }

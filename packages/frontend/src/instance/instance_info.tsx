@@ -1,10 +1,14 @@
 import { A } from "@solidjs/router";
 
+import { createDocumentSelector } from "../documents/reactivity";
 import type { LiveInstanceDoc } from "./live_doc_compatibility";
 
 /** Parent model link shown in an instance document head. */
 export function InstanceInfo(props: { liveInstance: LiveInstanceDoc }) {
-    const modelRefId = () => props.liveInstance.instance.document.instanceOf._id;
+    const modelRefId = createDocumentSelector(
+        () => props.liveInstance.instance,
+        () => props.liveInstance.instance.document.instanceOf._id,
+    );
 
     return (
         <>
