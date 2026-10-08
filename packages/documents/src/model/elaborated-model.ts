@@ -41,7 +41,7 @@ export interface MorphismJudgment<
 /** A judgment of an elaborated model.*/
 /** One side of an elaborated equation: the identity on an object, or a
 composite of morphism judgments. Morphisms that cannot be resolved are `null`. */
-export type EquationJudgmentSide<S extends Shape> =
+export type EquationJudgmentSide<S extends Shape = Shape> =
     | ObjectJudgment<ObjectTypesOf<S>>
     | {
           readonly kind: "composite";
@@ -50,7 +50,7 @@ export type EquationJudgmentSide<S extends Shape> =
 
 /** An equation judgment of an elaborated model. Mirrors [`EquationCell`], minus
 mutation. */
-export interface EquationJudgment<S extends Shape> {
+export interface EquationJudgment<S extends Shape = Shape> {
     readonly kind: "path-equation";
     readonly id: string;
     readonly label: QualifiedLabel;
@@ -59,7 +59,7 @@ export interface EquationJudgment<S extends Shape> {
 }
 
 /** A judgment of an elaborated model.*/
-export type JudgmentOf<S extends Shape> =
+export type JudgmentOf<S extends Shape = Shape> =
     | ObjectJudgment<ObjectTypesOf<S>>
     | MorphismJudgment<S, MorphismTypesOf<S>>
     | EquationJudgment<S>;
@@ -68,7 +68,7 @@ export type JudgmentOf<S extends Shape> =
 
 The API mirrors the notebook's `cells`/`cellsOf`: judgments are returned in
 presentation order (objects first, then morphisms, then equations). */
-export interface ElaboratedModel<out S extends Shape> {
+export interface ElaboratedModel<out S extends Shape = Shape> {
     judgments(): ReadonlyArray<JudgmentOf<S>>;
 
     /** Judgments of the given cell type or shape, in presentation order.
@@ -86,7 +86,7 @@ export interface ElaboratedModel<out S extends Shape> {
 Elaboration and validation are separate steps, so `model` is always available:
 it contains the elaborated judgments even when validation fails. The model is
 empty when elaboration fails or the core theory cannot be loaded. */
-export interface ModelValidation<out S extends Shape> {
+export interface ModelValidation<out S extends Shape = Shape> {
     readonly model: ElaboratedModel<S>;
     /** Validation issues; empty when the notebook is valid. */
     readonly issues: ReadonlyArray<Issue>;
