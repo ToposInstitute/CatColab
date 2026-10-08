@@ -8,7 +8,7 @@ import type { Shape } from "./shape";
  * The kinds of document objects that can be created through a `Binder` and
  * staged in a transaction.
  */
-export type SupportedDocument<S extends Shape, H, V> =
+export type SupportedDocument<S extends Shape = Shape, H = unknown, V = unknown> =
     | Notebook<S, ModelDocument, H, V>
-    | Instance<H, S, V>
+    | Instance<S, H, V>
     | LLMConversation<SupportedDocument<S, H, V>, H>;

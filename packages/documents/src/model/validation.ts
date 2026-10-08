@@ -164,7 +164,7 @@ export async function validateModelDocument(
 }
 
 /** One-shot validation and change callbacks for a notebook. */
-export interface NotebookValidator<S extends Shape> {
+export interface NotebookValidator<S extends Shape = Shape> {
     validate(): Promise<ModelValidation<S>>;
     onValidate(callback: (result: ModelValidation<S>) => void): () => void;
 }

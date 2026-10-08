@@ -27,7 +27,7 @@ export function createNotebookValidation<S extends Shape>(
 }
 
 export function createInstanceValidation<H, S extends Shape, V>(
-    instance: Instance<H, S, V>,
+    instance: Instance<S, H, V>,
 ): Accessor<InstanceValidation<S> | undefined> {
     return createValidationAccessor((callback) => instance.onValidate(callback));
 }
