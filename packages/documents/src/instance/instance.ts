@@ -23,7 +23,7 @@ import type { FieldValue, InstancePath, InstanceTable, LiteralValue, TableRow } 
 export type { InstanceDocument } from "catcolab-document-methods";
 
 /** API for an instance document and its schema-derived tables. */
-export interface Instance<H, S extends Shape, V> {
+export interface Instance<S extends Shape = Shape, H = unknown, V = unknown> {
     readonly handle: H;
     readonly shape: S;
     readonly document: Readonly<InstanceDocument>;
@@ -81,7 +81,7 @@ export interface Instance<H, S extends Shape, V> {
 }
 
 /** The result of validating an instance and its schema. */
-export interface InstanceValidation<out S extends Shape> {
+export interface InstanceValidation<out S extends Shape = Shape> {
     /** The result of elaborating and validating the instance's schema. */
     readonly modelValidation: ModelValidation<S>;
     /** The instance's tables, including any orphaned stored data. */
@@ -100,7 +100,7 @@ export function instanceFromStore<Handle, S extends Shape, Version>(
     schema: Notebook<S, ModelDocument, Handle, Version>,
     store: DocumentStore<Handle, Version>,
     handle: Handle,
-): Instance<Handle, S, Version> {
+): Instance<S, Handle, Version> {
     function currentDocument(): Readonly<InstanceDocument> {
         return store.getDocumentView(handle) as Readonly<InstanceDocument>;
     }
@@ -135,7 +135,7 @@ export function instanceFromStore<Handle, S extends Shape, Version>(
         });
     }
 
-    const instance: Instance<Handle, S, Version> = {
+    const instance: Instance<S, Handle, Version> = {
         handle,
         shape: schema.shape,
         get document(): Readonly<InstanceDocument> {

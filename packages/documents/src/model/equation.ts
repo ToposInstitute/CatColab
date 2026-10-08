@@ -11,12 +11,12 @@ morphisms. The empty composite means the side is unspecified.
 
 Null morphisms are tolerated in both directions: reading yields them for
 references that cannot be resolved, while writing drops them. */
-export type EquationSide<S extends Shape> =
+export type EquationSide<S extends Shape = Shape> =
     | ObjectCell<ObjectTypesOf<S>>
     | ReadonlyArray<MorphismCell<S, MorphismTypesOf<S>> | null>;
 
 /** An equation between two paths of morphisms in a model. */
-export interface EquationCell<S extends Shape> {
+export interface EquationCell<S extends Shape = Shape> {
     readonly kind: "path-equation";
     readonly id: string;
     readonly label: string | undefined;
