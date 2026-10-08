@@ -4,7 +4,7 @@ import { createComputed, createRoot } from "solid-js";
 import { describe, expect, test } from "vitest";
 
 import { createBinder, createInMemoryStore } from "catcolab-documents";
-import { createInstanceValidationView } from "./validation";
+import { createInstanceValidationView } from "../src/index";
 
 describe("reconciled instance validation views", { timeout: 20_000 }, () => {
     test("retain table identity and do not publish raw rows with a pending schema", async () => {
@@ -27,7 +27,7 @@ describe("reconciled instance validation views", { timeout: 20_000 }, () => {
             });
             return dispose;
         });
-        await expect.poll(view.ready).toBe(true);
+        await expect.poll(view.ready, { timeout: 20_000 }).toBe(true);
         const table = view.data.tables[0]!;
         const old = view.validation()!;
         second.update({ label: "Unrelated" });

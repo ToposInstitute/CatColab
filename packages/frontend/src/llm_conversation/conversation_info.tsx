@@ -1,6 +1,6 @@
 import { A } from "@solidjs/router";
+import { createAutomergeDocumentView } from "catcolab-documents-solid-automerge/automerge";
 
-import { createAutomergeDocumentView } from "../documents/reactivity";
 import type { LiveLLMConversationDoc } from "./live_doc_compatibility";
 
 /** Attached document link shown in an LLM conversation document head. */

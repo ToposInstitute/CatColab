@@ -1,0 +1,49 @@
+{
+    "name": "catcolab-documents-solid-automerge",
+    "version": "0.1.0",
+    "private": true,
+    "license": "MIT",
+    "type": "module",
+    "exports": {
+        ".": "./src/index.ts",
+        "./automerge": "./src/automerge.ts"
+    },
+    "scripts": {
+        "check": "tsc -p tsconfig.json && pnpm run lint",
+        "lint": "oxlint --fix && oxfmt .",
+        "test": "vitest run",
+        "ci": "tsc -p tsconfig.json && oxlint --deny-warnings && oxfmt --check ."
+    },
+    "dependencies": {
+        "catcolab-document-types": "link:../document-types/pkg",
+        "catcolab-documents": "link:../documents"
+    },
+    "devDependencies": {
+        "@automerge/automerge": "^3.5.0",
+        "@automerge/automerge-repo": "^2.5.6",
+        "@catcolab-dev-tools/vite-plugin-monorepo-dedupe": "link:../../tools/vite-plugin-monorepo-dedupe",
+        "@types/node": "^24.0.0",
+        "catcolab-logics": "link:../logics",
+        "happy-dom": "^20.0.0",
+        "solid-automerge": "^2.0.1",
+        "solid-js": "^1.9.15",
+        "typescript": "^6.0.3",
+        "vite": "^7.2.2",
+        "vite-plugin-solid": "^2.11.14",
+        "vite-plugin-wasm": "^3.5.0",
+        "vitest": "4.1.10"
+    },
+    "peerDependencies": {
+        "@automerge/automerge-repo": "^2.5.6",
+        "solid-automerge": "^2.0.1",
+        "solid-js": "^1.9.15"
+    },
+    "peerDependenciesMeta": {
+        "@automerge/automerge-repo": {
+            "optional": true
+        },
+        "solid-automerge": {
+            "optional": true
+        }
+    }
+}

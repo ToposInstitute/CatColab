@@ -50,6 +50,7 @@
         "catcolab-document-methods": "link:../document-methods",
         "catcolab-document-types": "link:../document-types/pkg",
         "catcolab-documents": "link:../documents",
+        "catcolab-documents-solid-automerge": "link:../documents-solid-automerge",
         "catcolab-logics": "link:../logics",
         "catcolab-ui-components": "link:../ui-components",
         "catlog-wasm": "link:../catlog-wasm/dist/pkg-browser",

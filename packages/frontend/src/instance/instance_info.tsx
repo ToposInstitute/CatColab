@@ -1,6 +1,6 @@
 import { A } from "@solidjs/router";
+import { createAutomergeDocumentView } from "catcolab-documents-solid-automerge/automerge";
 
-import { createAutomergeDocumentView } from "../documents/reactivity";
 import type { LiveInstanceDoc } from "./live_doc_compatibility";
 
 /** Parent model link shown in an instance document head. */

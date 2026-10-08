@@ -51,7 +51,7 @@ export type { CellOf as NotebookCell, MorphismCell, ObjectCell } from "./model/c
 export type { ModelDocument } from "./model/document";
 export type { EquationCell, EquationSide } from "./model/equation";
 export { modelNotebookFromStore, cellMatchesFilter } from "./model/notebook";
-export { decodeEquationSide } from "./model/equation-translate";
+export { createCellReadView, describeModelCell } from "./model/cell-reads";
 export type { Notebook } from "./model/notebook";
 export type {
     JudgmentOf,

@@ -1,3 +1,4 @@
+import { createAutomergeDocumentView } from "catcolab-documents-solid-automerge/automerge";
 import { getAuth } from "firebase/auth";
 import Plus from "lucide-solid/icons/plus";
 import X from "lucide-solid/icons/x";
@@ -10,7 +11,6 @@ import type { Document } from "catcolab-document-types";
 import type { DeepReadonly } from "catcolab-documents";
 import { DocumentTypeIcon, IconButton, InlineInput } from "catcolab-ui-components";
 import { documentTypeLabel, type LiveDocWithRef, useApi, useBinder } from "../api";
-import { createAutomergeDocumentView } from "../documents/reactivity";
 import { DEFAULT_LLM_MODEL } from "../inference/chat";
 import { ModelLibraryContext } from "../model";
 import { PageActionsContext } from "../page/context";

@@ -5,12 +5,8 @@ import { describe, expect, test, vi } from "vitest";
 
 import type { Document } from "catcolab-document-types";
 import { createInMemoryStore } from "catcolab-documents";
-import {
-    createAutomergeDocumentView,
-    createDocumentAccessor,
-    createDocumentSelector,
-    createDocumentView,
-} from "./reactivity";
+import { createAutomergeDocumentView } from "../src/automerge";
+import { createDocumentAccessor, createDocumentSelector, createDocumentView } from "../src/index";
 
 const document = (): Document => ({
     type: "instance",

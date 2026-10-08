@@ -1,3 +1,6 @@
+import type { NotebookView } from "catcolab-documents-solid-automerge";
+import { createNotebookValidation } from "catcolab-documents-solid-automerge";
+import { createAutomergeNotebookView } from "catcolab-documents-solid-automerge/automerge";
 // @vitest-environment happy-dom
 import { Attr, AttrType, Entity, SimpleSchema } from "catcolab-logics/simple-schema";
 import { type Accessor, createSignal, For } from "solid-js";
@@ -11,16 +14,14 @@ import {
     type ObjectCell,
     type Notebook,
 } from "catcolab-documents";
-import { createAutomergeNotebookView, type NotebookView } from "./notebook_view";
 import { createProjectedStore } from "./projected-store";
-import { createNotebookValidation } from "./validation";
 
 /** Shows an attribute's codomain and offers completions for replacing it,
 drawn from the validated model's attribute types. */
 function CodomainPicker(props: {
     attrCell: MorphismCell<typeof SimpleSchema, typeof Attr>;
     notebook: Notebook<typeof SimpleSchema>;
-    view: NotebookView<typeof SimpleSchema, unknown, unknown>;
+    view: NotebookView<typeof SimpleSchema>;
     text: Accessor<string>;
     onSelect: (label: string) => void;
 }) {

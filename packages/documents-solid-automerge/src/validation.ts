@@ -1,11 +1,4 @@
-import {
-    type Accessor,
-    createComputed,
-    createSignal,
-    getOwner,
-    onCleanup,
-    untrack,
-} from "solid-js";
+import { type Accessor, createComputed, createSignal, onCleanup, untrack } from "solid-js";
 import { createStore, reconcile } from "solid-js/store";
 
 import type {
@@ -17,13 +10,12 @@ import type {
     Notebook,
     Shape,
 } from "catcolab-documents";
+import { requireOwner } from "./owner";
 
 function createValidationAccessor<T>(
     subscribe: (callback: (value: T) => void) => () => void,
 ): Accessor<T | undefined> {
-    if (!getOwner()) {
-        throw new Error("Validation accessors must be created within a Solid owner.");
-    }
+    requireOwner();
     const [validation, setValidation] = createSignal<T>();
     const unsubscribe = subscribe((value) => setValidation(() => value));
     onCleanup(unsubscribe);

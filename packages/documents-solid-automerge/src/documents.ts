@@ -1,35 +1,11 @@
-import type { DocHandle } from "@automerge/automerge-repo";
-import { makeDocumentProjection } from "solid-automerge";
-import {
-    type Accessor,
-    createComputed,
-    createMemo,
-    createSignal,
-    getOwner,
-    onCleanup,
-    untrack,
-} from "solid-js";
+import { type Accessor, createComputed, createSignal, onCleanup, untrack } from "solid-js";
 import { createStore, reconcile, type Store } from "solid-js/store";
 
 import type { DocumentSnapshot, DocumentStore } from "catcolab-documents";
+import { requireOwner } from "./owner";
 
 type ChangeSource = { onChange(callback: () => void): () => void };
 type Source = ChangeSource | Accessor<ChangeSource>;
-
-function requireOwner(): void {
-    if (!getOwner()) {
-        throw new Error("Document accessors must be created within a Solid owner.");
-    }
-}
-
-/** Patch-backed raw document reads, owned exclusively by the frontend.
- * Replacing the handle releases the previous projection; writes belong to command facades. */
-export function createAutomergeDocumentView<T extends object>(
-    handle: Accessor<DocHandle<T>>,
-): Accessor<Store<T>> {
-    requireOwner();
-    return createMemo(() => makeDocumentProjection(handle()));
-}
 
 /** Translate the explicit storage subscription into a Solid dependency. */
 export function createDocumentAccessor<H, V>(

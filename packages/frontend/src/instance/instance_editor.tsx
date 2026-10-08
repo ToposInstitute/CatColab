@@ -1,8 +1,8 @@
+import { createInstanceValidationView } from "catcolab-documents-solid-automerge";
 import { createEffect, createMemo, Index, onCleanup, Show } from "solid-js";
 
 import type { Result, TableIssue } from "catcolab-documents";
 import { type FocusHandle, Spinner, TableEditor, useChildFocus } from "catcolab-ui-components";
-import { createInstanceValidationView } from "../documents/validation";
 import type { ApiInstance } from "./live_doc_compatibility";
 import { useTableList } from "./table_list";
 

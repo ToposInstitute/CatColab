@@ -13,7 +13,8 @@ import {
     type ObjectCell,
     type RichTextCell,
 } from "catcolab-documents";
-import { createAutomergeNotebookView, createReconciledNotebookView } from "./notebook_view";
+import { createAutomergeNotebookView } from "../src/automerge";
+import { createNotebookView } from "../src/index";
 import { createProjectedStore } from "./projected-store";
 
 const objectView = (value: unknown) => value as ObjectCell<typeof Entity>;
@@ -193,7 +194,7 @@ describe("reactive bound notebook views", { timeout: 20_000 }, () => {
         const other = notebook.add(Entity, { label: "Other" });
         const seen: Array<string | undefined> = [];
         const dispose = createRoot((dispose) => {
-            const view = createReconciledNotebookView(() => notebook);
+            const view = createNotebookView(() => notebook);
             const first = objectView(view().cell(person.id));
             createComputed(() => {
                 seen.push(first.label);

@@ -1,10 +1,10 @@
+import { createAutomergeDocumentView } from "catcolab-documents-solid-automerge/automerge";
 import { createMemo } from "solid-js";
 
 import {
     type LLMConversationInput,
     LLMConversationEditor as LLMConversationEditorView,
 } from "catcolab-ui-components";
-import { createAutomergeDocumentView } from "../documents/reactivity";
 import { useInferenceKey } from "../user/inference_key_context";
 import { createLLMConversationController } from "./conversation_controller";
 import type { ApiLLMConversation } from "./live_doc_compatibility";
