@@ -42,7 +42,7 @@ export function createInstanceValidationView<H, S extends Shape, V>(instance: In
     return { validation, data, ready: () => validation() !== undefined };
 }
 
-export function createInstanceValidation<H, S extends Shape, V>(
+function createInstanceValidation<H, S extends Shape, V>(
     instance: Instance<S, H, V>,
 ): Accessor<InstanceValidation<S> | undefined> {
     return createValidationAccessor((callback) => instance.onValidate(callback));

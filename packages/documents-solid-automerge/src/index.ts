@@ -1,2 +1,2 @@
 export { createAutomergeDocumentView } from "./automerge";
-export { createInstanceValidation, createInstanceValidationView } from "./validation";
+export { createInstanceValidationView } from "./validation";

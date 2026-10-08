@@ -5,7 +5,7 @@ import { createEffect, createRoot } from "solid-js";
 import { describe, expect, test } from "vitest";
 
 import { createBinder, createInMemoryStore } from "catcolab-documents";
-import { createInstanceValidation } from "../src/index";
+import { createInstanceValidationView } from "../src/index";
 import { createNotebookValidation } from "./utils/validation";
 
 describe("Solid validation accessors", { timeout: 20_000 }, () => {
@@ -54,14 +54,14 @@ describe("Solid validation accessors", { timeout: 20_000 }, () => {
         }
 
         let validation!: ReturnType<
-            typeof createInstanceValidation<
+            typeof createInstanceValidationView<
                 typeof result.content.handle,
                 typeof SimpleSchema,
                 unknown
             >
-        >;
+        >["validation"];
         const dispose = createRoot((dispose) => {
-            validation = createInstanceValidation(result.content);
+            validation = createInstanceValidationView(result.content).validation;
             return dispose;
         });
         await expect.poll(() => validation(), { timeout: 20_000 }).toBeDefined();
