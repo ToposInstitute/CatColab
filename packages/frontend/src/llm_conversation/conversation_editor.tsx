@@ -1,4 +1,4 @@
-import { createAutomergeDocumentView } from "catcolab-documents-solid-automerge/automerge";
+import { createAutomergeDocumentView } from "catcolab-documents-solid-automerge";
 import { createMemo } from "solid-js";
 
 import {

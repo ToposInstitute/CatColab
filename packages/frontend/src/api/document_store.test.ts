@@ -4,7 +4,6 @@
 import { getObjectId, spans, splice, splitBlock } from "@automerge/automerge";
 import { Repo } from "@automerge/automerge-repo";
 import type { UserState } from "catcolab-api/src/user_state";
-import { createDocumentAccessor } from "catcolab-documents-solid-automerge";
 import { SimpleOlog, Type } from "catcolab-logics/simple-olog";
 import { createRenderEffect, createRoot } from "solid-js";
 import { parse as uuidParse } from "uuid";
@@ -17,6 +16,7 @@ import {
     Nb,
 } from "catcolab-document-methods";
 import { createBinder, defineShape, type InstanceDocument } from "catcolab-documents";
+import { createDocumentAccessor } from "../../../documents-solid-automerge/test/utils/documents";
 import { makeLiveDoc } from "./document";
 import { createApiDocumentStore } from "./document_store";
 import type { Api } from "./types";

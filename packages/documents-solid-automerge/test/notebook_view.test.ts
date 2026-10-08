@@ -13,9 +13,9 @@ import {
     type ObjectCell,
     type RichTextCell,
 } from "catcolab-documents";
-import { createAutomergeNotebookView } from "../src/automerge";
-import { createNotebookView } from "../src/index";
 import { createProjectedStore } from "./projected-store";
+import { createAutomergeNotebookView } from "./utils/automerge";
+import { createNotebookView } from "./utils/notebook";
 
 const objectView = (value: unknown) => value as ObjectCell<typeof Entity>;
 const attrView = (value: unknown) => value as MorphismCell<typeof SimpleSchema, typeof Attr>;

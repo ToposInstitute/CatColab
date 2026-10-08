@@ -1,4 +1,4 @@
-import { createAutomergeDocumentView } from "catcolab-documents-solid-automerge/automerge";
+import { createAutomergeDocumentView } from "catcolab-documents-solid-automerge";
 import { getAuth } from "firebase/auth";
 import Plus from "lucide-solid/icons/plus";
 import X from "lucide-solid/icons/x";

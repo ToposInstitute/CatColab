@@ -6,8 +6,6 @@ import type {
     InstanceValidation,
     InstanceTable,
     TableIssue,
-    ModelValidation,
-    Notebook,
     Shape,
 } from "catcolab-documents";
 import { requireOwner } from "./owner";
@@ -20,12 +18,6 @@ function createValidationAccessor<T>(
     const unsubscribe = subscribe((value) => setValidation(() => value));
     onCleanup(unsubscribe);
     return validation;
-}
-
-export function createNotebookValidation<S extends Shape>(
-    notebook: Notebook<S>,
-): Accessor<ModelValidation<S> | undefined> {
-    return createValidationAccessor((callback) => notebook.onValidate(callback));
 }
 
 /** Reconcile only published validation data, never current raw rows against an

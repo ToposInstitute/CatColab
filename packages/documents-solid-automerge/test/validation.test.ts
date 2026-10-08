@@ -5,7 +5,8 @@ import { createEffect, createRoot } from "solid-js";
 import { describe, expect, test } from "vitest";
 
 import { createBinder, createInMemoryStore } from "catcolab-documents";
-import { createInstanceValidation, createNotebookValidation } from "../src/index";
+import { createInstanceValidation } from "../src/index";
+import { createNotebookValidation } from "./utils/validation";
 
 describe("Solid validation accessors", { timeout: 20_000 }, () => {
     test("tracks notebook validation and releases the subscription", async () => {

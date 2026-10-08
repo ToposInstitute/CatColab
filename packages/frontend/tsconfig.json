@@ -23,5 +23,10 @@
         "noUncheckedIndexedAccess": true,
         "noFallthroughCasesInSwitch": true
     },
-    "include": ["src", "vite.config.ts"]
+    "include": [
+        "src",
+        "vite.config.ts",
+        "../documents-solid-automerge/src",
+        "../documents-solid-automerge/test/utils"
+    ]
 }

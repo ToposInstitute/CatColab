@@ -1,5 +1,5 @@
 import { A } from "@solidjs/router";
-import { createAutomergeDocumentView } from "catcolab-documents-solid-automerge/automerge";
+import { createAutomergeDocumentView } from "catcolab-documents-solid-automerge";
 
 import type { LiveInstanceDoc } from "./live_doc_compatibility";
 

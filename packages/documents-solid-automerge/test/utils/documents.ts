@@ -2,7 +2,7 @@ import { type Accessor, createComputed, createSignal, onCleanup, untrack } from 
 import { createStore, reconcile, type Store } from "solid-js/store";
 
 import type { DocumentSnapshot, DocumentStore } from "catcolab-documents";
-import { requireOwner } from "./owner";
+import { requireOwner } from "../../src/owner";
 
 type ChangeSource = { onChange(callback: () => void): () => void };
 type Source = ChangeSource | Accessor<ChangeSource>;

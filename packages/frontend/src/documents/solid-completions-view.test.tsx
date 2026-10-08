@@ -1,6 +1,3 @@
-import type { NotebookView } from "catcolab-documents-solid-automerge";
-import { createNotebookValidation } from "catcolab-documents-solid-automerge";
-import { createAutomergeNotebookView } from "catcolab-documents-solid-automerge/automerge";
 // @vitest-environment happy-dom
 import { Attr, AttrType, Entity, SimpleSchema } from "catcolab-logics/simple-schema";
 import { type Accessor, createSignal, For } from "solid-js";
@@ -14,6 +11,9 @@ import {
     type ObjectCell,
     type Notebook,
 } from "catcolab-documents";
+import { createAutomergeNotebookView } from "../../../documents-solid-automerge/test/utils/automerge";
+import type { NotebookView } from "../../../documents-solid-automerge/test/utils/notebook";
+import { createNotebookValidation } from "../../../documents-solid-automerge/test/utils/validation";
 import { createProjectedStore } from "./projected-store";
 
 /** Shows an attribute's codomain and offers completions for replacing it,

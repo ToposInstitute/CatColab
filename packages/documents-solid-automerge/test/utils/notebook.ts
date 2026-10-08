@@ -10,7 +10,7 @@ import {
     type NotebookCell,
     type Shape,
 } from "catcolab-documents";
-import { requireOwner } from "./owner";
+import { requireOwner } from "../../src/owner";
 import { createDocumentView } from "./documents";
 
 export type NotebookView<S extends Shape> = Pick<
