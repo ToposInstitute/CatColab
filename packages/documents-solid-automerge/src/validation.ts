@@ -1,28 +1,33 @@
 import { type Accessor, createComputed, createSignal, onCleanup, untrack } from "solid-js";
 import { createStore, reconcile } from "solid-js/store";
 
-import type {
-    Instance,
-    InstanceValidation,
-    InstanceTable,
-    TableIssue,
-    Shape,
-} from "catcolab-documents";
+import type { Instance, InstanceValidation, InstanceTable, TableIssue } from "catcolab-documents";
 import { requireOwner } from "./owner";
 
-function createValidationAccessor<T>(
-    subscribe: (callback: (value: T) => void) => () => void,
-): Accessor<T | undefined> {
+function createValidationAccessor(
+    subscribe: (callback: (validation: InstanceValidation | undefined) => void) => () => void,
+): Accessor<InstanceValidation | undefined> {
     requireOwner();
-    const [validation, setValidation] = createSignal<T>();
+    const [validation, setValidation] = createSignal<InstanceValidation | undefined>();
     const unsubscribe = subscribe((value) => setValidation(() => value));
     onCleanup(unsubscribe);
     return validation;
 }
 
-/** Reconcile only published validation data, never current raw rows against an
- * older schema. The immutable result remains available for revision-aware commands. */
-export function createInstanceValidationView<H, S extends Shape, V>(instance: Instance<H, S, V>) {
+export type InstanceValidationView = {
+    validation: Accessor<InstanceValidation | undefined>;
+    data: {
+        tables: readonly InstanceTable[];
+        issues: readonly TableIssue[];
+    };
+    ready: Accessor<boolean>;
+};
+
+/** Create a fine-grained reactive view of the validation of an instance.
+ */
+export function createInstanceValidationView(
+    instance: Pick<Instance, "onValidate">,
+): InstanceValidationView {
     const validation = createInstanceValidation(instance);
     const [data, setData] = createStore<{
         tables: readonly InstanceTable[];
@@ -42,8 +47,8 @@ export function createInstanceValidationView<H, S extends Shape, V>(instance: In
     return { validation, data, ready: () => validation() !== undefined };
 }
 
-function createInstanceValidation<H, S extends Shape, V>(
-    instance: Instance<S, H, V>,
-): Accessor<InstanceValidation<S> | undefined> {
+function createInstanceValidation(
+    instance: Pick<Instance, "onValidate">,
+): Accessor<InstanceValidation | undefined> {
     return createValidationAccessor((callback) => instance.onValidate(callback));
 }
