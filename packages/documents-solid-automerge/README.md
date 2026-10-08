@@ -23,10 +23,11 @@ package root. Solid is a peer dependency; install `solid-automerge` and Automerg
 Repo to use the document view. Create all adapters within a Solid owner. Projected document data is read-only, not a snapshot for validation
 or a writable draft.
 
-`createInstanceValidationView` exposes original immutable results through
-`view.validation` and reconciles tables/issues from the same published result for
-field-grained rendering; it does not mix raw current rows with an older schema
-and is not patch-backed.
+`createInstanceValidationView` exposes `view.data`, a fine-grained store of
+`tables`/`issues` reconciled from the most recently published validation, plus
+`view.ready`; it does not mix raw current rows with an older schema and is not
+patch-backed. The full immutable validation result remains available to
+subscribers of `instance.onValidate`.
 
 Notebook adapters, notebook validation accessors and generic document helpers
 currently used only by tests live in `test/utils`. The frontend schema

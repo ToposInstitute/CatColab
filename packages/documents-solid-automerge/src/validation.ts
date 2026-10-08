@@ -15,7 +15,6 @@ function createValidationAccessor(
 }
 
 export type InstanceValidationView = {
-    validation: Accessor<InstanceValidation | undefined>;
     data: {
         tables: readonly InstanceTable[];
         issues: readonly TableIssue[];
@@ -44,7 +43,7 @@ export function createInstanceValidationView(
         const next = structuredClone({ tables: current.tables, issues: current.issues });
         untrack(() => setData(reconcile(next, { key: "id" })));
     });
-    return { validation, data, ready: () => validation() !== undefined };
+    return { data, ready: () => validation() !== undefined };
 }
 
 function createInstanceValidation(

@@ -3,7 +3,7 @@ import { Entity, SimpleSchema } from "catcolab-logics/simple-schema";
 import { createComputed, createRoot } from "solid-js";
 import { describe, expect, test } from "vitest";
 
-import { createBinder, createInMemoryStore } from "catcolab-documents";
+import { type InstanceValidation, createBinder, createInMemoryStore } from "catcolab-documents";
 import { createInstanceValidationView } from "../src/index";
 
 describe("reconciled instance validation views", { timeout: 20_000 }, () => {
@@ -19,6 +19,10 @@ describe("reconciled instance validation views", { timeout: 20_000 }, () => {
         }
         const instance = result.content;
         let view!: ReturnType<typeof createInstanceValidationView>;
+        let latestValidation: InstanceValidation | undefined;
+        instance.onValidate((validation) => {
+            latestValidation = validation;
+        });
         const labels: Array<string | null | undefined> = [];
         const dispose = createRoot((dispose) => {
             view = createInstanceValidationView(instance);
@@ -28,8 +32,9 @@ describe("reconciled instance validation views", { timeout: 20_000 }, () => {
             return dispose;
         });
         await expect.poll(view.ready, { timeout: 20_000 }).toBe(true);
+        // Snapshot the published result: the view must never mutate it.
+        const published = latestValidation!;
         const table = view.data.tables[0]!;
-        const old = view.validation()!;
         second.update({ label: "Unrelated" });
         await expect.poll(() => view.data.tables[1]?.label).toBe("Unrelated");
         expect(view.data.tables[0]).toBe(table);
@@ -51,8 +56,8 @@ describe("reconciled instance validation views", { timeout: 20_000 }, () => {
         expect(view.data.tables[0]).toBe(table);
         expect(table.label).toBe("Renamed");
         expect(table.rows.map((row) => row.id)).toEqual(["stray"]);
-        expect(old.tables[0]?.label).toBe("First");
-        expect(old.tables[0]?.rows).toEqual([]);
+        expect(published?.tables[0]?.label).toBe("First");
+        expect(published?.tables[0]?.rows).toEqual([]);
         const before = [...labels];
         dispose();
         first.update({ label: "Released" });

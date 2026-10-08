@@ -4,8 +4,7 @@ import { Attr, AttrType, Entity, SimpleSchema } from "catcolab-logics/simple-sch
 import { createEffect, createRoot } from "solid-js";
 import { describe, expect, test } from "vitest";
 
-import { createBinder, createInMemoryStore } from "catcolab-documents";
-import { createInstanceValidationView } from "../src/index";
+import { type InstanceValidation, createBinder, createInMemoryStore } from "catcolab-documents";
 import { createNotebookValidation } from "./utils/validation";
 
 describe("Solid validation accessors", { timeout: 20_000 }, () => {
@@ -53,31 +52,22 @@ describe("Solid validation accessors", { timeout: 20_000 }, () => {
             throw new Error("Expected an instance");
         }
 
-        let validation!: ReturnType<
-            typeof createInstanceValidationView<
-                typeof result.content.handle,
-                typeof SimpleSchema,
-                unknown
-            >
-        >["validation"];
-        const dispose = createRoot((dispose) => {
-            validation = createInstanceValidationView(result.content).validation;
-            return dispose;
+        let validation: InstanceValidation | undefined;
+        const unsubscribe = result.content.onValidate((value) => {
+            validation = value;
         });
-        await expect.poll(() => validation(), { timeout: 20_000 }).toBeDefined();
-        await expect
-            .poll(() => validation()?.tables.map((table) => table.label))
-            .toEqual(["Person"]);
-        const table = validation()?.tables[0];
+        await expect.poll(() => validation, { timeout: 20_000 }).toBeDefined();
+        await expect.poll(() => validation?.tables.map((table) => table.label)).toEqual(["Person"]);
+        const table = validation?.tables[0];
         if (!table) {
             throw new Error("Expected a table");
         }
         const row = await result.content.addRow(table, { name: "Alice" });
         expect(row.tag).toBe("Ok");
-        await expect.poll(() => validation()?.tables[0]?.rows.length).toBe(1);
+        await expect.poll(() => validation?.tables[0]?.rows.length).toBe(1);
         schema.add(Attr, { label: "role", from: person, to: string });
         await expect
-            .poll(() => validation()?.issues.map((issue) => issue.issueType))
+            .poll(() => validation?.issues.map((issue) => issue.issueType))
             .toEqual(["MissingValue"]);
 
         store.changeDocument(result.content.handle, (document) => {
@@ -96,14 +86,14 @@ describe("Solid validation accessors", { timeout: 20_000 }, () => {
             };
         });
         await expect
-            .poll(() => validation()?.issues.map((issue) => issue.issueType))
+            .poll(() => validation?.issues.map((issue) => issue.issueType))
             .toContain("OrphanedTable");
         expect(
-            validation()?.get(["ghost-table", "rows", "ghost-row", "fields", "mystery"]),
+            validation?.get(["ghost-table", "rows", "ghost-row", "fields", "mystery"]),
         ).toMatchObject({
             tag: "Ok",
             content: { tag: "Int", content: { value: 3 } },
         });
-        dispose();
+        unsubscribe();
     });
 });
