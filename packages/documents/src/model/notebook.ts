@@ -125,7 +125,10 @@ function shapeSupportsShape(shape: Shape, required: Shape): boolean {
     return true;
 }
 
-function cellMatchesFilter<S extends Shape>(cell: CellOf<S>, filter: AnyCellType | Shape): boolean {
+export function cellMatchesFilter<S extends Shape>(
+    cell: CellOf<S>,
+    filter: AnyCellType | Shape,
+): boolean {
     if (isCellType(filter)) {
         switch (filter.kind) {
             case "rich-text":

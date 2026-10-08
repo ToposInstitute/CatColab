@@ -1,8 +1,14 @@
-import type { Mor } from "catcolab-document-types";
+import type { Mor, Ob } from "catcolab-document-types";
 import type { DocumentStore } from "../document-store";
 import { findMorphismType } from "../shape";
-import type { MorphismTypesOf, Shape } from "../shape";
-import { getMorphismCell, obFromObjectCell, objectCellFromOb, type MorphismCell } from "./cell";
+import type { MorphismTypesOf, ObjectTypesOf, Shape } from "../shape";
+import {
+    getMorphismCell,
+    obFromObjectCell,
+    objectCellFromOb,
+    type MorphismCell,
+    type ObjectCell,
+} from "./cell";
 import { tryGetModelJudgment, type ModelDocument } from "./document";
 import type { EquationSide } from "./equation";
 
@@ -38,11 +44,24 @@ export function sideFromMor<Handle, S extends Shape, Version>(
     handle: Handle,
     side: Mor | null,
 ): EquationSide<S> {
+    return decodeEquationSide(
+        side,
+        (ob) => objectCellFromOb(shape, store, handle, ob),
+        (id) => morphismCellFromBasicMor(shape, store, handle, id),
+    );
+}
+
+/** Decode a stored side using caller-owned reference resolution (snapshot or frontend view). */
+export function decodeEquationSide<S extends Shape>(
+    side: Mor | null,
+    objectFromOb: (ob: Ob) => ObjectCell<ObjectTypesOf<S>> | null,
+    morphismFromId: (id: string) => MorphismCell<S, MorphismTypesOf<S>> | null,
+): EquationSide<S> {
     if (side === null) {
         return [];
     }
     if (side.tag === "Composite" && side.content.tag === "Id") {
-        const object = objectCellFromOb(shape, store, handle, side.content.content);
+        const object = objectFromOb(side.content.content);
         if (object === null) {
             return [null];
         }
@@ -58,7 +77,7 @@ export function sideFromMor<Handle, S extends Shape, Version>(
         if (mor.tag !== "Basic") {
             return null;
         }
-        return morphismCellFromBasicMor(shape, store, handle, mor.content);
+        return morphismFromId(mor.content);
     });
 }
 
