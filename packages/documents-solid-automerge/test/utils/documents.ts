@@ -22,9 +22,11 @@ export function createDocumentAccessor<H, V>(
     return snapshot;
 }
 
-/** Explicitly observe a selector over a command facade's current reads.
- * Core getters themselves do not register reactive dependencies. */
-export function createDocumentSelector<T>(source: Source, select: () => T): Accessor<T> {
+/** Reconcile derived or non-Automerge snapshot data into a frontend-owned projection.
+ * Unlike createDocumentView, this clones/reconciles selected data on each change. IDs retain
+ * object identity across versions; unrelated fields do not invalidate their
+ * readers. Select data only, not command facades containing functions. */
+export function createDocumentStore<T extends object>(source: Source, select: () => T): Store<T> {
     requireOwner();
     const [revision, setRevision] = createSignal(0);
     createComputed(() => {
@@ -32,18 +34,10 @@ export function createDocumentSelector<T>(source: Source, select: () => T): Acce
         setRevision((value) => value + 1);
         onCleanup(current.onChange(() => setRevision((value) => value + 1)));
     });
-    return () => {
+    const selected: Accessor<T> = () => {
         revision();
         return select();
     };
-}
-
-/** Reconcile derived or non-Automerge snapshot data into a frontend-owned projection.
- * Unlike createDocumentView, this clones/reconciles selected data on each change. IDs retain
- * object identity across versions; unrelated fields do not invalidate their
- * readers. Select data only, not command facades containing functions. */
-export function createDocumentStore<T extends object>(source: Source, select: () => T): Store<T> {
-    const selected = createDocumentSelector(source, select);
     const [view, setView] = createStore<T>(structuredClone(untrack(selected)));
     createComputed(() => {
         const value = structuredClone(selected());
