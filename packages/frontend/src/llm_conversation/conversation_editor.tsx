@@ -1,4 +1,4 @@
-import { createAutomergeDocumentView } from "catcolab-documents-solid-automerge";
+import { createDocumentView } from "catcolab-documents-solid-automerge";
 import { createMemo } from "solid-js";
 
 import {
@@ -12,7 +12,7 @@ import type { ApiLLMConversation } from "./live_doc_compatibility";
 export function LLMConversationEditor(props: { conversation: ApiLLMConversation }) {
     const inferenceKey = useInferenceKey();
     const controller = createLLMConversationController(() => props.conversation, inferenceKey);
-    const stored = createAutomergeDocumentView(() => props.conversation.handle.automergeHandle);
+    const stored = createDocumentView(() => props.conversation.handle.automergeHandle);
     const interactions = createMemo(() => {
         const document = stored();
         return [

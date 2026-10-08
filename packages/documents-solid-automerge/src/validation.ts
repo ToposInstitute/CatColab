@@ -2,7 +2,7 @@ import { type Accessor, createComputed, createSignal, onCleanup, untrack } from 
 import { createStore, reconcile } from "solid-js/store";
 
 import type { Instance, InstanceValidation, InstanceTable, TableIssue } from "catcolab-documents";
-import { requireOwner } from "./owner";
+import { requireOwner } from "./require_owner";
 
 function createValidationAccessor(
     subscribe: (callback: (validation: InstanceValidation | undefined) => void) => () => void,
@@ -15,10 +15,7 @@ function createValidationAccessor(
 }
 
 export type InstanceValidationView = {
-    data: {
-        tables: readonly InstanceTable[];
-        issues: readonly TableIssue[];
-    };
+    data: Pick<InstanceValidation, "tables" | "issues">;
     ready: Accessor<boolean>;
 };
 

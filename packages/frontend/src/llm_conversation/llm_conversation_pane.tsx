@@ -1,4 +1,4 @@
-import { createAutomergeDocumentView } from "catcolab-documents-solid-automerge";
+import { createDocumentView } from "catcolab-documents-solid-automerge";
 import { getAuth } from "firebase/auth";
 import Plus from "lucide-solid/icons/plus";
 import X from "lucide-solid/icons/x";
@@ -145,10 +145,10 @@ export function LLMConversationPane(props: {
                 >
                     <For each={conversations()}>
                         {({ conversation, attachment }) => {
-                            const conversationDocument = createAutomergeDocumentView(
+                            const conversationDocument = createDocumentView(
                                 () => conversation.handle.automergeHandle,
                             );
-                            const attachmentDocument = createAutomergeDocumentView(
+                            const attachmentDocument = createDocumentView(
                                 () => attachment.handle.automergeHandle,
                             );
                             return (

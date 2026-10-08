@@ -10,8 +10,8 @@ import {
     type NotebookCell,
     type Shape,
 } from "catcolab-documents";
-import { requireOwner } from "../../src/owner";
-import { createDocumentView } from "./documents";
+import { requireOwner } from "../../src/require_owner";
+import { createDocumentStore } from "./documents";
 
 export type NotebookView<S extends Shape> = Pick<
     Notebook<S, ModelDocument>,
@@ -28,7 +28,7 @@ export function createNotebookView<S extends Shape, H, V>(
     project: (
         notebook: Notebook<S, ModelDocument, H, V>,
     ) => Accessor<DeepReadonly<ModelDocument>> = (notebook) => {
-        const view = createDocumentView(notebook, () => notebook.dump());
+        const view = createDocumentStore(notebook, () => notebook.dump());
         return () => view;
     },
 ): Accessor<NotebookView<S>> {

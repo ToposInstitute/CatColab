@@ -1,7 +1,7 @@
 import { type Accessor, createSignal, onCleanup } from "solid-js";
 
 import type { ModelValidation, Notebook, Shape } from "catcolab-documents";
-import { requireOwner } from "../../src/owner";
+import { requireOwner } from "../../src/require_owner";
 
 export function createNotebookValidation<S extends Shape>(
     notebook: Notebook<S>,

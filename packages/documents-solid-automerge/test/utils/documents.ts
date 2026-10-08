@@ -2,7 +2,7 @@ import { type Accessor, createComputed, createSignal, onCleanup, untrack } from 
 import { createStore, reconcile, type Store } from "solid-js/store";
 
 import type { DocumentSnapshot, DocumentStore } from "catcolab-documents";
-import { requireOwner } from "../../src/owner";
+import { requireOwner } from "../../src/require_owner";
 
 type ChangeSource = { onChange(callback: () => void): () => void };
 type Source = ChangeSource | Accessor<ChangeSource>;
@@ -39,10 +39,10 @@ export function createDocumentSelector<T>(source: Source, select: () => T): Acce
 }
 
 /** Reconcile derived or non-Automerge snapshot data into a frontend-owned projection.
- * Unlike createAutomergeDocumentView, this clones/reconciles selected data on each change. IDs retain
+ * Unlike createDocumentView, this clones/reconciles selected data on each change. IDs retain
  * object identity across versions; unrelated fields do not invalidate their
  * readers. Select data only, not command facades containing functions. */
-export function createDocumentView<T extends object>(source: Source, select: () => T): Store<T> {
+export function createDocumentStore<T extends object>(source: Source, select: () => T): Store<T> {
     const selected = createDocumentSelector(source, select);
     const [view, setView] = createStore<T>(structuredClone(untrack(selected)));
     createComputed(() => {

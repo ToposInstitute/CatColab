@@ -5,11 +5,11 @@ import { describe, expect, test, vi } from "vitest";
 
 import type { Document } from "catcolab-document-types";
 import { createInMemoryStore } from "catcolab-documents";
-import { createAutomergeDocumentView } from "../src";
+import { createDocumentView } from "../src";
 import {
     createDocumentAccessor,
     createDocumentSelector,
-    createDocumentView,
+    createDocumentStore,
 } from "./utils/documents";
 
 const document = (): Document => ({
@@ -25,18 +25,18 @@ describe("explicit Solid document adapters", () => {
         const repo = new Repo();
         const handle = repo.create({ items: [{ id: "first", name: "Initial" }], unrelated: 0 });
         await handle.whenReady();
-        expect(() => createAutomergeDocumentView(() => handle)).toThrow("Solid owner");
+        expect(() => createDocumentView(() => handle)).toThrow("Solid owner");
         const off = vi.spyOn(handle, "off");
         const received: string[] = [];
         let view!: ReturnType<typeof handle.doc>;
         const dispose = createRoot((dispose) => {
-            const projection = createAutomergeDocumentView(() => handle);
+            const projection = createDocumentView(() => handle);
             view = projection();
             createComputed(() => received.push(projection().items[0]?.name ?? "Deleted"));
             return dispose;
         });
         const disposeShared = createRoot((dispose) => {
-            expect(createAutomergeDocumentView(() => handle)()).toBe(view);
+            expect(createDocumentView(() => handle)()).toBe(view);
             return dispose;
         });
         // Let the projection's readiness initialization finish before editing.
@@ -75,7 +75,7 @@ describe("explicit Solid document adapters", () => {
         const [handle, setHandle] = createSignal(first);
         const received: string[] = [];
         const dispose = createRoot((dispose) => {
-            const view = createAutomergeDocumentView(handle);
+            const view = createDocumentView(handle);
             createComputed(() => received.push(view().name));
             return dispose;
         });
@@ -131,7 +131,7 @@ describe("explicit Solid document adapters", () => {
         };
         const received: string[] = [];
         const dispose = createRoot((dispose) => {
-            const view = createDocumentView(source, () => data);
+            const view = createDocumentStore(source, () => data);
             const first = view.items[0];
             createComputed(() => received.push(view.items[0]!.name));
             data = { ...data, unrelated: 1 };

@@ -1,12 +1,12 @@
 import { A } from "@solidjs/router";
-import { createAutomergeDocumentView } from "catcolab-documents-solid-automerge";
+import { createDocumentView } from "catcolab-documents-solid-automerge";
 
 import type { LiveLLMConversationDoc } from "./live_doc_compatibility";
 
 /** Attached document link shown in an LLM conversation document head. */
 export function LLMConversationInfo(props: { liveConversation: LiveLLMConversationDoc }) {
     const attachedRefId = () => props.liveConversation.liveDoc.doc.llmConversationOf._id;
-    const attachedDoc = createAutomergeDocumentView(
+    const attachedDoc = createDocumentView(
         () => props.liveConversation.attachment.handle.automergeHandle,
     );
 
