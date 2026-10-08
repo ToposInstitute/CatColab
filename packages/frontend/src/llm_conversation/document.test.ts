@@ -33,8 +33,8 @@ async function makeFixture(withInstance = false) {
     const store = createInMemoryStore();
     const binder = createBinder(store);
     const schema = await binder.createNotebook(SimpleSchema, { title: "Company schema" });
-    let attachment: typeof schema | Instance<Document, typeof SimpleSchema, Document> = schema;
-    let instance: Instance<Document, typeof SimpleSchema, Document> | undefined;
+    let attachment: typeof schema | Instance<typeof SimpleSchema, Document, Document> = schema;
+    let instance: Instance<typeof SimpleSchema, Document, Document> | undefined;
 
     if (withInstance) {
         instance = expectOk(await binder.createInstance(schema, { title: "Company data" }));
@@ -135,7 +135,7 @@ describe("LLM conversation turns", { timeout: 30_000 }, () => {
             async (_client, _transcript, scope, _onContent, _model, systemPromptSuffix) => {
                 const scopedSchema = schemaBinding(scope);
                 const scopedInstance = scope.document_Company_data as
-                    | Instance<unknown, typeof SimpleSchema, Document>
+                    | Instance<typeof SimpleSchema, unknown, Document>
                     | undefined;
                 assert(scopedInstance);
                 assert.match(systemPromptSuffix ?? "", /Company schema/);
@@ -291,7 +291,7 @@ describe("LLM conversation turns", { timeout: 30_000 }, () => {
                 onSuccessHook,
             ) => {
                 const attachedDocument = scope.document_Company_data as
-                    | Instance<unknown, typeof SimpleSchema, Document>
+                    | Instance<typeof SimpleSchema, unknown, Document>
                     | undefined;
                 assert(attachedDocument);
                 assert(scope.document_Company_schema);
