@@ -103,11 +103,11 @@ export async function createInstance(
     modelRefId: string,
 ): Promise<string> {
     const ref = { id: modelRefId, version: null, server: api.serverHost };
-    const handle = await binder.store.getHandle(ref);
+    const handle = await binder.getHandle(ref);
     if (handle.tag === "Err") {
         throw new Error(handle.content.map((issue) => issue.message).join("\n"));
     }
-    const document = binder.store.getDocumentView(handle.content);
+    const document = binder.getDocumentView(handle.content);
     if (document.type !== "model") {
         throw new Error(`Cannot create a data instance of a "${document.type}" document.`);
     }

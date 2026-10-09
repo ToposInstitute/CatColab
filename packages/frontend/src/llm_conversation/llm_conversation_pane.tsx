@@ -8,13 +8,7 @@ import invariant from "tiny-invariant";
 import type { UserSettings } from "catcolab-api";
 import type { Document } from "catcolab-document-types";
 import { DocumentTypeIcon, IconButton, InlineInput } from "catcolab-ui-components";
-import {
-    type ApiDocumentHandle,
-    documentTypeLabel,
-    type LiveDocWithRef,
-    useApi,
-    useBinder,
-} from "../api";
+import { documentTypeLabel, type LiveDocWithRef, useApi, useBinder } from "../api";
 import { DEFAULT_LLM_MODEL } from "../inference/chat";
 import { ModelLibraryContext } from "../model";
 import { PageActionsContext } from "../page/context";
@@ -23,6 +17,7 @@ import { isDocumentVisible } from "../user/user_settings";
 import { useUserState } from "../user/user_state_context";
 import { LLMConversationEditor } from "./conversation_editor";
 import {
+    type ApiLLMConversation,
     createLLMConversation,
     getLiveLLMConversation,
     supportsLLMConversation,
@@ -71,9 +66,9 @@ export function LLMConversationPane(props: {
             docs &&
             docs.length > 0 &&
             !conversations.loading &&
-            !docs.some(({ conversation }) => conversation.ref.id === props.selectedRefId)
+            !docs.some(({ conversation }) => conversation.handle.ref.id === props.selectedRefId)
         ) {
-            props.onSelect(docs[0]!.conversation.ref.id, true);
+            props.onSelect(docs[0]!.conversation.handle.ref.id, true);
         }
     });
 
@@ -84,22 +79,23 @@ export function LLMConversationPane(props: {
         props.onSelect(newRefId);
     };
 
-    const onDeleteLLMConversation = async (conversation: ApiDocumentHandle) => {
+    const onDeleteLLMConversation = async (conversation: ApiLLMConversation) => {
         const deleted = await actions.showDeleteDialog({
-            refId: conversation.ref.id,
-            name: conversation.docView.name,
-            typeName: documentTypeLabel(conversation.docView.type),
+            refId: conversation.handle.ref.id,
+            name: conversation.title,
+            typeName: documentTypeLabel(conversation.document.type),
         });
-        if (deleted && props.selectedRefId === conversation.ref.id) {
+        if (deleted && props.selectedRefId === conversation.handle.ref.id) {
             const nextConversation = conversations()?.find(
-                ({ conversation: candidate }) => candidate.ref.id !== conversation.ref.id,
+                ({ conversation: candidate }) =>
+                    candidate.handle.ref.id !== conversation.handle.ref.id,
             );
-            props.onSelect(nextConversation?.conversation.ref.id, true);
+            props.onSelect(nextConversation?.conversation.handle.ref.id, true);
         }
     };
 
-    const canDeleteLLMConversation = (conversation: ApiDocumentHandle) => {
-        const document = userState.documents[conversation.ref.id];
+    const canDeleteLLMConversation = (conversation: ApiLLMConversation) => {
+        const document = userState.documents[conversation.handle.ref.id];
         return (
             document?.deletedAt === null &&
             document.permissions.some(
@@ -150,34 +146,31 @@ export function LLMConversationPane(props: {
                             <div
                                 class={styles.row}
                                 classList={{
-                                    [styles.active]: conversation.ref.id === props.selectedRefId,
+                                    [styles.active]:
+                                        conversation.handle.ref.id === props.selectedRefId,
                                 }}
-                                onMouseDown={() => props.onSelect(conversation.ref.id)}
+                                onMouseDown={() => props.onSelect(conversation.handle.ref.id)}
                             >
                                 <DocumentTypeIcon documentType="llmconversation" />
                                 <div
                                     class={styles.rowName}
-                                    onFocusIn={() => props.onSelect(conversation.ref.id)}
+                                    onFocusIn={() => props.onSelect(conversation.handle.ref.id)}
                                 >
                                     <InlineInput
-                                        text={conversation.docView.name}
-                                        setText={(title) =>
-                                            conversation.automergeHandle.change((doc) => {
-                                                doc.name = title;
-                                            })
-                                        }
+                                        text={conversation.title}
+                                        setText={(title) => conversation.update({ title })}
                                         placeholder="Untitled"
                                     />
                                 </div>
                                 <div
                                     class={styles.rowAttachment}
-                                    title={`On ${documentTypeLabel(attachment.docView.type)} "${attachment.docView.name || "Untitled"}"`}
+                                    title={`On ${documentTypeLabel(attachment.document.type)} "${attachment.title || "Untitled"}"`}
                                 >
                                     <DocumentTypeIcon
-                                        documentType={attachment.docView.type}
-                                        letters={iconLettersOf(attachment.docView)}
+                                        documentType={attachment.document.type}
+                                        letters={iconLettersOf(attachment.document)}
                                     />
-                                    <span>{attachment.docView.name || "Untitled"}</span>
+                                    <span>{attachment.title || "Untitled"}</span>
                                 </div>
                                 <Show when={canDeleteLLMConversation(conversation)}>
                                     <div

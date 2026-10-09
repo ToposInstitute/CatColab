@@ -5,6 +5,7 @@ import { Diagram } from "catcolab-document-methods";
 import type { Document } from "catcolab-document-types";
 import {
     createBinder,
+    createInMemoryStore,
     type Instance,
     type ModelDocument,
     type Notebook,
@@ -29,7 +30,8 @@ vi.mock("../inference/chat.ts", async (importOriginal) => ({
 type Fixture = Awaited<ReturnType<typeof makeFixture>>;
 
 async function makeFixture(withInstance = false) {
-    const binder = createBinder();
+    const store = createInMemoryStore();
+    const binder = createBinder(store);
     const schema = await binder.createNotebook(SimpleSchema, { title: "Company schema" });
     let attachment: typeof schema | Instance<Document, typeof SimpleSchema, Document> = schema;
     let instance: Instance<Document, typeof SimpleSchema, Document> | undefined;
@@ -42,7 +44,7 @@ async function makeFixture(withInstance = false) {
     const conversation = await binder.createLLMConversation(attachment, "test-model", {
         title: "Conversation",
     });
-    return { binder, schema, instance, conversation };
+    return { binder, store, schema, instance, conversation };
 }
 
 async function makeInvalidInstance(fixture: Fixture) {
@@ -52,7 +54,7 @@ async function makeInvalidInstance(fixture: Fixture) {
     const table = (await instance.validate()).tables[0];
     assert(table);
     const row = expectOk(await instance.addRow(table));
-    fixture.binder.store.changeDocument(instance.handle, (document) => {
+    fixture.store.changeDocument(instance.handle, (document) => {
         assert.strictEqual(document.type, "instance");
         if (document.type !== "instance") {
             return;
@@ -90,7 +92,7 @@ function response(content: string): ChatTurnResult {
 async function runTurn(fixture: Fixture) {
     return runLLMConversationTurn(
         fixture.conversation,
-        fixture.binder.store,
+        fixture.binder,
         { tag: "Ready", key: "inference-key" },
         { content: "Inspect the document.", files: [] },
     );
@@ -205,7 +207,7 @@ describe("LLM conversation turns", { timeout: 30_000 }, () => {
 
         const result = await runLLMConversationTurn(
             outer,
-            fixture.binder.store,
+            fixture.binder,
             { tag: "Ready", key: "inference-key" },
             { content: "Inspect the document.", files: [] },
         );
@@ -215,11 +217,11 @@ describe("LLM conversation turns", { timeout: 30_000 }, () => {
 
     test("skips documents that have no document API object", async () => {
         const fixture = await makeFixture();
-        const schemaRefId = fixture.binder.store.getDocumentRef(fixture.schema.handle).id;
-        const diagramHandle = await fixture.binder.store.createHandle(
+        const schemaRefId = fixture.store.getDocumentRef(fixture.schema.handle).id;
+        const diagramHandle = await fixture.store.createHandle(
             Diagram.newDiagramDocument({ _id: schemaRefId, _version: null, _server: "" }),
         );
-        fixture.binder.store.changeDocument(diagramHandle, (document) => {
+        fixture.store.changeDocument(diagramHandle, (document) => {
             assert.strictEqual(document.type, "diagram");
             if (document.type === "diagram") {
                 document.name = "Company diagram";
@@ -406,7 +408,7 @@ describe("LLM conversation turns", { timeout: 30_000 }, () => {
             ["user-message", "llm-code-execution"],
         );
         assert.deepStrictEqual(
-            await retryLastLLMConversationResponse(fixture.conversation, fixture.binder.store, {
+            await retryLastLLMConversationResponse(fixture.conversation, fixture.binder, {
                 tag: "Ready",
                 key: "inference-key",
             }),
