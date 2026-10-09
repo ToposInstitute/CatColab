@@ -222,7 +222,7 @@ describe("instance schema validation", () => {
         unsubscribeValidation();
     });
 
-    test("a validation view tracks schema and instance changes", async () => {
+    test("validation callbacks track schema and instance changes", async () => {
         const store = createInMemoryStore();
         const binder = createBinder(store);
         const schema = await binder.createNotebook(SimpleSchema, { title: "Company schema" });
@@ -230,14 +230,18 @@ describe("instance schema validation", () => {
         const instance = expectOk(
             await binder.createInstance(schema, { title: "Company instance" }),
         );
-        const view = instance.createValidationView();
 
-        await expect.poll(() => view.modelValidation.issues).toEqual([]);
-        expect(view.tables.map((table) => table.label)).toEqual(["Person"]);
+        let latest: Awaited<ReturnType<typeof instance.validate>> | undefined;
+        const unsubscribe = instance.onValidate((validation) => {
+            latest = validation;
+        });
+
+        await expect.poll(() => latest?.modelValidation.issues).toEqual([]);
+        expect(latest?.tables.map((table) => table.label)).toEqual(["Person"]);
 
         schema.add(Entity, { label: "Company" });
         await expect
-            .poll(() => view.tables.map((table) => table.label))
+            .poll(() => latest?.tables.map((table) => table.label))
             .toEqual(["Person", "Company"]);
 
         store.changeDocument(instance.handle, (document) => {
@@ -248,14 +252,16 @@ describe("instance schema validation", () => {
             };
         });
         await expect
-            .poll(() => view.issues.map((issue) => issue.issueType))
+            .poll(() => latest?.issues.map((issue) => issue.issueType))
             .toEqual(["OrphanedTable"]);
-        expect(view.get(["ghost-table", "rows", "ghost-row", "fields", "mystery"])).toMatchObject({
+        expect(
+            latest?.get(["ghost-table", "rows", "ghost-row", "fields", "mystery"]),
+        ).toMatchObject({
             tag: "Ok",
             content: { tag: "Int", content: { value: 3 } },
         });
 
-        view.dispose();
+        unsubscribe();
     });
 });
 
