@@ -7,6 +7,7 @@ import type { DeepReadonly, DocumentStore } from "../document-store";
 import type { ElaboratedModel, ObjectJudgment } from "../model/elaborated-model";
 import type { Issue, Result } from "../result";
 import type { InstanceCapableShape, ObjectType } from "../shape";
+import { atomicTypeOfAttributeType } from "./atomic-types";
 import type { FieldPath } from "./errors";
 import type { ParsedTables } from "./parsed-document";
 import { parsedInstanceTables } from "./parsed-source";
@@ -18,7 +19,6 @@ import type {
     TableHeader,
     TableRow,
 } from "./tables";
-import { atomicTypeOfAttributeType } from "./validation";
 
 /** The stored tables of the document at `handle`, parsed.
 
