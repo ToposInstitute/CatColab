@@ -44,8 +44,7 @@ const fixtures: Record<string, () => Promise<Fixture>> = {
                     doc.name = name;
                 }),
             subscribe: (callback) => {
-                const onChange = ({ doc }: { doc: Document }) =>
-                    callback(getDocumentSnapshot(doc));
+                const onChange = ({ doc }: { doc: Document }) => callback(getDocumentSnapshot(doc));
                 handle.on("change", onChange);
                 return () => handle.off("change", onChange);
             },

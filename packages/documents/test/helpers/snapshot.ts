@@ -1,4 +1,5 @@
 import { toJS } from "@automerge/automerge";
+
 import type { Document } from "catcolab-document-types";
 import { createDocumentSnapshot, type DocumentSnapshot } from "catcolab-documents";
 

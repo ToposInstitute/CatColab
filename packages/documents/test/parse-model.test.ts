@@ -13,7 +13,6 @@ import {
     type Result,
 } from "catcolab-documents";
 import { findModelReferenceCellId, parseModelSnapshot } from "../src/model/parsed-source";
-import { getRichTextCell } from "../src/rich-text";
 import { getDocumentSnapshot } from "./helpers/snapshot";
 
 const a = "00000000-0000-0000-0000-000000000001";
