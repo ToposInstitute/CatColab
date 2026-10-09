@@ -79,6 +79,13 @@ export type InstanceCapableShape = Shape & {
     };
 };
 
+/** Assert that a schema's shape declares support for instances. */
+export function assertInstanceCapableShape(shape: Shape): asserts shape is InstanceCapableShape {
+    if (shape.supportsInstances === undefined) {
+        throw new Error(`Shape \`${shape.theory ?? "unnamed"}\` does not support instances`);
+    }
+}
+
 export type RichTextType = typeof RichText;
 export type EquationType = typeof PathEquation;
 export type ObjectTypesOf<S extends Shape> = NonNullable<S["objects"]>[number];
