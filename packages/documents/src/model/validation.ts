@@ -1,5 +1,4 @@
-import type { FormalCell } from "catcolab-document-methods";
-import type { ModelJudgment, ModelNotebook } from "catcolab-document-types";
+import type { ModelNotebook } from "catcolab-document-types";
 import type {
     DblModel,
     DblTheory,
@@ -11,13 +10,13 @@ import type { DeepReadonly, DocumentSnapshot, DocumentStore } from "../document-
 import type { Issue } from "../result";
 import type { Shape } from "../shape";
 import { elaboratedModelFromPresentation, type ModelValidation } from "./elaborated-model";
-import type { ParsedModelDocument, ParsedModelNotebook } from "./parsed-document";
+import type { ParsedModelCell, ParsedModelDocument, ParsedModelNotebook } from "./parsed-document";
 import { parseModelSnapshot } from "./parsed-source";
 
 function formalCellForGenerator(
     notebook: ParsedModelNotebook,
     generatorId: string,
-): DeepReadonly<FormalCell<ModelJudgment>> | undefined {
+): DeepReadonly<Extract<ParsedModelCell, { tag: "formal" }>> | undefined {
     for (const cellId of notebook.cellOrder) {
         const cell = notebook.cellContents[cellId]!;
         if (cell.tag === "formal" && cell.content.id === generatorId) {

@@ -19,7 +19,7 @@ import type {
 import type { Commit } from "../transaction";
 import { createSubscriptionScope } from "../util/subscription-scope";
 import {
-    getModelCell,
+    tryGetModelCell,
     getMorphismCell,
     getObjectCell,
     obFromObjectCell,
@@ -297,7 +297,10 @@ export function modelNotebookFromStore<Handle, S extends Shape, Version>(
         cells() {
             const parsed = parseModelSnapshot(store.getDocumentSnapshot(handle));
             const order = parsed.tag === "Ok" ? parsed.content.value.notebook.cellOrder : [];
-            return order.map((cellId) => getModelCell(shape, store, handle, cellId));
+            return order.flatMap((cellId) => {
+                const cell = tryGetModelCell(shape, store, handle, cellId);
+                return cell ? [cell] : [];
+            });
         },
         cellsOf(filter: AnyCellType | Shape) {
             return this.cells().filter((cell) => cellMatchesFilter(cell, filter));

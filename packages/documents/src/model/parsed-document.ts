@@ -1,4 +1,3 @@
-import type { ModelJudgment, Notebook as StoredNotebook } from "catcolab-document-types";
 import type { DeepReadonly } from "../document-store";
 import {
     isRecord,
@@ -8,11 +7,20 @@ import {
 } from "../parsed-document";
 import type { Result } from "../result";
 
-/** Structural parsing only: theory support and reference validity belong to validation. */
-declare const parsed: unique symbol;
-export type ParsedModelNotebook = DeepReadonly<StoredNotebook<ModelJudgment>> & {
-    readonly [parsed]: true;
-};
+/** Only the envelope is checked; payloads belong to Wasm deserialization and validation. */
+export interface ParsedModelJudgment extends Readonly<Record<string, unknown>> {
+    readonly tag: "object" | "morphism" | "equation" | "instantiation";
+    readonly id: string;
+    readonly name: string;
+}
+export type ParsedModelCell =
+    | { readonly tag: "formal"; readonly id: string; readonly content: ParsedModelJudgment }
+    | { readonly tag: "rich-text"; readonly id: string; readonly content: unknown };
+
+export interface ParsedModelNotebook {
+    readonly cellContents: Readonly<Record<string, DeepReadonly<ParsedModelCell>>>;
+    readonly cellOrder: readonly string[];
+}
 
 export interface ParsedModelDocument {
     readonly type: "model";
@@ -22,175 +30,33 @@ export interface ParsedModelDocument {
 }
 
 type Path = ReadonlyArray<PropertyKey>;
-type Check = (value: unknown, path: Path, issues: StructuralIssue[]) => boolean;
-
-function scalar(predicate: (value: unknown) => boolean, description: string): Check {
-    return (value, path, issues) => {
-        if (predicate(value)) {
-            return true;
-        }
-        issues.push(issue(`Expected ${description}`, path));
-        return false;
-    };
-}
-const string = scalar((value) => typeof value === "string", "a string");
-const uuid = scalar(
-    (value) =>
-        typeof value === "string" &&
-        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value),
-    "a UUID",
-);
-const record = scalar(isRecord, "an object");
-const modality = scalar(
-    (value) =>
-        typeof value === "string" &&
-        [
-            "Discrete",
-            "Codiscrete",
-            "List",
-            "SymmetricList",
-            "CocartesianList",
-            "CartesianList",
-            "AdditiveList",
-        ].includes(value),
-    "a modality",
-);
-
-function nullable(check: Check): Check {
-    return (value, path, issues) => value === null || check(value, path, issues);
-}
-function array(check: Check): Check {
-    return (value, path, issues) => {
-        if (!Array.isArray(value)) {
-            issues.push(issue("Expected an array", path));
-            return false;
-        }
-        // Check every entry, even after a failure, to report all structural damage.
-        return Array.from(value, (entry, index) => check(entry, [...path, index], issues)).every(
-            Boolean,
-        );
-    };
-}
-function fields(schema: Record<string, Check>): Check {
-    return (value, path, issues) => {
-        if (!isRecord(value)) {
-            issues.push(issue("Expected an object", path));
-            return false;
-        }
-        return Object.entries(schema)
-            .map(([key, check]) => check(value[key], [...path, key], issues))
-            .every(Boolean);
-    };
-}
-function tagged(variants: Record<string, Check>): Check {
-    return (value, path, issues) => {
-        // Stored JSON is acyclic, but callers may pass arbitrary JS values.
-        // Bound nesting so cyclic or adversarially deep expressions cannot overflow.
-        if (path.length > 256) {
-            issues.push(issue("Expression nesting is too deep", path));
-            return false;
-        }
-        if (!isRecord(value)) {
-            issues.push(issue("Expected a tagged expression", path));
-            return false;
-        }
-        const check =
-            typeof value["tag"] === "string" && Object.hasOwn(variants, value["tag"])
-                ? variants[value["tag"]]
-                : undefined;
-        if (!check) {
-            issues.push(issue("Unknown expression tag", [...path, "tag"]));
-            return false;
-        }
-        return check(value["content"], [...path, "content"], issues);
-    };
+function string(value: unknown, path: Path, issues: StructuralIssue[]): boolean {
+    if (typeof value === "string") {
+        return true;
+    }
+    issues.push(issue("Expected a string", path));
+    return false;
 }
 
-// Lazy functions allow the mutually recursive stored expression types.
-const obType: Check = (value, path, issues) =>
-    tagged({
-        Basic: string,
-        Tabulator: morType,
-        ModeApp: fields({ modality, obType }),
-    })(value, path, issues);
-const morType: Check = (value, path, issues) =>
-    tagged({
-        Basic: string,
-        Hom: obType,
-        Composite: array(morType),
-        ModeApp: fields({ modality, morType }),
-    })(value, path, issues);
-const ob: Check = (value, path, issues) =>
-    tagged({
-        Basic: string,
-        App: fields({ op: tagged({ Basic: string }), ob }),
-        List: fields({ modality, objects: array(nullable(ob)) }),
-        Tabulated: mor,
-    })(value, path, issues);
-const mor: Check = (value, path, issues) =>
-    tagged({
-        Basic: string,
-        Composite: tagged({ Id: ob, Seq: array(mor) }),
-        TabulatorSquare: fields({ dom: mor, cod: mor, pre: mor, post: mor }),
-    })(value, path, issues);
-const link = fields({
-    _id: string,
-    _version: nullable(string),
-    _server: string,
-    type: scalar((value) => value === "instantiation", "an instantiation link"),
-});
-const judgment: Check = (value, path, issues) => {
+function judgment(value: unknown, path: Path, issues: StructuralIssue[]): boolean {
     if (!isRecord(value)) {
         issues.push(issue("Expected a model judgment", path));
         return false;
     }
-    const variants: Record<string, Check> = {
-        object: fields({ id: uuid, name: string, obType }),
-        morphism: fields({ id: uuid, name: string, morType, dom: nullable(ob), cod: nullable(ob) }),
-        equation: fields({ id: uuid, name: string, lhs: nullable(mor), rhs: nullable(mor) }),
-        instantiation: fields({
-            id: uuid,
-            name: string,
-            model: nullable(link),
-            specializations: array(fields({ id: nullable(string), ob: nullable(ob) })),
-        }),
-    };
-    const check =
-        typeof value["tag"] === "string" && Object.hasOwn(variants, value["tag"])
-            ? variants[value["tag"]]
-            : undefined;
-    if (!check) {
+    if (
+        typeof value["tag"] !== "string" ||
+        !["object", "morphism", "equation", "instantiation"].includes(value["tag"])
+    ) {
         issues.push(issue("Unknown model judgment tag", [...path, "tag"]));
         return false;
     }
-    return check(value, path, issues);
-};
-const richText: Check = (value, path, issues) => {
-    if (typeof value === "string") {
-        return true;
-    }
-    return array((span, spanPath, spanIssues) => {
-        if (!isRecord(span)) {
-            spanIssues.push(issue("Expected a rich-text span", spanPath));
-            return false;
-        }
-        switch (span["type"]) {
-            case "text":
-                return fields({
-                    value: string,
-                    ...(span["marks"] === undefined ? {} : { marks: record }),
-                })(span, spanPath, spanIssues);
-            case "block":
-                return fields({ block: record })(span, spanPath, spanIssues);
-            default:
-                spanIssues.push(issue("Unknown rich-text span type", [...spanPath, "type"]));
-                return false;
-        }
-    })(value, path, issues);
-};
+    const id = string(value["id"], [...path, "id"], issues);
+    const name = string(value["name"], [...path, "name"], issues);
+    return id && name;
+}
 
 /** Repair notebook structure without changing the stored JSON. The returned
- * order contains exactly the retained cell keys, once each. Malformed cells
+ * order contains exactly the retained cell keys, once each. Malformed cell envelopes
  * are dropped; the map key is authoritative for each cell's ID. Extra fields
  * are retained. An undamaged notebook is returned with the same object identity. */
 export function parseModelNotebook(value: unknown): WithIssues<ParsedModelNotebook> {
@@ -208,24 +74,18 @@ export function parseModelNotebook(value: unknown): WithIssues<ParsedModelNotebo
     const kept: Record<string, unknown> = Object.create(null);
     for (const [id, cell] of Object.entries(contents)) {
         const cellPath = [...path, "cellContents", id];
-        if (!uuid(id, cellPath, issues)) {
-            continue;
-        }
         if (!isRecord(cell)) {
             issues.push(issue("Expected a notebook cell", cellPath));
             continue;
         }
-        const check =
-            cell["tag"] === "rich-text"
-                ? richText
-                : cell["tag"] === "formal"
-                  ? judgment
-                  : undefined;
-        if (!check) {
+        if (cell["tag"] !== "rich-text" && cell["tag"] !== "formal") {
             issues.push(issue("Unknown notebook cell tag", [...cellPath, "tag"]));
             continue;
         }
-        if (!check(cell["content"], [...cellPath, "content"], issues)) {
+        if (
+            cell["tag"] === "formal" &&
+            !judgment(cell["content"], [...cellPath, "content"], issues)
+        ) {
             continue;
         }
         if (cell["id"] !== id) {

@@ -1,5 +1,5 @@
-import type { Mor, Ob } from "catcolab-document-types";
-import type { DeepReadonly } from "../document-store";
+import type { Mor } from "catcolab-document-types";
+import { isRecord } from "../parsed-document";
 import type { MorphismTypesOf, ObjectTypesOf, Shape } from "../shape";
 import { obFromObjectCell, type MorphismCell, type ObjectCell } from "./cell";
 import { tryGetModelJudgment, type ModelDocument } from "./document";
@@ -32,31 +32,45 @@ export function morFromSide<S extends Shape>(
 
 /** Decode a stored side using caller-owned reference resolution (snapshot or frontend view). */
 export function decodeEquationSide<S extends Shape>(
-    side: DeepReadonly<Mor> | null,
-    objectFromOb: (ob: DeepReadonly<Ob>) => ObjectCell<ObjectTypesOf<S>> | null,
+    side: unknown,
+    objectFromOb: (ob: unknown) => ObjectCell<ObjectTypesOf<S>> | null,
     morphismFromId: (id: string) => MorphismCell<S, MorphismTypesOf<S>> | null,
 ): EquationSide<S> {
-    if (side === null) {
+    if (side == null) {
         return [];
     }
-    if (side.tag === "Composite" && side.content.tag === "Id") {
-        const object = objectFromOb(side.content.content);
+    if (!isRecord(side)) {
+        return [null];
+    }
+    if (
+        side["tag"] === "Composite" &&
+        isRecord(side["content"]) &&
+        side["content"]["tag"] === "Id"
+    ) {
+        const object = objectFromOb(side["content"]["content"]);
         if (object === null) {
             return [null];
         }
         return object;
     }
-    let mors: readonly DeepReadonly<Mor>[];
-    if (side.tag === "Composite" && side.content.tag === "Seq") {
-        mors = side.content.content;
+    let mors: readonly unknown[];
+    if (
+        side["tag"] === "Composite" &&
+        isRecord(side["content"]) &&
+        side["content"]["tag"] === "Seq"
+    ) {
+        if (!Array.isArray(side["content"]["content"])) {
+            return [null];
+        }
+        mors = side["content"]["content"];
     } else {
         mors = [side];
     }
     return mors.map((mor) => {
-        if (mor.tag !== "Basic") {
+        if (!isRecord(mor) || mor["tag"] !== "Basic" || typeof mor["content"] !== "string") {
             return null;
         }
-        return morphismFromId(mor.content);
+        return morphismFromId(mor["content"]);
     });
 }
 

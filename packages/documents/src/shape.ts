@@ -1,6 +1,5 @@
 import type { Modality, MorType, ObOp, ObType } from "catcolab-document-types";
 import type { DblTheory } from "catlog-wasm";
-import type { DeepReadonly } from "./document-store";
 import { morphismTypesEqual, objectTypesEqual } from "./model/equality";
 
 export interface ObjectType<O extends ObType = ObType> {
@@ -124,7 +123,7 @@ export type CodomainObjectTypesOf<S extends Shape, M extends MorphismType> = M e
 
 export function findObjectType<S extends Shape>(
     shape: S,
-    obType: DeepReadonly<ObType>,
+    obType: unknown,
 ): ObjectTypesOf<S> | undefined {
     return shape.objects?.find((type) => objectTypesEqual(type.obType, obType)) as
         | ObjectTypesOf<S>
@@ -133,7 +132,7 @@ export function findObjectType<S extends Shape>(
 
 export function findMorphismType<S extends Shape>(
     shape: S,
-    morType: DeepReadonly<MorType>,
+    morType: unknown,
 ): MorphismTypesOf<S> | undefined {
     return shape.morphisms?.find((type) => morphismTypesEqual(type.morType, morType)) as
         | MorphismTypesOf<S>

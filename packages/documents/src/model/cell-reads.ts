@@ -1,6 +1,7 @@
-import type { ModelJudgment, NotebookCell, Ob } from "catcolab-document-types";
+import type { RichTextContent } from "catcolab-document-types";
 import type { DeepReadonly } from "../document-store";
 import type { NotebookDocument } from "../notebook-document";
+import { isRecord } from "../parsed-document";
 import {
     findMorphismType,
     findObjectType,
@@ -10,7 +11,7 @@ import {
 } from "../shape";
 import type { CellOf, MorphismCell, ObjectCell } from "./cell";
 import { decodeEquationSide } from "./equation-translate";
-import type { ParsedModelDocument } from "./parsed-document";
+import type { ParsedModelCell, ParsedModelDocument, ParsedModelJudgment } from "./parsed-document";
 import { findModelReferenceCellId } from "./parsed-source";
 
 /** Structural identity of a supported model cell; value fields are not read. */
@@ -34,14 +35,14 @@ export function describeModelCell<S extends Shape>(
     }
     switch (cell.content.tag) {
         case "object": {
-            const type = findObjectType(shape, cell.content.obType);
+            const type = findObjectType(shape, cell.content["obType"]);
             if (!type) {
                 return undefined;
             }
             return { kind: "object" as const, type };
         }
         case "morphism": {
-            const type = findMorphismType(shape, cell.content.morType);
+            const type = findMorphismType(shape, cell.content["morType"]);
             if (!type) {
                 return undefined;
             }
@@ -73,7 +74,7 @@ export function createCellReadView<C extends CellOf<Shape>>(
     resolve: (id: string) => CellOf<Shape> | undefined = () => undefined,
     runCommand: (command: () => void) => void = (command) => command(),
 ): C {
-    function stored(): DeepReadonly<NotebookCell<ModelJudgment>> | undefined {
+    function stored(): DeepReadonly<ParsedModelCell> | undefined {
         const document = read();
         if (!document) {
             return undefined;
@@ -106,7 +107,7 @@ export function createCellReadView<C extends CellOf<Shape>>(
         }
         return cell;
     }
-    function judgment(): DeepReadonly<ModelJudgment> | undefined {
+    function judgment(): DeepReadonly<ParsedModelJudgment> | undefined {
         const cell = stored();
         return cell?.tag === "formal" ? cell.content : undefined;
     }
@@ -122,9 +123,9 @@ export function createCellReadView<C extends CellOf<Shape>>(
         const resolved = cellId === undefined ? undefined : resolve(cellId);
         return resolved?.kind === kind ? resolved : null;
     }
-    const objectFromOb = (ob: DeepReadonly<Ob> | null): ObjectCell<ObjectTypesOf<Shape>> | null =>
-        ob?.tag === "Basic"
-            ? (reference(ob.content, "object") as ObjectCell<ObjectTypesOf<Shape>> | null)
+    const objectFromOb = (ob: unknown): ObjectCell<ObjectTypesOf<Shape>> | null =>
+        isRecord(ob) && ob["tag"] === "Basic" && typeof ob["content"] === "string"
+            ? (reference(ob["content"], "object") as ObjectCell<ObjectTypesOf<Shape>> | null)
             : null;
     const morphismFromId = (id: string): MorphismCell<Shape, MorphismTypesOf<Shape>> | null =>
         reference(id, "morphism") as MorphismCell<Shape, MorphismTypesOf<Shape>> | null;
@@ -162,7 +163,11 @@ export function createCellReadView<C extends CellOf<Shape>>(
                 kind: "rich-text",
                 get content() {
                     const cell = stored();
-                    return cell?.tag === "rich-text" ? cell.content : undefined;
+                    const content = cell?.tag === "rich-text" ? cell.content : undefined;
+                    // Rich-text spans are opaque here, just as they are at the editor boundary.
+                    return typeof content === "string" || Array.isArray(content)
+                        ? (content as RichTextContent)
+                        : undefined;
                 },
             } as C;
         case "object":
@@ -182,11 +187,11 @@ export function createCellReadView<C extends CellOf<Shape>>(
                 },
                 get from() {
                     const decl = judgment();
-                    return decl?.tag === "morphism" ? objectFromOb(decl.dom) : undefined;
+                    return decl?.tag === "morphism" ? objectFromOb(decl["dom"]) : undefined;
                 },
                 get to() {
                     const decl = judgment();
-                    return decl?.tag === "morphism" ? objectFromOb(decl.cod) : undefined;
+                    return decl?.tag === "morphism" ? objectFromOb(decl["cod"]) : undefined;
                 },
             } as C;
         case "path-equation":

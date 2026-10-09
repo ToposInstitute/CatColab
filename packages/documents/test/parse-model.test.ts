@@ -8,12 +8,13 @@ import {
     createInMemoryStore,
     parseModelDocument,
     parseModelNotebook,
+    PathEquation,
     RichText,
     type Result,
 } from "catcolab-documents";
-import { getDocumentSnapshot } from "./helpers/snapshot";
 import { findModelReferenceCellId, parseModelSnapshot } from "../src/model/parsed-source";
 import { getRichTextCell } from "../src/rich-text";
+import { getDocumentSnapshot } from "./helpers/snapshot";
 
 const a = "00000000-0000-0000-0000-000000000001";
 const b = "00000000-0000-0000-0000-000000000002";
@@ -109,45 +110,10 @@ describe("model structural parsing", () => {
     test.each([
         { tag: "unknown", id: a, content: {} },
         { tag: "formal", id: a, content: null },
+        { tag: "formal", id: a, content: { ...objectCell().content, tag: "unknown" } },
         { tag: "formal", id: a, content: { ...objectCell().content, name: 42 } },
-        { tag: "formal", id: a, content: { ...objectCell().content, id: "invalid" } },
-        {
-            tag: "formal",
-            id: a,
-            content: {
-                tag: "morphism",
-                id: b,
-                name: "f",
-                morType: basic,
-                dom: { tag: "Basic", content: 3 },
-                cod: null,
-            },
-        },
-        {
-            tag: "formal",
-            id: a,
-            content: {
-                tag: "equation",
-                id: b,
-                name: "e",
-                lhs: { tag: "Composite", content: { tag: "Seq", content: [null] } },
-                rhs: null,
-            },
-        },
-        {
-            tag: "formal",
-            id: a,
-            content: {
-                tag: "instantiation",
-                id: b,
-                name: "i",
-                model: { _id: "ref" },
-                specializations: [],
-            },
-        },
-        { tag: "rich-text", id: a, content: [{ type: "text", value: 3 }] },
-        { tag: "rich-text", id: a, content: [{ type: "block", block: [] }] },
-    ])("drops malformed cells with diagnostic paths", (cell) => {
+        { tag: "formal", id: a, content: { ...objectCell().content, id: null } },
+    ])("drops malformed envelopes with diagnostic paths", (cell) => {
         const parsed = parseNotebook(cell);
         expect(parsed.value.cellOrder).toEqual([]);
         expect(parsed.value.cellContents).toEqual({});
@@ -159,92 +125,42 @@ describe("model structural parsing", () => {
         ).toBe(true);
     });
 
-    test("retains all structurally valid variants, including unsupported expressions and missing references", () => {
-        const ob = {
-            tag: "List",
+    test.each([
+        { ...objectCell(), content: { ...objectCell().content, obType: null } },
+        { ...objectCell(), content: { ...objectCell().content, obType: { tag: "FutureType" } } },
+        { tag: "formal", id: a, content: { tag: "morphism", id: b, name: "f", dom: 3 } },
+        {
+            tag: "formal",
+            id: a,
             content: {
-                modality: "List",
-                objects: [
-                    null,
-                    {
-                        tag: "App",
-                        content: {
-                            op: { tag: "Basic", content: "operation" },
-                            ob: { tag: "Basic", content: "missing" },
-                        },
-                    },
-                ],
+                tag: "equation",
+                id: b,
+                name: "e",
+                lhs: { tag: "Composite", content: { tag: "Seq", content: [null] } },
             },
+        },
+        {
+            tag: "formal",
+            id: a,
+            content: { tag: "instantiation", id: b, name: "i", model: {}, specializations: "bad" },
+        },
+        { tag: "rich-text", id: a, content: [{ type: "text", value: 3 }] },
+    ])("preserves unchecked payloads for downstream consumers", (cell) => {
+        const parsed = parseNotebook(cell);
+        expect(parsed.issues).toEqual([]);
+        expect(parsed.value.cellContents[a]).toBe(cell);
+    });
+
+    test("IDs are opaque strings at the notebook boundary", () => {
+        const cell = {
+            ...objectCell("cell"),
+            content: { ...objectCell().content, id: "generator" },
         };
-        const mor = { tag: "Composite", content: { tag: "Id", content: ob } };
-        const cells = [
-            {
-                ...objectCell(),
-                content: {
-                    ...objectCell().content,
-                    obType: {
-                        tag: "Tabulator",
-                        content: {
-                            tag: "ModeApp",
-                            content: {
-                                modality: "Discrete",
-                                morType: {
-                                    tag: "Composite",
-                                    content: [{ tag: "Hom", content: basic }],
-                                },
-                            },
-                        },
-                    },
-                },
-            },
-            {
-                tag: "formal",
-                id: a,
-                content: {
-                    tag: "morphism",
-                    id: b,
-                    name: "f",
-                    morType: { tag: "Hom", content: basic },
-                    dom: {
-                        tag: "Tabulated",
-                        content: {
-                            tag: "TabulatorSquare",
-                            content: { dom: mor, cod: mor, pre: mor, post: mor },
-                        },
-                    },
-                    cod: null,
-                },
-            },
-            {
-                tag: "formal",
-                id: a,
-                content: { tag: "equation", id: b, name: "e", lhs: mor, rhs: null },
-            },
-            {
-                tag: "formal",
-                id: a,
-                content: {
-                    tag: "instantiation",
-                    id: b,
-                    name: "i",
-                    model: null,
-                    specializations: [{ id: null, ob: null }],
-                },
-            },
-            {
-                tag: "rich-text",
-                id: a,
-                content: [
-                    { type: "text", value: "Hello", marks: { strong: true } },
-                    { type: "block", block: { type: "paragraph" } },
-                ],
-            },
-        ];
-        for (const cell of cells) {
-            const parsed = parseNotebook(cell);
-            expect(parsed.issues).toEqual([]);
-            expect(parsed.value.cellContents[a]).toBe(cell);
-        }
+        const raw = { cellContents: { cell }, cellOrder: ["cell"] };
+        const parsed = parseModelNotebook(raw);
+        expect(parsed.issues).toEqual([]);
+        expect(parsed.value).toBe(raw);
+        expect(findModelReferenceCellId(parsed.value, "object", "generator")).toBe("cell");
     });
 
     test("reference indexes preserve first-match semantics and are scoped to notebook identity", () => {
@@ -257,19 +173,56 @@ describe("model structural parsing", () => {
         expect(findModelReferenceCellId(first, "object", b)).toBe(a);
     });
 
-    test("cyclic expressions are diagnosed rather than overflowing", () => {
+    test("does not traverse expression payloads", () => {
         const type: { tag: string; content?: unknown } = { tag: "Tabulator" };
         type.content = { tag: "Hom", content: type };
-        const parsed = parseNotebook({
-            ...objectCell(),
-            content: { ...objectCell().content, obType: type },
-        });
-        expect(parsed.value.cellOrder).toEqual([]);
-        expect(parsed.issues[0]?.message).toContain("nesting");
+        const cell = { ...objectCell(), content: { ...objectCell().content, obType: type } };
+        const parsed = parseNotebook(cell);
+        expect(parsed.issues).toEqual([]);
+        expect(parsed.value.cellContents[a]).toBe(cell);
     });
 });
 
 describe("parsed model notebook integration", { timeout: 20_000 }, () => {
+    test("preserves damaged expressions, reads them safely, and reports Wasm failures", async () => {
+        const store = createInMemoryStore();
+        const notebook = await createBinder(store).createNotebook(SimpleOlog, { title: "Model" });
+        const object = notebook.add(Type, { label: "A" });
+        const morphism = notebook.add(Aspect, { label: "f", from: object, to: object });
+        const equation = notebook.add(PathEquation, { label: "e", lhs: [morphism] });
+        store.changeDocument(notebook.handle, (doc) => {
+            if (doc.type === "model") {
+                const contents = doc.notebook.cellContents;
+                for (const [id, field, value] of [
+                    [object.id, "obType", { tag: "ModeApp", content: null }],
+                    [morphism.id, "dom", { tag: "Basic", content: 3 }],
+                    [
+                        equation.id,
+                        "lhs",
+                        { tag: "Composite", content: { tag: "Seq", content: [null] } },
+                    ],
+                ] as const) {
+                    (contents[id]!.content as unknown as Record<string, unknown>)[field] = value;
+                }
+            }
+        });
+        const parsed = ok(parseModelSnapshot(store.getDocumentSnapshot(notebook.handle)));
+        expect(parsed.issues).toEqual([]);
+        expect(parsed.value.notebook.cellOrder).toHaveLength(3);
+        expect(notebook.cells().map((cell) => cell.id)).toEqual([morphism.id, equation.id]);
+        expect(object.label).toBe("A");
+        expect(morphism.from).toBeNull();
+        expect(morphism.to).toBeNull(); // The referenced object has no representable type.
+        expect(equation.lhs).toEqual([null]);
+        expect(
+            (await notebook.validate()).issues.some((issue) =>
+                issue.message.includes("Failed to elaborate model"),
+            ),
+        ).toBe(true);
+        expect(notebook.dump().notebook.cellOrder).toHaveLength(3);
+        notebook.dispose();
+    });
+
     test.each(["missing", "duplicate", "malformed"])(
         "deletes cells despite %s order entries without persisting unrelated repairs",
         async (damage) => {
@@ -323,7 +276,7 @@ describe("parsed model notebook integration", { timeout: 20_000 }, () => {
         const repo = new Repo();
         try {
             const handle = repo.create(document() as Document);
-            const read = (handle: typeof handle) => getDocumentSnapshot(handle.doc());
+            const read = (source: typeof handle) => getDocumentSnapshot(source.doc());
             const before = parseModelSnapshot(read(handle));
             expect(parseModelSnapshot(read(handle))).toBe(before);
             handle.change((doc) => {

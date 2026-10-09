@@ -3,8 +3,8 @@ import { describe, expect, test, vi } from "vitest";
 
 import type { Document } from "catcolab-document-types";
 import { createInMemoryStore } from "catcolab-documents";
-import { getDocumentSnapshot } from "./helpers/snapshot";
 import { parsedInstanceTables, parsedSnapshotTables } from "../src/instance/parsed-source";
+import { getDocumentSnapshot } from "./helpers/snapshot";
 
 function document(): Document {
     return {
@@ -80,7 +80,7 @@ describe("snapshot-derived instance parsing", () => {
         const repo = new Repo();
         try {
             const handle = repo.create(document());
-            const read = (handle: typeof handle) => getDocumentSnapshot(handle.doc());
+            const read = (source: typeof handle) => getDocumentSnapshot(source.doc());
             const before = read(handle);
             expect(read(handle)).toBe(before);
             handle.change((doc) => {

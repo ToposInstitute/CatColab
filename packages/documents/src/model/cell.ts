@@ -184,8 +184,8 @@ export function getModelCell<Handle, S extends Shape, Version>(
     return cell;
 }
 
-/** Resolve only cells representable by this shape; malformed cells were already
- * removed by parsing. Semantic validation still sees unsupported judgments. */
+/** Resolve only cells representable by this shape. Validation still sees
+ * unsupported or malformed expression payloads. */
 export function tryGetModelCell<Handle, S extends Shape, Version>(
     shape: S,
     store: DocumentStore<Handle, Version>,
