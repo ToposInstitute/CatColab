@@ -2,11 +2,11 @@ import { change, from } from "@automerge/automerge";
 import { describe, expect, test } from "vitest";
 
 import { Model } from "catcolab-document-methods";
-import { createDocumentSnapshotCache } from "./document_snapshot";
+import { createDocumentSnapshotReader } from "./document_snapshot";
 
-describe("createDocumentSnapshotCache", () => {
+describe("createDocumentSnapshotReader", () => {
     test("reuses snapshots by Automerge version identity without changing old snapshots", () => {
-        const getCachedSnapshot = createDocumentSnapshotCache();
+        const getCachedSnapshot = createDocumentSnapshotReader();
         const original = from({ ...Model.newModelDocument({ theory: "simple-olog" }) });
         const before = getCachedSnapshot(original);
 

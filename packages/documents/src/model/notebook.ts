@@ -20,7 +20,7 @@ import type {
 import type { Commit } from "../transaction";
 import { createSubscriptionScope } from "../util/subscription-scope";
 import {
-    getModelCell,
+    tryGetModelCell,
     getMorphismCell,
     getObjectCell,
     obFromObjectCell,
@@ -33,6 +33,7 @@ import type { ModelValidation } from "./elaborated-model";
 import { morphismTypesEqual, objectTypesEqual } from "./equality";
 import { getEquationCell, type EquationCell, type EquationSide } from "./equation";
 import { morFromSide } from "./equation-translate";
+import { parseModelSnapshot } from "./parsed-source";
 import { createNotebookValidator } from "./validation";
 
 /**
@@ -230,79 +231,80 @@ export function modelNotebookFromStore<Handle, S extends Shape, Version>(
     return {
         shape,
         handle,
-        get type() {
-            return (store.getDocumentSnapshot(handle) as DeepReadonly<ModelDocument>).type;
-        },
+        type: "model",
         get document() {
-            return store.getDocumentSnapshot(handle) as DeepReadonly<ModelDocument>;
-        },
+        return store.getDocumentSnapshot(handle) as DeepReadonly<ModelDocument>;
+    },
         get title() {
-            return (store.getDocumentSnapshot(handle) as DeepReadonly<ModelDocument>).name;
+            const parsed = parseModelSnapshot(store.getDocumentSnapshot(handle));
+            return parsed.tag === "Ok" ? parsed.content.value.name : "";
         },
         add<T extends CellTypeOf<S>>(type: T, values: CellValuesOf<S, T>) {
-            if (type.kind === "rich-text") {
-                const richText = values as { content: string };
-                const cell = Nb.newRichTextCell(richText.content);
-                appendCell(cell);
-                return getRichTextCell(store, handle, cell.id) as AddedCellOf<S, T>;
-            }
+        if (type.kind === "rich-text") {
+            const richText = values as { content: string };
+            const cell = Nb.newRichTextCell(richText.content);
+            appendCell(cell);
+            return getRichTextCell(store, handle, cell.id) as AddedCellOf<S, T>;
+        }
 
-            if (type.kind === "object") {
-                const object = values as { label: string | null };
-                const judgment = Model.newObjectDecl(type.obType);
-                judgment.name = object.label ?? "";
-                const cell = Nb.newFormalCell<ModelJudgment>(judgment);
-                appendCell(cell);
-                return getObjectCell(
-                    store,
-                    handle,
-                    cell.id,
-                    type as ObjectTypesOf<S>,
-                ) as AddedCellOf<S, T>;
-            }
-
-            if (type.kind === "path-equation") {
-                if (!shape.supportsEquations) {
-                    throw new Error(
-                        `Shape \`${shape.theory ?? "unnamed"}\` does not support path equations`,
-                    );
-                }
-                const equation = values as CellValuesOf<S, EquationType>;
-                const decl = Model.newEquationDecl();
-                decl.name = equation.label ?? "";
-                const document = store.getDocumentSnapshot(handle) as ModelDocument;
-                decl.lhs = morFromSide(document, equation.lhs ?? []);
-                decl.rhs = morFromSide(document, equation.rhs ?? []);
-                const cell = Nb.newFormalCell<ModelJudgment>(decl);
-                appendCell(cell);
-                return getEquationCell(shape, store, handle, cell.id) as AddedCellOf<S, T>;
-            }
-
-            const morphism = values as CellValuesOf<S, MorphismTypesOf<S>>;
-            const judgment = Model.newMorphismDecl(type.morType);
-            judgment.name = morphism.label ?? "";
-            const document = store.getDocumentSnapshot(handle) as ModelDocument;
-            judgment.dom = obFromObjectCell(document, morphism.from);
-            judgment.cod = obFromObjectCell(document, morphism.to);
+        if (type.kind === "object") {
+            const object = values as { label: string | null };
+            const judgment = Model.newObjectDecl(type.obType);
+            judgment.name = object.label ?? "";
             const cell = Nb.newFormalCell<ModelJudgment>(judgment);
             appendCell(cell);
-            return getMorphismCell(
-                shape,
+            return getObjectCell(
                 store,
                 handle,
                 cell.id,
-                type as MorphismTypesOf<S>,
+                type as ObjectTypesOf<S>,
             ) as AddedCellOf<S, T>;
-        },
+        }
+
+        if (type.kind === "path-equation") {
+            if (!shape.supportsEquations) {
+                throw new Error(
+                    `Shape \`${shape.theory ?? "unnamed"}\` does not support path equations`,
+                );
+            }
+            const equation = values as CellValuesOf<S, EquationType>;
+            const decl = Model.newEquationDecl();
+            decl.name = equation.label ?? "";
+            const document = store.getDocumentSnapshot(handle) as ModelDocument;
+            decl.lhs = morFromSide(document, equation.lhs ?? []);
+            decl.rhs = morFromSide(document, equation.rhs ?? []);
+            const cell = Nb.newFormalCell<ModelJudgment>(decl);
+            appendCell(cell);
+            return getEquationCell(shape, store, handle, cell.id) as AddedCellOf<S, T>;
+        }
+
+        const morphism = values as CellValuesOf<S, MorphismTypesOf<S>>;
+        const judgment = Model.newMorphismDecl(type.morType);
+        judgment.name = morphism.label ?? "";
+        const document = store.getDocumentSnapshot(handle) as ModelDocument;
+        judgment.dom = obFromObjectCell(document, morphism.from);
+        judgment.cod = obFromObjectCell(document, morphism.to);
+        const cell = Nb.newFormalCell<ModelJudgment>(judgment);
+        appendCell(cell);
+        return getMorphismCell(
+            shape,
+            store,
+            handle,
+            cell.id,
+            type as MorphismTypesOf<S>,
+        ) as AddedCellOf<S, T>;
+    },
         cells() {
-            const document = store.getDocumentSnapshot(handle) as DeepReadonly<ModelDocument>;
-            return document.notebook.cellOrder.map((cellId) =>
-                getModelCell(shape, store, handle, cellId),
-            );
+            const parsed = parseModelSnapshot(store.getDocumentSnapshot(handle));
+            const order = parsed.tag === "Ok" ? parsed.content.value.notebook.cellOrder : [];
+            return order.flatMap((cellId) => {
+                const cell = tryGetModelCell(shape, store, handle, cellId);
+                return cell ? [cell] : [];
+            });
         },
         cellsOf(filter: AnyCellType | Shape) {
-            return this.cells().filter((cell) => cellMatchesFilter(cell, filter));
-        },
+        return this.cells().filter((cell) => cellMatchesFilter(cell, filter));
+    },
         supports(filter) {
             if (isCellType(filter)) {
                 return shapeSupportsCell(shape, filter);

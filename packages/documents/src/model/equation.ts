@@ -1,12 +1,12 @@
 import type { EqnDecl } from "catcolab-document-types";
-import type { DeepReadonly } from "../deep-freeze";
 import type { DocumentStore } from "../document-store";
 import { deleteNotebookCell } from "../notebook-document";
 import type { MorphismTypesOf, ObjectTypesOf, Shape } from "../shape";
-import { getModelCell, type MorphismCell, type ObjectCell } from "./cell";
-import { createCellReadView, describeModelCell } from "./cell-reads";
+import { tryGetModelCell, type MorphismCell, type ObjectCell } from "./cell";
+import { createCellReadView } from "./cell-reads";
 import type { ModelDocument } from "./document";
 import { morFromSide } from "./equation-translate";
+import { readModelSnapshot } from "./parsed-source";
 
 /** A side of an equation: the identity on an object, or a composite of
 morphisms. The empty composite means the side is unspecified.
@@ -81,14 +81,7 @@ export function getEquationCell<Handle, S extends Shape, Version>(
                 deleteNotebookCell(store, handle, cellId);
             },
         },
-        () => store.getDocumentSnapshot(handle) as DeepReadonly<ModelDocument>,
-        (id) =>
-            describeModelCell(
-                shape,
-                store.getDocumentSnapshot(handle) as DeepReadonly<ModelDocument>,
-                id,
-            )
-                ? getModelCell(shape, store, handle, id)
-                : undefined,
+        () => readModelSnapshot(store.getDocumentSnapshot(handle)),
+        (id) => tryGetModelCell(shape, store, handle, id),
     );
 }
