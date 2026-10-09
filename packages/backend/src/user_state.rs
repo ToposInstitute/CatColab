@@ -425,10 +425,14 @@ pub async fn get_or_create_user_state_doc(
         }
     }
 
+    // Serialize first loads so concurrent requests cannot rotate each other's IDs.
+    let mut initialized = state.initialized_user_states.write().await;
+    if let Some(doc_id) = initialized.get(user_id) {
+        return Ok(doc_id.clone());
+    }
     let user_state = read_user_state_from_db(user_id.to_string(), &state.db).await?;
     let doc_id = initialize_user_state_doc(state, user_id, &user_state).await?;
 
-    let mut initialized = state.initialized_user_states.write().await;
     initialized.insert(user_id.to_string(), doc_id.clone());
     Ok(doc_id)
 }
@@ -440,39 +444,13 @@ pub fn user_state_to_automerge(state: &UserState) -> Result<automerge::Automerge
     Ok(doc)
 }
 
-/// Initializes a user state document.
+/// Creates a fresh user state document and persists its ID.
 pub async fn initialize_user_state_doc(
     state: &AppState,
     user_id: &str,
     user_state: &UserState,
 ) -> Result<DocumentId, AppError> {
-    let persisted_doc_id: Option<(String,)> =
-        sqlx::query_as("SELECT state_doc_id FROM users WHERE id = $1 AND state_doc_id IS NOT NULL")
-            .bind(user_id)
-            .fetch_optional(&state.db)
-            .await?;
-
-    // If we have a persisted ID, try to find the doc in the repo and re-use it.
-    if let Some((doc_id_str,)) = &persisted_doc_id
-        && let Ok(doc_id) = DocumentId::from_str(doc_id_str)
-    {
-        if let Ok(Some(doc_handle)) = state.repo.find(doc_id.clone()).await {
-            doc_handle.with_document(|doc| user_state.reconcile_into(doc))?;
-            debug!(
-                user_id = %user_id,
-                doc_id = %doc_id,
-                "Reconciled existing user state document from DB"
-            );
-            return Ok(doc_id);
-        }
-        debug!(
-            user_id = %user_id,
-            doc_id = %doc_id_str,
-            "Persisted state_doc_id not found in repo; creating new document"
-        );
-    }
-
-    // No existing doc — create a fresh one.
+    // Never load the old document into this repo; rebuild from authoritative DB state.
     let doc = user_state_to_automerge(user_state)?;
     let doc_handle = state.repo.create(doc).await?;
     let doc_id = doc_handle.document_id();
@@ -483,7 +461,10 @@ pub async fn initialize_user_state_doc(
         .execute(&state.db)
         .await?;
 
-    info!(user_id = %user_id, doc_id = %doc_id, "Initialized user state document");
+    // Ideally we'd delete the old document from storage here, but samod 0.13 has no repo-level
+    // delete API.
+
+    info!(user_id = %user_id, doc_id = %doc_id, "Initialized fresh user state document");
 
     Ok(doc_id.clone())
 }

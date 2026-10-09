@@ -629,11 +629,9 @@ mod integration_tests {
         Ok(())
     }
 
-    /// The document ID should survive an app restart (persisted in the DB).
+    /// Restart rotates the ID without deleting the old document.
     #[sqlx::test]
-    async fn get_or_create_user_state_doc_persists_across_app_restart(
-        pool: PgPool,
-    ) -> sqlx::Result<()> {
+    async fn get_or_create_user_state_doc_rotates_after_restart(pool: PgPool) -> sqlx::Result<()> {
         use backend::user_state::get_or_create_user_state_doc;
 
         run_migrations(&pool).await?;
@@ -652,12 +650,49 @@ mod integration_tests {
         let id_after = backend::user_state::get_or_create_user_state_doc(&state2, &user_id)
             .await
             .unwrap();
-        assert_eq!(id_before, id_after);
+        assert_ne!(id_before, id_after);
+        assert_eq!(
+            backend::user_state::get_user_state_doc(&state2, &user_id).await,
+            Some(id_after.clone())
+        );
+        assert_eq!(get_or_create_user_state_doc(&state2, &user_id).await.unwrap(), id_after);
+
+        assert!(state2.repo.find(id_before).await.unwrap().is_some());
+        state2.repo.stop().await;
 
         Ok(())
     }
 
-    /// The first read after restart should refresh stale doc contents from DB.
+    /// A missing old document should not prevent initialization.
+    #[sqlx::test]
+    async fn get_or_create_user_state_doc_replaces_missing_document(
+        pool: PgPool,
+    ) -> sqlx::Result<()> {
+        use backend::user_state::get_or_create_user_state_doc;
+        run_migrations(&pool).await?;
+        let state = create_test_app_state(pool.clone()).await;
+        let user_id = format!("test_user_{}", Uuid::now_v7());
+        ensure_user_exists(&pool, &user_id).await.unwrap();
+        let missing_id = get_or_create_user_state_doc(&state, &user_id).await.unwrap();
+        state.repo.stop().await;
+        sqlx::query("DELETE FROM storage WHERE key[1] = $1")
+            .bind(missing_id.to_string())
+            .execute(&pool)
+            .await?;
+        let state = create_test_app_state(pool.clone()).await;
+        let (first, second) = tokio::join!(
+            get_or_create_user_state_doc(&state, &user_id),
+            get_or_create_user_state_doc(&state, &user_id),
+        );
+        let new_id = first.unwrap();
+        assert_ne!(new_id, missing_id);
+        assert_eq!(new_id, second.unwrap());
+        assert_eq!(backend::user_state::get_user_state_doc(&state, &user_id).await, Some(new_id));
+        state.repo.stop().await;
+        Ok(())
+    }
+
+    /// The first read after restart should rebuild document contents from DB.
     #[sqlx::test]
     async fn get_or_create_user_state_doc_refreshes_on_first_read_after_restart(
         pool: PgPool,
