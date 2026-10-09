@@ -3,7 +3,6 @@
     flex-direction: column;
     width: fit-content;
     max-width: 100%;
-    overflow-x: auto;
     border: 1px solid var(--color-gray-450);
     background: var(--color-background);
 }
@@ -42,6 +41,89 @@
     line-height: 1.4;
 }
 
+.scrollViewport {
+    position: relative;
+    min-width: 0;
+}
+
+/* Separate from the scrolling content so the cues stay at the viewport edges.
+Leave the native scrollbar gutter uncovered and allow all pointer events through. */
+.scrollIndicators {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 3;
+    pointer-events: none;
+    overflow: hidden;
+}
+
+/* One fixed line replaces the sticky cells' collapsed top borders. */
+.scrollIndicators::before {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    /* Fractional heights can disappear when resizing shifts the pixel alignment. */
+    height: 1px;
+    background: var(--color-gray-450);
+    opacity: 0.65;
+    content: "";
+}
+
+.scrollTop,
+.scrollBottom,
+.scrollLeft,
+.scrollRight {
+    position: absolute;
+}
+
+.scrollTop,
+.scrollBottom {
+    left: 0;
+    right: 0;
+    height: 10px;
+}
+
+.scrollTop {
+    top: var(--scroll-header-height);
+    background: linear-gradient(to bottom, rgb(0 0 0 / 20%), transparent);
+}
+
+.scrollBottom {
+    bottom: 0;
+    background: linear-gradient(to top, rgb(0 0 0 / 20%), transparent);
+}
+
+.scrollLeft,
+.scrollRight {
+    top: var(--scroll-header-height);
+    bottom: 0;
+    width: 10px;
+}
+
+.scrollLeft {
+    left: 0;
+    background: linear-gradient(to right, rgb(0 0 0 / 20%), transparent);
+}
+
+.scrollRight {
+    right: 0;
+    background: linear-gradient(to left, rgb(0 0 0 / 20%), transparent);
+}
+
+.scrollArea {
+    overflow: auto;
+    max-height: var(--table-editor-max-height, 70vh);
+    outline: none;
+}
+
+.spacer,
+.spacer td {
+    padding: 0;
+    border: none;
+    line-height: 0;
+}
+
 .grid {
     width: max-content;
     border-collapse: collapse;
@@ -49,9 +131,13 @@
 }
 
 .columnHeader {
+    position: sticky;
+    top: 0;
+    z-index: 2;
     height: 28px;
     padding: 0 0.5rem;
     border: 1px solid var(--color-gray-450);
+    border-top: none;
     background: var(--color-gray-50);
     font-weight: 500;
     text-align: left;
@@ -257,7 +343,7 @@ on the last row. Inset shadows leave the collapsed borders alone. */
         inset 0 3px 0 #d87878;
 }
 
-.grid tbody tr:last-child .cell.columnDeleting {
+.grid tbody tr.lastRow .cell.columnDeleting {
     box-shadow:
         inset 3px 0 0 #d87878,
         inset -3px 0 0 #d87878,

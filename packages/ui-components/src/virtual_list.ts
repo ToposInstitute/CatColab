@@ -16,7 +16,7 @@ export function createVirtualList<T>(config: {
         viewerTop: number;
         visibleItems: readonly T[];
     }>,
-    onScroll: (e: Event) => void,
+    onScroll: (e: Pick<Event, "target">) => void,
 ] {
     const overscan = config.overscanCount ?? 1;
     const [offset, setOffset] = createSignal(0);
@@ -40,7 +40,7 @@ export function createVirtualList<T>(config: {
         };
     });
 
-    const onScroll = (e: Event) => {
+    const onScroll = (e: Pick<Event, "target">) => {
         const target = e.target as HTMLElement | null;
         if (target?.scrollTop !== undefined) {
             setOffset(target.scrollTop);
