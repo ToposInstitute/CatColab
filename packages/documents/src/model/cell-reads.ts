@@ -1,6 +1,5 @@
 import type { RichTextContent } from "catcolab-document-types";
 import type { DeepReadonly } from "../document-store";
-import type { NotebookDocument } from "../notebook-document";
 import { isRecord } from "../parsed-document";
 import {
     findMorphismType,
@@ -55,22 +54,18 @@ export function describeModelCell<S extends Shape>(
     }
 }
 
-type CellReadDocument =
-    | ParsedModelDocument
-    | DeepReadonly<Exclude<NotebookDocument, { type: "model" }>>;
-
 type CellCommands<C extends CellOf<Shape>> = Omit<
     C,
     "label" | "content" | "from" | "to" | "lhs" | "rhs"
 >;
 
-/** Framework-neutral cell reads over structurally parsed model documents (or
- * non-model rich-text documents). Commands accept references by cell ID, so a
+/** Framework-neutral cell reads over structurally parsed model documents.
+ * Commands accept references by cell ID, so a
  * caller can supply its own identity-preserving resolver without translating patches.
  * An undefined read source retires the view: empty reads and no-op commands. */
 export function createCellReadView<C extends CellOf<Shape>>(
     commands: CellCommands<C>,
-    read: () => CellReadDocument | undefined,
+    read: () => ParsedModelDocument | undefined,
     resolve: (id: string) => CellOf<Shape> | undefined = () => undefined,
     runCommand: (command: () => void) => void = (command) => command(),
 ): C {
@@ -88,9 +83,6 @@ export function createCellReadView<C extends CellOf<Shape>>(
                 throw new Error(`Cell ${commands.id} is not rich text.`);
             }
             return cell;
-        }
-        if (document.type !== "model") {
-            throw new Error("Formal model reads require a model document.");
         }
         const cell = document.notebook.cellContents[commands.id];
         if (!cell) {
@@ -116,7 +108,7 @@ export function createCellReadView<C extends CellOf<Shape>>(
         kind: "object" | "morphism",
     ): ObjectCell<ObjectTypesOf<Shape>> | MorphismCell<Shape, MorphismTypesOf<Shape>> | null {
         const document = read();
-        if (document?.type !== "model") {
+        if (!document) {
             return null;
         }
         const cellId = findModelReferenceCellId(document.notebook, kind, id);

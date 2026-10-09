@@ -252,26 +252,6 @@ describe("parsed model notebook integration", { timeout: 20_000 }, () => {
         },
     );
 
-    test("non-model rich-text facades keep their generic read path", async () => {
-        const store = createInMemoryStore();
-        const handle = await store.createHandle({
-            type: "diagram",
-            name: "Diagram",
-            version: "2",
-            diagramIn: { _id: a, _version: null, _server: "", type: "diagram-in" },
-            notebook: {
-                cellContents: { [a]: { tag: "rich-text", id: a, content: "Hello" } },
-                cellOrder: [a],
-            },
-        });
-        const cell = getRichTextCell(store, handle, a);
-        expect(cell.content).toBe("Hello");
-        cell.update({ content: "Updated" });
-        expect(cell.content).toBe("Updated");
-        cell.delete();
-        expect(cell.content).toBeUndefined();
-    });
-
     test("Automerge local edits and remote merges select fresh parsed snapshots", async () => {
         const repo = new Repo();
         try {
