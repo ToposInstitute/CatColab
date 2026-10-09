@@ -6,7 +6,7 @@ import { tryGetModelCell, type MorphismCell, type ObjectCell } from "./cell";
 import { createCellReadView } from "./cell-reads";
 import type { ModelDocument } from "./document";
 import { morFromSide } from "./equation-translate";
-import { parseModelSnapshot } from "./parsed-source";
+import { readModelSnapshot } from "./parsed-source";
 
 /** A side of an equation: the identity on an object, or a composite of
 morphisms. The empty composite means the side is unspecified.
@@ -85,10 +85,7 @@ export function getEquationCell<Handle, S extends Shape, Version>(
                 deleteNotebookCell(store, handle, cellId);
             },
         },
-        () => {
-            const parsed = parseModelSnapshot(store.getDocumentSnapshot(handle));
-            return parsed.tag === "Ok" ? parsed.content.value : undefined;
-        },
+        () => readModelSnapshot(store.getDocumentSnapshot(handle)),
         (id) => tryGetModelCell(shape, store, handle, id),
     );
 }

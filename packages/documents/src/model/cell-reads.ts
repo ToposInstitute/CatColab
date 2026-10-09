@@ -58,12 +58,17 @@ type CellReadDocument =
     | ParsedModelDocument
     | DeepReadonly<Exclude<NotebookDocument, { type: "model" }>>;
 
+type CellCommands<C extends CellOf<Shape>> = Omit<
+    C,
+    "label" | "content" | "from" | "to" | "lhs" | "rhs"
+>;
+
 /** Framework-neutral cell reads over structurally parsed model documents (or
  * non-model rich-text documents). Commands accept references by cell ID, so a
  * caller can supply its own identity-preserving resolver without translating patches.
  * An undefined read source retires the view: empty reads and no-op commands. */
 export function createCellReadView<C extends CellOf<Shape>>(
-    commands: Omit<C, "label" | "content" | "from" | "to" | "lhs" | "rhs">,
+    commands: CellCommands<C>,
     read: () => CellReadDocument | undefined,
     resolve: (id: string) => CellOf<Shape> | undefined = () => undefined,
     runCommand: (command: () => void) => void = (command) => command(),
@@ -117,85 +122,86 @@ export function createCellReadView<C extends CellOf<Shape>>(
         const resolved = cellId === undefined ? undefined : resolve(cellId);
         return resolved?.kind === kind ? resolved : null;
     }
-    const objectFromOb = (
-        ob: DeepReadonly<Ob> | null,
-    ): ObjectCell<NonNullable<Shape["objects"]>[number]> | null =>
+    const objectFromOb = (ob: DeepReadonly<Ob> | null): ObjectCell<ObjectTypesOf<Shape>> | null =>
         ob?.tag === "Basic"
-            ? (reference(ob.content, "object") as ObjectCell<
-                  NonNullable<Shape["objects"]>[number]
-              > | null)
+            ? (reference(ob.content, "object") as ObjectCell<ObjectTypesOf<Shape>> | null)
             : null;
-    const morphismFromId = (
-        id: string,
-    ): MorphismCell<Shape, NonNullable<Shape["morphisms"]>[number]> | null =>
-        reference(id, "morphism") as MorphismCell<
-            Shape,
-            NonNullable<Shape["morphisms"]>[number]
-        > | null;
-    const reads =
-        commands.kind === "rich-text"
-            ? {
-                  get content() {
-                      const cell = stored();
-                      return cell?.tag === "rich-text" ? cell.content : undefined;
-                  },
-              }
-            : {
-                  get label() {
-                      return judgment()?.name;
-                  },
-              };
-    // Copy getter descriptors, not values. Spreading a read object would evaluate it.
-    const properties = Object.getOwnPropertyDescriptors(reads);
-    if (commands.kind === "morphism") {
-        for (const [name, field] of [
-            ["from", "dom"],
-            ["to", "cod"],
-        ] as const) {
-            properties[name] = {
-                enumerable: true,
-                get() {
-                    const decl = judgment();
-                    return decl?.tag === "morphism" ? objectFromOb(decl[field]) : undefined;
-                },
-            };
-        }
+    const morphismFromId = (id: string): MorphismCell<Shape, MorphismTypesOf<Shape>> | null =>
+        reference(id, "morphism") as MorphismCell<Shape, MorphismTypesOf<Shape>> | null;
+    function equationSide(side: "lhs" | "rhs") {
+        const decl = judgment();
+        return decodeEquationSide(
+            decl?.tag === "equation" ? decl[side] : null,
+            objectFromOb,
+            morphismFromId,
+        );
     }
-    if (commands.kind === "path-equation") {
-        for (const name of ["lhs", "rhs"] as const) {
-            properties[name] = {
-                enumerable: true,
-                get() {
-                    const decl = judgment();
-                    return decodeEquationSide(
-                        decl?.tag === "equation" ? decl[name] : null,
-                        objectFromOb,
-                        morphismFromId,
-                    );
-                },
-            };
-        }
+    function runIfPresent(command: () => void): void {
+        runCommand(() => {
+            if (stored()) {
+                command();
+            }
+        });
     }
-    return Object.defineProperties(
-        {
-            kind: commands.kind,
-            id: commands.id,
-            ...("type" in commands ? { type: commands.type } : {}),
-            update(patch: Parameters<C["update"]>[0]): void {
-                runCommand(() => {
-                    if (stored()) {
-                        commands.update(patch);
-                    }
-                });
-            },
-            delete(): void {
-                runCommand(() => {
-                    if (stored()) {
-                        commands.delete();
-                    }
-                });
-            },
+    const actions = {
+        id: commands.id,
+        ...("type" in commands ? { type: commands.type } : {}),
+        update(patch: Parameters<C["update"]>[0]): void {
+            runIfPresent(() => commands.update(patch));
         },
-        properties,
-    ) as C;
+        delete(): void {
+            runIfPresent(() => commands.delete());
+        },
+    };
+
+    // Only spread actions: spreading getters would capture stale values.
+    switch (commands.kind) {
+        case "rich-text":
+            return {
+                ...actions,
+                kind: "rich-text",
+                get content() {
+                    const cell = stored();
+                    return cell?.tag === "rich-text" ? cell.content : undefined;
+                },
+            } as C;
+        case "object":
+            return {
+                ...actions,
+                kind: "object",
+                get label() {
+                    return judgment()?.name;
+                },
+            } as C;
+        case "morphism":
+            return {
+                ...actions,
+                kind: "morphism",
+                get label() {
+                    return judgment()?.name;
+                },
+                get from() {
+                    const decl = judgment();
+                    return decl?.tag === "morphism" ? objectFromOb(decl.dom) : undefined;
+                },
+                get to() {
+                    const decl = judgment();
+                    return decl?.tag === "morphism" ? objectFromOb(decl.cod) : undefined;
+                },
+            } as C;
+        case "path-equation":
+            return {
+                ...actions,
+                kind: "path-equation",
+                get label() {
+                    return judgment()?.name;
+                },
+                get lhs() {
+                    return equationSide("lhs");
+                },
+                get rhs() {
+                    return equationSide("rhs");
+                },
+            } as C;
+    }
 }

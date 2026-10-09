@@ -32,6 +32,12 @@ export function findModelReferenceCellId(
     return index.get(`${kind}:${id}`);
 }
 
+/** Read a valid parsed model, or retire cell reads until the document recovers. */
+export function readModelSnapshot(snapshot: DocumentSnapshot) {
+    const result = parseModelSnapshot(snapshot);
+    return result.tag === "Ok" ? result.content.value : undefined;
+}
+
 /** Snapshot identity determines validity; no subscription or owner is needed. */
 export function parseModelSnapshot(
     snapshot: DocumentSnapshot,

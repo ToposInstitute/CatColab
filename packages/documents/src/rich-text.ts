@@ -1,7 +1,7 @@
 import type { RichTextContent } from "catcolab-document-types";
 import type { DeepReadonly, DocumentStore } from "./document-store";
 import { createCellReadView } from "./model/cell-reads";
-import { parseModelSnapshot } from "./model/parsed-source";
+import { readModelSnapshot } from "./model/parsed-source";
 import { deleteNotebookCell, type NotebookDocument } from "./notebook-document";
 
 export interface RichTextCell {
@@ -64,8 +64,7 @@ export function getRichTextCell<Handle, Version>(
             if (document.type !== "model") {
                 return document;
             }
-            const parsed = parseModelSnapshot(snapshot);
-            return parsed.tag === "Ok" ? parsed.content.value : undefined;
+            return readModelSnapshot(snapshot);
         },
     );
 }

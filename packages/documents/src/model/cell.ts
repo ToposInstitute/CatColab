@@ -14,7 +14,7 @@ import type {
 import { createCellReadView, describeModelCell } from "./cell-reads";
 import { tryGetModelJudgment, type ModelDocument } from "./document";
 import { getEquationCell, type EquationCell } from "./equation";
-import { parseModelSnapshot } from "./parsed-source";
+import { parseModelSnapshot, readModelSnapshot } from "./parsed-source";
 
 /** Runtime names for the discriminants on notebook cell handles. */
 export const CellKind = {
@@ -94,10 +94,7 @@ export function getObjectCell<Handle, O extends ObjectType, Version>(
                 deleteNotebookCell(store, handle, cellId);
             },
         },
-        () => {
-            const parsed = parseModelSnapshot(store.getDocumentSnapshot(handle));
-            return parsed.tag === "Ok" ? parsed.content.value : undefined;
-        },
+        () => readModelSnapshot(store.getDocumentSnapshot(handle)),
     );
 }
 
@@ -169,10 +166,7 @@ export function getMorphismCell<Handle, S extends Shape, M extends MorphismTypes
                 deleteNotebookCell(store, handle, cellId);
             },
         },
-        () => {
-            const parsed = parseModelSnapshot(store.getDocumentSnapshot(handle));
-            return parsed.tag === "Ok" ? parsed.content.value : undefined;
-        },
+        () => readModelSnapshot(store.getDocumentSnapshot(handle)),
         (id) => tryGetModelCell(shape, store, handle, id),
     );
 }

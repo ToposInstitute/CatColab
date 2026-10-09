@@ -192,7 +192,7 @@ const richText: Check = (value, path, issues) => {
 /** Repair notebook structure without changing the stored JSON. The returned
  * order contains exactly the retained cell keys, once each. Malformed cells
  * are dropped; the map key is authoritative for each cell's ID. Extra fields
- * are retained. An undamaged notebook is returned by identity. */
+ * are retained. An undamaged notebook is returned with the same object identity. */
 export function parseModelNotebook(value: unknown): WithIssues<ParsedModelNotebook> {
     const issues: StructuralIssue[] = [];
     const path = ["notebook"];
