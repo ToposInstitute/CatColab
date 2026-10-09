@@ -12,7 +12,7 @@ import {
     parseInstanceDocument,
     type Result,
 } from "catcolab-documents";
-import { cachedParseTables } from "../src/instance/parsed-document";
+import { getTables } from "../src/instance/parsed-document";
 
 function expectOk<T, E>(result: Result<T, E>): T {
     expect(result.tag).toBe("Ok");
@@ -207,7 +207,7 @@ describe("parsing of stored instances", { timeout: 20_000 }, () => {
         const instance = expectOk(await binder.createInstance(schema, { title: "Instance" }));
         const validation = await instance.validate();
         const table = validation.tables[0]!;
-        const initial = cachedParseTables(store.getDocumentSnapshot(instance.handle));
+        const initial = getTables(store.getDocumentSnapshot(instance.handle));
         expect(table.rows).toEqual([]);
         store.changeDocument(instance.handle, (doc) => {
             if (doc.type === "instance") {
@@ -220,11 +220,11 @@ describe("parsing of stored instances", { timeout: 20_000 }, () => {
         expect(current.tables[0]?.rows.map((row) => row.id)).toEqual(["stray"]);
         expect(current.tables[0]?.rows[0]?.index).toBe(0);
         expect(current.tables[0]?.rows[0]?.fields).toEqual([]);
-        const after = cachedParseTables(store.getDocumentSnapshot(instance.handle));
+        const after = getTables(store.getDocumentSnapshot(instance.handle));
         expect(after).not.toBe(initial);
         schema.add(Entity, { label: "Other" });
         await instance.validate();
-        expect(cachedParseTables(store.getDocumentSnapshot(instance.handle))).toBe(after);
+        expect(getTables(store.getDocumentSnapshot(instance.handle))).toBe(after);
         instance.dispose();
     });
 

@@ -5,7 +5,7 @@
 // defines `getRichTextRef`, which adds an `editorRef` field to `RichText`
 // cells that the editor component makes use of.
 import * as Automerge from "@automerge/automerge";
-import { toJS, type Patch } from "@automerge/automerge";
+import { type Patch } from "@automerge/automerge";
 import {
     type DocHandle,
     type DocHandleChangePayload,
@@ -29,7 +29,7 @@ import {
     RichText,
     type RichTextCell,
 } from "catcolab-documents";
-import { createSnapshotReader } from "./helpers/snapshot_reader";
+import { getDocumentSnapshot } from "./helpers/snapshot";
 
 type StoreHandle = {
     readonly docHandle: DocHandle<Document>;
@@ -38,16 +38,12 @@ type StoreHandle = {
 
 function makeAutomergeRichTextStore(): DocumentStore<StoreHandle> {
     const repo = new Repo();
-    const getDocumentSnapshot = createSnapshotReader<StoreHandle>(
-        (handle) => handle.docHandle.doc(),
-        (doc) => toJS<Document>(doc as Document),
-    );
     return {
         createHandle: async (initialDoc) => {
             const docHandle = repo.create<Document>(initialDoc);
             return { docHandle, docView: makeDocumentProjection(docHandle) };
         },
-        getDocumentSnapshot,
+        getDocumentSnapshot: (handle) => getDocumentSnapshot(handle.docHandle.doc()),
         changeDocument: (handle, fn) => handle.docHandle.change(fn),
         subscribe: (handle, callback) => {
             handle.docHandle.on("change", callback);

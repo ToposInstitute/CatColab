@@ -3,7 +3,6 @@
 // A simple Automerge store: handles are `DocHandle`s in a `Repo`, changes go
 // through `DocHandle.change`, and copied values are materialized off the
 // Automerge backend.
-import { toJS } from "@automerge/automerge";
 import { type DocHandle, Repo } from "@automerge/automerge-repo";
 import { SimpleOlog, Type } from "catcolab-logics/simple-olog";
 import { describe, expect, test } from "vitest";
@@ -15,17 +14,12 @@ import {
     documentLinks,
     emptyHandlesByLinkType,
 } from "catcolab-documents";
-import { createSnapshotReader } from "../helpers/snapshot_reader";
+import { getDocumentSnapshot } from "../helpers/snapshot";
 
 const repo = new Repo();
 
 // Handles minted by the store, so `listUsedBy` can enumerate them.
 const createdHandles = new Set<DocHandle<Document>>();
-
-const getDocumentSnapshot = createSnapshotReader<DocHandle<Document>>(
-    (handle) => handle.doc(),
-    (doc) => toJS<Document>(doc as Document),
-);
 
 const automergeStore: DocumentStore<DocHandle<Document>> = {
     createHandle: async (initialDoc) => {
@@ -33,10 +27,10 @@ const automergeStore: DocumentStore<DocHandle<Document>> = {
         createdHandles.add(handle);
         return handle;
     },
-    getDocumentSnapshot,
+    getDocumentSnapshot: (handle) => getDocumentSnapshot(handle.doc()),
     changeDocument: (handle, fn) => handle.change(fn),
     subscribe: (handle, callback) => {
-        const onChange = () => callback(getDocumentSnapshot(handle));
+        const onChange = () => callback(getDocumentSnapshot(handle.doc()));
         handle.on("change", onChange);
         return () => handle.off("change", onChange);
     },
