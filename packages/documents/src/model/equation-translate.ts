@@ -1,7 +1,7 @@
 import type { Mor } from "catcolab-document-types";
 import type { DocumentStore } from "../document-store";
 import { findMorphismType } from "../shape";
-import type { MorphismType, MorphismTypesOf, Shape } from "../shape";
+import type { MorphismTypesOf, Shape } from "../shape";
 import { getMorphismCell, obFromObjectCell, objectCellFromOb, type MorphismCell } from "./cell";
 import { tryGetModelJudgment, type ModelDocument } from "./document";
 import type { EquationSide } from "./equation";
@@ -82,10 +82,7 @@ function morphismCellFromBasicMor<Handle, S extends Shape, Version>(
     return null;
 }
 
-function morFromMorphismCell(
-    document: Readonly<ModelDocument>,
-    endpoint: MorphismCell<Shape, MorphismType>,
-): Mor {
+function morFromMorphismCell(document: Readonly<ModelDocument>, endpoint: MorphismCell): Mor {
     const judgment = tryGetModelJudgment(document, endpoint.id);
     if (!judgment) {
         throw new Error(`Cell ${endpoint.id} does not exist.`);

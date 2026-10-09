@@ -176,7 +176,7 @@ function cellMatchesFilter<S extends Shape>(cell: CellOf<S>, filter: AnyCellType
 }
 
 export interface Notebook<
-    S extends Shape,
+    S extends Shape = Shape,
     D extends NotebookDocument = NotebookDocument,
     H = unknown,
     V = unknown,

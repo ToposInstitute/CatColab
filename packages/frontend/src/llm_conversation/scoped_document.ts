@@ -1,7 +1,7 @@
 import type { Document } from "catcolab-document-types";
-import type { InstanceValidation, Issue, ModelValidation, Shape } from "catcolab-documents";
+import type { InstanceValidation, Issue, ModelValidation } from "catcolab-documents";
 
-type DocumentValidation = ModelValidation<Shape> | InstanceValidation<Shape>;
+type DocumentValidation = ModelValidation | InstanceValidation;
 
 /**
  * A draft document staged in the execution scope of an LLM conversation.
