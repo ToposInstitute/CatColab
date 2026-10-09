@@ -1,10 +1,9 @@
-import { toJS } from "@automerge/automerge";
 import { Repo } from "@automerge/automerge-repo";
 import { describe, expect, test } from "vitest";
 
 import type { Document } from "catcolab-document-types";
 import { createInMemoryStore, type DocumentSnapshot } from "catcolab-documents";
-import { createSnapshotReader } from "./helpers/snapshot_reader";
+import { getDocumentSnapshot } from "./helpers/snapshot";
 
 const document = (): Document => ({
     type: "instance",
@@ -38,18 +37,15 @@ const fixtures: Record<string, () => Promise<Fixture>> = {
     automerge: async () => {
         const repo = new Repo();
         const handle = repo.create(document());
-        const snapshotOf = createSnapshotReader<Document>(
-            (doc) => doc,
-            (doc) => toJS<Document>(doc as Document),
-        );
         return {
-            read: () => snapshotOf(handle.doc()),
+            read: () => getDocumentSnapshot(handle.doc()),
             rename: (name) =>
                 handle.change((doc) => {
                     doc.name = name;
                 }),
             subscribe: (callback) => {
-                const onChange = ({ doc }: { doc: Document }) => callback(snapshotOf(doc));
+                const onChange = ({ doc }: { doc: Document }) =>
+                    callback(getDocumentSnapshot(doc));
                 handle.on("change", onChange);
                 return () => handle.off("change", onChange);
             },

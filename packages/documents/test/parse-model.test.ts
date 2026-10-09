@@ -1,4 +1,3 @@
-import { toJS } from "@automerge/automerge";
 import { Repo } from "@automerge/automerge-repo";
 import { Aspect, SimpleOlog, Type } from "catcolab-logics/simple-olog";
 import { describe, expect, test, vi } from "vitest";
@@ -12,9 +11,9 @@ import {
     RichText,
     type Result,
 } from "catcolab-documents";
+import { getDocumentSnapshot } from "./helpers/snapshot";
 import { findModelReferenceCellId, parseModelSnapshot } from "../src/model/parsed-source";
 import { getRichTextCell } from "../src/rich-text";
-import { createSnapshotReader } from "./helpers/snapshot_reader";
 
 const a = "00000000-0000-0000-0000-000000000001";
 const b = "00000000-0000-0000-0000-000000000002";
@@ -324,10 +323,7 @@ describe("parsed model notebook integration", { timeout: 20_000 }, () => {
         const repo = new Repo();
         try {
             const handle = repo.create(document() as Document);
-            const read = createSnapshotReader<typeof handle>(
-                (handle) => handle.doc(),
-                (doc) => toJS(doc as Document),
-            );
+            const read = (handle: typeof handle) => getDocumentSnapshot(handle.doc());
             const before = parseModelSnapshot(read(handle));
             expect(parseModelSnapshot(read(handle))).toBe(before);
             handle.change((doc) => {

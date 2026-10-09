@@ -5,7 +5,7 @@
 // `createHandle` registers new documents with the backend, and `getHandle`
 // resolves `DocumentRef`s back through it, so instantiations across notebooks
 // validate.
-import { toJS } from "@automerge/automerge";
+
 import type { DocHandle, DocumentId } from "@automerge/automerge-repo";
 import { SimpleOlog, Type } from "catcolab-logics/simple-olog";
 import { makeDocumentProjection } from "solid-automerge";
@@ -20,7 +20,7 @@ import {
     Instantiation,
 } from "catcolab-documents";
 import { FakeBackend } from "../helpers/fake_backend";
-import { createSnapshotReader } from "../helpers/snapshot_reader";
+import { getDocumentSnapshot } from "../helpers/snapshot";
 
 const backend = new FakeBackend();
 const repo = backend.repo;
@@ -37,11 +37,6 @@ const makeHandle = (docHandle: DocHandle<Document>): StoreHandle => ({
 
 const refByDocId = new Map<DocumentId, string>();
 const handleByRefId = new Map<string, StoreHandle>();
-
-const getDocumentSnapshot = createSnapshotReader<StoreHandle>(
-    (handle) => handle.docHandle.doc(),
-    (doc) => toJS<Document>(doc as Document),
-);
 
 const backendStore: DocumentStore<StoreHandle> = {
     createHandle: async (initialDoc: Document) => {
@@ -62,10 +57,10 @@ const backendStore: DocumentStore<StoreHandle> = {
         handleByRefId.set(refId, handle);
         return handle;
     },
-    getDocumentSnapshot,
+    getDocumentSnapshot: (handle) => getDocumentSnapshot(handle.docHandle.doc()),
     changeDocument: (handle, fn) => handle.docHandle.change(fn),
     subscribe: (handle, callback) => {
-        const onChange = () => callback(getDocumentSnapshot(handle));
+        const onChange = () => callback(getDocumentSnapshot(handle.docHandle.doc()));
         handle.docHandle.on("change", onChange);
         return () => handle.docHandle.off("change", onChange);
     },

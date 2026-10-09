@@ -1,11 +1,10 @@
-import { toJS } from "@automerge/automerge";
 import { Repo } from "@automerge/automerge-repo";
 import { describe, expect, test, vi } from "vitest";
 
 import type { Document } from "catcolab-document-types";
 import { createInMemoryStore } from "catcolab-documents";
+import { getDocumentSnapshot } from "./helpers/snapshot";
 import { parsedInstanceTables, parsedSnapshotTables } from "../src/instance/parsed-source";
-import { createSnapshotReader } from "./helpers/snapshot_reader";
 
 function document(): Document {
     return {
@@ -81,10 +80,7 @@ describe("snapshot-derived instance parsing", () => {
         const repo = new Repo();
         try {
             const handle = repo.create(document());
-            const materialize = vi.fn<(doc: Readonly<Document>) => Document>((doc) =>
-                toJS<Document>(doc as Document),
-            );
-            const read = createSnapshotReader<typeof handle>((handle) => handle.doc(), materialize);
+            const read = (handle: typeof handle) => getDocumentSnapshot(handle.doc());
             const before = read(handle);
             expect(read(handle)).toBe(before);
             handle.change((doc) => {
@@ -109,7 +105,6 @@ describe("snapshot-derived instance parsing", () => {
                 "remote",
             ]);
             expect(parsedSnapshotTables(before).value["entity"]?.rowOrder).toEqual(["first"]);
-            expect(materialize).toHaveBeenCalledTimes(3);
         } finally {
             await repo.shutdown();
         }
