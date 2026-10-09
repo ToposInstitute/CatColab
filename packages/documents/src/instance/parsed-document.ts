@@ -1,7 +1,15 @@
 import type * as DocumentTypes from "catcolab-document-types";
 import type { Link } from "catcolab-document-types";
 import type { DeepReadonly } from "../document-store";
-import type { Issue, Result } from "../result";
+import {
+    isRecord,
+    structuralIssue as issue,
+    type StructuralIssue,
+    type WithIssues,
+} from "../parsed-document";
+import type { Result } from "../result";
+
+export type { StructuralIssue, WithIssues } from "../parsed-document";
 
 /* Parsing of the underlying JSON of an instance document.
 
@@ -17,17 +25,6 @@ Parsing is deliberately tolerant of extra fields and of semantic problems
 (those are the instance validator's job). */
 
 type Path = ReadonlyArray<PropertyKey>;
-
-/** An issue reported while parsing; its path is always present. */
-export interface StructuralIssue extends Issue {
-    readonly path: Path;
-}
-
-/** A parsed value together with the issues repaired while parsing it. */
-export interface WithIssues<T> {
-    readonly value: T;
-    readonly issues: ReadonlyArray<StructuralIssue>;
-}
 
 declare const parsed: unique symbol;
 
@@ -45,14 +42,6 @@ export interface ParsedInstanceDocument {
     readonly name: string;
     readonly instanceOf: Link;
     readonly tables: ParsedTables;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-    return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function issue(message: string, path: Path): StructuralIssue {
-    return { message, path };
 }
 
 /** Parse the stored tables of an instance document.

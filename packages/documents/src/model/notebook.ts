@@ -32,6 +32,7 @@ import type { ModelValidation } from "./elaborated-model";
 import { morphismTypesEqual, objectTypesEqual } from "./equality";
 import { getEquationCell, type EquationCell, type EquationSide } from "./equation";
 import { morFromSide } from "./equation-translate";
+import { parseModelSnapshot } from "./parsed-source";
 import { createNotebookValidator } from "./validation";
 
 /**
@@ -229,14 +230,13 @@ export function modelNotebookFromStore<Handle, S extends Shape, Version>(
     return {
         shape,
         handle,
-        get type() {
-            return (store.getDocumentSnapshot(handle).document as Readonly<ModelDocument>).type;
-        },
+        type: "model",
         get document() {
             return store.getDocumentSnapshot(handle).document as DeepReadonly<ModelDocument>;
         },
         get title() {
-            return (store.getDocumentSnapshot(handle).document as Readonly<ModelDocument>).name;
+            const parsed = parseModelSnapshot(store.getDocumentSnapshot(handle));
+            return parsed.tag === "Ok" ? parsed.content.value.name : "";
         },
         add<T extends CellTypeOf<S>>(type: T, values: CellValuesOf<S, T>) {
             if (type.kind === "rich-text") {
@@ -295,10 +295,9 @@ export function modelNotebookFromStore<Handle, S extends Shape, Version>(
             ) as AddedCellOf<S, T>;
         },
         cells() {
-            const document = store.getDocumentSnapshot(handle).document as Readonly<ModelDocument>;
-            return document.notebook.cellOrder.map((cellId) =>
-                getModelCell(shape, store, handle, cellId),
-            );
+            const parsed = parseModelSnapshot(store.getDocumentSnapshot(handle));
+            const order = parsed.tag === "Ok" ? parsed.content.value.notebook.cellOrder : [];
+            return order.map((cellId) => getModelCell(shape, store, handle, cellId));
         },
         cellsOf(filter: AnyCellType | Shape) {
             return this.cells().filter((cell) => cellMatchesFilter(cell, filter));

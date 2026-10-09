@@ -12,6 +12,7 @@ import { parseInstanceDocument } from "./instance/parsed-document";
 import { type LLMConversation, llmConversationFromStore } from "./llm-conversation";
 import type { ModelDocument } from "./model/document";
 import { modelNotebookFromStore, type Notebook } from "./model/notebook";
+import { parseModelSnapshot } from "./model/parsed-source";
 import type { Result } from "./result";
 import type { Shape } from "./shape";
 import type { SupportedDocument } from "./supported-document";
@@ -194,18 +195,11 @@ function binderFromStore<Handle, Version>(
                 return result;
             }
 
-            const document = store.getDocumentSnapshot(result.content).document;
-            if (document.type !== "model") {
-                return {
-                    tag: "Err",
-                    content: [
-                        {
-                            message: `Cannot load document of type "${document.type}" as a notebook.`,
-                            path: ["type"],
-                        },
-                    ],
-                };
+            const parsed = parseModelSnapshot(store.getDocumentSnapshot(result.content));
+            if (parsed.tag === "Err") {
+                return parsed;
             }
+            const document = parsed.content.value;
             if (document.theory !== shape.theory) {
                 return {
                     tag: "Err",

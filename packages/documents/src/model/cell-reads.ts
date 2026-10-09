@@ -9,21 +9,22 @@ import {
     type Shape,
 } from "../shape";
 import type { CellOf, MorphismCell, ObjectCell } from "./cell";
-import type { ModelDocument } from "./document";
 import { decodeEquationSide } from "./equation-translate";
+import type { ParsedModelDocument } from "./parsed-document";
+import { findModelReferenceCellId } from "./parsed-source";
 
 /** Structural identity of a supported model cell; value fields are not read. */
-export type ModelCellDescription =
+export type ModelCellDescription<S extends Shape = Shape> =
     | { kind: "rich-text"; type: undefined }
-    | { kind: "object"; type: ObjectTypesOf<Shape> }
-    | { kind: "morphism"; type: MorphismTypesOf<Shape> }
+    | { kind: "object"; type: ObjectTypesOf<S> }
+    | { kind: "morphism"; type: MorphismTypesOf<S> }
     | { kind: "path-equation"; type: undefined };
 
-export function describeModelCell(
-    shape: Shape,
-    document: DeepReadonly<ModelDocument>,
+export function describeModelCell<S extends Shape>(
+    shape: S,
+    document: ParsedModelDocument,
     id: string,
-): ModelCellDescription | undefined {
+): ModelCellDescription<S> | undefined {
     const cell = document.notebook.cellContents[id];
     if (!cell) {
         return undefined;
@@ -53,12 +54,17 @@ export function describeModelCell(
     }
 }
 
-/** Framework-neutral cell reads. Commands accept references by cell ID, so a
+type CellReadDocument =
+    | ParsedModelDocument
+    | DeepReadonly<Exclude<NotebookDocument, { type: "model" }>>;
+
+/** Framework-neutral cell reads over structurally parsed model documents (or
+ * non-model rich-text documents). Commands accept references by cell ID, so a
  * caller can supply its own identity-preserving resolver without translating patches.
  * An undefined read source retires the view: empty reads and no-op commands. */
 export function createCellReadView<C extends CellOf<Shape>>(
     commands: Omit<C, "label" | "content" | "from" | "to" | "lhs" | "rhs">,
-    read: () => DeepReadonly<NotebookDocument> | undefined,
+    read: () => CellReadDocument | undefined,
     resolve: (id: string) => CellOf<Shape> | undefined = () => undefined,
     runCommand: (command: () => void) => void = (command) => command(),
 ): C {
@@ -107,14 +113,9 @@ export function createCellReadView<C extends CellOf<Shape>>(
         if (document?.type !== "model") {
             return null;
         }
-        for (const cellId of document.notebook.cellOrder) {
-            const cell = document.notebook.cellContents[cellId];
-            if (cell?.tag === "formal" && cell.content.tag === kind && cell.content.id === id) {
-                const resolved = resolve(cellId);
-                return resolved?.kind === kind ? resolved : null;
-            }
-        }
-        return null;
+        const cellId = findModelReferenceCellId(document.notebook, kind, id);
+        const resolved = cellId === undefined ? undefined : resolve(cellId);
+        return resolved?.kind === kind ? resolved : null;
     }
     const objectFromOb = (
         ob: DeepReadonly<Ob> | null,
@@ -182,14 +183,14 @@ export function createCellReadView<C extends CellOf<Shape>>(
             ...("type" in commands ? { type: commands.type } : {}),
             update(patch: Parameters<C["update"]>[0]): void {
                 runCommand(() => {
-                    if (read()) {
+                    if (stored()) {
                         commands.update(patch);
                     }
                 });
             },
             delete(): void {
                 runCommand(() => {
-                    if (read()) {
+                    if (stored()) {
                         commands.delete();
                     }
                 });

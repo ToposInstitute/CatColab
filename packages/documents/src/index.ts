@@ -18,12 +18,10 @@ export {
     getDocumentSnapshot,
 } from "./document-store";
 export { parseInstanceDocument, parseInstanceTables } from "./instance/parsed-document";
-export type {
-    WithIssues as Parsed,
-    ParsedInstanceDocument,
-    ParsedTables,
-    StructuralIssue,
-} from "./instance/parsed-document";
+export { parseModelDocument, parseModelNotebook } from "./model/parsed-document";
+export type { ParsedModelDocument, ParsedModelNotebook } from "./model/parsed-document";
+export type { ParsedInstanceDocument, ParsedTables } from "./instance/parsed-document";
+export type { WithIssues as Parsed, StructuralIssue } from "./parsed-document";
 export { atomicTypeOfAttributeType } from "./instance/validation";
 export type {
     FieldPath,

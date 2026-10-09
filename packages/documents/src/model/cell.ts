@@ -1,9 +1,7 @@
-import { Nb } from "catcolab-document-methods";
 import type { Ob } from "catcolab-document-types";
-import type { DeepReadonly, DocumentStore } from "../document-store";
+import type { DocumentStore } from "../document-store";
 import { deleteNotebookCell } from "../notebook-document";
 import { getRichTextCell, type RichTextCell } from "../rich-text";
-import { findMorphismType, findObjectType } from "../shape";
 import type {
     CodomainObjectTypesOf,
     DomainObjectTypesOf,
@@ -16,6 +14,7 @@ import type {
 import { createCellReadView, describeModelCell } from "./cell-reads";
 import { tryGetModelJudgment, type ModelDocument } from "./document";
 import { getEquationCell, type EquationCell } from "./equation";
+import { parseModelSnapshot } from "./parsed-source";
 
 /** Runtime names for the discriminants on notebook cell handles. */
 export const CellKind = {
@@ -95,7 +94,10 @@ export function getObjectCell<Handle, O extends ObjectType, Version>(
                 deleteNotebookCell(store, handle, cellId);
             },
         },
-        () => store.getDocumentSnapshot(handle).document as DeepReadonly<ModelDocument>,
+        () => {
+            const parsed = parseModelSnapshot(store.getDocumentSnapshot(handle));
+            return parsed.tag === "Ok" ? parsed.content.value : undefined;
+        },
     );
 }
 
@@ -167,15 +169,11 @@ export function getMorphismCell<Handle, S extends Shape, M extends MorphismTypes
                 deleteNotebookCell(store, handle, cellId);
             },
         },
-        () => store.getDocumentSnapshot(handle).document as DeepReadonly<ModelDocument>,
-        (id) =>
-            describeModelCell(
-                shape,
-                store.getDocumentSnapshot(handle).document as DeepReadonly<ModelDocument>,
-                id,
-            )
-                ? getModelCell(shape, store, handle, id)
-                : undefined,
+        () => {
+            const parsed = parseModelSnapshot(store.getDocumentSnapshot(handle));
+            return parsed.tag === "Ok" ? parsed.content.value : undefined;
+        },
+        (id) => tryGetModelCell(shape, store, handle, id),
     );
 }
 
@@ -185,30 +183,37 @@ export function getModelCell<Handle, S extends Shape, Version>(
     handle: Handle,
     cellId: string,
 ): CellOf<S> {
-    const document = store.getDocumentSnapshot(handle).document as Readonly<ModelDocument>;
-    const cell = Nb.getCellById(document.notebook, cellId);
-    if (cell.tag === "rich-text") {
-        return getRichTextCell(store, handle, cellId);
+    const cell = tryGetModelCell(shape, store, handle, cellId);
+    if (!cell) {
+        throw new Error(`Cell ${cellId} is missing or is not supported by the notebook shape.`);
     }
+    return cell;
+}
 
-    switch (cell.content.tag) {
-        case "object": {
-            const type = findObjectType(shape, cell.content.obType);
-            if (!type) {
-                throw new Error(`Object cell ${cellId} is not supported by the notebook shape.`);
-            }
-            return getObjectCell(store, handle, cellId, type);
-        }
-        case "morphism": {
-            const type = findMorphismType(shape, cell.content.morType);
-            if (!type) {
-                throw new Error(`Morphism cell ${cellId} is not supported by the notebook shape.`);
-            }
-            return getMorphismCell(shape, store, handle, cellId, type);
-        }
-        case "equation":
+/** Resolve only cells representable by this shape; malformed cells were already
+ * removed by parsing. Semantic validation still sees unsupported judgments. */
+export function tryGetModelCell<Handle, S extends Shape, Version>(
+    shape: S,
+    store: DocumentStore<Handle, Version>,
+    handle: Handle,
+    cellId: string,
+): CellOf<S> | undefined {
+    const parsed = parseModelSnapshot(store.getDocumentSnapshot(handle));
+    if (parsed.tag === "Err") {
+        return undefined;
+    }
+    const description = describeModelCell(shape, parsed.content.value, cellId);
+    if (!description) {
+        return undefined;
+    }
+    switch (description.kind) {
+        case "rich-text":
+            return getRichTextCell(store, handle, cellId);
+        case "object":
+            return getObjectCell(store, handle, cellId, description.type);
+        case "morphism":
+            return getMorphismCell(shape, store, handle, cellId, description.type);
+        case "path-equation":
             return getEquationCell(shape, store, handle, cellId);
-        default:
-            throw new Error(`Formal cell ${cellId} is not supported yet.`);
     }
 }

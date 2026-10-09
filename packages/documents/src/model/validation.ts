@@ -1,5 +1,5 @@
-import type { FormalCell, ModelDocument } from "catcolab-document-methods";
-import type { ModelJudgment, Notebook } from "catcolab-document-types";
+import type { FormalCell } from "catcolab-document-methods";
+import type { ModelJudgment, ModelNotebook } from "catcolab-document-types";
 import type {
     DblModel,
     DblTheory,
@@ -7,25 +7,27 @@ import type {
     InvalidModelEqn,
     ModelPresentation,
 } from "catlog-wasm";
-import type { DocumentSnapshot, DocumentStore } from "../document-store";
+import type { DeepReadonly, DocumentSnapshot, DocumentStore } from "../document-store";
 import type { Issue } from "../result";
 import type { Shape } from "../shape";
 import { elaboratedModelFromPresentation, type ModelValidation } from "./elaborated-model";
+import type { ParsedModelDocument, ParsedModelNotebook } from "./parsed-document";
+import { parseModelSnapshot } from "./parsed-source";
 
 function formalCellForGenerator(
-    notebook: Notebook<ModelJudgment>,
+    notebook: ParsedModelNotebook,
     generatorId: string,
-): FormalCell<ModelJudgment> | undefined {
+): DeepReadonly<FormalCell<ModelJudgment>> | undefined {
     for (const cellId of notebook.cellOrder) {
-        const cell = notebook.cellContents[cellId];
-        if (cell?.tag === "formal" && "id" in cell.content && cell.content.id === generatorId) {
+        const cell = notebook.cellContents[cellId]!;
+        if (cell.tag === "formal" && cell.content.id === generatorId) {
             return cell;
         }
     }
     return undefined;
 }
 
-function generatorName(notebook: Notebook<ModelJudgment>, generatorId: string): string {
+function generatorName(notebook: ParsedModelNotebook, generatorId: string): string {
     const cell = formalCellForGenerator(notebook, generatorId);
     if (!cell || !cell.content.name) {
         return generatorId;
@@ -34,7 +36,7 @@ function generatorName(notebook: Notebook<ModelJudgment>, generatorId: string): 
 }
 
 function generatorPath(
-    notebook: Notebook<ModelJudgment>,
+    notebook: ParsedModelNotebook,
     generatorId: string,
     property?: string,
 ): PropertyKey[] | undefined {
@@ -65,7 +67,7 @@ function eqnErrorMessage(error: InvalidModelEqn): string {
     }
 }
 
-function invalidModelIssue(notebook: Notebook<ModelJudgment>, error: InvalidDblModel): Issue {
+function invalidModelIssue(notebook: ParsedModelNotebook, error: InvalidDblModel): Issue {
     switch (error.tag) {
         case "Dom":
             return {
@@ -133,7 +135,7 @@ interface ModelValidationState {
 /** Elaborate and validate a model document against its core theory. Total:
 elaboration and validation failures are values. */
 export async function validateModelDocument(
-    document: Readonly<ModelDocument>,
+    document: ParsedModelDocument,
     theory: DblTheory,
     refId: string,
 ): Promise<ModelValidationState> {
@@ -141,7 +143,14 @@ export async function validateModelDocument(
     const instantiatedModels = new DblModelMap();
     let model: DblModel;
     try {
-        model = elaborateModel(document.notebook, instantiatedModels, theory, refId);
+        // The generated Wasm binding accepts mutable types but only deserializes
+        // this value; no mutable reference to the snapshot is retained.
+        model = elaborateModel(
+            document.notebook as unknown as ModelNotebook,
+            instantiatedModels,
+            theory,
+            refId,
+        );
     } catch (error) {
         return {
             issues: [{ message: `Failed to elaborate model: ${String(error)}` }],
@@ -184,13 +193,21 @@ export function createNotebookValidator<Handle, S extends Shape>(
 
     /** Elaborate and validate the current document. */
     async function elaborateAndValidate(snapshot: DocumentSnapshot): Promise<ModelValidationState> {
+        const parsed = parseModelSnapshot(snapshot);
+        if (parsed.tag === "Err") {
+            return { issues: parsed.content };
+        }
+        const { value: document, issues: structuralIssues } = parsed.content;
         if (!shape.getCoreTheory) {
             let shapeName = "unnamed";
             if (shape.theory) {
                 shapeName = shape.theory;
             }
             return {
-                issues: [{ message: `Shape \`${shapeName}\` has no core theory` }],
+                issues: [
+                    ...structuralIssues,
+                    { message: `Shape \`${shapeName}\` has no core theory` },
+                ],
             };
         }
         try {
@@ -198,11 +215,18 @@ export function createNotebookValidator<Handle, S extends Shape>(
                 coreTheory = shape.getCoreTheory();
             }
             const theory = await coreTheory;
-            const document = snapshot.document as Readonly<ModelDocument>;
-            return await validateModelDocument(document, theory, store.getDocumentRef(handle).id);
+            const state = await validateModelDocument(
+                document,
+                theory,
+                store.getDocumentRef(handle).id,
+            );
+            return { ...state, issues: [...structuralIssues, ...state.issues] };
         } catch (error) {
             return {
-                issues: [{ message: `Failed to load core theory: ${String(error)}` }],
+                issues: [
+                    ...structuralIssues,
+                    { message: `Failed to load core theory: ${String(error)}` },
+                ],
             };
         }
     }
