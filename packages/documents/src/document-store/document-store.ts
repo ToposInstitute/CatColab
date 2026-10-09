@@ -67,6 +67,9 @@ export interface DocumentStore<Handle, Version = unknown> {
     getDocumentRef(handle: Handle): DocumentRef;
     // Get a document view from a handle
     getDocumentView(handle: Handle): Readonly<Document>;
+    // Optional reactive revision, updated after change callbacks have run.
+    // Cached readers access it to participate in the store's reactive system.
+    getDocumentRevision?(handle: Handle): unknown;
     // An unproxied snapshot, if the store can obtain one more directly than copyValue.
     getDocumentSnapshot?(handle: Handle): Readonly<Document>;
     // List the documents that depend on the document at `handle`, indexed by

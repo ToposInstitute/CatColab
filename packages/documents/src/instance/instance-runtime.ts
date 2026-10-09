@@ -1,4 +1,3 @@
-import type { InstanceDocument } from "catcolab-document-methods";
 import type { DocumentStore } from "../document-store";
 import type { ModelDocument } from "../model/document";
 import type { ElaboratedModel, ModelValidation } from "../model/elaborated-model";
@@ -7,6 +6,7 @@ import type { Result } from "../result";
 import type { InstanceCapableShape, Shape } from "../shape";
 import { validatePathEquations } from "./equation-validation";
 import type { InstanceValidation } from "./instance";
+import { parsedInstanceTables } from "./parsed-source";
 import {
     addInstanceRowsToStore,
     deleteOrphanedFieldFromStore,
@@ -180,16 +180,22 @@ export function createInstanceValidator<Handle, S extends Shape, Version>(
     handle: Handle,
 ): (schemaValidation: ModelValidation<S>) => InstanceValidation<S> {
     return (schemaValidation) => {
+        const parsedTables = parsedInstanceTables(store, handle);
+
         const schemaTables = instanceTablesFromModel(
             instanceCapableShape(schema),
             store,
             handle,
             schemaValidation.model,
         );
-        const document = store.getDocumentView(handle) as Readonly<InstanceDocument>;
         const tables = tablesWithOrphanedData(store, handle, schemaTables);
         const issues = [
-            ...validateInstanceTables(document, schemaTables),
+            ...parsedTables.issues.map((issue) => ({
+                message: issue.message,
+                path: issue.path,
+                issueType: "MalformedDocument" as const,
+            })),
+            ...validateInstanceTables(parsedTables.value, schemaTables),
             ...validatePathEquations(tables, schemaValidation.model),
         ];
         return {
