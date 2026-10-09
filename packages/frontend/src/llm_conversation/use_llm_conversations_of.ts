@@ -73,7 +73,7 @@ export function useLLMConversationsOf(
                     ...Object.values(dependsOn).flat(),
                     ...Object.values(usedBy).flat(),
                 ]) {
-                    if (binder.getDocumentView(handle).type !== "llmconversation") {
+                    if (handle.docView.type !== "llmconversation") {
                         scope.set(handle.ref.id, handle);
                     }
                 }
