@@ -297,6 +297,7 @@
               );
               frontend = frontendPackage.package;
               frontend-tests = frontendPackage.tests;
+              frontend-dev = frontendPackage.dev;
             };
 
           linuxOnlyPackages = {
