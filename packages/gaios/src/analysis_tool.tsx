@@ -20,6 +20,7 @@ import { stdTheories } from "../../frontend/src/stdlib";
 import { TheoryLibraryContext } from "../../frontend/src/theory";
 import { rootFocus, useChildFocus } from "../../ui-components/src/util/focus";
 import type { AnalysisDoc } from "./analysis_datatype";
+import { createNotebookDiff } from "./notebook_diff";
 
 import "../../ui-components/src/global.css";
 
@@ -44,8 +45,6 @@ export function AnalysisTool(props: { handle: DocHandle<AnalysisDoc>; element: T
         // oxlint-disable-next-line solid/reactivity -- the host element and its repo are fixed for the tool's lifetime
         (docUrl) => getLiveAnalysisFromRepo(docUrl, props.element.repo, modelLibrary),
     );
-
-    const { childFocus } = useChildFocus<"model" | "analysis">(rootFocus, { default: "model" });
 
     return (
         <Switch>
@@ -72,29 +71,10 @@ export function AnalysisTool(props: { handle: DocHandle<AnalysisDoc>; element: T
                                     <ModelLibraryContext.Provider
                                         value={modelLibrary as ModelLibrary<string>}
                                     >
-                                        <div style={{ display: "flex", height: "100%" }}>
-                                            <div
-                                                style={{
-                                                    ...paneStyle,
-                                                    "border-right": "1px solid rgba(0, 0, 0, 0.15)",
-                                                }}
-                                            >
-                                                <ModelDocumentHead
-                                                    liveModel={modelAnalysis().liveModel}
-                                                />
-                                                <ModelNotebookEditor
-                                                    liveModel={modelAnalysis().liveModel}
-                                                    focus={childFocus("model")}
-                                                />
-                                            </div>
-                                            <div style={paneStyle}>
-                                                <DocumentHead liveDoc={modelAnalysis().liveDoc} />
-                                                <AnalysisNotebookEditor
-                                                    liveAnalysis={modelAnalysis()}
-                                                    focus={childFocus("analysis")}
-                                                />
-                                            </div>
-                                        </div>
+                                        <ModelAndAnalysisPanes
+                                            modelAnalysis={modelAnalysis()}
+                                            element={props.element}
+                                        />
                                     </ModelLibraryContext.Provider>
                                 </TheoryLibraryContext.Provider>
                             )}
@@ -103,6 +83,53 @@ export function AnalysisTool(props: { handle: DocHandle<AnalysisDoc>; element: T
                 )}
             </Match>
         </Switch>
+    );
+}
+
+/** The model and its analysis side by side, each highlighting its changes
+against the active draft's baseline.
+ */
+function ModelAndAnalysisPanes(props: {
+    modelAnalysis: LiveModelAnalysisDoc;
+    element: ToolElement;
+}) {
+    const { childFocus } = useChildFocus<"model" | "analysis">(rootFocus, { default: "model" });
+
+    // oxlint-disable solid/reactivity -- the host element is fixed for the tool's lifetime
+    const modelDiff = createNotebookDiff(
+        props.element,
+        () => props.modelAnalysis.liveModel.liveDoc.docHandle,
+    );
+    const analysisDiff = createNotebookDiff(
+        props.element,
+        () => props.modelAnalysis.liveDoc.docHandle,
+    );
+    // oxlint-enable solid/reactivity
+
+    return (
+        <div style={{ display: "flex", height: "100%" }}>
+            <div
+                style={{
+                    ...paneStyle,
+                    "border-right": "1px solid rgba(0, 0, 0, 0.15)",
+                }}
+            >
+                <ModelDocumentHead liveModel={props.modelAnalysis.liveModel} />
+                <ModelNotebookEditor
+                    liveModel={props.modelAnalysis.liveModel}
+                    focus={childFocus("model")}
+                    diff={modelDiff()}
+                />
+            </div>
+            <div style={paneStyle}>
+                <DocumentHead liveDoc={props.modelAnalysis.liveDoc} />
+                <AnalysisNotebookEditor
+                    liveAnalysis={props.modelAnalysis}
+                    focus={childFocus("analysis")}
+                    diff={analysisDiff()}
+                />
+            </div>
+        </div>
     );
 }
 

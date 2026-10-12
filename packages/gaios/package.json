@@ -22,6 +22,7 @@
     "dependencies": {
         "@automerge/automerge": "^3.4.1",
         "@automerge/automerge-repo": "^2.5.6",
+        "@inkandswitch/patchwork-providers": "^0.5.3",
         "catcolab-document-methods": "link:../document-methods",
         "catlog-wasm": "link:../catlog-wasm/dist/pkg-browser",
         "solid-js": "^1.9.7"

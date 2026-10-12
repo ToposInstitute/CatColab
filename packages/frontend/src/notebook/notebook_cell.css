@@ -11,6 +11,33 @@
     opacity: 0.4;
 }
 
+/* The tint is extended past the cell's edges by a box-shadow, rather than
+   padding, so that toggling a diff doesn't shift the layout. */
+.cell[data-diff] {
+    --diff-tint: color-mix(in srgb, var(--diff-color) 8%, transparent);
+    border-radius: 4px;
+    background: var(--diff-tint);
+    box-shadow: 0 0 0 3px var(--diff-tint);
+}
+
+.cell[data-diff="added"] {
+    --diff-color: #22c55e;
+}
+
+.cell[data-diff="changed"] {
+    --diff-color: #eab308;
+}
+
+.cell[data-diff="deleted"] {
+    --diff-color: #ef4444;
+    opacity: 0.6;
+}
+
+.deleted-rich-text {
+    margin: 0;
+    white-space: pre-wrap;
+}
+
 .cell-gutter {
     position: absolute;
     top: 50%;

@@ -5,7 +5,12 @@ import invariant from "tiny-invariant";
 import { Model, Nb } from "catcolab-document-methods";
 import type { InstantiatedModel, ModelJudgment, MorDecl, ObDecl } from "catcolab-document-types";
 import { type FocusHandle } from "catcolab-ui-components";
-import { type CellConstructor, type FormalCellEditorProps, NotebookEditor } from "../notebook";
+import {
+    type CellConstructor,
+    type FormalCellEditorProps,
+    NotebookEditor,
+    type NotebookDiff,
+} from "../notebook";
 import { TheoryLibraryContext, type ModelTypeMeta, type Theory } from "../theory";
 import { LiveModelContext } from "./context";
 import type { LiveModelDoc } from "./document";
@@ -13,7 +18,11 @@ import { InstantiationCellEditor } from "./instantiation_cell_editor";
 
 /** Notebook editor for a model of a double theory.
  */
-export function ModelNotebookEditor(props: { liveModel: LiveModelDoc; focus: FocusHandle }) {
+export function ModelNotebookEditor(props: {
+    liveModel: LiveModelDoc;
+    focus: FocusHandle;
+    diff?: NotebookDiff<ModelJudgment>;
+}) {
     const liveDoc = () => props.liveModel.liveDoc;
 
     const cellConstructors = () => {
@@ -36,6 +45,7 @@ export function ModelNotebookEditor(props: { liveModel: LiveModelDoc; focus: Foc
                 cellLabel={judgmentLabel}
                 duplicateCell={Model.duplicateModelJudgment}
                 focus={props.focus}
+                diff={props.diff}
             />
         </LiveModelContext.Provider>
     );
