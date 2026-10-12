@@ -1,0 +1,5 @@
+/* De-emphasize the placeholder label of an unnamed generator, both in the
+   input itself (the inline input inherits its color) and in a completion. */
+.unnamed {
+    color: var(--color-text-placeholder);
+}

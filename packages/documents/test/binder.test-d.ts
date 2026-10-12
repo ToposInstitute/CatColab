@@ -18,6 +18,6 @@ describe("binder type errors", () => {
     });
 
     test("createBinder without arguments is typed with the in-memory handle", () => {
-        expectTypeOf(createBinder()).toEqualTypeOf<Binder<Document>>();
+        expectTypeOf(createBinder()).toEqualTypeOf<Binder<Document, Document>>();
     });
 });

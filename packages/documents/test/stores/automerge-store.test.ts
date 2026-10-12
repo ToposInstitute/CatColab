@@ -9,13 +9,23 @@ import { SimpleOlog, Type } from "catcolab-logics/simple-olog";
 import { describe, expect, test } from "vitest";
 
 import type { Document } from "catcolab-document-types";
-import { createBinder, type DocumentStore } from "catcolab-documents";
+import {
+    createBinder,
+    type DocumentStore,
+    documentLinks,
+    emptyHandlesByLinkType,
+} from "catcolab-documents";
 
 const repo = new Repo();
 
+// Handles minted by the store, so `listUsedBy` can enumerate them.
+const createdHandles = new Set<DocHandle<Document>>();
+
 const automergeStore: DocumentStore<DocHandle<Document>> = {
     createHandle: async (initialDoc) => {
-        return repo.create<Document>(initialDoc as Document);
+        const handle = repo.create<Document>(initialDoc as Document);
+        createdHandles.add(handle);
+        return handle;
     },
     changeDocument: (handle, fn) => handle.change(fn),
     subscribe: (handle, callback) => {
@@ -33,6 +43,31 @@ const automergeStore: DocumentStore<DocHandle<Document>> = {
     },
     getDocumentView: (handle) => handle.doc(),
     getDocumentRef: (handle) => ({ id: handle.documentId, version: null, server: "" }),
+    listUsedBy: async (handle) => {
+        const linked = emptyHandlesByLinkType<DocHandle<Document>>();
+        for (const other of createdHandles) {
+            if (other === handle) {
+                continue;
+            }
+            for (const link of documentLinks(other.doc())) {
+                if (link._id === handle.documentId) {
+                    linked[link.type].push(other);
+                }
+            }
+        }
+        return linked;
+    },
+    listDependsOn: async (handle) => {
+        const linked = emptyHandlesByLinkType<DocHandle<Document>>();
+        for (const link of documentLinks(handle.doc())) {
+            for (const other of createdHandles) {
+                if (other !== handle && other.documentId === link._id) {
+                    linked[link.type].push(other);
+                }
+            }
+        }
+        return linked;
+    },
     // Link resolution omitted for brevity.
     getHandle: async () => ({
         tag: "Err",

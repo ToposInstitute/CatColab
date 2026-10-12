@@ -3,7 +3,7 @@ import File from "lucide-solid/icons/file";
 import FileX from "lucide-solid/icons/file-x";
 import MessageSquare from "lucide-solid/icons/message-square";
 import Network from "lucide-solid/icons/network";
-import Table from "lucide-solid/icons/table";
+import Table2 from "lucide-solid/icons/table-2";
 import { Match, Switch } from "solid-js";
 
 import { ModelFileIcon } from "./model_file_icon";
@@ -33,7 +33,7 @@ export function DocumentTypeIcon(props: {
                 <ChartSpline />
             </Match>
             <Match when={props.documentType === "instance"}>
-                <Table />
+                <Table2 />
             </Match>
             <Match when={props.documentType === "llmconversation"}>
                 <MessageSquare />

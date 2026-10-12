@@ -6,10 +6,9 @@ use derivative::Derivative;
 
 use super::theory::DiscreteDblTheory;
 use crate::dbl::{category::*, model::*, theory::DblTheory};
-use crate::one::{fp_category::QualifiedFpCategory, *};
 use crate::tt::util::pretty::*;
 use crate::validate::{self, Validate};
-use crate::zero::*;
+use crate::{one::*, zero::*};
 
 /// A finitely presented model of a discrete double theory.
 ///
@@ -22,7 +21,7 @@ use crate::zero::*;
 pub struct DiscreteDblModel {
     #[derivative(PartialEq(compare_with = "Rc::ptr_eq"))]
     theory: Rc<DiscreteDblTheory>,
-    pub(crate) category: QualifiedFpCategory,
+    pub(crate) category: FpCategory,
     ob_types: IndexedHashColumn<QualifiedName, QualifiedName>,
     mor_types: IndexedHashColumn<QualifiedName, QualifiedPath>,
 }
@@ -49,8 +48,8 @@ impl DiscreteDblModel {
     }
 
     /// Adds a path equation to the model.
-    pub fn add_equation(&mut self, eq: PathEq<QualifiedName, QualifiedName>) {
-        self.category.add_equation(eq);
+    pub fn add_equation(&mut self, name: QualifiedName, eq: QualifiedPathEq) {
+        self.category.add_equation(name, eq);
     }
 
     /// Iterates over failures of model to be well defined.
@@ -59,7 +58,7 @@ impl DiscreteDblModel {
         let category_errors = self.category.iter_invalid().map(|err| match err {
             InvalidFpCategory::Dom(e) => Invalid::Dom(e),
             InvalidFpCategory::Cod(e) => Invalid::Cod(e),
-            InvalidFpCategory::Eqn(eq, errs) => Invalid::Eqn(Some(eq), errs.map(|e| e.into())),
+            InvalidFpCategory::Eqn(eq, errs) => Invalid::Eqn(eq, errs.map(|e| e.into())),
         });
         let ob_type_errors = self.category.ob_generators().filter_map(|x| {
             if self.theory.has_ob_type(&self.ob_type(&x)) {
@@ -208,8 +207,10 @@ impl FpDblModel for DiscreteDblModel {
         self.mor_types.preimage(typ)
     }
 
-    fn equations(&self) -> impl Iterator<Item = (Self::Mor, Self::Mor)> {
-        self.category.equations().map(|PathEq { lhs, rhs }| (lhs.clone(), rhs.clone()))
+    fn equations(&self) -> impl Iterator<Item = (QualifiedName, Self::Mor, Self::Mor)> {
+        self.category
+            .equations()
+            .map(|(name, PathEq { lhs, rhs })| (name, lhs.clone(), rhs.clone()))
     }
 }
 

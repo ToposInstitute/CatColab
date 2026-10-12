@@ -4,7 +4,7 @@ use crate::app::{AppCtx, AppError, AppState};
 use crate::ref_actor::ensure_ref_actor;
 use crate::user_state_updates::{update_ref_for_users, update_user_state};
 use catcolab_document_types::automerge_json::{
-    hydrate_to_json_with_rich_text, populate_automerge_from_json,
+    auomerge_doc_from_json, hydrate_to_json_with_rich_text,
 };
 use catcolab_document_types::automerge_util::copy_doc_at_heads;
 use chrono::{DateTime, Utc};
@@ -33,13 +33,8 @@ pub async fn new_ref(ctx: AppCtx, content: Value) -> Result<Uuid, AppError> {
 
     let ref_id = Uuid::now_v7();
 
-    // Create automerge document and populate it with the JSON content
-    let mut automerge_doc = automerge::Automerge::new();
-    automerge_doc
-        .transact(|tx| {
-            populate_automerge_from_json(tx, automerge::ROOT, &content)?;
-            Ok::<_, automerge::AutomergeError>(())
-        })
+    // Batch-initialize the document, then apply rich-text spans where needed.
+    let automerge_doc = auomerge_doc_from_json(&content)
         .map_err(|e| AppError::Invalid(format!("Failed to populate document: {:?}", e)))?;
 
     let doc_handle = ctx.state.repo.create(automerge_doc).await?;

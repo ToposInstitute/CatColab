@@ -1,22 +1,22 @@
 import type { LLMConversationDocument } from "catcolab-document-methods";
 import type { UserMessage } from "catcolab-document-types";
 import { assertExhaustive } from "../util/assert_exhaustive.ts";
-import type { OpenAITranscript } from "./chat.ts";
+import type { ChatTranscript } from "./chat.ts";
 
 /** Files available to `contextExec`, indexed by their filenames. */
 export type ConversationFiles = Readonly<Record<string, string | number[]>>;
 
-/** The OpenAI request data derived from a persisted LLM conversation. */
+/** The inference request data derived from a persisted LLM conversation. */
 export type LLMConversationInferenceContext = {
-    transcript: OpenAITranscript;
+    transcript: ChatTranscript;
     files: ConversationFiles;
 };
 
-/** Derive the OpenAI request data for a persisted LLM conversation. */
+/** Derive the inference request data for a persisted LLM conversation. */
 export function prepareLLMConversationInference(
     conversation: LLMConversationDocument,
 ): LLMConversationInferenceContext {
-    const transcript: OpenAITranscript = [];
+    const transcript: ChatTranscript = [];
     const files: Record<string, string | number[]> = Object.create(null) as Record<
         string,
         string | number[]
@@ -25,7 +25,7 @@ export function prepareLLMConversationInference(
     for (const interaction of conversation.interactions) {
         switch (interaction.tag) {
             case "user-message":
-                transcript.push({ role: "user", content: userMessageToOpenAIContent(interaction) });
+                transcript.push({ role: "user", content: userMessageToChatContent(interaction) });
                 for (const file of interaction.files) {
                     files[file.filename] = decodeFile(file.mediaType, file.content);
                 }
@@ -90,7 +90,7 @@ export function prepareLLMConversationInference(
 }
 
 /** Render a stored user message as the text sent to the LLM. */
-function userMessageToOpenAIContent(message: UserMessage): string {
+function userMessageToChatContent(message: UserMessage): string {
     if (message.files.length === 0) {
         return message.content;
     }

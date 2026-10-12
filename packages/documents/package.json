@@ -8,12 +8,13 @@
         ".": "./src/index.ts"
     },
     "scripts": {
+        "build:doc-types": "pnpm --prefix ../document-methods run build:wasm",
         "format": "oxfmt .",
         "lint": "oxlint --fix && oxfmt .",
         "test": "vitest run",
         "test:db-dump": "vitest --config vitest.db-dump.config.ts --run",
         "test:watch": "vitest",
-        "check": "tsc -p tsconfig.test.json && pnpm run lint",
+        "check": "pnpm run build:doc-types && tsc -p tsconfig.test.json && pnpm run lint",
         "ci": "tsc -p tsconfig.test.json && oxlint --deny-warnings && oxfmt --check ."
     },
     "dependencies": {
@@ -23,9 +24,8 @@
         "uuid": "^13.0.0"
     },
     "devDependencies": {
-        "@automerge/automerge": "^3.4.1",
+        "@automerge/automerge": "^3.5.0",
         "@automerge/automerge-repo": "^2.5.6",
-        "@automerge/automerge-repo-solid-primitives": "^2.5.6",
         "@automerge/prosemirror": "^0.2.0",
         "@catcolab-dev-tools/vite-plugin-monorepo-dedupe": "link:../../tools/vite-plugin-monorepo-dedupe",
         "@standard-schema/spec": "^1.1.0",
@@ -38,10 +38,11 @@
         "prosemirror-model": "^1.25.9",
         "prosemirror-state": "^1.4.4",
         "prosemirror-view": "^1.41.9",
-        "solid-js": "^1.9.10",
+        "solid-automerge": "^2.0.1",
+        "solid-js": "^1.9.15",
         "typescript": "^6.0.3",
         "vite": "^7.2.2",
-        "vite-plugin-solid": "^2.11.10",
+        "vite-plugin-solid": "^2.11.14",
         "vite-plugin-wasm": "^3.5.0",
         "vitest": "4.1.10"
     }

@@ -5,8 +5,8 @@ import type { DocumentStore } from "./document-store";
 export type NotebookDocument = Extract<Document, { type: "model" | "diagram" | "analysis" }>;
 
 /** Delete a notebook cell by ID, returning whether the cell existed. */
-export function deleteNotebookCell<Handle>(
-    store: DocumentStore<Handle>,
+export function deleteNotebookCell<Handle, Version>(
+    store: DocumentStore<Handle, Version>,
     handle: Handle,
     cellId: string,
 ): boolean {

@@ -30,6 +30,11 @@ export default function createSchemaTheory(theoryMeta: TheoryMeta): Theory {
     return new Theory({
         ...theoryMeta,
         theory: thSchema.theory(),
+        equationCellMeta: {
+            name: "Equation",
+            description: "Add an equation between morphisms",
+            shortcut: ["E"],
+        },
         pushforwards: [
             {
                 target: "simple-olog",

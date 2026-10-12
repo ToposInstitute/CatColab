@@ -1,4 +1,4 @@
-import { defineMorphism, defineObject, defineShape } from "catcolab-documents";
+import { defineMorphism, defineObject, defineShape, PathEquation } from "catcolab-documents";
 
 export const Type = defineObject({ tag: "Basic", content: "Object" });
 
@@ -12,7 +12,14 @@ export const SimpleOlog = defineShape({
     },
     objects: [Type],
     morphisms: [Aspect],
+    supportsEquations: true,
     supportsInstances: {
         tableObjects: [Type],
     },
 });
+
+export const simpleOlogCellTypes = {
+    Type,
+    Aspect,
+    PathEquation,
+};

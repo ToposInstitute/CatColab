@@ -7,6 +7,7 @@
         "allowJs": true,
         "jsx": "preserve",
         "jsxImportSource": "solid-js",
+        "noUncheckedIndexedAccess": true,
         "types": ["vite/client"],
         "skipLibCheck": true,
         "paths": {

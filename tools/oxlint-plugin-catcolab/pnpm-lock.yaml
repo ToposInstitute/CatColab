@@ -4,6 +4,11 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+patchedDependencies:
+  '@automerge/automerge@3.5.0':
+    hash: 1b451d5888023b0f28b6ef72a15ce4962bed3fbd8d4acabe83fd063e50bd4992
+    path: ../../patches/@automerge__automerge@3.5.0.patch
+
 importers:
 
   .: {}

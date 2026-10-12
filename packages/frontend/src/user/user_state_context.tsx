@@ -8,7 +8,9 @@ export const INITIAL_USER_STATE: UserState = {
     documents: {},
 };
 
-export const UserStateContext = createContext<UserState>(INITIAL_USER_STATE);
+// No default value, so that consuming the context outside `UserStateProvider`
+// fails rather than gives some empty/incorrect state.
+export const UserStateContext = createContext<UserState>();
 
 /** Retrieve user state from application context. */
 export function useUserState(): UserState {

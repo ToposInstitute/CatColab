@@ -31,12 +31,16 @@ jobs:
 
       - name: Install Nix
         uses: cachix/install-nix-action@v25
+        with:
+          extra_nix_config: |
+            fallback = true
+            download-attempts = 5
 
       - name: Configure Cachix
         uses: cachix/cachix-action@v17
         with:
-          name: catcolab-jmoggr
-          authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
+          name: topos-institute
+          authToken: '${{ secrets.CACHIX_TOPOS_AUTH_TOKEN }}'
 
       # The ui-components-tests devShell provides nodejs_24, pnpm, and
       # playwright-driver.browsers (set via PLAYWRIGHT_BROWSERS_PATH).

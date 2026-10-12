@@ -1,12 +1,11 @@
 import { isValidDocumentId } from "@automerge/automerge-repo";
 import { type FirebaseOptions, initializeApp } from "firebase/app";
 import { deleteUser, getAuth, signInWithEmailAndPassword, signOut } from "firebase/auth";
-import invariant from "tiny-invariant";
 import { v4 } from "uuid";
 import { afterAll, assert, describe, test } from "vitest";
 
 import type { UserProfile } from "catcolab-api";
-import { createTestDocument, initTestUserAuth } from "../util/test_util.ts";
+import { createTestDocument, createTestUserAuth } from "../util/test_util.ts";
 import { createFetchWithAuth, createRpcClient, unwrap, unwrapErr } from "./rpc.ts";
 
 const serverUrl = import.meta.env.VITE_SERVER_URL;
@@ -17,13 +16,10 @@ const rpc = createRpcClient(serverUrl, createFetchWithAuth(firebaseApp));
 
 describe("RPC for user profiles", async () => {
     const auth = getAuth(firebaseApp);
-    const email = "test-user-rpc@catcolab.org";
     const password = "foobar";
-    await initTestUserAuth(auth, email, password);
+    const { email, user } = await createTestUserAuth(auth, "test-user-rpc", password);
 
-    const user = auth.currentUser;
-
-    afterAll(async () => user && (await deleteUser(user)));
+    afterAll(async () => await deleteUser(user));
 
     const signUpResult = await rpc.sign_up_or_sign_in.mutate();
     test.sequential("should allow sign up when authenticated", () => {
@@ -100,12 +96,12 @@ describe("RPC for user profiles", async () => {
 describe("Sharing documents between users", async () => {
     // Set up account for the user to share with (the "sharee").
     const auth = getAuth(firebaseApp);
-    const shareeEmail = "test-user-sharee@catcolab.org";
     const password = "foobar";
-    await initTestUserAuth(auth, shareeEmail, password);
-
-    const shareeUser = auth.currentUser;
-    invariant(shareeUser);
+    const { email: shareeEmail, user: shareeUser } = await createTestUserAuth(
+        auth,
+        "test-user-sharee",
+        password,
+    );
     afterAll(async () => await deleteUser(shareeUser));
 
     unwrap(await rpc.sign_up_or_sign_in.mutate());
@@ -121,11 +117,7 @@ describe("Sharing documents between users", async () => {
     await signOut(auth);
 
     // Set up account for the user who will share the document (the "sharer").
-    const sharerEmail = "test-user-sharer@catcolab.org";
-    await initTestUserAuth(auth, sharerEmail, password);
-
-    const sharerUser = auth.currentUser;
-    invariant(sharerUser);
+    const { user: sharerUser } = await createTestUserAuth(auth, "test-user-sharer", password);
     afterAll(async () => await deleteUser(sharerUser));
 
     unwrap(await rpc.sign_up_or_sign_in.mutate());

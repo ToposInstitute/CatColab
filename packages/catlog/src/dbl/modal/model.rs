@@ -251,7 +251,7 @@ impl<Kind: DblTheoryKind> FpDblModel for ModalDblModel<Kind> {
     fn mor_generators_with_type(&self, typ: &Self::MorType) -> impl Iterator<Item = Self::MorGen> {
         self.mor_types.preimage(typ)
     }
-    fn equations(&self) -> impl Iterator<Item = (Self::Mor, Self::Mor)> {
+    fn equations(&self) -> impl Iterator<Item = (QualifiedName, Self::Mor, Self::Mor)> {
         self.equations.iter().map(|()| unreachable!())
     }
 }

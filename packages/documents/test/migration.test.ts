@@ -37,6 +37,6 @@ describe.skip("migrating between logics", () => {
                 .map((cell) => cell.label)
                 .join(", "),
         ).toBe("has");
-        expect((await schema.validate()).tag).toBe("Ok");
+        expect((await schema.validate()).issues).toEqual([]);
     });
 });

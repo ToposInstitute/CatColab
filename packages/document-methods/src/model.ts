@@ -38,6 +38,15 @@ export const newMorphismDecl = (morType: MorType): ModelJudgment & { tag: "morph
     cod: null,
 });
 
+/** Create a new equation declaration. */
+export const newEquationDecl = (): ModelJudgment & { tag: "equation" } => ({
+    tag: "equation",
+    id: v7(),
+    name: "",
+    lhs: null,
+    rhs: null,
+});
+
 /** Create a new instantiation of an existing model. */
 export const newInstantiatedModel = (
     model?: Link | null,

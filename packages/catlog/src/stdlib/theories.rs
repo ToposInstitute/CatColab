@@ -40,7 +40,11 @@ pub fn th_signed_category() -> DiscreteDblTheory {
     let mut sgn = FpCategory::new();
     sgn.add_ob_generator(name("Object"));
     sgn.add_mor_generator(name("Negative"), name("Object"), name("Object"));
-    sgn.equate(Path::pair(name("Negative"), name("Negative")), Path::empty(name("Object")));
+    sgn.equate(
+        name("negative_involution"),
+        Path::pair(name("Negative"), name("Negative")),
+        Path::empty(name("Object")),
+    );
     sgn.into()
 }
 
@@ -53,20 +57,33 @@ pub fn th_delayable_signed_category() -> DiscreteDblTheory {
     cat.add_ob_generator(name("Object"));
     cat.add_mor_generator(name("Negative"), name("Object"), name("Object"));
     cat.add_mor_generator(name("Slow"), name("Object"), name("Object"));
-    cat.equate(Path::pair(name("Negative"), name("Negative")), Path::empty(name("Object")));
-    cat.equate(Path::pair(name("Slow"), name("Slow")), name("Slow").into());
     cat.equate(
+        name("negative_involution"),
+        Path::pair(name("Negative"), name("Negative")),
+        Path::empty(name("Object")),
+    );
+    cat.equate(
+        name("slow_idempotent"),
+        Path::pair(name("Slow"), name("Slow")),
+        name("Slow").into(),
+    );
+    cat.equate(
+        name("negative_slow_commute"),
         Path::pair(name("Negative"), name("Slow")),
         Path::pair(name("Slow"), name("Negative")),
     );
 
     // NOTE: These aliases are superfluous but are included for backwards
-    // compatibility with the previous version of the theory, defined by an
-    // explicit multiplication table.
+    // compatibility with the old version of the theory, defined by an explicit
+    // multiplication table.
     cat.add_mor_generator(name("PositiveSlow"), name("Object"), name("Object"));
     cat.add_mor_generator(name("NegativeSlow"), name("Object"), name("Object"));
-    cat.equate(name("PositiveSlow").into(), name("Slow").into());
-    cat.equate(name("NegativeSlow").into(), Path::pair(name("Negative"), name("Slow")));
+    cat.equate(name("positive_slow_alias"), name("PositiveSlow").into(), name("Slow").into());
+    cat.equate(
+        name("negative_slow_alias"),
+        name("NegativeSlow").into(),
+        Path::pair(name("Negative"), name("Slow")),
+    );
 
     cat.into()
 }
@@ -80,10 +97,27 @@ pub fn th_nullable_signed_category() -> DiscreteDblTheory {
     sgn.add_ob_generator(name("Object"));
     sgn.add_mor_generator(name("Negative"), name("Object"), name("Object"));
     sgn.add_mor_generator(name("Zero"), name("Object"), name("Object"));
-    sgn.equate(Path::pair(name("Negative"), name("Negative")), Path::empty(name("Object")));
-    sgn.equate(Path::pair(name("Negative"), name("Zero")), name("Zero").into());
-    sgn.equate(Path::pair(name("Zero"), name("Negative")), name("Zero").into());
-    sgn.equate(Path::pair(name("Zero"), name("Zero")), name("Zero").into());
+    sgn.equate(
+        name("negative_involution"),
+        Path::pair(name("Negative"), name("Negative")),
+        Path::empty(name("Object")),
+    );
+    // Make `Zero` be absorbing.
+    sgn.equate(
+        name("zero_absorbs_negative_left"),
+        Path::pair(name("Negative"), name("Zero")),
+        name("Zero").into(),
+    );
+    sgn.equate(
+        name("zero_absorbs_negative_right"),
+        Path::pair(name("Zero"), name("Negative")),
+        name("Zero").into(),
+    );
+    sgn.equate(
+        name("zero_idempotent"),
+        Path::pair(name("Zero"), name("Zero")),
+        name("Zero").into(),
+    );
     sgn.into()
 }
 
@@ -100,7 +134,11 @@ pub fn th_category_with_scalars() -> DiscreteDblTheory {
     let mut idem = FpCategory::new();
     idem.add_ob_generator(name("Object"));
     idem.add_mor_generator(name("Nonscalar"), name("Object"), name("Object"));
-    idem.equate(Path::pair(name("Nonscalar"), name("Nonscalar")), name("Nonscalar").into());
+    idem.equate(
+        name("nonscalar_idempotent"),
+        Path::pair(name("Nonscalar"), name("Nonscalar")),
+        name("Nonscalar").into(),
+    );
     idem.into()
 }
 
@@ -307,15 +345,32 @@ pub fn th_power_system() -> DiscreteDblTheory {
     cat.add_ob_generator(name("Bus"));
     cat.add_mor_generator(name("Passive"), name("Bus"), name("Bus"));
     cat.add_mor_generator(name("Branch"), name("Bus"), name("Bus"));
-    cat.equate(Path::pair(name("Passive"), name("Passive")), name("Passive").into());
-    cat.equate(Path::pair(name("Passive"), name("Branch")), name("Branch").into());
-    cat.equate(Path::pair(name("Branch"), name("Passive")), name("Branch").into());
-    cat.equate(Path::pair(name("Branch"), name("Branch")), name("Branch").into());
+    cat.equate(
+        name("passive_idempotent"),
+        Path::pair(name("Passive"), name("Passive")),
+        name("Passive").into(),
+    );
+    // Make `Branch` be absorbing.
+    cat.equate(
+        name("branch_absorbs_passive_left"),
+        Path::pair(name("Passive"), name("Branch")),
+        name("Branch").into(),
+    );
+    cat.equate(
+        name("branch_absorbs_passive_right"),
+        Path::pair(name("Branch"), name("Passive")),
+        name("Branch").into(),
+    );
+    cat.equate(
+        name("branch_idempotent"),
+        Path::pair(name("Branch"), name("Branch")),
+        name("Branch").into(),
+    );
     cat.into()
 }
 
-// Not yet using a modal theory since instantiation is currently only supported in
-// models of discrete theories.
+// TODO: Switch to this modal theory since instantiation is now supported for
+// models of modal theories, where previously it was not.
 #[allow(dead_code)]
 fn modal_th_power_system() -> ModalDblTheory<Unital> {
     let mut th = ModalDblTheory::new();

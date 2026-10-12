@@ -1,15 +1,14 @@
 import { Model, Nb } from "catcolab-document-methods";
 import type { ModelJudgment } from "catcolab-document-types";
-import type { DblModel, DblTheory } from "catlog-wasm";
 import type { DocumentStore } from "../document-store";
 import type { NotebookDocument } from "../notebook-document";
-import type { Result } from "../result";
 import { getRichTextCell, type RichTextCell } from "../rich-text";
 import type {
     AnyCellType,
     CellTypeOf,
     CodomainObjectTypesOf,
     DomainObjectTypesOf,
+    EquationType,
     MorphismType,
     MorphismTypesOf,
     ObjectType,
@@ -17,6 +16,7 @@ import type {
     RichTextType,
     Shape,
 } from "../shape";
+import type { Commit } from "../transaction";
 import {
     getModelCell,
     getMorphismCell,
@@ -27,8 +27,11 @@ import {
     type ObjectCell,
 } from "./cell";
 import type { ModelDocument } from "./document";
+import type { ModelValidation, ModelValidationView } from "./elaborated-model";
 import { morphismTypesEqual, objectTypesEqual } from "./equality";
-import { validateModelDocument } from "./validation";
+import { getEquationCell, type EquationCell, type EquationSide } from "./equation";
+import { morFromSide } from "./equation-translate";
+import { createNotebookValidator } from "./validation";
 
 /**
  * The value given to [`Notebook.add`].
@@ -43,7 +46,9 @@ type CellValuesOf<S extends Shape, T extends CellTypeOf<S>> = T extends RichText
               from: ObjectCell<DomainObjectTypesOf<S, T>> | null;
               to: ObjectCell<CodomainObjectTypesOf<S, T>> | null;
           }
-        : never;
+        : T extends EquationType
+          ? { label: string | null; lhs?: EquationSide<S>; rhs?: EquationSide<S> }
+          : never;
 /**
  * The type of a cell after being added to a notebook. This resolves to a
  * [`CellOf`] switched by the [`T`] [`CellTypeOf`] passed to it.
@@ -54,7 +59,9 @@ type AddedCellOf<S extends Shape, T extends CellTypeOf<S>> = T extends RichTextT
       ? ObjectCell<T>
       : T extends MorphismType
         ? MorphismCell<S, T>
-        : never;
+        : T extends EquationType
+          ? EquationCell<S>
+          : never;
 
 function isCellType(value: AnyCellType | Shape): value is AnyCellType {
     return "kind" in value;
@@ -84,6 +91,8 @@ function shapeSupportsCell(shape: Shape, type: AnyCellType): boolean {
                 }
             }
             return false;
+        case "path-equation":
+            return shape.supportsEquations === true;
     }
 }
 
@@ -130,6 +139,8 @@ function cellMatchesFilter<S extends Shape>(cell: CellOf<S>, filter: AnyCellType
                     return false;
                 }
                 return morphismTypesEqual(cell.type.morType, filter.morType);
+            case "path-equation":
+                return cell.kind === "path-equation";
         }
     }
 
@@ -159,13 +170,21 @@ function cellMatchesFilter<S extends Shape>(cell: CellOf<S>, filter: AnyCellType
                 }
             }
             return false;
+        case "path-equation":
+            return filter.supportsEquations === true;
     }
 }
 
-export interface Notebook<S extends Shape, D extends NotebookDocument = NotebookDocument> {
+export interface Notebook<
+    S extends Shape,
+    D extends NotebookDocument = NotebookDocument,
+    H = unknown,
+    V = unknown,
+> {
     readonly shape: S;
     readonly document: Readonly<D>;
     readonly title: string;
+    readonly handle: H;
 
     add<T extends CellTypeOf<S>>(type: T, values: CellValuesOf<S, T>): AddedCellOf<S, T>;
     cells(): readonly CellOf<S>[];
@@ -174,53 +193,22 @@ export interface Notebook<S extends Shape, D extends NotebookDocument = Notebook
     update(patch: Partial<{ title: string }>): void;
     dump(): D;
     onChange(callback: () => void): () => void;
-    validate(): Promise<Result<DblModel>>;
-    onValidate(callback: (result: Result<DblModel>) => void): () => void;
+    validate(): Promise<ModelValidation<S>>;
+    onValidate(callback: (result: ModelValidation<S>) => void): () => void;
+    /** Create a live, reactive view of the notebook's validation state. The
+     * caller must dispose the view when it is no longer needed. */
+    createValidationView(): ModelValidationView<S>;
+
+    /** Undo the changes this notebook's document received in a commit. */
+    revert(commit: Commit<H, V>): void;
 }
 
-export function modelNotebookFromStore<Handle, S extends Shape>(
+export function modelNotebookFromStore<Handle, S extends Shape, Version>(
     shape: S,
-    store: DocumentStore<Handle>,
+    store: DocumentStore<Handle, Version>,
     handle: Handle,
-): Notebook<S, ModelDocument> {
-    let coreTheory: Promise<DblTheory> | undefined;
-
-    async function validateCurrentDocument(): Promise<Result<DblModel>> {
-        let result: Result<DblModel>;
-        if (!shape.getCoreTheory) {
-            let shapeName = "unnamed";
-            if (shape.theory) {
-                shapeName = shape.theory;
-            }
-            result = {
-                tag: "Err",
-                content: [{ message: `Shape \`${shapeName}\` has no core theory` }],
-            };
-        } else {
-            try {
-                if (!coreTheory) {
-                    coreTheory = shape.getCoreTheory();
-                }
-                const theory = await coreTheory;
-                const document = store.copyValue(
-                    handle,
-                    store.getDocumentView(handle),
-                ) as ModelDocument;
-                result = await validateModelDocument(
-                    document,
-                    theory,
-                    store.getDocumentRef(handle).id,
-                );
-            } catch (error) {
-                result = {
-                    tag: "Err",
-                    content: [{ message: `Failed to load core theory: ${String(error)}` }],
-                };
-            }
-        }
-
-        return result;
-    }
+): Notebook<S, ModelDocument, Handle, Version> {
+    const validator = createNotebookValidator(shape, store, handle);
 
     function appendCell(
         cell: ReturnType<typeof Nb.newRichTextCell> | Nb.FormalCell<ModelJudgment>,
@@ -232,6 +220,7 @@ export function modelNotebookFromStore<Handle, S extends Shape>(
 
     return {
         shape,
+        handle,
         get document() {
             return store.getDocumentView(handle) as Readonly<ModelDocument>;
         },
@@ -258,6 +247,23 @@ export function modelNotebookFromStore<Handle, S extends Shape>(
                     cell.id,
                     type as ObjectTypesOf<S>,
                 ) as AddedCellOf<S, T>;
+            }
+
+            if (type.kind === "path-equation") {
+                if (!shape.supportsEquations) {
+                    throw new Error(
+                        `Shape \`${shape.theory ?? "unnamed"}\` does not support path equations`,
+                    );
+                }
+                const equation = values as CellValuesOf<S, EquationType>;
+                const decl = Model.newEquationDecl();
+                decl.name = equation.label ?? "";
+                const document = store.getDocumentView(handle) as Readonly<ModelDocument>;
+                decl.lhs = morFromSide(document, equation.lhs ?? []);
+                decl.rhs = morFromSide(document, equation.rhs ?? []);
+                const cell = Nb.newFormalCell<ModelJudgment>(decl);
+                appendCell(cell);
+                return getEquationCell(shape, store, handle, cell.id) as AddedCellOf<S, T>;
             }
 
             const morphism = values as CellValuesOf<S, MorphismTypesOf<S>>;
@@ -305,29 +311,15 @@ export function modelNotebookFromStore<Handle, S extends Shape>(
         onChange(callback) {
             return store.subscribe(handle, callback);
         },
-        validate() {
-            return validateCurrentDocument();
-        },
-        onValidate(callback) {
-            let active = true;
-
-            async function validateAndNotify(): Promise<void> {
-                const result = await validateCurrentDocument();
-                if (!active) {
-                    return;
-                }
-                callback(result);
+        validate: validator.validate,
+        onValidate: validator.onValidate,
+        createValidationView: validator.createValidationView,
+        revert(commit) {
+            const change = commit.documents.get(handle);
+            if (change === undefined) {
+                throw new Error("The notebook's document was not part of the commit.");
             }
-
-            const unsubscribe = store.subscribe(handle, () => {
-                void validateAndNotify();
-            });
-            void validateAndNotify();
-
-            return () => {
-                active = false;
-                unsubscribe();
-            };
+            store.revertCommit(handle, change);
         },
     };
 }

@@ -19,7 +19,11 @@ The generated function does not close over the caller's lexical scope. As with
 any function created using `Function`, JavaScript globals remain available; this
 is not a sandbox.
  */
-export async function contextExec(code: string, scope: ContextExecScope): Promise<EvalResult> {
+export async function contextExec(
+    code: string,
+    scope: ContextExecScope,
+    onSuccessHook?: () => Promise<void>,
+): Promise<EvalResult> {
     const bindings = Object.entries(scope);
 
     try {
@@ -31,6 +35,18 @@ export async function contextExec(code: string, scope: ContextExecScope): Promis
         // oxlint-enable no-implied-eval
 
         const value = await fn(...bindings.map(([, value]) => value));
+        try {
+            await onSuccessHook?.();
+        } catch (error) {
+            // The validation feedback must reach the LLM, but it must not make
+            // the return result unobservable.
+            return {
+                tag: "Err",
+                error: truncateResult(
+                    `${errorMessage(error)}\n\nYour code returned:\n${stringify(value)}`,
+                ),
+            };
+        }
         return { tag: "Ok", value: truncateResult(stringify(value)) };
     } catch (error) {
         return { tag: "Err", error: truncateResult(errorMessage(error)) };

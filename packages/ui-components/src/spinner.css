@@ -9,6 +9,15 @@
     will-change: transform;
 }
 
+.spinner-small {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-width: 2px;
+    margin: 0 0.25rem 0 0;
+    vertical-align: -0.125em;
+}
+
 @keyframes spin {
     to {
         transform: rotate(360deg);

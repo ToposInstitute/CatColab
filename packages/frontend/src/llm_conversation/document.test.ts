@@ -1,33 +1,24 @@
-import { Repo } from "@automerge/automerge-repo";
-import { assert, describe, test, vi } from "vitest";
+import { Entity, Mapping, SimpleSchema } from "catcolab-logics/simple-schema";
+import { assert, beforeEach, describe, test, vi } from "vitest";
 
-import { LLMConversation, type LLMConversationDocument } from "catcolab-document-methods";
-import type { InlineFile } from "catcolab-document-types";
-import { makeLiveDoc } from "../api";
-import type {
-    GeneratedOpenAIMessage,
-    OpenAIChatTurnResult,
-    OpenAITranscript,
-} from "../inference/chat.ts";
-import type { ContextExecScope } from "../inference/context_exec.ts";
+import { Diagram } from "catcolab-document-methods";
+import type { Document } from "catcolab-document-types";
 import {
-    type LiveLLMConversationDoc,
-    retryLastLLMConversationResponse,
-    runLLMConversationTurn,
-} from "./document.ts";
+    createBinder,
+    type Instance,
+    type ModelDocument,
+    type Notebook,
+    type Result,
+} from "catcolab-documents";
+import type { ChatTurnResult } from "../inference/chat.ts";
+import type { ContextExecScope } from "../inference/context_exec.ts";
+import { retryLastLLMConversationResponse, runLLMConversationTurn } from "./document.ts";
+
+type RunChatTurn = (typeof import("../inference/chat.ts"))["runChatTurn"];
 
 const inference = vi.hoisted(() => ({
     createInferenceClient: vi.fn<(apiKey: string) => unknown>(),
-    runOpenAIChatTurn:
-        vi.fn<
-            (
-                client: unknown,
-                transcript: OpenAITranscript,
-                scope: ContextExecScope,
-                onContent?: (delta: string, snapshot: string) => void,
-                model?: string,
-            ) => Promise<OpenAIChatTurnResult>
-        >(),
+    runChatTurn: vi.fn<RunChatTurn>(),
 }));
 
 vi.mock("../inference/chat.ts", async (importOriginal) => ({
@@ -35,228 +26,491 @@ vi.mock("../inference/chat.ts", async (importOriginal) => ({
     ...inference,
 }));
 
-const modelRef = {
-    _id: "0198b0e0-2085-1000-8000-000000000001",
-    _version: null,
-    _server: "example.test",
-};
+type Fixture = Awaited<ReturnType<typeof makeFixture>>;
 
-function makeLiveConversation(): LiveLLMConversationDoc {
-    const repo = new Repo();
-    const document = LLMConversation.newLLMConversationDocument(modelRef, "test-model");
-    const liveDoc = makeLiveDoc<LLMConversationDocument>(repo.create(document), "llmconversation");
+async function makeFixture(withInstance = false) {
+    const binder = createBinder();
+    const schema = await binder.createNotebook(SimpleSchema, { title: "Company schema" });
+    let attachment: typeof schema | Instance<Document, typeof SimpleSchema, Document> = schema;
+    let instance: Instance<Document, typeof SimpleSchema, Document> | undefined;
 
+    if (withInstance) {
+        instance = expectOk(await binder.createInstance(schema, { title: "Company data" }));
+        attachment = instance;
+    }
+
+    const conversation = await binder.createLLMConversation(attachment, "test-model", {
+        title: "Conversation",
+    });
+    return { binder, schema, instance, conversation };
+}
+
+async function makeInvalidInstance(fixture: Fixture) {
+    const instance = fixture.instance;
+    assert(instance);
+    fixture.schema.add(Entity, { label: "Person" });
+    const table = (await instance.validate()).tables[0];
+    assert(table);
+    const row = expectOk(await instance.addRow(table));
+    fixture.binder.store.changeDocument(instance.handle, (document) => {
+        assert.strictEqual(document.type, "instance");
+        if (document.type !== "instance") {
+            return;
+        }
+        const storedRow = document.tables[table.id]?.rows[row.id];
+        assert(storedRow);
+        storedRow.fields.unexpected = { String: "value" };
+    });
+    return { table, row };
+}
+
+function expectOk<T, E>(result: Result<T, E>): T {
+    if (result.tag === "Err") {
+        throw new Error(`Expected Ok, got ${JSON.stringify(result.content)}`);
+    }
+    return result.content;
+}
+
+function schemaBinding(
+    scope: ContextExecScope,
+): Notebook<typeof SimpleSchema, ModelDocument, Document, Document> {
+    const schema = scope.document_Company_schema;
+    assert(schema);
+    return schema as Notebook<typeof SimpleSchema, ModelDocument, Document, Document>;
+}
+
+function response(content: string): ChatTurnResult {
     return {
-        type: "llmconversation",
-        liveDoc,
-        docRef: {
-            refId: "0198b0e0-2085-1000-8000-000000000010",
-            permissions: { anyone: null, user: "Own", users: null },
-            isDeleted: false,
-        },
-        liveModel: {} as LiveLLMConversationDoc["liveModel"],
+        content,
+        generatedMessageDelta: [{ role: "assistant", content }],
+        termination: { tag: "FinalResponse" },
     };
 }
 
-const inputFile: InlineFile = {
-    filename: "values.csv",
-    mediaType: "text/csv",
-    content: Array.from(new TextEncoder().encode("left,right\n0,1\n")),
-};
+async function runTurn(fixture: Fixture) {
+    return runLLMConversationTurn(
+        fixture.conversation,
+        fixture.binder.store,
+        { tag: "Ready", key: "inference-key" },
+        { content: "Inspect the document.", files: [] },
+    );
+}
 
-const generatedMessageDelta: GeneratedOpenAIMessage[] = [
-    {
-        role: "assistant",
-        content: null,
-        tool_calls: [
-            {
-                id: "call_multiply",
-                type: "function",
-                function: {
-                    name: "contextExec",
-                    arguments: JSON.stringify({ code: "return files['values.csv'];" }),
-                },
-            },
-        ],
-    },
-    {
-        role: "tool",
-        tool_call_id: "call_multiply",
-        content: JSON.stringify({ tag: "Ok", value: "left,right\n0,1\n" }),
-    },
-    { role: "assistant", content: "The values are 0 and 1." },
-];
-
-describe("LLM conversation turns", () => {
-    test("persists a completed user, tool, and assistant turn", async () => {
-        const conversation = makeLiveConversation();
+describe("LLM conversation turns", { timeout: 30_000 }, () => {
+    beforeEach(() => {
+        inference.createInferenceClient.mockReset();
+        inference.runChatTurn.mockReset();
         inference.createInferenceClient.mockReturnValue({});
-        inference.runOpenAIChatTurn.mockResolvedValue({
-            content: "The values are 0 and 1.",
-            generatedMessageDelta,
+    });
+
+    test("runs against an isolated document scope and commits valid changes", async () => {
+        const fixture = await makeFixture();
+        inference.runChatTurn.mockImplementation(async (_client, _transcript, scope) => {
+            schemaBinding(scope).update({ title: "Updated schema" });
+            assert.strictEqual(fixture.schema.title, "Company schema");
+            return response("Done.");
         });
 
+        assert.deepStrictEqual(await runTurn(fixture), { tag: "Completed", content: "Done." });
+        assert.strictEqual(fixture.schema.title, "Updated schema");
+
+        const call = inference.runChatTurn.mock.calls[0]!;
+        assert.strictEqual(call[4], "test-model");
+        assert.match(call[5] ?? "", /attached document "Company schema"/);
         assert.deepStrictEqual(
-            await runLLMConversationTurn(
-                conversation,
-                { tag: "Ready", key: "inference-key" },
-                {
-                    content: "Inspect the attached file.",
-                    files: [inputFile],
-                },
-                {},
-            ),
-            { tag: "Completed", content: "The values are 0 and 1." },
+            fixture.conversation.interactions().map((interaction) => interaction.tag),
+            ["user-message", "llm-message"],
+        );
+    });
+
+    test("injects the instances of an attached schema into the document scope", async () => {
+        const fixture = await makeFixture();
+        const instance = expectOk(
+            await fixture.binder.createInstance(fixture.schema, { title: "Company data" }),
         );
 
-        const scope = inference.runOpenAIChatTurn.mock.calls[0]?.[2] as ContextExecScope;
-        assert.deepStrictEqual(scope.files, {
-            "values.csv": "left,right\n0,1\n",
-        });
-        assert.strictEqual(inference.runOpenAIChatTurn.mock.calls[0]?.[4], "test-model");
+        inference.runChatTurn.mockImplementation(
+            async (_client, _transcript, scope, _onContent, _model, systemPromptSuffix) => {
+                const scopedSchema = schemaBinding(scope);
+                const scopedInstance = scope.document_Company_data as
+                    | Instance<unknown, typeof SimpleSchema, Document>
+                    | undefined;
+                assert(scopedInstance);
+                assert.match(systemPromptSuffix ?? "", /Company schema/);
+                assert.match(
+                    systemPromptSuffix ?? "",
+                    /`document_Company_data` is the document .*`instance-of` link points to `document_Company_schema`\./s,
+                );
 
-        const interactions = conversation.liveDoc.docHandle.doc().interactions;
+                // Both documents are staged in the same transaction: edits to
+                // either commit together with the turn.
+                scopedSchema.update({ title: "Updated schema" });
+                scopedInstance.update({ title: "Updated data" });
+                return response("Done.");
+            },
+        );
+
+        assert.deepStrictEqual(await runTurn(fixture), { tag: "Completed", content: "Done." });
+        assert.strictEqual(fixture.schema.title, "Updated schema");
+        assert.strictEqual(instance.title, "Updated data");
+    });
+
+    test("stages sibling conversations of the attached document", async () => {
+        const fixture = await makeFixture();
+        const sibling = await fixture.binder.createLLMConversation(fixture.schema, "test-model", {
+            title: "Conversation 2",
+        });
+
+        inference.runChatTurn.mockImplementation(
+            async (_client, _transcript, scope, _onContent, _model, systemPromptSuffix) => {
+                // The running conversation itself is not staged: only its
+                // sibling is in the draft scope.
+                const stagedConversation = scope.document_Conversation_2 as
+                    | typeof fixture.conversation
+                    | undefined;
+                assert(stagedConversation);
+                assert.match(
+                    systemPromptSuffix ?? "",
+                    /`document_Conversation_2` is the document .*`llmconversation-of` link points to `document_Company_schema`\./s,
+                );
+                stagedConversation.update({ title: "Renamed" });
+                return response("Done.");
+            },
+        );
+
+        assert.deepStrictEqual(await runTurn(fixture), { tag: "Completed", content: "Done." });
+        assert.strictEqual(sibling.title, "Renamed");
+        assert.strictEqual(fixture.conversation.title, "Conversation");
+    });
+
+    test("brings the attachment of a conversation-attached conversation into scope", async () => {
+        const fixture = await makeFixture();
+        const inner = await fixture.binder.createLLMConversation(fixture.schema, "test-model", {
+            title: "Inner",
+        });
+        const outer = await fixture.binder.createLLMConversation(inner, "test-model", {
+            title: "Outer",
+        });
+
+        inference.runChatTurn.mockImplementation(
+            async (_client, _transcript, scope, _onContent, _model, systemPromptSuffix) => {
+                assert.match(
+                    systemPromptSuffix ?? "",
+                    /`document_Inner` is the attached document .*`llmconversation-of` link points to `document_Company_schema`\./s,
+                );
+                schemaBinding(scope).update({ title: "Updated schema" });
+                return response("Done.");
+            },
+        );
+
+        const result = await runLLMConversationTurn(
+            outer,
+            fixture.binder.store,
+            { tag: "Ready", key: "inference-key" },
+            { content: "Inspect the document.", files: [] },
+        );
+        assert.deepStrictEqual(result, { tag: "Completed", content: "Done." });
+        assert.strictEqual(fixture.schema.title, "Updated schema");
+    });
+
+    test("skips documents that have no document API object", async () => {
+        const fixture = await makeFixture();
+        const schemaRefId = fixture.binder.store.getDocumentRef(fixture.schema.handle).id;
+        const diagramHandle = await fixture.binder.store.createHandle(
+            Diagram.newDiagramDocument({ _id: schemaRefId, _version: null, _server: "" }),
+        );
+        fixture.binder.store.changeDocument(diagramHandle, (document) => {
+            assert.strictEqual(document.type, "diagram");
+            if (document.type === "diagram") {
+                document.name = "Company diagram";
+            }
+        });
+
+        inference.runChatTurn.mockImplementation(async (_client, _transcript, scope) => {
+            assert(!("document_Company_diagram" in scope));
+            return response("Done.");
+        });
+
+        assert.deepStrictEqual(await runTurn(fixture), { tag: "Completed", content: "Done." });
+    });
+
+    test("blocks notebook commits until schema issues are repaired", async () => {
+        const fixture = await makeFixture();
+        inference.runChatTurn.mockImplementation(
+            async (
+                _client,
+                _transcript,
+                scope,
+                _onContent,
+                _model,
+                _systemPromptSuffix,
+                onSuccessHook,
+            ) => {
+                const schema = schemaBinding(scope);
+                const invalid = schema.add(Mapping, {
+                    label: "invalid",
+                    from: null,
+                    to: null,
+                });
+                assert(onSuccessHook);
+
+                let validationError: unknown;
+                try {
+                    await onSuccessHook();
+                } catch (error) {
+                    validationError = error;
+                }
+                assert(validationError instanceof Error);
+                assert.match(validationError.message, /document_Company_schema: .*"message"/s);
+
+                invalid.delete();
+                await onSuccessHook();
+                return response("Repaired.");
+            },
+        );
+
+        assert.deepStrictEqual(await runTurn(fixture), {
+            tag: "Completed",
+            content: "Repaired.",
+        });
+    });
+
+    test("persists complete validation feedback from linked document tools", async () => {
+        const fixture = await makeFixture(true);
+        const { table, row } = await makeInvalidInstance(fixture);
+        inference.runChatTurn.mockImplementation(
+            async (
+                _client,
+                _transcript,
+                scope,
+                _onContent,
+                _model,
+                systemPromptSuffix,
+                onSuccessHook,
+            ) => {
+                const attachedDocument = scope.document_Company_data as
+                    | Instance<unknown, typeof SimpleSchema, Document>
+                    | undefined;
+                assert(attachedDocument);
+                assert(scope.document_Company_schema);
+                assert.match(
+                    systemPromptSuffix ?? "",
+                    /Company data.*instance-of.*Company schema/s,
+                );
+                assert(onSuccessHook);
+
+                let validationError: unknown;
+                try {
+                    await onSuccessHook();
+                } catch (error) {
+                    validationError = error;
+                }
+                assert(validationError instanceof Error);
+                const feedback = validationError.message;
+                assert.match(feedback, /"issueType":"OrphanedField"/);
+                assert.ok(
+                    feedback.includes(
+                        JSON.stringify([table.id, "rows", row.id, "fields", "unexpected"]),
+                    ),
+                );
+
+                attachedDocument.deleteRow(table.id, row.id);
+                await onSuccessHook();
+                return {
+                    content: "Repaired.",
+                    generatedMessageDelta: [
+                        {
+                            role: "assistant",
+                            content: null,
+                            tool_calls: [
+                                {
+                                    id: "call-inspect",
+                                    type: "function",
+                                    function: {
+                                        name: "contextExec",
+                                        arguments: JSON.stringify({ code: "return 'inspection';" }),
+                                    },
+                                },
+                            ],
+                        },
+                        {
+                            role: "tool",
+                            tool_call_id: "call-inspect",
+                            content: JSON.stringify({ tag: "Err", error: feedback }),
+                        },
+                        { role: "assistant", content: "Repaired." },
+                    ],
+                    termination: { tag: "FinalResponse" },
+                };
+            },
+        );
+
+        assert.deepStrictEqual(await runTurn(fixture), {
+            tag: "Completed",
+            content: "Repaired.",
+        });
+        assert.strictEqual(inference.runChatTurn.mock.calls.length, 1);
+        const interactions = fixture.conversation.interactions();
         assert.deepStrictEqual(
             interactions.map((interaction) => interaction.tag),
             ["user-message", "llm-code-execution", "llm-message"],
         );
-        const [user, execution, response] = interactions;
-        assert(user?.tag === "user-message");
+        const execution = interactions[1];
         assert(execution?.tag === "llm-code-execution");
-        assert(response?.tag === "llm-message");
-        assert.strictEqual(user.content, "Inspect the attached file.");
-        assert.strictEqual(execution.toolCallId, "call_multiply");
-        assert.strictEqual(response.content, "The values are 0 and 1.");
+        assert.strictEqual(execution.result.tag, "Err");
+        if (execution.result.tag === "Err") {
+            assert.match(execution.result.error, /"issueType":"OrphanedField"/);
+        }
     });
 
-    test("rejects pending feedback requests when a user sends a new message", async () => {
-        const conversation = makeLiveConversation();
-        conversation.liveDoc.changeDoc((doc) => {
-            doc.interactions.push({
-                tag: "user-feedback-request",
-                id: "feedback-request",
-                timestamp: new Date().toISOString(),
-                codeExecution: "code-execution",
-                content: "Apply the proposed changes?",
-                resolution: "unresolved",
-            });
-        });
-        inference.createInferenceClient.mockReturnValue({});
-        inference.runOpenAIChatTurn.mockResolvedValue({
-            content: "A response.",
-            generatedMessageDelta: [{ role: "assistant", content: "A response." }],
-        });
-
-        await runLLMConversationTurn(
-            conversation,
-            { tag: "Ready", key: "inference-key" },
-            { content: "Do something else.", files: [] },
-            {},
-        );
-
-        const request = conversation.liveDoc.docHandle.doc().interactions[0];
-        assert(request?.tag === "user-feedback-request");
-        assert.strictEqual(request.resolution, "rejected");
-    });
-
-    test("persists tool output when the model produces no final text", async () => {
-        const conversation = makeLiveConversation();
-        inference.createInferenceClient.mockReturnValue({});
-        inference.runOpenAIChatTurn.mockResolvedValue({
-            content: "",
-            generatedMessageDelta: generatedMessageDelta.slice(0, 2),
+    test("commits valid progress when the provider request limit is reached", async () => {
+        const fixture = await makeFixture();
+        inference.runChatTurn.mockImplementation(async (_client, _transcript, scope) => {
+            schemaBinding(scope).update({ title: "Unfinished update" });
+            return {
+                content: "",
+                generatedMessageDelta: [
+                    {
+                        role: "assistant",
+                        content: null,
+                        tool_calls: [
+                            {
+                                id: "call-update",
+                                type: "function",
+                                function: {
+                                    name: "contextExec",
+                                    arguments: JSON.stringify({
+                                        code: "document_Company_schema.update({ title: 'Unfinished update' });",
+                                    }),
+                                },
+                            },
+                        ],
+                    },
+                    {
+                        role: "tool",
+                        tool_call_id: "call-update",
+                        content: JSON.stringify({ tag: "Ok", value: "undefined" }),
+                    },
+                ],
+                termination: { tag: "ProviderRequestLimit" },
+            };
         });
 
+        assert.deepStrictEqual(await runTurn(fixture), {
+            tag: "Incomplete",
+            reason: "The model exhausted the provider request budget before producing a final response.",
+        });
+        assert.strictEqual(fixture.schema.title, "Unfinished update");
         assert.deepStrictEqual(
-            await runLLMConversationTurn(
-                conversation,
-                { tag: "Ready", key: "inference-key" },
-                { content: "Inspect the attached file.", files: [inputFile] },
-                {},
-            ),
-            { tag: "Completed", content: "" },
-        );
-
-        const interactions = conversation.liveDoc.docHandle.doc().interactions;
-        assert.deepStrictEqual(
-            interactions.map((interaction) => interaction.tag),
+            fixture.conversation.interactions().map((interaction) => interaction.tag),
             ["user-message", "llm-code-execution"],
         );
+        assert.deepStrictEqual(
+            await retryLastLLMConversationResponse(fixture.conversation, fixture.binder.store, {
+                tag: "Ready",
+                key: "inference-key",
+            }),
+            { tag: "Failed", error: "The latest interaction is not a user message." },
+        );
+        assert.strictEqual(inference.runChatTurn.mock.calls.length, 1);
+    });
+
+    test("persists several contextExec calls batched into one assistant message", async () => {
+        const fixture = await makeFixture();
+        inference.runChatTurn
+            .mockResolvedValueOnce({
+                content: "Done.",
+                generatedMessageDelta: [
+                    {
+                        role: "assistant",
+                        content: "Two updates.",
+                        tool_calls: [
+                            {
+                                id: "call-a",
+                                type: "function",
+                                function: {
+                                    name: "contextExec",
+                                    arguments: JSON.stringify({ code: "return 'first';" }),
+                                },
+                            },
+                            {
+                                id: "call-b",
+                                type: "function",
+                                function: {
+                                    name: "contextExec",
+                                    arguments: JSON.stringify({ code: "return 'second';" }),
+                                },
+                            },
+                        ],
+                    },
+                    {
+                        role: "tool",
+                        tool_call_id: "call-a",
+                        content: JSON.stringify({ tag: "Ok", value: "first" }),
+                    },
+                    {
+                        role: "tool",
+                        tool_call_id: "call-b",
+                        content: JSON.stringify({ tag: "Ok", value: "second" }),
+                    },
+                    { role: "assistant", content: "Done." },
+                ],
+                termination: { tag: "FinalResponse" },
+            })
+            .mockResolvedValueOnce(response("Follow-up done."));
+
+        assert.deepStrictEqual(await runTurn(fixture), { tag: "Completed", content: "Done." });
+
+        const interactions = fixture.conversation.interactions();
+        assert.deepStrictEqual(
+            interactions.map((interaction) => interaction.tag),
+            [
+                "user-message",
+                "llm-message",
+                "llm-code-execution",
+                "llm-code-execution",
+                "llm-message",
+            ],
+        );
+        const [first, second] = interactions.slice(2);
+        assert(first?.tag === "llm-code-execution");
+        assert(second?.tag === "llm-code-execution");
+        assert.strictEqual(first.toolCallId, "call-a");
+        assert.strictEqual(first.code, "return 'first';");
+        assert.strictEqual(second.toolCallId, "call-b");
+        assert.strictEqual(second.code, "return 'second';");
+
+        // The persisted executions round-trip as one assistant/tool pair each.
+        assert.deepStrictEqual(await runTurn(fixture), {
+            tag: "Completed",
+            content: "Follow-up done.",
+        });
+        const transcript = inference.runChatTurn.mock.calls[1]![1];
+        assert.deepStrictEqual(
+            transcript.map((message) => message.role),
+            ["user", "assistant", "assistant", "tool", "assistant", "tool", "assistant", "user"],
+        );
+        const toolCallIds: Array<string | undefined> = [];
+        for (const message of transcript) {
+            if (message.role === "assistant") {
+                toolCallIds.push(message.tool_calls?.[0]?.id);
+            }
+        }
+        assert.deepStrictEqual(toolCallIds, [undefined, "call-a", "call-b", undefined]);
     });
 
     test("retains the user message when inference fails", async () => {
-        const conversation = makeLiveConversation();
-        inference.createInferenceClient.mockReturnValue({});
-        inference.runOpenAIChatTurn.mockRejectedValue(new Error("network failed"));
+        const fixture = await makeFixture();
+        inference.runChatTurn.mockRejectedValue(new Error("network failed"));
 
-        const result = await runLLMConversationTurn(
-            conversation,
-            { tag: "Ready", key: "inference-key" },
-            { content: "What is the meaning of life?", files: [] },
-            {},
-        );
-        assert.deepStrictEqual(result, { tag: "Retryable", error: "network failed" });
-
-        const interactions = conversation.liveDoc.docHandle.doc().interactions;
-        assert.strictEqual(interactions.length, 1);
-        const user = interactions[0];
-        assert(user?.tag === "user-message");
-        assert.strictEqual(user.content, "What is the meaning of life?");
-    });
-
-    test("retries without duplicating the persisted user message", async () => {
-        const conversation = makeLiveConversation();
-        const savedUserMessage = LLMConversation.newUserMessage("Please answer this.", []);
-        conversation.liveDoc.changeDoc((doc) => {
-            LLMConversation.appendLLMInteraction(doc, savedUserMessage);
+        assert.deepStrictEqual(await runTurn(fixture), {
+            tag: "Retryable",
+            error: "network failed",
+            attempts: [],
         });
-        inference.createInferenceClient.mockReturnValue({});
-        inference.runOpenAIChatTurn.mockReset();
-        inference.runOpenAIChatTurn.mockResolvedValue({
-            content: "A usable response.",
-            generatedMessageDelta: [{ role: "assistant", content: "A usable response." }],
-        });
-
         assert.deepStrictEqual(
-            await retryLastLLMConversationResponse(
-                conversation,
-                { tag: "Ready", key: "inference-key" },
-                {},
-            ),
-            { tag: "Completed", content: "A usable response." },
+            fixture.conversation.interactions().map((interaction) => interaction.tag),
+            ["user-message"],
         );
-        const interactions = conversation.liveDoc.docHandle.doc().interactions;
-        assert.deepStrictEqual(
-            interactions.map((interaction) => interaction.tag),
-            ["user-message", "llm-message"],
-        );
-        assert.strictEqual(inference.runOpenAIChatTurn.mock.calls.length, 1);
-        const retryTranscript = inference.runOpenAIChatTurn.mock.calls[0]?.[1];
-        assert.deepStrictEqual(retryTranscript, [{ role: "user", content: "Please answer this." }]);
-    });
-
-    test("does not retry when the latest interaction is not a user message", async () => {
-        const conversation = makeLiveConversation();
-        conversation.liveDoc.changeDoc((doc) => {
-            LLMConversation.appendLLMInteraction(
-                doc,
-                LLMConversation.newLLMMessage("Already answered."),
-            );
-        });
-        inference.createInferenceClient.mockClear();
-        inference.runOpenAIChatTurn.mockClear();
-
-        const result = await retryLastLLMConversationResponse(
-            conversation,
-            { tag: "Ready", key: "inference-key" },
-            {},
-        );
-
-        assert.deepStrictEqual(result, {
-            tag: "Failed",
-            error: "The latest interaction is not a user message.",
-        });
-        assert.strictEqual(inference.createInferenceClient.mock.calls.length, 0);
-        assert.strictEqual(inference.runOpenAIChatTurn.mock.calls.length, 0);
     });
 });

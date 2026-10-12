@@ -20,12 +20,12 @@
         "watch": "nodemon --watch src -e js,tsx,ts,tsx,css,json --exec 'pnpm build && pnpm push'"
     },
     "dependencies": {
-        "@automerge/automerge": "^3.4.1",
+        "@automerge/automerge": "^3.5.0",
         "@automerge/automerge-repo": "^2.5.6",
         "@inkandswitch/patchwork-providers": "^0.5.3",
         "catcolab-document-methods": "link:../document-methods",
         "catlog-wasm": "link:../catlog-wasm/dist/pkg-browser",
-        "solid-js": "^1.9.7"
+        "solid-js": "^1.9.15"
     },
     "devDependencies": {
         "@catcolab-dev-tools/oxlint-plugin-catcolab": "link:../../tools/oxlint-plugin-catcolab",
@@ -36,9 +36,9 @@
         "nodemon": "^3.1.9",
         "pushwork": "^2.2.3",
         "typescript": "^6.0.3",
-        "vite": "^5.3.4",
+        "vite": "^7.2.2",
         "vite-plugin-css-injected-by-js": "^3.5.2",
-        "vite-plugin-solid": "^2.10.2",
-        "vite-plugin-wasm": "^3.3.0"
+        "vite-plugin-solid": "^2.11.14",
+        "vite-plugin-wasm": "^3.5.0"
     }
 }

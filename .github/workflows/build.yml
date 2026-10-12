@@ -67,6 +67,10 @@ jobs:
   build_frontend:
     name: Build frontend
     runs-on: ubuntu-latest
+    env:
+      # Fetch build outputs from the nix binary cache (Cachix) instead of
+      # rebuilding them; see tools/build_system.
+      CATCOLAB_BUILD_SYSTEM_RETRIEVE_FROM_NIX: "true"
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
@@ -92,39 +96,36 @@ jobs:
             packages/frontend/dist
           key: frontend-build-${{ steps.cache-key.outputs.git-hash }}-${{ github.event_name == 'release' && 'production' || 'staging' }}
 
-      - name: Setup pnpm
+      - name: Install Nix
         if: github.event_name == 'release' || steps.cache-frontend-build.outputs.cache-hit != 'true'
-        uses: pnpm/action-setup@v6
-
-      - name: Setup NodeJS
-        if: github.event_name == 'release' || steps.cache-frontend-build.outputs.cache-hit != 'true'
-        uses: actions/setup-node@v7
+        uses: cachix/install-nix-action@v25
         with:
-          node-version: 24
-          cache: "pnpm"
+          extra_nix_config: |
+            fallback = true
+            download-attempts = 5
 
-      - name: Install Rust toolchain from file
+      - name: Configure Cachix
         if: github.event_name == 'release' || steps.cache-frontend-build.outputs.cache-hit != 'true'
-        uses: actions-rust-lang/setup-rust-toolchain@v1
+        uses: cachix/cachix-action@v17
         with:
-          # Don't override flags in cargo config files.
-          rustflags: ""
+          name: topos-institute
+          authToken: '${{ secrets.CACHIX_TOPOS_AUTH_TOKEN }}'
 
       - name: Build for Staging
         if: (github.event_name == 'push' || github.event_name == 'pull_request') && steps.cache-frontend-build.outputs.cache-hit != 'true'
         run: |
-          pnpm install
-          pnpm --filter ./packages/frontend run build:deps
+          nix develop --command pnpm install
+          nix develop --command pnpm --filter ./packages/frontend run build:deps
           # Uses env from packages/frontend/.env.staging
-          pnpm --filter ./packages/frontend run build:staging
+          nix develop --command pnpm --filter ./packages/frontend run build:staging
 
       - name: Build for Production
         if: github.event_name == 'release'
         run: |
-          pnpm install
-          pnpm --filter ./packages/frontend run build:deps
+          nix develop --command pnpm install
+          nix develop --command pnpm --filter ./packages/frontend run build:deps
           # Uses env from packages/frontend/.env.production
-          pnpm --filter ./packages/frontend run build
+          nix develop --command pnpm --filter ./packages/frontend run build
 
       - name: Report cache status
         run: |
@@ -152,7 +153,7 @@ jobs:
       - name: Build frontend docs
         if: steps.cache-frontend-docs.outputs.cache-hit != 'true'
         run: |
-          pnpm --filter ./packages/frontend run doc
+          nix develop --command pnpm --filter ./packages/frontend run doc
 
       - name: Report frontend docs cache status
         run: |
@@ -177,12 +178,16 @@ jobs:
 
       - name: Install Nix
         uses: cachix/install-nix-action@v25
+        with:
+          extra_nix_config: |
+            fallback = true
+            download-attempts = 5
 
       - name: Configure Cachix
         uses: cachix/cachix-action@v17
         with:
-          name: catcolab-jmoggr
-          authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
+          name: topos-institute
+          authToken: '${{ secrets.CACHIX_TOPOS_AUTH_TOKEN }}'
 
       - name: Build Rust docs
         run: |
@@ -322,6 +327,10 @@ jobs:
   build_gaios:
     name: Build gaios Patchwork plugin
     runs-on: ubuntu-latest
+    env:
+      # Fetch build outputs from the nix binary cache (Cachix) instead of
+      # rebuilding them; see tools/build_system.
+      CATCOLAB_BUILD_SYSTEM_RETRIEVE_FROM_NIX: "true"
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
@@ -344,30 +353,27 @@ jobs:
           path: packages/gaios/dist
           key: gaios-build-${{ steps.cache-key.outputs.git-hash }}
 
-      - name: Setup pnpm
+      - name: Install Nix
         if: steps.cache-gaios-build.outputs.cache-hit != 'true'
-        uses: pnpm/action-setup@v6
-
-      - name: Setup NodeJS
-        if: steps.cache-gaios-build.outputs.cache-hit != 'true'
-        uses: actions/setup-node@v7
+        uses: cachix/install-nix-action@v25
         with:
-          node-version: 24
-          cache: "pnpm"
+          extra_nix_config: |
+            fallback = true
+            download-attempts = 5
 
-      - name: Install Rust toolchain from file
+      - name: Configure Cachix
         if: steps.cache-gaios-build.outputs.cache-hit != 'true'
-        uses: actions-rust-lang/setup-rust-toolchain@v1
+        uses: cachix/cachix-action@v17
         with:
-          # Don't override flags in cargo config files.
-          rustflags: ""
+          name: topos-institute
+          authToken: '${{ secrets.CACHIX_TOPOS_AUTH_TOKEN }}'
 
       - name: Build gaios plugin
         if: steps.cache-gaios-build.outputs.cache-hit != 'true'
         run: |
-          pnpm install
-          pnpm --filter ./packages/gaios run build-deps
-          pnpm --filter ./packages/gaios run build
+          nix develop --command pnpm install
+          nix develop --command pnpm --filter ./packages/gaios run build-deps
+          nix develop --command pnpm --filter ./packages/gaios run build
 
       - name: Report cache status
         run: |

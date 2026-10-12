@@ -75,6 +75,22 @@
       pkgsLinux = nixpkgsFor linuxSystem;
       rustToolchainLinux = rustToolchainFor linuxSystem;
 
+      # deploy-rs lib whose activate-rs uses the nixpkgs-built (binary cached) deploy-rs,
+      # rather than building the flake's own copy from crates.io.
+      deployLib =
+        (import nixpkgs {
+          system = linuxSystem;
+          overlays = [
+            deploy-rs.overlays.default
+            (final: prev: {
+              deploy-rs = {
+                inherit (pkgsLinux) deploy-rs;
+                lib = prev.deploy-rs.lib;
+              };
+            })
+          ];
+        }).deploy-rs.lib;
+
       # Per-system crane library + prebuilt cargo dependency layer. The
       # frontend package is exposed for every system in `devShellSystems` so
       # macOS developers can `nix build .#frontend` against the same wasm/api
@@ -162,13 +178,14 @@
               esbuild
               lld
               netcat
+              ninja
               nodejs_24
               nix
               openssl
               pkg-config
               pnpm
               postgresql
-              python3
+              (python3.withPackages (ps: [ ps.ninja ]))
               python312Packages.ipykernel
               python312Packages.jupyter-core
               python312Packages.jupyter-server
@@ -211,7 +228,7 @@
         };
 
       # NOTE: this is not currently used, but was painful to build and might be useful in the future.
-      # Wraps the typical `deploy-rs.lib.${linuxSystem}.activate.nixos` activation function
+      # Wraps the typical `deployLib.activate.nixos` activation function
       # with a custom script that can run additional health checks. The script runs on the remote host
       # and if it fails the whole deployment will fail.
       # use:
@@ -219,7 +236,7 @@
       healthcheckWrapper =
         nixosConfiguration:
         let
-          defaultNixos = deploy-rs.lib.${linuxSystem}.activate.nixos nixosConfiguration;
+          defaultNixos = deployLib.activate.nixos nixosConfiguration;
 
           healthcheckWrapperScript = pkgsLinux.writeShellScriptBin "healthcheck-wrapper-script" ''
             PROFILE=${defaultNixos}
@@ -227,7 +244,7 @@
             ${defaultNixos}/deploy-rs-activate
           '';
         in
-        deploy-rs.lib.${linuxSystem}.activate.custom healthcheckWrapperScript
+        deployLib.activate.custom healthcheckWrapperScript
           "./bin/healthcheck-wrapper-script";
     in
     {
@@ -246,7 +263,7 @@
       # nix build .#packages.x86_64-linux.automerge
       # node ./result/main.cjs
       #
-      # The frontend and its rust-derived dependencies (catcolabApi,
+      # The frontend and its rust-derived dependencies (backend-bindings,
       # catlog-wasm-browser, document-types-wasm) are exposed for every
       # `devShellSystems` entry so macOS developers can `nix build .#frontend`
       # natively. Linux-only outputs (backend, migrator, julia-fhs, rust-docs,
@@ -269,14 +286,22 @@
               };
             in
             {
-              catcolabApi = pkgs.callPackage ./infrastructure/catcolab-api.nix craneArgs;
-              catlog-wasm-browser = pkgs.callPackage ./packages/catlog-wasm/default.nix craneArgs;
-              document-types-wasm = pkgs.callPackage ./packages/document-types/default.nix craneArgs;
+              backend-bindings = pkgs.callPackage ./infrastructure/ninja-target.nix (
+                craneArgs // { target = "backend-bindings"; }
+              );
+              catlog-wasm-browser = pkgs.callPackage ./infrastructure/ninja-target.nix (
+                craneArgs // { target = "catlog-wasm-browser"; }
+              );
+              document-types-wasm = pkgs.callPackage ./infrastructure/ninja-target.nix (
+                craneArgs // { target = "document-types-wasm"; }
+              );
               frontend = frontendPackage.package;
               frontend-tests = frontendPackage.tests;
             };
 
           linuxOnlyPackages = {
+            deploy-rs = pkgsLinux.deploy-rs;
+
             backend = pkgsLinux.callPackage ./packages/backend/default.nix {
               inherit craneLib cargoArtifacts;
               pkgs = pkgsLinux;
@@ -386,7 +411,7 @@
           profiles.system = {
             sshUser = "catcolab";
             user = "root";
-            path = deploy-rs.lib.${linuxSystem}.activate.nixos self.nixosConfigurations.catcolab;
+            path = deployLib.activate.nixos self.nixosConfigurations.catcolab;
           };
         };
         catcolab-next = {
@@ -394,7 +419,7 @@
           profiles.system = {
             sshUser = "catcolab";
             user = "root";
-            path = deploy-rs.lib.${linuxSystem}.activate.nixos self.nixosConfigurations.catcolab-next;
+            path = deployLib.activate.nixos self.nixosConfigurations.catcolab-next;
           };
         };
         catcolab-vm = {
@@ -406,7 +431,7 @@
               "2221"
             ];
             sshUser = "catcolab";
-            path = deploy-rs.lib.${linuxSystem}.activate.nixos self.nixosConfigurations.catcolab-vm;
+            path = deployLib.activate.nixos self.nixosConfigurations.catcolab-vm;
             user = "root";
           };
         };

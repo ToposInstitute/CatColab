@@ -17,6 +17,16 @@ export const Summary: Story = {
     tags: ["!autodocs", "!dev"],
 };
 
+export const Inline: Story = {
+    render: () => (
+        <p style={{ "font-size": "smaller" }}>
+            <Spinner size="small" aria-hidden="true" />
+            Running...
+        </p>
+    ),
+    tags: ["!autodocs", "!dev"],
+};
+
 export const LoadingState: Story = {
     render: () => {
         const [isLoading, setIsLoading] = createSignal(true);

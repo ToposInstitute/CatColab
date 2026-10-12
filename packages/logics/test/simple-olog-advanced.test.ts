@@ -2,12 +2,10 @@ import { Aspect, SimpleOlog, Type } from "catcolab-logics/simple-olog";
 import { SimpleSchema } from "catcolab-logics/simple-schema";
 import { describe, expect, test } from "vitest";
 
-// Advanced Simple Olog behavior remains outlined until validation, equations,
-// diagrams, and migrations are implemented.
 import { createBinder, PathEquation, RichText } from "catcolab-documents";
 
-describe.skip("the simple-olog logic (advanced)", () => {
-    test("notebooks validate against the core theory of categories", async () => {
+describe("the simple-olog logic (advanced)", { timeout: 10000 }, () => {
+    test.skip("notebooks validate against the core theory of categories", async () => {
         const binder = createBinder();
         const notebook = await binder.createNotebook(SimpleOlog, { title: "An Olog" });
 
@@ -16,12 +14,9 @@ describe.skip("the simple-olog logic (advanced)", () => {
         notebook.add(Aspect, { label: "has", from: a, to: b });
 
         const result = await notebook.validate();
-        expect(result.tag).toBe("Ok");
-        if (result.tag !== "Ok") {
-            return;
-        }
-        expect(result.content.obGenerators().length).toBe(2);
-        expect(result.content.morGenerators().length).toBe(1);
+        expect(result.issues).toEqual([]);
+        expect(result.model.judgmentsOf(Type).length).toBe(2);
+        expect(result.model.judgmentsOf(Aspect).length).toBe(1);
     });
 
     test("the shape supports rich text and path equations", async () => {
@@ -33,18 +28,18 @@ describe.skip("the simple-olog logic (advanced)", () => {
 
         const a = notebook.add(Type, { label: "A" });
         const f = notebook.add(Aspect, { label: "f", from: a, to: a });
-        const g = notebook.add(Aspect, { label: "g", from: a, to: a });
 
         const equation = notebook.add(PathEquation, {
             label: "idempotent",
             lhs: [f, f],
-            rhs: [g],
+            rhs: [f],
         });
-        expect(equation.lhs.map((step) => step.label)).toEqual(["f", "f"]);
+        expect(equation.lhs.map((mor) => mor?.label)).toEqual(["f", "f"]);
+        expect(equation.rhs.map((mor) => mor?.label)).toEqual(["f"]);
         expect(notebook.cellsOf(PathEquation).length).toBe(1);
     });
 
-    test("supportsInstances generates the .Diagram shape", async () => {
+    test.skip("supportsInstances generates the .Diagram shape", async () => {
         const binder = createBinder();
         const model = await binder.createNotebook(SimpleOlog, { title: "An Olog" });
 
@@ -65,7 +60,7 @@ describe.skip("the simple-olog logic (advanced)", () => {
         expect(f.over?.label).toBe("has");
     });
 
-    test("ologs migrate to simple-schema", async () => {
+    test.skip("ologs migrate to simple-schema", async () => {
         const binder = createBinder();
         const olog = await binder.createNotebook(SimpleOlog, { title: "An Olog" });
 
@@ -79,6 +74,6 @@ describe.skip("the simple-olog logic (advanced)", () => {
             return;
         }
         expect(migration.content.document.theory).toBe("simple-schema");
-        expect((await migration.content.validate()).tag).toBe("Ok");
+        expect((await migration.content.validate()).issues).toEqual([]);
     });
 });

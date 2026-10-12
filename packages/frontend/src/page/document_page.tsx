@@ -1,7 +1,8 @@
 import Resizable, { type ContextValue } from "@corvu/resizable";
 import { makeEventListener } from "@solid-primitives/event-listener";
 import { Title } from "@solidjs/meta";
-import { useNavigate, useParams } from "@solidjs/router";
+import { useLocation, useNavigate, useParams, useSearchParams } from "@solidjs/router";
+import BotMessageSquare from "lucide-solid/icons/bot-message-square";
 import ChevronsRight from "lucide-solid/icons/chevrons-right";
 import History from "lucide-solid/icons/history";
 import Maximize2 from "lucide-solid/icons/maximize-2";
@@ -32,10 +33,31 @@ import {
 import { getLiveAnalysis, type LiveAnalysisDoc } from "../analysis";
 import { AnalysisNotebookEditor } from "../analysis/analysis_editor";
 import { AnalysisInfo } from "../analysis/analysis_info";
-import { type Api, type DocRef, type DocumentType, documentTypeLabel, useApi } from "../api";
+import {
+    type Api,
+    type ApiBinder,
+    type DocRef,
+    type DocumentType,
+    type LiveDocWithRef,
+    documentTypeLabel,
+    useApi,
+    useBinder,
+} from "../api";
 import { getLiveDiagram, type LiveDiagramDoc } from "../diagram";
 import { DiagramNotebookEditor } from "../diagram/diagram_editor";
 import { DiagramInfo } from "../diagram/diagram_info";
+import { InstanceEditor } from "../instance/instance_editor";
+import { InstanceInfo } from "../instance/instance_info";
+import { getLiveInstance, type LiveInstanceDoc } from "../instance/live_doc_compatibility";
+import { createTableList, TableListContext } from "../instance/table_list";
+import {
+    canOpenLLMConversationPane,
+    getLiveLLMConversation,
+    LLMConversationEditor,
+    LLMConversationInfo,
+    LLMConversationPane,
+    type LiveLLMConversationDoc,
+} from "../llm_conversation";
 import { type LiveModelDoc, type ModelLibrary, ModelLibraryContext } from "../model";
 import { ModelNotebookEditor } from "../model/model_editor";
 import { ModelDocumentHead } from "../model/model_info";
@@ -43,7 +65,9 @@ import { DocumentBreadcrumbs, DocumentLoadingScreen } from "../page";
 import { DocumentHead } from "../page/document_head";
 import { SidebarLayout } from "../page/sidebar_layout";
 import { PermissionsButton } from "../user";
+import { isDocumentVisible, useUserSettings } from "../user/user_settings";
 import { assertExhaustive } from "../util/assert_exhaustive";
+import NotFoundPage from "./404_page";
 import { DocRefIdContext } from "./context";
 import { DocumentSidebar } from "./document_page_sidebar";
 import { HistorySidebar } from "./history_sidebar";
@@ -51,7 +75,12 @@ import { useSnapshotHistory } from "./use_snapshot_history";
 
 import "./document_page.css";
 
-type AnyLiveDoc = LiveModelDoc | LiveDiagramDoc | LiveAnalysisDoc;
+type AnyLiveDoc =
+    | LiveModelDoc
+    | LiveDiagramDoc
+    | LiveAnalysisDoc
+    | LiveInstanceDoc
+    | LiveLLMConversationDoc;
 
 /** A Live*Document bundled with its backend DocRef.
  *
@@ -68,25 +97,57 @@ const INITIAL_SPLIT_SIZE = 0.5;
 
 export default function DocumentPage() {
     const api = useApi();
+    const binder = useBinder();
     const models = useContext(ModelLibraryContext);
     invariant(models, "Must provide model library as context to page");
 
     const params = useParams();
+    const location = useLocation();
     const navigate = useNavigate();
-    const isSidePanelOpen = () => !!params.subkind && !!params.subref;
-    const paneFocus = useChildFocus<"primary" | "secondary">(rootFocus, { default: "primary" });
+    const [searchParams, setSearchParams] = useSearchParams();
+    const { settings } = useUserSettings();
+    const documentIsVisible = (kind: string | undefined) =>
+        kind === undefined || isDocumentVisible({ typeName: kind as DocumentType }, settings());
+    const isSidePanelOpen = () =>
+        !!params.subkind && !!params.subref && documentIsVisible(params.subkind);
+    const paneFocus = useChildFocus<"primary" | "secondary" | "llmconversations">(rootFocus, {
+        default: "primary",
+    });
+    const primaryPaneFocus = paneFocus.childFocus("primary");
+    const secondaryPaneFocus = paneFocus.childFocus("secondary");
+    const llmConversationsFocus = paneFocus.childFocus("llmconversations");
+    const tableList = createTableList();
 
     // Redirect if primary and secondary refs match
     createEffect(() => {
         if (params.subref && params.ref === params.subref) {
-            navigate(`/${params.kind}/${params.ref}`, { replace: true });
+            navigate(`/${params.kind}/${params.ref}${location.search}`, { replace: true });
         }
     });
 
     const [primaryLiveDoc, { refetch: refetchPrimaryDoc }] = createResource(
-        () => params.ref,
-        (refId) => getLiveDocument(refId, api, models, params.kind as DocumentType),
+        () => (documentIsVisible(params.kind) ? params.ref : undefined),
+        (refId) => getLiveDocument(refId, api, models, binder, params.kind as DocumentType),
     );
+
+    createEffect(() => {
+        const primary = primaryLiveDoc();
+        if (
+            params.kind !== "llmconversation" ||
+            !primary ||
+            primary.docRef.refId !== params.ref ||
+            primary.liveDoc.type !== "llmconversation"
+        ) {
+            return;
+        }
+
+        const conversationRefId = primary.docRef.refId;
+        const attachmentRefId = primary.liveDoc.liveDoc.doc.llmConversationOf._id;
+        const attachmentType = primary.liveDoc.attachment.document.type;
+        const query = new URLSearchParams(location.search);
+        query.set("llmconversation", conversationRefId);
+        navigate(`/${attachmentType}/${attachmentRefId}?${query}`, { replace: true });
+    });
 
     const [secondaryLiveDoc, { refetch: refetchSecondaryDoc }] = createResource(
         () => {
@@ -95,11 +156,12 @@ export default function DocumentPage() {
                 kind: params.subkind || null,
                 ref: params.subref || null,
                 primaryRef: params.ref,
+                visible: documentIsVisible(params.subkind),
             };
         },
         async (source) => {
             // Return undefined to clear resource when there's no secondary in URL
-            if (!source.kind || !source.ref) {
+            if (!source.kind || !source.ref || !source.visible) {
                 return undefined;
             }
 
@@ -108,23 +170,93 @@ export default function DocumentPage() {
                 return undefined;
             }
 
-            return getLiveDocument(source.ref, api, models, source.kind as DocumentType);
+            return getLiveDocument(source.ref, api, models, binder, source.kind as DocumentType);
         },
     );
 
     const closeSidePanel = () => {
         paneFocus.setActiveChild("primary");
-        navigate(`/${params.kind}/${params.ref}`);
+        navigate(`/${params.kind}/${params.ref}${location.search}`);
     };
 
     const maximizeSidePanel = () => {
-        navigate(`/${params.subkind}/${params.subref}`);
+        navigate(`/${params.subkind}/${params.subref}${location.search}`);
     };
 
     const [primaryHistoryOpen, setPrimaryHistoryOpen] = createSignal(false);
     const togglePrimaryHistorySidebar = () => setPrimaryHistoryOpen((v) => !v);
     const [secondaryHistoryOpen, setSecondaryHistoryOpen] = createSignal(false);
     const toggleSecondaryHistorySidebar = () => setSecondaryHistoryOpen((v) => !v);
+    const selectedLLMConversationRefId = () => {
+        const value = searchParams.llmconversation;
+        return typeof value === "string" ? value : undefined;
+    };
+    const llmConversationsEnabled = () =>
+        isDocumentVisible({ typeName: "llmconversation" }, settings());
+    const [llmConversationsOpen, setLLMConversationsOpen] = createSignal(
+        llmConversationsEnabled() && selectedLLMConversationRefId() !== undefined,
+    );
+    createEffect(() => {
+        const selectedRefId = selectedLLMConversationRefId();
+        const enabled = llmConversationsEnabled();
+        if (selectedRefId !== undefined) {
+            setLLMConversationsOpen(enabled);
+        } else if (!enabled) {
+            setLLMConversationsOpen(false);
+        }
+        if (settings() !== undefined && !enabled && selectedRefId !== undefined) {
+            setSearchParams({ llmconversation: undefined }, { replace: true });
+        }
+    });
+    const selectLLMConversation = (refId: string | undefined, replace = false) => {
+        if (refId !== selectedLLMConversationRefId()) {
+            setSearchParams({ llmconversation: refId }, { replace });
+        }
+    };
+    const toggleLLMConversationPane = () => {
+        const open = !llmConversationsOpen();
+        if (!open) {
+            (isSidePanelOpen() ? secondaryPaneFocus : primaryPaneFocus).setFocused(true);
+            selectLLMConversation(undefined, true);
+        } else {
+            llmConversationsFocus.setFocused(true);
+        }
+        setLLMConversationsOpen(open);
+    };
+
+    const llmConversationDocuments = (): LiveDocWithRef[] => {
+        const primaryCandidate = primaryLiveDoc();
+        const secondaryCandidate = secondaryLiveDoc();
+        const primary =
+            primaryCandidate?.docRef.refId === params.ref ? primaryCandidate : undefined;
+        const secondary =
+            isSidePanelOpen() && secondaryCandidate?.docRef.refId === params.subref
+                ? secondaryCandidate
+                : undefined;
+        return [primary, secondary]
+            .filter((doc): doc is AnyLiveDocWithRef => doc !== undefined)
+            .map(({ liveDoc, docRef }) => ({ liveDoc: liveDoc.liveDoc, docRef }));
+    };
+    const llmConversationCreationDocument = (): LiveDocWithRef | undefined => {
+        if (isSidePanelOpen()) {
+            const secondary = secondaryLiveDoc();
+            if (secondary && secondary.docRef.refId === params.subref) {
+                return { liveDoc: secondary.liveDoc.liveDoc, docRef: secondary.docRef };
+            }
+            return undefined;
+        }
+        const primary = primaryLiveDoc();
+        if (primary && primary.docRef.refId === params.ref) {
+            return { liveDoc: primary.liveDoc.liveDoc, docRef: primary.docRef };
+        }
+        return undefined;
+    };
+    const canOpenLLMConversations = () =>
+        llmConversationsEnabled() &&
+        (llmConversationsOpen() ||
+            llmConversationDocuments().some((doc) =>
+                canOpenLLMConversationPane(doc.liveDoc.doc, settings()),
+            ));
 
     const [resizableContext, setResizableContext] = createSignal<ContextValue>();
     createEffect(() => {
@@ -159,66 +291,106 @@ export default function DocumentPage() {
     });
 
     return (
-        <>
+        <Show when={documentIsVisible(params.kind)} fallback={<NotFoundPage />}>
             <Title>{documentTitle()}</Title>
             <Show when={primaryLiveDoc()} fallback={<DocumentLoadingScreen />}>
                 {(docWithRef) => (
-                    <SidebarLayout
-                        toolbarContents={
-                            <SplitPaneToolbar
-                                doc={docWithRef().liveDoc}
-                                docRef={docWithRef().docRef}
-                                secondaryDoc={secondaryLiveDoc()?.liveDoc}
-                                secondaryDocRef={secondaryLiveDoc()?.docRef}
-                                panelSizes={resizableContext()?.sizes()}
-                                maximizeSidePanel={maximizeSidePanel}
-                                closeSidePanel={closeSidePanel}
-                                togglePrimaryHistorySidebar={togglePrimaryHistorySidebar}
-                                toggleSecondaryHistorySidebar={toggleSecondaryHistorySidebar}
-                                primaryPaneFocus={paneFocus.childFocus("primary")}
-                                secondaryPaneFocus={paneFocus.childFocus("secondary")}
-                            />
-                        }
-                        sidebarContents={
-                            <DocumentSidebar
-                                primaryDoc={{
-                                    liveDoc: docWithRef().liveDoc.liveDoc,
-                                    docRef: docWithRef().docRef,
-                                }}
-                                secondaryDoc={(() => {
-                                    const secondary = secondaryLiveDoc();
-                                    return secondary
-                                        ? {
-                                              liveDoc: secondary.liveDoc.liveDoc,
-                                              docRef: secondary.docRef,
-                                          }
-                                        : undefined;
-                                })()}
-                                primaryPaneFocus={paneFocus.childFocus("primary")}
-                                secondaryPaneFocus={paneFocus.childFocus("secondary")}
-                                refetchPrimaryDoc={refetchPrimaryDoc}
-                                refetchSecondaryDoc={refetchSecondaryDoc}
-                            />
-                        }
-                    >
-                        <ResizablePanels
-                            primaryDoc={docWithRef().liveDoc}
-                            primaryDocRef={docWithRef().docRef}
-                            secondaryDoc={secondaryLiveDoc()}
-                            isSidePanelOpen={isSidePanelOpen()}
-                            closeSidePanel={closeSidePanel}
-                            refetchPrimaryDoc={refetchPrimaryDoc}
-                            refetchSecondaryDoc={refetchSecondaryDoc}
-                            setResizableContext={setResizableContext}
-                            primaryHistoryOpen={primaryHistoryOpen()}
-                            secondaryHistoryOpen={secondaryHistoryOpen()}
-                            primaryPaneFocus={paneFocus.childFocus("primary")}
-                            secondaryPaneFocus={paneFocus.childFocus("secondary")}
-                        />
-                    </SidebarLayout>
+                    <TableListContext.Provider value={tableList}>
+                        <SidebarLayout
+                            toolbarContents={
+                                <SplitPaneToolbar
+                                    doc={docWithRef().liveDoc}
+                                    docRef={docWithRef().docRef}
+                                    secondaryDoc={secondaryLiveDoc()?.liveDoc}
+                                    secondaryDocRef={secondaryLiveDoc()?.docRef}
+                                    panelSizes={resizableContext()?.sizes()}
+                                    maximizeSidePanel={maximizeSidePanel}
+                                    closeSidePanel={closeSidePanel}
+                                    togglePrimaryHistorySidebar={togglePrimaryHistorySidebar}
+                                    toggleSecondaryHistorySidebar={toggleSecondaryHistorySidebar}
+                                    llmConversationsAvailable={canOpenLLMConversations()}
+                                    llmConversationsOpen={llmConversationsOpen()}
+                                    primaryPaneFocus={primaryPaneFocus}
+                                    secondaryPaneFocus={secondaryPaneFocus}
+                                />
+                            }
+                            sidebarContents={
+                                <DocumentSidebar
+                                    primaryDoc={{
+                                        liveDoc: docWithRef().liveDoc.liveDoc,
+                                        docRef: docWithRef().docRef,
+                                    }}
+                                    secondaryDoc={(() => {
+                                        const secondary = secondaryLiveDoc();
+                                        return secondary
+                                            ? {
+                                                  liveDoc: secondary.liveDoc.liveDoc,
+                                                  docRef: secondary.docRef,
+                                              }
+                                            : undefined;
+                                    })()}
+                                    primaryPaneFocus={primaryPaneFocus}
+                                    secondaryPaneFocus={secondaryPaneFocus}
+                                    refetchPrimaryDoc={refetchPrimaryDoc}
+                                    refetchSecondaryDoc={refetchSecondaryDoc}
+                                />
+                            }
+                        >
+                            <div class="document-workspace-layout">
+                                <ResizablePanels
+                                    primaryDoc={docWithRef().liveDoc}
+                                    primaryDocRef={docWithRef().docRef}
+                                    secondaryDoc={secondaryLiveDoc()}
+                                    isSidePanelOpen={isSidePanelOpen()}
+                                    closeSidePanel={closeSidePanel}
+                                    refetchPrimaryDoc={refetchPrimaryDoc}
+                                    refetchSecondaryDoc={refetchSecondaryDoc}
+                                    setResizableContext={setResizableContext}
+                                    primaryHistoryOpen={primaryHistoryOpen()}
+                                    secondaryHistoryOpen={secondaryHistoryOpen()}
+                                    primaryPaneFocus={primaryPaneFocus}
+                                    secondaryPaneFocus={secondaryPaneFocus}
+                                />
+                                <Show when={canOpenLLMConversations()}>
+                                    <div class="llm-conversation-drawer">
+                                        <div class="llm-conversation-drawer-gutter">
+                                            <button
+                                                type="button"
+                                                class="llm-conversation-drawer-tab"
+                                                aria-expanded={llmConversationsOpen()}
+                                                aria-label="Toggle LLM conversations"
+                                                title="Toggle LLM conversations"
+                                                onClick={toggleLLMConversationPane}
+                                            >
+                                                <BotMessageSquare size={30} />
+                                            </button>
+                                        </div>
+                                        <Show when={llmConversationsOpen()}>
+                                            <div
+                                                class="llm-conversation-sidebar"
+                                                onMouseDown={() =>
+                                                    llmConversationsFocus.setFocused(true)
+                                                }
+                                                onFocusIn={() =>
+                                                    llmConversationsFocus.setFocused(true)
+                                                }
+                                            >
+                                                <LLMConversationPane
+                                                    documents={llmConversationDocuments()}
+                                                    createOn={llmConversationCreationDocument()}
+                                                    selectedRefId={selectedLLMConversationRefId()}
+                                                    onSelect={selectLLMConversation}
+                                                />
+                                            </div>
+                                        </Show>
+                                    </div>
+                                </Show>
+                            </div>
+                        </SidebarLayout>
+                    </TableListContext.Provider>
                 )}
             </Show>
-        </>
+        </Show>
     );
 }
 
@@ -232,6 +404,8 @@ function SplitPaneToolbar(props: {
     maximizeSidePanel: () => void;
     togglePrimaryHistorySidebar: () => void;
     toggleSecondaryHistorySidebar: () => void;
+    llmConversationsAvailable: boolean;
+    llmConversationsOpen: boolean;
     primaryPaneFocus: FocusHandle;
     secondaryPaneFocus: FocusHandle;
 }) {
@@ -239,36 +413,38 @@ function SplitPaneToolbar(props: {
     const primaryPanelSize = () => props.panelSizes?.[0];
 
     return (
-        <>
+        <div
+            class="split-pane-toolbar"
+            classList={{
+                "llm-conversations-available": props.llmConversationsAvailable,
+                "llm-conversations-open": props.llmConversationsOpen,
+            }}
+        >
             <DocumentBreadcrumbs liveDoc={props.doc.liveDoc} docRefId={props.docRef.refId} />
             <span class="filler" />
             <Show when={!secondaryPanelSize()}>
-                <IconButton
-                    onClick={() => {
-                        props.primaryPaneFocus.setFocused(true);
-                        props.togglePrimaryHistorySidebar();
-                    }}
-                    tooltip="Toggle history"
-                >
-                    <History size={20} />
-                </IconButton>
-                <PermissionsButton liveDoc={props.doc.liveDoc} docRef={props.docRef} />
+                <div class="single-pane-toolbar">
+                    <PaneToolbarButtons
+                        doc={props.doc}
+                        docRef={props.docRef}
+                        toggleHistorySidebar={props.togglePrimaryHistorySidebar}
+                        paneFocus={props.primaryPaneFocus}
+                    />
+                </div>
             </Show>
             <Show when={secondaryPanelSize()}>
                 <div
                     class="primary-permissions-toolbar toolbar"
-                    style={{ left: `${(primaryPanelSize() ?? 0) * 100}%` }}
+                    style={{
+                        left: `calc((100% - var(--llm-conversation-pane-offset)) * ${primaryPanelSize() ?? 0})`,
+                    }}
                 >
-                    <IconButton
-                        onClick={() => {
-                            props.primaryPaneFocus.setFocused(true);
-                            props.togglePrimaryHistorySidebar();
-                        }}
-                        tooltip="Toggle history"
-                    >
-                        <History size={20} />
-                    </IconButton>
-                    <PermissionsButton liveDoc={props.doc.liveDoc} docRef={props.docRef} />
+                    <PaneToolbarButtons
+                        doc={props.doc}
+                        docRef={props.docRef}
+                        toggleHistorySidebar={props.togglePrimaryHistorySidebar}
+                        paneFocus={props.primaryPaneFocus}
+                    />
                 </div>
             </Show>
             <Show when={secondaryPanelSize()}>
@@ -284,6 +460,29 @@ function SplitPaneToolbar(props: {
                     />
                 )}
             </Show>
+        </div>
+    );
+}
+
+/** Toolbar buttons for a single document pane: side pane toggles and permissions. */
+function PaneToolbarButtons(props: {
+    doc: AnyLiveDoc;
+    docRef: DocRef;
+    toggleHistorySidebar: () => void;
+    paneFocus: FocusHandle;
+}) {
+    return (
+        <>
+            <IconButton
+                onClick={() => {
+                    props.paneFocus.setFocused(true);
+                    props.toggleHistorySidebar();
+                }}
+                tooltip="Toggle history"
+            >
+                <History size={20} />
+            </IconButton>
+            <PermissionsButton liveDoc={props.doc.liveDoc} docRef={props.docRef} />
         </>
     );
 }
@@ -301,7 +500,9 @@ function SecondaryToolbar(props: {
         <>
             <div
                 class="secondary-toolbar toolbar"
-                style={{ left: `${(1 - props.panelSize) * 100}%` }}
+                style={{
+                    left: `calc((100% - var(--llm-conversation-pane-offset)) * ${1 - props.panelSize})`,
+                }}
             >
                 <IconButton onClick={props.closeSidePanel} tooltip="Close">
                     <ChevronsRight />
@@ -321,18 +522,11 @@ function SecondaryToolbar(props: {
             >
                 {(secondary) => (
                     <div class="secondary-permissions-toolbar toolbar">
-                        <IconButton
-                            onClick={() => {
-                                props.secondaryPaneFocus.setFocused(true);
-                                props.toggleHistorySidebar();
-                            }}
-                            tooltip="Toggle history"
-                        >
-                            <History size={20} />
-                        </IconButton>
-                        <PermissionsButton
-                            liveDoc={secondary().doc.liveDoc}
+                        <PaneToolbarButtons
+                            doc={secondary().doc}
                             docRef={secondary().docRef}
+                            toggleHistorySidebar={props.toggleHistorySidebar}
+                            paneFocus={props.secondaryPaneFocus}
                         />
                     </div>
                 )}
@@ -471,8 +665,8 @@ export function DocumentPane(props: {
     // oxlint-disable solid/reactivity -- Context.Provider value getter is reactive
     return (
         <DocRefIdContext.Provider value={() => props.docRef.refId}>
-            <div class="document-pane-layout" onMouseDown={() => props.focus.setFocused(true)}>
-                <div class="document-pane-content">
+            <div class="document-pane-layout">
+                <div class="document-pane-content" onMouseDown={() => props.focus.setFocused(true)}>
                     <Show when={isDeleted()}>
                         <WarningBanner
                             actions={
@@ -493,53 +687,87 @@ export function DocumentPane(props: {
                             be listed in your documents.
                         </WarningBanner>
                     </Show>
-                    <div class="notebook-container">
-                        <Switch>
-                            <Match keyed when={props.doc.type === "model" && props.doc}>
-                                {(liveModel) => <ModelDocumentHead liveModel={liveModel} />}
-                            </Match>
-                            <Match keyed when={props.doc.type === "diagram" && props.doc}>
-                                {(liveDiagram) => (
-                                    <DocumentHead liveDoc={liveDiagram.liveDoc}>
-                                        <DiagramInfo liveDiagram={liveDiagram} />
-                                    </DocumentHead>
-                                )}
-                            </Match>
-                            <Match keyed when={props.doc.type === "analysis" && props.doc}>
-                                {(liveAnalysis) => (
-                                    <DocumentHead liveDoc={liveAnalysis.liveDoc}>
-                                        <AnalysisInfo liveAnalysis={liveAnalysis} />
-                                    </DocumentHead>
-                                )}
-                            </Match>
-                        </Switch>
-                        <Switch>
-                            <Match keyed when={props.doc.type === "model" && props.doc}>
-                                {(liveModel) => (
+                    <Switch>
+                        <Match keyed when={props.doc.type === "model" && props.doc}>
+                            {(liveModel) => <ModelDocumentHead liveModel={liveModel} />}
+                        </Match>
+                        <Match keyed when={props.doc.type === "diagram" && props.doc}>
+                            {(liveDiagram) => (
+                                <DocumentHead liveDoc={liveDiagram.liveDoc}>
+                                    <DiagramInfo liveDiagram={liveDiagram} />
+                                </DocumentHead>
+                            )}
+                        </Match>
+                        <Match keyed when={props.doc.type === "analysis" && props.doc}>
+                            {(liveAnalysis) => (
+                                <DocumentHead liveDoc={liveAnalysis.liveDoc}>
+                                    <AnalysisInfo liveAnalysis={liveAnalysis} />
+                                </DocumentHead>
+                            )}
+                        </Match>
+                        <Match keyed when={props.doc.type === "instance" && props.doc}>
+                            {(liveInstance) => (
+                                <DocumentHead liveDoc={liveInstance.liveDoc}>
+                                    <InstanceInfo liveInstance={liveInstance} />
+                                </DocumentHead>
+                            )}
+                        </Match>
+                        <Match keyed when={props.doc.type === "llmconversation" && props.doc}>
+                            {(liveConversation) => (
+                                <DocumentHead liveDoc={liveConversation.liveDoc}>
+                                    <LLMConversationInfo liveConversation={liveConversation} />
+                                </DocumentHead>
+                            )}
+                        </Match>
+                    </Switch>
+                    <Switch>
+                        <Match keyed when={props.doc.type === "model" && props.doc}>
+                            {(liveModel) => (
+                                <div class="notebook-container">
                                     <ModelNotebookEditor
                                         liveModel={liveModel}
                                         focus={props.focus}
                                     />
-                                )}
-                            </Match>
-                            <Match keyed when={props.doc.type === "diagram" && props.doc}>
-                                {(liveDiagram) => (
+                                </div>
+                            )}
+                        </Match>
+                        <Match keyed when={props.doc.type === "diagram" && props.doc}>
+                            {(liveDiagram) => (
+                                <div class="notebook-container">
                                     <DiagramNotebookEditor
                                         liveDiagram={liveDiagram}
                                         focus={props.focus}
                                     />
-                                )}
-                            </Match>
-                            <Match keyed when={props.doc.type === "analysis" && props.doc}>
-                                {(liveAnalysis) => (
+                                </div>
+                            )}
+                        </Match>
+                        <Match keyed when={props.doc.type === "analysis" && props.doc}>
+                            {(liveAnalysis) => (
+                                <div class="notebook-container">
                                     <AnalysisNotebookEditor
                                         liveAnalysis={liveAnalysis}
                                         focus={props.focus}
                                     />
-                                )}
-                            </Match>
-                        </Switch>
-                    </div>
+                                </div>
+                            )}
+                        </Match>
+                        <Match keyed when={props.doc.type === "instance" && props.doc}>
+                            {(liveInstance) => (
+                                <InstanceEditor
+                                    instance={liveInstance.instance}
+                                    refId={props.docRef.refId}
+                                    focus={props.focus}
+                                />
+                            )}
+                        </Match>
+                        <Match keyed when={props.doc.type === "llmconversation" && props.doc}>
+                            {(liveConversation) => (
+                                <LLMConversationEditor
+                                    conversation={liveConversation.conversation}
+                                />
+                            )}
+                        </Match>
+                    </Switch>
                 </div>
                 <Show when={props.historySidebarOpen && props.docRef.refId}>
                     <div class="history-sidebar">
@@ -555,6 +783,7 @@ async function getLiveDocument(
     refId: string,
     api: Api,
     models: ModelLibrary<string>,
+    binder: ApiBinder,
     documentType: DocumentType,
 ): Promise<AnyLiveDocWithRef> {
     switch (documentType) {
@@ -571,10 +800,19 @@ async function getLiveDocument(
             const { liveAnalysis, docRef } = await getLiveAnalysis(refId, api, models);
             return { liveDoc: liveAnalysis, docRef };
         }
-        case "instance":
-            throw new Error("Instance documents are not supported by the frontend");
-        case "llmconversation":
-            throw new Error("LLM conversation pages are not implemented");
+        case "instance": {
+            const { liveInstance, docRef } = await getLiveInstance(refId, api, models, binder);
+            return { liveDoc: liveInstance, docRef };
+        }
+        case "llmconversation": {
+            const { liveConversation, docRef } = await getLiveLLMConversation(
+                refId,
+                api,
+                models,
+                binder,
+            );
+            return { liveDoc: liveConversation, docRef };
+        }
         default:
             assertExhaustive(documentType);
     }

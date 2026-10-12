@@ -12,11 +12,11 @@ import {
     type Prop,
     Repo,
 } from "@automerge/automerge-repo";
-import { makeDocumentProjection } from "@automerge/automerge-repo-solid-primitives";
 import { basicSchemaAdapter, init } from "@automerge/prosemirror";
 import { SimpleOlog } from "catcolab-logics/simple-olog";
 import { EditorState } from "prosemirror-state";
 import { EditorView } from "prosemirror-view";
+import { makeDocumentProjection } from "solid-automerge";
 import { createEffect, createSignal, For, onCleanup } from "solid-js";
 import { render } from "solid-js/web";
 import { describe, expect, test } from "vitest";

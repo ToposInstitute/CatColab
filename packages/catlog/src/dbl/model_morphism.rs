@@ -26,6 +26,8 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "serde-wasm")]
 use tsify::Tsify;
 
+use crate::zero::QualifiedName;
+
 pub use super::discrete::model_morphism::*;
 
 /// An invalid assignment in a morphism between models of a double theory.
@@ -34,32 +36,32 @@ pub use super::discrete::model_morphism::*;
 #[cfg_attr(feature = "serde", serde(tag = "tag", content = "content"))]
 #[cfg_attr(feature = "serde-wasm", derive(Tsify))]
 #[cfg_attr(feature = "serde-wasm", tsify(into_wasm_abi, from_wasm_abi))]
-pub enum InvalidDblModelMorphism<ObGen, MorGen> {
+pub enum InvalidDblModelMorphism {
     /// An object generator not mapped to an object in the codomain model.
     #[error("Object generator `{0}` is not mapped to an object in the codomain")]
-    Ob(ObGen),
+    Ob(QualifiedName),
 
     /// A morphism generator not mapped to a morphism in the codomain model.
     #[error("Morphism generator `{0}` is not mapped to a morphism in the codomain")]
-    Mor(MorGen),
+    Mor(QualifiedName),
 
     /// A morphism generator whose domain is not preserved.
     #[error("Domain of morphism generator `{0}` is not preserved")]
-    Dom(MorGen),
+    Dom(QualifiedName),
 
     /// A morphism generator whose codomain is not preserved.
     #[error("Codomain of morphism generator `{0}` is not preserved")]
-    Cod(MorGen),
+    Cod(QualifiedName),
 
     /// An object generator whose type is not preserved.
     #[error("Object `{0}` is not mapped to an object of the same type in the codomain")]
-    ObType(ObGen),
+    ObType(QualifiedName),
 
     /// A morphism generator whose type is not preserved.
     #[error("Morphism `{0}` is not mapped to a morphism of the same type in the codomain")]
-    MorType(MorGen),
+    MorType(QualifiedName),
 
     /// A path equation in domain presentation that is not respected.
     #[error("Path equation `{0}` is not respected")]
-    Eq(usize),
+    Eq(QualifiedName),
 }

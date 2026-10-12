@@ -10,7 +10,7 @@ import invariant from "tiny-invariant";
 import * as uuid from "uuid";
 
 import { Button } from "catcolab-ui-components";
-import { Api, ApiContext, useApi } from "./api";
+import { Api, ApiContext, BinderProvider, useApi } from "./api";
 import { helpRoutes } from "./help/routes";
 import { createModelLibraryWithApi, ModelLibraryContext } from "./model";
 import { createModel } from "./model/document";
@@ -54,6 +54,7 @@ const Root = (props: RouteSectionProps) => {
                     [TheoryLibraryContext, theories],
                     [ModelLibraryContext, models],
                     UserStateProvider,
+                    BinderProvider,
                     UserSettingsProvider,
                     InferenceKeyProvider,
                 ]}
@@ -129,9 +130,15 @@ const routes: RouteDefinition[] = [
     {
         path: "/:kind/:ref/:subkind?/:subref?",
         matchFilters: {
-            kind: ["model", "diagram", "analysis"],
+            kind: ["model", "diagram", "analysis", "instance", "llmconversation"],
             ref: refIsUUIDFilter.ref,
-            subkind: (v?: string) => !v || v === "analysis" || v === "diagram" || v === "model",
+            subkind: (v?: string) =>
+                !v ||
+                v === "analysis" ||
+                v === "diagram" ||
+                v === "instance" ||
+                v === "model" ||
+                v === "llmconversation",
             subref: (v?: string) => !v || refIsUUIDFilter.ref(v),
         },
         component: lazy(() => import("./page/document_page")),

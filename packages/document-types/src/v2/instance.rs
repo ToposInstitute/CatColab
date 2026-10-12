@@ -14,9 +14,9 @@ pub enum FieldValue {
     /// Base type: boolean.
     Bool(bool),
     /// Base type: integer.
-    Int(i32),
+    Int(i64),
     /// Base type: float.
-    Float(f32),
+    Float(f64),
     /// Base type: string.
     String(String),
     /// Mapping type: the uuid of another row.

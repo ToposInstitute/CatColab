@@ -1,9 +1,9 @@
 import { type FirebaseOptions, initializeApp } from "firebase/app";
-import { deleteUser, getAuth, signInWithEmailAndPassword, signOut } from "firebase/auth";
+import { deleteUser, getAuth, signInWithEmailAndPassword, signOut, type User } from "firebase/auth";
 import invariant from "tiny-invariant";
 import { afterAll, assert, beforeAll, describe, test } from "vitest";
 
-import { initTestUserAuth } from "../util/test_util.ts";
+import { createTestUserAuth } from "../util/test_util.ts";
 import { createFetchWithAuth, createRpcClient, unwrap, unwrapErr } from "./rpc.ts";
 
 // These tests exercise the live `get_inference_key` RPC, which creates
@@ -18,18 +18,19 @@ const rpc = createRpcClient(serverUrl, createFetchWithAuth(firebaseApp));
 
 describe("RPC for inference keys", () => {
     const auth = getAuth(firebaseApp);
-    const email = "test-inference-key@catcolab.org";
     const password = "foobar";
+    let email: string;
+    let user: User | undefined;
 
     beforeAll(async () => {
-        await initTestUserAuth(auth, email, password);
+        ({ email, user } = await createTestUserAuth(auth, "test-inference-key", password));
         invariant(auth.currentUser);
         unwrap(await rpc.sign_up_or_sign_in.mutate());
     });
 
     afterAll(async () => {
-        if (auth.currentUser) {
-            await deleteUser(auth.currentUser);
+        if (user) {
+            await deleteUser(user);
         }
     });
 

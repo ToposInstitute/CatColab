@@ -2,8 +2,8 @@ import type { JsResult } from "catlog-wasm";
 
 export const ALLOWED_CONVERSATION_FILE_MEDIA_TYPES: ReadonlySet<string> = new Set(["text/csv"]);
 
-const MAX_FILE_BYTES = 8 * 1024;
-const MAX_TOTAL_BYTES = 64 * 1024;
+const MAX_FILE_BYTES = 1024 * 1024;
+const MAX_TOTAL_BYTES = 10 * 1024 * 1024;
 
 export type ConversationAttachmentMetadata = {
     filename: string;
@@ -48,5 +48,8 @@ function fileBytes(files: readonly ConversationAttachmentMetadata[]): number {
 }
 
 function formatBytes(bytes: number): string {
+    if (bytes >= 1024 * 1024) {
+        return `${bytes / (1024 * 1024)} MiB`;
+    }
     return `${bytes / 1024} KiB`;
 }

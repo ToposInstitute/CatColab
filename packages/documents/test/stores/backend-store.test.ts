@@ -7,12 +7,18 @@
 // validate.
 import { getBackend, getObjectId } from "@automerge/automerge";
 import type { DocHandle, DocumentId } from "@automerge/automerge-repo";
-import { makeDocumentProjection } from "@automerge/automerge-repo-solid-primitives";
 import { SimpleOlog, Type } from "catcolab-logics/simple-olog";
+import { makeDocumentProjection } from "solid-automerge";
 import { describe, expect, test } from "vitest";
 
 import type { Document } from "catcolab-document-types";
-import { createBinder, type DocumentStore, Instantiation } from "catcolab-documents";
+import {
+    createBinder,
+    type DocumentStore,
+    documentLinks,
+    emptyHandlesByLinkType,
+    Instantiation,
+} from "catcolab-documents";
 import { FakeBackend } from "../helpers/fake_backend";
 
 const backend = new FakeBackend();
@@ -71,6 +77,34 @@ const backendStore: DocumentStore<StoreHandle> = {
         }
         return { id: refId, version: null, server: backend.serverHost };
     },
+    listUsedBy: async (handle) => {
+        const refId = refByDocId.get(handle.docHandle.documentId);
+        if (!refId) {
+            throw new Error("handle is not registered with this store");
+        }
+        const linked = emptyHandlesByLinkType<StoreHandle>();
+        for (const other of handleByRefId.values()) {
+            if (other === handle) {
+                continue;
+            }
+            for (const link of documentLinks(other.docView)) {
+                if (link._id === refId) {
+                    linked[link.type].push(other);
+                }
+            }
+        }
+        return linked;
+    },
+    listDependsOn: async (handle) => {
+        const linked = emptyHandlesByLinkType<StoreHandle>();
+        for (const link of documentLinks(handle.docView)) {
+            const other = handleByRefId.get(link._id);
+            if (other !== undefined && other !== handle) {
+                linked[link.type].push(other);
+            }
+        }
+        return linked;
+    },
     getHandle: async (ref) => {
         const refId = ref.id;
         const cached = handleByRefId.get(refId);
@@ -106,6 +140,6 @@ describe.skip("backend binder", () => {
         notebook.add(Instantiation, { label: "ImportedOlog", model: imported });
 
         const result = await notebook.validate();
-        expect(result.tag).toBe("Ok");
+        expect(result.issues).toEqual([]);
     });
 });

@@ -1,0 +1,14 @@
+/* The static display of a morphism can be clicked to edit it. */
+.display {
+    cursor: text;
+}
+
+/* The `id` of an identity morphism is notation, not a name. */
+.identityPrefix {
+    color: var(--color-text-secondary);
+}
+
+.subscript {
+    font-size: 0.75em;
+    line-height: 0.5ex;
+}

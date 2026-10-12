@@ -23,11 +23,10 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Install Rust toolchain
-        uses: actions-rust-lang/setup-rust-toolchain@v1
+        uses: actions-rust-lang/setup-rust-toolchain@v2
         with:
           toolchain: ${{ matrix.toolchain }}
-          # Don't override flags in cargo config files.
-          rustflags: ""
+          build-warnings: ""
 
       - name: Tests
         run: |
@@ -42,10 +41,11 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Install Rust toolchain from file
-        uses: actions-rust-lang/setup-rust-toolchain@v1
+        uses: actions-rust-lang/setup-rust-toolchain@v2
         with:
           toolchain: nightly
           components: rustfmt
+          build-warnings: ""
 
       - name: Check formatting
         run: |
@@ -59,15 +59,9 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Install Rust toolchain from file
-        uses: actions-rust-lang/setup-rust-toolchain@v1
-        with:
-          # Don't override flags in cargo config files. Warnings are denied
-          # through `CARGO_BUILD_WARNINGS` instead of `RUSTFLAGS`.
-          rustflags: ""
+        uses: actions-rust-lang/setup-rust-toolchain@v2
 
       - name: Check clippy warnings
-        env:
-          CARGO_BUILD_WARNINGS: deny
         run: |
           cargo clippy --all-targets --all-features --keep-going
 
@@ -80,12 +74,16 @@ jobs:
 
       - name: Install Nix
         uses: cachix/install-nix-action@v25
+        with:
+          extra_nix_config: |
+            fallback = true
+            download-attempts = 5
 
       - name: Configure Cachix
         uses: cachix/cachix-action@v17
         with:
-          name: catcolab-jmoggr
-          authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
+          name: topos-institute
+          authToken: '${{ secrets.CACHIX_TOPOS_AUTH_TOKEN }}'
 
       - name: Check Rust docs
         run: |
@@ -94,41 +92,43 @@ jobs:
   npm_checks:
     name: npm checks
     runs-on: ubuntu-latest
+    env:
+      # Fetch build outputs from the nix binary cache (Cachix) instead of
+      # rebuilding them; see tools/build_system.
+      CATCOLAB_BUILD_SYSTEM_RETRIEVE_FROM_NIX: "true"
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v6
-
-      - name: Setup NodeJS
-        uses: actions/setup-node@v7
+      - name: Install Nix
+        uses: cachix/install-nix-action@v25
         with:
-          node-version: 24
-          cache: "pnpm"
+          extra_nix_config: |
+            fallback = true
+            download-attempts = 5
+
+      - name: Configure Cachix
+        uses: cachix/cachix-action@v17
+        with:
+          name: topos-institute
+          authToken: '${{ secrets.CACHIX_TOPOS_AUTH_TOKEN }}'
 
       - name: Install NodeJS dependencies
         run: |
-          pnpm install
-
-      - name: Install Rust toolchain from file
-        uses: actions-rust-lang/setup-rust-toolchain@v1
-        with:
-          # Don't override flags in cargo config files.
-          rustflags: ""
+          nix develop --command pnpm install
 
       - name: Format/linting/import sorting
         run: |
-          pnpm --filter "./packages/*" run build:deps
-          pnpm --filter "./packages/*" run ci
+          nix develop --command pnpm --filter "./packages/*" run build:deps
+          nix develop --command pnpm --filter "./packages/*" run ci
 
       - name: Typescript documents package tests
         run: |
-          pnpm --filter catcolab-documents exec vitest run test/creating-and-editing.test.ts test/definitions.test.ts test/binder.test-d.ts
+          nix develop --command pnpm --filter catcolab-documents test
 
       - name: Typescript logic package tests
         run: |
-          pnpm --filter catcolab-logics exec vitest run test/simple-olog.test.ts
+          nix develop --command pnpm --filter catcolab-logics test
 
   build_nixos_system:
     name: build NixOS system
@@ -137,15 +137,19 @@ jobs:
     steps:
     - name: Checkout
       uses: actions/checkout@v7
-    
+
     - name: Install Nix
       uses: cachix/install-nix-action@v25
+      with:
+        extra_nix_config: |
+          fallback = true
+          download-attempts = 5
 
     - name: Configure Cachix
       uses: cachix/cachix-action@v17
       with:
-        name: catcolab-jmoggr
-        authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
+        name: topos-institute
+        authToken: '${{ secrets.CACHIX_TOPOS_AUTH_TOKEN }}'
 
     - name: Build the NixOS system for catcolab-next
       run: nix build .#nixosConfigurations.catcolab-next.config.system.build.toplevel
@@ -158,10 +162,9 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Install Rust toolchain from file
-        uses: actions-rust-lang/setup-rust-toolchain@v1
+        uses: actions-rust-lang/setup-rust-toolchain@v2
         with:
-          # Don't override flags in cargo config files.
-          rustflags: ""
+          build-warnings: ""
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v6
@@ -190,9 +193,9 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Install Rust toolchain from file
-        uses: actions-rust-lang/setup-rust-toolchain@v1
+        uses: actions-rust-lang/setup-rust-toolchain@v2
         with:
-          rustflags: ""
+          build-warnings: ""
 
       - name: Start PostgreSQL
         run: |
@@ -229,12 +232,15 @@ jobs:
       uses: cachix/install-nix-action@v25
       with:
         install_url: https://releases.nixos.org/nix/nix-2.29.2/install
+        extra_nix_config: |
+          fallback = true
+          download-attempts = 5
 
     - name: Configure Cachix
       uses: cachix/cachix-action@v17
       with:
-        name: catcolab-jmoggr
-        authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
+        name: topos-institute
+        authToken: '${{ secrets.CACHIX_TOPOS_AUTH_TOKEN }}'
 
     - name: Run frontend tests with VM
       run: |

@@ -15,6 +15,7 @@ import { useUserSettings } from "./user_settings";
 import { useUserState } from "./user_state_context";
 
 import "./documents.css";
+import styles from "./menu_pages.module.css";
 
 export default function UserDocuments() {
     const appTitle = import.meta.env.VITE_APP_TITLE;
@@ -22,7 +23,7 @@ export default function UserDocuments() {
     return (
         <>
             <Title>My Documents - {appTitle}</Title>
-            <div class="documents-page">
+            <div class={`documents-page ${styles.menuPage}`}>
                 <BrandedToolbar />
                 <div class="page-container">
                     <LoginGate>
@@ -63,6 +64,7 @@ function DocumentsSearch() {
 
     return (
         <>
+            <h1>My documents</h1>
             <input
                 type="text"
                 class="search-input"
@@ -70,7 +72,6 @@ function DocumentsSearch() {
                 value={searchQuery()}
                 onInput={(e) => setSearchQuery(e.currentTarget.value)}
             />
-            <h3>My Documents</h3>
             <DocumentList
                 documents={documents}
                 renderActions={(doc) => <DeleteButton doc={doc} />}

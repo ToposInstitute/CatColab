@@ -2,12 +2,19 @@ import { v7 } from "uuid";
 
 import type { Document } from "catcolab-document-types";
 import type { Result } from "../result";
-import type { DocumentStore, DocumentRef } from "./document-store";
+import type {
+    DocumentChange,
+    DocumentStore,
+    DocumentRef,
+    HandlesByLinkType,
+} from "./document-store";
+import { documentLinks, emptyHandlesByLinkType } from "./document-store";
 
-export function createInMemoryStore(): DocumentStore<Document> {
+export function createInMemoryStore(): DocumentStore<Document, Document> {
     const idToDocument = new Map<string, Document>();
     const documentToId = new WeakMap<Document, string>();
     const documentToCallbacks = new WeakMap<Document, Set<() => void>>();
+    const drafts = new WeakSet<Document>();
 
     function requireDocumentId(handle: Document): string {
         const id = documentToId.get(handle);
@@ -15,6 +22,35 @@ export function createInMemoryStore(): DocumentStore<Document> {
             throw new Error("Document handle is not registered with this store.");
         }
         return id;
+    }
+
+    function notify(handle: Document): void {
+        // Make an array to prevent mutation of the callback set during iteration.
+        for (const callback of Array.from(documentToCallbacks.get(handle) ?? [])) {
+            callback();
+        }
+    }
+
+    /** Overwrite every key of `handle`'s document with a copy of `replacement`. */
+    function replaceContents(handle: Document, replacement: Document): void {
+        const mutable = handle as unknown as Record<string, unknown>;
+        for (const key of Object.keys(mutable)) {
+            delete mutable[key];
+        }
+        Object.assign(mutable, structuredClone(replacement));
+        notify(handle);
+    }
+
+    /** Stop tracking a draft once it has been committed or abandoned. */
+    function forgetDraft(draft: Document): void {
+        if (drafts.delete(draft)) {
+            const id = documentToId.get(draft);
+            if (id !== undefined) {
+                idToDocument.delete(id);
+            }
+            documentToId.delete(draft);
+            documentToCallbacks.delete(draft);
+        }
     }
 
     return {
@@ -63,11 +99,7 @@ export function createInMemoryStore(): DocumentStore<Document> {
         changeDocument(handle: Document, fn: (doc: Document) => void): void {
             requireDocumentId(handle);
             fn(handle);
-
-            // Make an array to prevent mutation of the callback set during iteration.
-            for (const callback of Array.from(documentToCallbacks.get(handle)!)) {
-                callback();
-            }
+            notify(handle);
         },
 
         subscribe(handle: Document, callback: () => void): () => void {
@@ -93,6 +125,65 @@ export function createInMemoryStore(): DocumentStore<Document> {
         getDocumentView(handle: Document): Readonly<Document> {
             requireDocumentId(handle);
             return handle;
+        },
+
+        async listUsedBy(handle: Document): Promise<HandlesByLinkType<Document>> {
+            const id = requireDocumentId(handle);
+            const linked = emptyHandlesByLinkType<Document>();
+            for (const doc of idToDocument.values()) {
+                // Skip drafts: only committed documents answer the query.
+                if (drafts.has(doc)) {
+                    continue;
+                }
+                for (const link of documentLinks(doc)) {
+                    if (link._id === id) {
+                        linked[link.type].push(doc);
+                    }
+                }
+            }
+            return linked;
+        },
+
+        async listDependsOn(handle: Document): Promise<HandlesByLinkType<Document>> {
+            requireDocumentId(handle);
+            const linked = emptyHandlesByLinkType<Document>();
+            for (const link of documentLinks(handle)) {
+                const target = idToDocument.get(link._id);
+                if (target !== undefined) {
+                    linked[link.type].push(target);
+                }
+            }
+            return linked;
+        },
+
+        createDraft(handle: Document): Document {
+            requireDocumentId(handle);
+            const draft = structuredClone(handle);
+            const id = `draft-${v7()}`;
+            idToDocument.set(id, draft);
+            documentToId.set(draft, id);
+            documentToCallbacks.set(draft, new Set());
+            drafts.add(draft);
+            return draft;
+        },
+
+        commitDraft(handle: Document, draft: Document): DocumentChange<Document> {
+            requireDocumentId(handle);
+
+            const before = structuredClone(handle);
+            replaceContents(handle, draft);
+            forgetDraft(draft);
+            return { before, after: structuredClone(handle) };
+        },
+
+        discardDraft(draft: Document): void {
+            forgetDraft(draft);
+        },
+
+        revertCommit(handle: Document, change: DocumentChange<Document>): void {
+            requireDocumentId(handle);
+
+            replaceContents(handle, change.before);
         },
     };
 }

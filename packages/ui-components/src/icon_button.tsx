@@ -26,20 +26,17 @@ export function IconButton(
         }
     };
 
+    const button = (triggerProps?: ComponentProps<"button">) => (
+        <button {...triggerProps} class={buttonClass()} {...buttonProps}>
+            {props.children}
+        </button>
+    );
+
     return (
-        <Show
-            when={props.tooltip}
-            fallback={
-                <button class={buttonClass()} {...buttonProps}>
-                    {props.children}
-                </button>
-            }
-        >
+        <Show when={props.tooltip} fallback={button()}>
             <Tooltip hoverableContent={false} openOnFocus={false}>
                 <Tooltip.Anchor>
-                    <Tooltip.Trigger class={buttonClass()} {...buttonProps}>
-                        {props.children}
-                    </Tooltip.Trigger>
+                    <Tooltip.Trigger as={button} />
                 </Tooltip.Anchor>
                 <Tooltip.Portal>
                     <Tooltip.Content class="tooltip-content">{props.tooltip}</Tooltip.Content>

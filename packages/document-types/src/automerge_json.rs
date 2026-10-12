@@ -90,148 +90,102 @@ fn json_to_spans(value: &Value) -> Vec<Span> {
     spans
 }
 
-/// Insert a rich-text spans array as an Automerge `Text` object under `key`.
-fn insert_spans_into_map<'a>(
-    tx: &mut automerge::transaction::Transaction<'a>,
-    parent: &automerge::ObjId,
-    key: &str,
-    value: &Value,
-) -> Result<(), automerge::AutomergeError> {
-    let text_id = tx.put_object(parent, key, automerge::ObjType::Text)?;
-    let spans = json_to_spans(value);
-    tx.update_spans(&text_id, UpdateSpansConfig::default(), spans)
-}
-
 /// Returns `true` if the JSON object is a rich-text cell (`tag == "rich-text"`).
 fn json_is_rich_text_cell(map: &JsonMap<String, Value>) -> bool {
     map.get("tag").and_then(Value::as_str) == Some(RICH_TEXT_CELL_TAG)
 }
 
-/// Insert a JSON value into a map property.
+/// Create a document using batch initialization, preserving Text objects.
 ///
-/// `parent_is_rich_text_cell` indicates whether `parent` is a rich-text cell,
-/// in which case a `content` array is materialized as an Automerge `Text`
-/// object (with marks and block markers) rather than a plain `List`.
-fn insert_value_into_map<'a>(
-    tx: &mut automerge::transaction::Transaction<'a>,
-    parent: &automerge::ObjId,
-    key: &str,
+/// Rich-text content is initialized as empty Text objects, then populated with
+/// spans in a second transaction to preserve marks and block markers.
+pub fn auomerge_doc_from_json(
     value: &Value,
-    parent_is_rich_text_cell: bool,
-) -> Result<(), automerge::AutomergeError> {
-    // Inside a rich-text cell, the `content` array (including an empty one) is
-    // always materialized as a Text object, never a plain List.
-    if parent_is_rich_text_cell && key == RICH_TEXT_KEY && value.is_array() {
-        return insert_spans_into_map(tx, parent, key, value);
-    }
+) -> Result<automerge::Automerge, automerge::AutomergeError> {
+    use automerge::ReadDoc;
 
-    match value {
-        Value::String(s) => {
-            // Use ObjType::Text instead of scalar string to avoid ImmutableString in JavaScript
-            let text_id = tx.put_object(parent, key, automerge::ObjType::Text)?;
-            tx.splice_text(&text_id, 0, 0, s.as_str())?;
-        }
-        Value::Number(n) => {
-            if let Some(i) = n.as_i64() {
-                tx.put(parent, key, i)?;
-            } else if let Some(f) = n.as_f64() {
-                tx.put(parent, key, f)?;
-            }
-        }
-        Value::Bool(b) => {
-            tx.put(parent, key, *b)?;
-        }
-        Value::Null => {
-            tx.put(parent, key, ())?;
-        }
-        Value::Object(map) => {
-            let obj_id = tx.put_object(parent, key, automerge::ObjType::Map)?;
-            let is_rich_text = json_is_rich_text_cell(map);
-            for (nested_key, nested_val) in map {
-                insert_value_into_map(tx, &obj_id, nested_key.as_str(), nested_val, is_rich_text)?;
-            }
-        }
-        Value::Array(arr) => {
-            let list_id = tx.put_object(parent, key, automerge::ObjType::List)?;
-            for (i, item) in arr.iter().enumerate() {
-                insert_value_into_list(tx, &list_id, i, item)?;
-            }
-        }
-    }
-    Ok(())
-}
-
-/// Insert a JSON value into a list at index.
-fn insert_value_into_list<'a>(
-    tx: &mut automerge::transaction::Transaction<'a>,
-    parent: &automerge::ObjId,
-    index: usize,
-    value: &Value,
-) -> Result<(), automerge::AutomergeError> {
-    match value {
-        Value::String(s) => {
-            // Use ObjType::Text instead of scalar string to avoid ImmutableString in JavaScript
-            let text_id = tx.insert_object(parent, index, automerge::ObjType::Text)?;
-            tx.splice_text(&text_id, 0, 0, s.as_str())?;
-        }
-        Value::Number(n) => {
-            if let Some(i) = n.as_i64() {
-                tx.insert(parent, index, i)?;
-            } else if let Some(f) = n.as_f64() {
-                tx.insert(parent, index, f)?;
-            }
-        }
-        Value::Bool(b) => {
-            tx.insert(parent, index, *b)?;
-        }
-        Value::Null => {
-            tx.insert(parent, index, ())?;
-        }
-        Value::Object(map) => {
-            let obj_id = tx.insert_object(parent, index, automerge::ObjType::Map)?;
-            let is_rich_text = json_is_rich_text_cell(map);
-            for (nested_key, nested_val) in map {
-                insert_value_into_map(tx, &obj_id, nested_key.as_str(), nested_val, is_rich_text)?;
-            }
-        }
-        Value::Array(arr) => {
-            let list_id = tx.insert_object(parent, index, automerge::ObjType::List)?;
-            for (i, item) in arr.iter().enumerate() {
-                insert_value_into_list(tx, &list_id, i, item)?;
-            }
-        }
-    }
-    Ok(())
-}
-
-/// Populate an automerge document from a JSON value.
-pub fn populate_automerge_from_json<'a>(
-    tx: &mut automerge::transaction::Transaction<'a>,
-    obj_id: automerge::ObjId,
-    value: &Value,
-) -> Result<(), automerge::AutomergeError> {
-    let Value::Object(map) = value else {
-        let value_type = match value {
-            Value::Null => "Null",
-            Value::Bool(_) => "Bool",
-            Value::Number(_) => "Number",
-            Value::String(_) => "String",
-            Value::Array(_) => "Array",
-            Value::Object(_) => unreachable!(),
-        };
-
+    let mut rich_text = Vec::new();
+    let hydrate::Value::Map(map) = json_to_initial_hydrate(value, &mut Vec::new(), &mut rich_text)
+    else {
         return Err(automerge::AutomergeError::InvalidValueType {
-            expected: "Object".to_string(),
-            unexpected: format!("{} as document root", value_type),
+            expected: "Object".into(),
+            unexpected: "non-object document root".into(),
         });
     };
-
-    let is_rich_text = json_is_rich_text_cell(map);
-    for (key, val) in map {
-        insert_value_into_map(tx, &obj_id, key.as_str(), val, is_rich_text)?;
+    let mut doc = automerge::Automerge::new();
+    doc.init_from_hydrate(&map)?;
+    if !rich_text.is_empty() {
+        let mut targets = Vec::new();
+        for (path, content) in rich_text {
+            let mut object = automerge::ROOT;
+            for property in path {
+                object = doc
+                    .get(&object, property)?
+                    .ok_or(automerge::AutomergeError::InvalidObjId(
+                        "missing rich-text object".into(),
+                    ))?
+                    .1;
+            }
+            targets.push((object, json_to_spans(content)));
+        }
+        doc.transact(|tx| {
+            for (object, spans) in targets {
+                tx.update_spans(&object, UpdateSpansConfig::default(), spans)?;
+            }
+            Ok::<_, automerge::AutomergeError>(())
+        })
+        .map_err(|failure| failure.error)?;
     }
+    Ok(doc)
+}
 
-    Ok(())
+fn initial_text(text: &str) -> hydrate::Value {
+    hydrate::Value::Text(
+        automerge::ConcreteTextValue::new(text, automerge::TextEncoding::platform_default()).into(),
+    )
+}
+
+/// Unlike block-marker conversion, ordinary string properties must be Text.
+fn json_to_initial_hydrate<'a>(
+    value: &'a Value,
+    path: &mut Vec<automerge::Prop>,
+    rich_text: &mut Vec<(Vec<automerge::Prop>, &'a Value)>,
+) -> hydrate::Value {
+    match value {
+        Value::Object(map) => {
+            let is_rich_text = json_is_rich_text_cell(map);
+            let map: HashMap<String, hydrate::Value> = map
+                .iter()
+                .map(|(key, value)| {
+                    path.push(automerge::Prop::Map(key.clone()));
+                    let hydrated = if is_rich_text && key == RICH_TEXT_KEY && value.is_array() {
+                        rich_text.push((path.clone(), value));
+                        initial_text("")
+                    } else {
+                        json_to_initial_hydrate(value, path, rich_text)
+                    };
+                    path.pop();
+                    (key.clone(), hydrated)
+                })
+                .collect();
+            hydrate::Value::Map(map.into())
+        }
+        Value::Array(values) => hydrate::Value::List(
+            values
+                .iter()
+                .enumerate()
+                .map(|(index, value)| {
+                    path.push(automerge::Prop::Seq(index));
+                    let hydrated = json_to_initial_hydrate(value, path, rich_text);
+                    path.pop();
+                    hydrated
+                })
+                .collect::<Vec<_>>()
+                .into(),
+        ),
+        Value::String(text) => initial_text(text),
+        scalar => hydrate::Value::Scalar(json_to_scalar(scalar)),
+    }
 }
 
 /// Convert automerge hydrate::Value to serde_json::Value.
@@ -466,9 +420,7 @@ mod rich_text_tests {
     fn rich_text_spans_roundtrip_through_json() {
         let json = doc_with_cell(sample_cell_json());
 
-        let mut doc = automerge::Automerge::new();
-        doc.transact(|tx| populate_automerge_from_json(tx, automerge::ROOT, &json))
-            .unwrap();
+        let doc = auomerge_doc_from_json(&json).unwrap();
 
         // The cell's `content` must be a real Automerge Text object, not a List.
         let (_, cell_id) = doc.get(automerge::ROOT, "cell").unwrap().unwrap();
@@ -482,13 +434,45 @@ mod rich_text_tests {
         assert_eq!(json, result);
     }
 
+    #[test]
+    fn initial_document_preserves_rich_text_in_arrays() {
+        let json = json!({ "cells": [sample_cell_json()] });
+        let doc = auomerge_doc_from_json(&json).unwrap();
+        assert_eq!(hydrate_to_json_with_rich_text(&doc).unwrap(), json);
+    }
+
+    #[test]
+    fn initial_document_preserves_empty_rich_text() {
+        let json = doc_with_cell(json!({ "tag": "rich-text", "content": [] }));
+        let doc = auomerge_doc_from_json(&json).unwrap();
+        let (_, cell_id) = doc.get(automerge::ROOT, "cell").unwrap().unwrap();
+        let (value, _) = doc.get(cell_id, "content").unwrap().unwrap();
+        assert_eq!(value, automerge::Value::Object(automerge::ObjType::Text));
+        assert_eq!(hydrate_to_json_with_rich_text(&doc).unwrap(), json);
+    }
+
+    #[test]
+    fn initial_document_roundtrips_scalars_and_unicode() {
+        let json = json!({
+            "name": "Unicode: café 🦀", "empty": "",
+            "nested": { "items": ["text", 42, -7, 1.5, true, null, {}, []] }
+        });
+        let doc = auomerge_doc_from_json(&json).unwrap();
+        assert_eq!(hydrate_to_json_with_rich_text(&doc).unwrap(), json);
+    }
+
+    #[test]
+    fn initial_document_rejects_non_object_root() {
+        for json in [json!([]), json!(null), json!("text"), json!(123)] {
+            assert!(auomerge_doc_from_json(&json).is_err());
+        }
+    }
+
     /// The serialized shape carries the expected marks and math attributes.
     #[test]
     fn rich_text_json_has_expected_shape() {
         let json = doc_with_cell(sample_cell_json());
-        let mut doc = automerge::Automerge::new();
-        doc.transact(|tx| populate_automerge_from_json(tx, automerge::ROOT, &json))
-            .unwrap();
+        let doc = auomerge_doc_from_json(&json).unwrap();
 
         let result = hydrate_to_json_with_rich_text(&doc).unwrap();
         let spans = result["cell"]["content"].as_array().expect("spans array");
@@ -509,9 +493,7 @@ mod rich_text_tests {
             "id": "00000000-0000-0000-0000-000000000002",
             "content": [ { "type": "text", "value": "plain" } ]
         }));
-        let mut doc = automerge::Automerge::new();
-        doc.transact(|tx| populate_automerge_from_json(tx, automerge::ROOT, &json))
-            .unwrap();
+        let doc = auomerge_doc_from_json(&json).unwrap();
 
         let result = hydrate_to_json_with_rich_text(&doc).unwrap();
         assert_eq!(json, result);
@@ -526,9 +508,7 @@ mod rich_text_tests {
             "id": "00000000-0000-0000-0000-000000000004",
             "content": "legacy text"
         }));
-        let mut doc = automerge::Automerge::new();
-        doc.transact(|tx| populate_automerge_from_json(tx, automerge::ROOT, &json))
-            .unwrap();
+        let doc = auomerge_doc_from_json(&json).unwrap();
 
         let result = hydrate_to_json_with_rich_text(&doc).unwrap();
         assert_eq!(result["cell"]["content"], json!([{ "type": "text", "value": "legacy text" }]));
@@ -545,9 +525,7 @@ mod rich_text_tests {
                 "content": { "tag": "Basic", "content": "some object name" }
             }
         });
-        let mut doc = automerge::Automerge::new();
-        doc.transact(|tx| populate_automerge_from_json(tx, automerge::ROOT, &json))
-            .unwrap();
+        let doc = auomerge_doc_from_json(&json).unwrap();
 
         let result = hydrate_to_json_with_rich_text(&doc).unwrap();
         assert_eq!(json, result);

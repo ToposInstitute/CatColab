@@ -19,6 +19,10 @@ import type {
 } from "catlog-wasm";
 
 import "./id_input.css";
+import styles from "./id_input.module.css";
+
+/** Placeholder label displayed for an entity without a name. */
+export const UNNAMED = "Unnamed";
 
 /** Optional props for `IdInput` component.
  */
@@ -56,6 +60,13 @@ export function IdInput(
     const idToLabel = (id: QualifiedName): QualifiedLabel | undefined => props.idToLabel?.(id);
     const idToText = (id: QualifiedName): string | undefined => idToLabel(id)?.join(".");
 
+    // Display text for an id, falling back to a placeholder label for ids
+    // without a name, flagged so it can be styled as de-emphasized.
+    const idToDisplay = (id: QualifiedName): { text: string; isUnnamed: boolean } => {
+        const name = idToText(id);
+        return { text: name || UNNAMED, isUnnamed: !name };
+    };
+
     const textToId = (text: string): NameLookup => {
         let label: LabelSegment = text;
         if (/^\d+$/.test(text)) {
@@ -67,11 +78,7 @@ export function IdInput(
     const [text, setText] = createSignal("");
 
     const updateText = (id: Uuid | null) => {
-        let name = "";
-        if (id) {
-            name = idToText(id) ?? "";
-        }
-        setText(name);
+        setText(id ? idToDisplay(id).text : "");
     };
 
     createEffect(() => updateText(props.id));
@@ -103,16 +110,20 @@ export function IdInput(
     };
 
     const completions = (): Completion[] | undefined =>
-        props.completions?.map((id) => ({
-            name: idToText(id) ?? "",
-            onComplete() {
-                props.setId(id);
-                updateText(id);
-            },
-        }));
+        props.completions?.map((id) => {
+            const label = idToDisplay(id);
+            return {
+                name: label.text,
+                nameClass: label.isUnnamed ? styles.unnamed : undefined,
+                onComplete() {
+                    props.setId(id);
+                    updateText(id);
+                },
+            };
+        });
 
     const isComplete = () => {
-        const name = props.id ? idToText(props.id) : "";
+        const name = props.id ? idToDisplay(props.id).text : "";
         return text() === name;
     };
 
@@ -140,8 +151,15 @@ export function IdInput(
         return typeof label[0] === "string" ? "named" : "anonymous";
     };
 
+    // Grey out the displayed text when it is the placeholder label for an
+    // unnamed id (but not while the user is typing something else).
+    const showsUnnamed = () => props.id != null && isComplete() && idToDisplay(props.id).isUnnamed;
+
     return (
-        <div class={`id-input ${labelType(props.id)}`}>
+        <div
+            class={`id-input ${labelType(props.id)}`}
+            classList={{ [styles.unnamed]: showsUnnamed() }}
+        >
             <InlineInput
                 text={text()}
                 setText={handleNewText}

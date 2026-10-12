@@ -1,0 +1,168 @@
+diff --git a/dist/cjs/fullfat_base64.cjs b/dist/cjs/fullfat_base64.cjs
+index c378c04..3ae9aca 100644
+--- a/dist/cjs/fullfat_base64.cjs
++++ b/dist/cjs/fullfat_base64.cjs
+@@ -3914,6 +3914,11 @@ function applyPutPatch(doc, path, patch) {
+ }
+ function applyInsertPatch(doc, path, patch) {
+   let { obj: parent, prop, parentPath } = pathElemAt(path, -1);
++  // Map key insertions (upstream fix in automerge/automerge#1308).
++  if (typeof prop === "string" && typeof parent === "object" && parent !== null && !Array.isArray(parent)) {
++      parent[prop] = patch.values[0];
++      return;
++  }
+   if (!(typeof prop === "number")) {
+     throw new RangeError(`index is not a number for patch`);
+   }
+@@ -3940,6 +3945,11 @@ function applyInsertPatch(doc, path, patch) {
+ }
+ function applyDelPatch(doc, path, patch) {
+   let { obj: parent, prop, parentPath } = pathElemAt(path, -1);
++  // Map key deletions (upstream fix in automerge/automerge#1308).
++  if (typeof prop === "string" && typeof parent === "object" && parent !== null && !Array.isArray(parent)) {
++      delete parent[prop];
++      return;
++  }
+   if (!(typeof prop === "number")) {
+     throw new RangeError(`index is not a number for patch`);
+   }
+diff --git a/dist/cjs/fullfat_node.cjs b/dist/cjs/fullfat_node.cjs
+index d783a15..566b7c4 100644
+--- a/dist/cjs/fullfat_node.cjs
++++ b/dist/cjs/fullfat_node.cjs
+@@ -6563,6 +6563,11 @@ function applyPutPatch(doc, path, patch) {
+ }
+ function applyInsertPatch(doc, path, patch) {
+   let { obj: parent, prop, parentPath } = pathElemAt(path, -1);
++  // Map key insertions (upstream fix in automerge/automerge#1308).
++  if (typeof prop === "string" && typeof parent === "object" && parent !== null && !Array.isArray(parent)) {
++      parent[prop] = patch.values[0];
++      return;
++  }
+   if (!(typeof prop === "number")) {
+     throw new RangeError(`index is not a number for patch`);
+   }
+@@ -6589,6 +6594,11 @@ function applyInsertPatch(doc, path, patch) {
+ }
+ function applyDelPatch(doc, path, patch) {
+   let { obj: parent, prop, parentPath } = pathElemAt(path, -1);
++  // Map key deletions (upstream fix in automerge/automerge#1308).
++  if (typeof prop === "string" && typeof parent === "object" && parent !== null && !Array.isArray(parent)) {
++      delete parent[prop];
++      return;
++  }
+   if (!(typeof prop === "number")) {
+     throw new RangeError(`index is not a number for patch`);
+   }
+diff --git a/dist/cjs/iife.cjs b/dist/cjs/iife.cjs
+index dc725d1..d7fe93a 100644
+--- a/dist/cjs/iife.cjs
++++ b/dist/cjs/iife.cjs
+@@ -3901,6 +3901,11 @@ function applyPutPatch(doc, path, patch) {
+ }
+ function applyInsertPatch(doc, path, patch) {
+   let { obj: parent, prop, parentPath } = pathElemAt(path, -1);
++  // Map key insertions (upstream fix in automerge/automerge#1308).
++  if (typeof prop === "string" && typeof parent === "object" && parent !== null && !Array.isArray(parent)) {
++      parent[prop] = patch.values[0];
++      return;
++  }
+   if (!(typeof prop === "number")) {
+     throw new RangeError(`index is not a number for patch`);
+   }
+@@ -3927,6 +3932,11 @@ function applyInsertPatch(doc, path, patch) {
+ }
+ function applyDelPatch(doc, path, patch) {
+   let { obj: parent, prop, parentPath } = pathElemAt(path, -1);
++  // Map key deletions (upstream fix in automerge/automerge#1308).
++  if (typeof prop === "string" && typeof parent === "object" && parent !== null && !Array.isArray(parent)) {
++      delete parent[prop];
++      return;
++  }
+   if (!(typeof prop === "number")) {
+     throw new RangeError(`index is not a number for patch`);
+   }
+diff --git a/dist/cjs/slim.cjs b/dist/cjs/slim.cjs
+index 6c6b471..fbd650a 100644
+--- a/dist/cjs/slim.cjs
++++ b/dist/cjs/slim.cjs
+@@ -3885,6 +3885,11 @@ function applyPutPatch(doc, path, patch) {
+ }
+ function applyInsertPatch(doc, path, patch) {
+   let { obj: parent, prop, parentPath } = pathElemAt(path, -1);
++  // Map key insertions (upstream fix in automerge/automerge#1308).
++  if (typeof prop === "string" && typeof parent === "object" && parent !== null && !Array.isArray(parent)) {
++      parent[prop] = patch.values[0];
++      return;
++  }
+   if (!(typeof prop === "number")) {
+     throw new RangeError(`index is not a number for patch`);
+   }
+@@ -3911,6 +3916,11 @@ function applyInsertPatch(doc, path, patch) {
+ }
+ function applyDelPatch(doc, path, patch) {
+   let { obj: parent, prop, parentPath } = pathElemAt(path, -1);
++  // Map key deletions (upstream fix in automerge/automerge#1308).
++  if (typeof prop === "string" && typeof parent === "object" && parent !== null && !Array.isArray(parent)) {
++      delete parent[prop];
++      return;
++  }
+   if (!(typeof prop === "number")) {
+     throw new RangeError(`index is not a number for patch`);
+   }
+diff --git a/dist/iife/iife.js b/dist/iife/iife.js
+index 948bc99..0d1dcd9 100644
+--- a/dist/iife/iife.js
++++ b/dist/iife/iife.js
+@@ -3902,6 +3902,11 @@ ${val.stack}`;
+   }
+   function applyInsertPatch(doc, path, patch) {
+     let { obj: parent, prop, parentPath } = pathElemAt(path, -1);
++    // Map key insertions (upstream fix in automerge/automerge#1308).
++    if (typeof prop === "string" && typeof parent === "object" && parent !== null && !Array.isArray(parent)) {
++        parent[prop] = patch.values[0];
++        return;
++    }
+     if (!(typeof prop === "number")) {
+       throw new RangeError(`index is not a number for patch`);
+     }
+@@ -3928,6 +3933,11 @@ ${val.stack}`;
+   }
+   function applyDelPatch(doc, path, patch) {
+     let { obj: parent, prop, parentPath } = pathElemAt(path, -1);
++    // Map key deletions (upstream fix in automerge/automerge#1308).
++    if (typeof prop === "string" && typeof parent === "object" && parent !== null && !Array.isArray(parent)) {
++        delete parent[prop];
++        return;
++    }
+     if (!(typeof prop === "number")) {
+       throw new RangeError(`index is not a number for patch`);
+     }
+diff --git a/dist/mjs/apply_patches.js b/dist/mjs/apply_patches.js
+index d74bdd3..0b0df80 100644
+--- a/dist/mjs/apply_patches.js
++++ b/dist/mjs/apply_patches.js
+@@ -54,6 +54,11 @@ function applyPutPatch(doc, path, patch) {
+ }
+ function applyInsertPatch(doc, path, patch) {
+     let { obj: parent, prop, parentPath } = pathElemAt(path, -1);
++    // Map key insertions (upstream fix in automerge/automerge#1308).
++    if (typeof prop === "string" && typeof parent === "object" && parent !== null && !Array.isArray(parent)) {
++        parent[prop] = patch.values[0];
++        return;
++    }
+     if (!(typeof prop === "number")) {
+         throw new RangeError(`index is not a number for patch`);
+     }
+@@ -86,6 +91,11 @@ function applyInsertPatch(doc, path, patch) {
+ }
+ function applyDelPatch(doc, path, patch) {
+     let { obj: parent, prop, parentPath } = pathElemAt(path, -1);
++    // Map key deletions (upstream fix in automerge/automerge#1308).
++    if (typeof prop === "string" && typeof parent === "object" && parent !== null && !Array.isArray(parent)) {
++        delete parent[prop];
++        return;
++    }
+     if (!(typeof prop === "number")) {
+         throw new RangeError(`index is not a number for patch`);
+     }

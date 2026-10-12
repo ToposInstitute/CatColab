@@ -39,6 +39,8 @@ let
     "packages/frontend" = ../frontend/pnpm-lock.yaml;
     "packages/ui-components" = ../ui-components/pnpm-lock.yaml;
     "packages/document-methods" = ../document-methods/pnpm-lock.yaml;
+    "packages/documents" = ../documents/pnpm-lock.yaml;
+    "packages/logics" = ../logics/pnpm-lock.yaml;
     "packages/backend/pkg" = ../backend/pkg/pnpm-lock.yaml;
     "tools/vite-plugin-monorepo-dedupe" = ../../tools/vite-plugin-monorepo-dedupe/pnpm-lock.yaml;
   };
@@ -79,6 +81,8 @@ let
         ../../tools/vite-plugin-monorepo-dedupe
         ../../tools/oxlint-plugin-catcolab
         ../../packages/document-methods
+        ../../packages/documents
+        ../../packages/logics
         ../../packages/backend/pkg
       ];
     };
@@ -146,7 +150,7 @@ let
 
         # Set up generated API bindings
         mkdir -p packages/backend/pkg/src
-        cp -r ${self.packages.${pkgs.stdenv.hostPlatform.system}.catcolabApi}/src packages/backend/pkg/
+        cp ${self.packages.${pkgs.stdenv.hostPlatform.system}.backend-bindings}/* packages/backend/pkg/src/
 
         cd packages/frontend
         # Generate CSS module type declarations
@@ -201,7 +205,7 @@ let
 
         # Bindings must be copied into source tree BEFORE the cp below copies backend to $out
         mkdir -p packages/backend/pkg/src
-        cp -r ${self.packages.${pkgs.stdenv.hostPlatform.system}.catcolabApi}/src packages/backend/pkg/
+        cp ${self.packages.${pkgs.stdenv.hostPlatform.system}.backend-bindings}/* packages/backend/pkg/src/
 
         cp -r packages/backend $out/packages/
         cp -r packages/frontend $out/packages/
@@ -210,6 +214,8 @@ let
         cp -r tools/vite-plugin-monorepo-dedupe $out/tools/
         cp -r tools/oxlint-plugin-catcolab $out/tools/
         cp -r packages/document-methods $out/packages/
+        cp -r packages/documents $out/packages/
+        cp -r packages/logics $out/packages/
         mkdir -p $out/packages/document-types
         cp -r packages/document-types/pkg $out/packages/document-types/
 

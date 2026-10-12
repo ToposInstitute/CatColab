@@ -1,10 +1,12 @@
-import { useNavigate } from "@solidjs/router";
+import { useLocation, useNavigate } from "@solidjs/router";
+import Table from "lucide-solid/icons/table";
 import { createMemo, createResource, For, Show, useContext } from "solid-js";
 import { stringify as uuidStringify } from "uuid";
 
 import { DocumentTypeIcon, type FocusHandle } from "catcolab-ui-components";
 import type { Document, Link } from "catlog-wasm";
 import { type Api, type LiveDocWithRef, useApi } from "../api";
+import { useTableList } from "../instance/table_list";
 import { TheoryLibraryContext } from "../theory";
 import { isDocumentVisible, useUserSettings } from "../user/user_settings";
 import { useUserState } from "../user/user_state_context";
@@ -50,6 +52,9 @@ async function getDocParent(doc: Document, api: Api): Promise<LiveDocWithRef | u
             break;
         case "analysis":
             parentLink = doc.analysisOf;
+            break;
+        case "instance":
+            parentLink = doc.instanceOf;
             break;
         case "llmconversation":
             parentLink = doc.llmConversationOf;
@@ -124,8 +129,8 @@ function DocumentsTreeNode(props: {
                 .filter(
                     (relation) =>
                         relation.relationType === "diagram-in" ||
-                        relation.relationType === "analysis-of" ||
-                        relation.relationType === "llmconversation-of",
+                        relation.relationType === "instance-of" ||
+                        relation.relationType === "analysis-of",
                 )
                 .map((relation) => uuidStringify(relation.refId)) ?? []
         );
@@ -194,6 +199,18 @@ function DocumentsTreeNode(props: {
                 refetchPrimaryDoc={props.refetchPrimaryDoc}
                 refetchSecondaryDoc={props.refetchSecondaryDoc}
             />
+            <Show when={props.doc.liveDoc.doc.type === "instance" && props.doc.docRef.refId}>
+                {(refId) => (
+                    <InstanceTableList
+                        refId={refId()}
+                        indent={props.indent + 1}
+                        isOpen={
+                            refId() === props.primaryDoc.docRef.refId ||
+                            refId() === props.secondaryDoc?.docRef.refId
+                        }
+                    />
+                )}
+            </Show>
             <For each={visibleChildDocs()}>
                 {(child) => (
                     <DocumentsTreeNode
@@ -222,7 +239,9 @@ function DocumentsTreeLeaf(props: {
     refetchPrimaryDoc: () => void;
     refetchSecondaryDoc: () => void;
 }) {
+    const location = useLocation();
     const navigate = useNavigate();
+    const navigateInWorkspace = (path: string) => navigate(`${path}${location.search}`);
     const theories = useContext(TheoryLibraryContext);
     const api = useApi();
 
@@ -259,10 +278,14 @@ function DocumentsTreeLeaf(props: {
             const parentOfPrimary = await getDocParent(props.primaryDoc.liveDoc.doc, api);
             if (parentOfPrimary && clickedDoc.docRef.refId === parentOfPrimary.docRef.refId) {
                 props.primaryPaneFocus.setFocused(true);
-                navigate(`/${createLinkPart(clickedDoc)}/${createLinkPart(props.primaryDoc)}`);
+                navigateInWorkspace(
+                    `/${createLinkPart(clickedDoc)}/${createLinkPart(props.primaryDoc)}`,
+                );
             } else {
                 props.secondaryPaneFocus.setFocused(true);
-                navigate(`/${createLinkPart(props.primaryDoc)}/${createLinkPart(clickedDoc)}`);
+                navigateInWorkspace(
+                    `/${createLinkPart(props.primaryDoc)}/${createLinkPart(clickedDoc)}`,
+                );
             }
         }
     };
@@ -293,7 +316,7 @@ function DocumentsTreeLeaf(props: {
                     liveDoc={props.doc.liveDoc}
                     docRef={props.doc.docRef}
                     onDocCreated={(docType, refId) => {
-                        navigate(`/${createLinkPart(props.doc)}/${docType}/${refId}`);
+                        navigateInWorkspace(`/${createLinkPart(props.doc)}/${docType}/${refId}`);
                     }}
                     onDocDeleted={() => {
                         const deletedRefId = props.doc.docRef.refId;
@@ -311,7 +334,7 @@ function DocumentsTreeLeaf(props: {
                                     // This is a root document: navigate to documents list
                                     navigate("/documents");
                                 } else {
-                                    navigate(`/${createLinkPart(parentDoc)}`);
+                                    navigateInWorkspace(`/${createLinkPart(parentDoc)}`);
                                 }
                             });
                         }
@@ -319,6 +342,35 @@ function DocumentsTreeLeaf(props: {
                 />
             </div>
         </div>
+    );
+}
+
+/** Tables of an open instance document. Clicking a row shows the table. */
+function InstanceTableList(props: { refId: string; indent: number; isOpen: boolean }) {
+    const tableList = useTableList();
+
+    return (
+        <Show when={props.isOpen}>
+            <For each={tableList.tables(props.refId)}>
+                {(table) => {
+                    const isVisible = () => tableList.isVisible(props.refId, table.id);
+                    return (
+                        <div
+                            class="related-table"
+                            classList={{
+                                active: isVisible(),
+                                unnamed: !table.label,
+                            }}
+                            style={{ "padding-left": `${props.indent * 16}px` }}
+                            onClick={() => tableList.show(props.refId, table.id)}
+                        >
+                            <Table />
+                            <div class="document-name">{table.label || "Unnamed table"}</div>
+                        </div>
+                    );
+                }}
+            </For>
+        </Show>
     );
 }
 

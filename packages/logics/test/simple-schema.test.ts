@@ -57,12 +57,11 @@ describe("the simple-schema logic", () => {
         notebook.add(Attr, { label: "name", from: person, to: str });
 
         const result = await notebook.validate();
-        expect(result.tag).toBe("Ok");
-        if (result.tag !== "Ok") {
-            return;
-        }
-        expect(result.content.obGenerators().length).toBe(3);
-        expect(result.content.morGenerators().length).toBe(2);
+        expect(result.issues).toEqual([]);
+        expect(result.model.judgmentsOf(Entity).length).toBe(2);
+        expect(result.model.judgmentsOf(AttrType).length).toBe(1);
+        expect(result.model.judgmentsOf(Mapping).length).toBe(1);
+        expect(result.model.judgmentsOf(Attr).length).toBe(1);
     });
 
     test("the shape supports rich text", async () => {
@@ -102,6 +101,6 @@ describe("the simple-schema logic", () => {
             return;
         }
         expect(migration.content.document.theory).toBe("simple-olog");
-        expect((await migration.content.validate()).tag).toBe("Ok");
+        expect((await migration.content.validate()).issues).toEqual([]);
     });
 });

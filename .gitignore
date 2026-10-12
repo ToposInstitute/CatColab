@@ -81,6 +81,7 @@ web_modules/
 .netlify
 /packages/frontend/docs/
 /target/
+/build.ninja
 
 # Sentry files
 instrument.mjs
@@ -112,3 +113,5 @@ CHANGELOG.html
 
 # VSCode
 .vscode/*
+
+__pycache__/

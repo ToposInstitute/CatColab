@@ -1,13 +1,13 @@
 import { type FirebaseOptions, initializeApp } from "firebase/app";
-import { deleteUser, getAuth } from "firebase/auth";
+import { deleteUser, getAuth, type User } from "firebase/auth";
 import invariant from "tiny-invariant";
 import { afterAll, assert, beforeAll, describe, test } from "vitest";
 
 import { createFetchWithAuth, createRpcClient } from "../api/rpc.ts";
-import { initTestUserAuth } from "../util/test_util.ts";
-import { createInferenceClient, runOpenAIChatTurn, type OpenAITranscript } from "./chat.ts";
+import { createTestUserAuth } from "../util/test_util.ts";
+import { createInferenceClient, runChatTurn, type ChatTranscript } from "./chat.ts";
 
-// When inference is configured, these tests exercise a live `runOpenAIChatTurn`
+// When inference is configured, these tests exercise a live `runChatTurn`
 // against OpenRouter, using a free model. A backend without
 // `OPENROUTER_PROVISIONING_KEY` is expected to report inference as unavailable,
 // in which case the OpenRouter assertions have nothing to exercise.
@@ -18,14 +18,15 @@ const firebaseOptions = JSON.parse(import.meta.env.VITE_FIREBASE_OPTIONS) as Fir
 const firebaseApp = initializeApp(firebaseOptions);
 const rpc = createRpcClient(serverUrl, createFetchWithAuth(firebaseApp));
 
-const testModel = "openai/gpt-oss-20b:free";
+const testModel = "openrouter/free";
 
 describe("chat turn over OpenRouter", () => {
     const auth = getAuth(firebaseApp);
     let client: ReturnType<typeof createInferenceClient> | undefined;
+    let user: User | undefined;
 
     beforeAll(async () => {
-        await initTestUserAuth(auth, "test-inference-chat@catcolab.org", "foobar");
+        ({ user } = await createTestUserAuth(auth, "test-inference-chat", "foobar"));
         invariant(auth.currentUser);
 
         await rpc.sign_up_or_sign_in.mutate();
@@ -42,8 +43,8 @@ describe("chat turn over OpenRouter", () => {
     });
 
     afterAll(async () => {
-        if (auth.currentUser) {
-            await deleteUser(auth.currentUser);
+        if (user) {
+            await deleteUser(user);
         }
     });
 
@@ -56,19 +57,20 @@ describe("chat turn over OpenRouter", () => {
                 return;
             }
 
-            const transcript: OpenAITranscript = [
+            const transcript: ChatTranscript = [
                 { role: "user", content: "Reply with exactly the word: pong" },
             ];
-            const result = await runOpenAIChatTurn(client, transcript, {}, undefined, testModel);
+            const result = await runChatTurn(client, transcript, {}, undefined, testModel);
 
             assert.ok(result.content.length > 0, "final content should be a non-empty string");
+            assert.deepStrictEqual(result.termination, { tag: "FinalResponse" });
             assert.strictEqual(transcript[0]?.role, "user");
             assert.strictEqual(result.generatedMessageDelta.at(-1)?.role, "assistant");
         },
     );
 
     test(
-        "records the contextExec call and result as OpenAI messages",
+        "records the contextExec call and result as chat messages",
         { timeout: 120000 },
         async ({ skip }) => {
             if (!client) {
@@ -76,14 +78,15 @@ describe("chat turn over OpenRouter", () => {
                 return;
             }
 
-            const transcript: OpenAITranscript = [
+            const transcript: ChatTranscript = [
                 {
                     role: "user",
                     content: "Use contextExec to evaluate 6 * 7, then tell me the result.",
                 },
             ];
-            const result = await runOpenAIChatTurn(client, transcript, {}, undefined, testModel);
+            const result = await runChatTurn(client, transcript, {}, undefined, testModel);
 
+            assert.deepStrictEqual(result.termination, { tag: "FinalResponse" });
             const assistant = result.generatedMessageDelta.find(
                 (message) =>
                     message.role === "assistant" &&
