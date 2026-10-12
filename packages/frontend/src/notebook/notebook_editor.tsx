@@ -18,7 +18,7 @@ import {
 import invariant from "tiny-invariant";
 
 import { Nb } from "catcolab-document-methods";
-import type { Cell, Notebook, Uuid } from "catcolab-document-types";
+import type { Cell, Notebook, RichTextContent, Uuid } from "catcolab-document-types";
 import {
     type Completion,
     Completions,
@@ -33,6 +33,7 @@ import {
 import { materializeFromAutomerge } from "../util/materialize_from_automerge";
 import {
     type CellActions,
+    type CellDiffStatus,
     type CellDragData,
     type FormalCellEditorProps,
     isCellDragData,
@@ -68,6 +69,27 @@ export type CellConstructor<T> = {
     construct: () => Cell<T>;
 };
 
+/** How a notebook differs from a baseline version of itself.
+
+Computed by the host, which knows what the baseline is, and passed to the
+notebook editor for display only.
+ */
+export type NotebookDiff<T> = {
+    /** Cells that were added or changed since the baseline, by ID. */
+    cells: Map<Uuid, Exclude<CellDiffStatus, "deleted">>;
+
+    /** Baseline content of formal cells that changed, by ID, as plain values. */
+    baseline: Map<Uuid, T>;
+
+    /** Cells deleted since the baseline, in baseline order.
+
+    Each is shown after the cell it followed in the baseline, or at the top of
+    the notebook if `after` is `null`. The cell contents must be plain values,
+    not live Automerge objects.
+     */
+    deleted: { cell: Cell<T>; after: Uuid | null }[];
+};
+
 /** Notebook editor based on Automerge.
 
 A notebook has two types of cells:
@@ -95,6 +117,9 @@ export function NotebookEditor<T>(props: {
     If omitted, a deep copy is performed.
      */
     duplicateCell?: (content: T) => T;
+
+    /** Differences from a baseline to highlight, if any. */
+    diff?: NotebookDiff<T>;
 }) {
     // oxlint-disable-next-line solid/reactivity -- Focus handles are stable for a mounted notebook.
     const cellFocus = useChildFocus<Uuid>(props.focus);
@@ -264,6 +289,19 @@ export function NotebookEditor<T>(props: {
         onCleanup(cleanup);
     });
 
+    const deletedCells = (after: Uuid | null) => (
+        <For each={props.diff?.deleted.filter((deleted) => deleted.after === after)}>
+            {(deleted) => (
+                <DeletedNotebookCell
+                    cell={deleted.cell}
+                    formalCellEditor={props.formalCellEditor}
+                    cellLabel={props.cellLabel}
+                    focus={cellFocus.childFocus(deleted.cell.id)}
+                />
+            )}
+        </For>
+    );
+
     return (
         <div class="notebook">
             <Show when={cellOrder().length === 0}>
@@ -280,6 +318,9 @@ export function NotebookEditor<T>(props: {
                 </div>
             </Show>
             <ul class="notebook-cells">
+                <Show when={props.diff}>
+                    <li>{deletedCells(null)}</li>
+                </Show>
                 <For each={cellOrder()}>
                     {(cellId, i) => {
                         const focus = () => cellFocus.childFocus(cellId);
@@ -355,6 +396,7 @@ export function NotebookEditor<T>(props: {
                                 <NotebookCell
                                     cellId={cell.id}
                                     index={i()}
+                                    diff={props.diff?.cells.get(cellId)}
                                     focus={focus()}
                                     actions={cellActions}
                                     tag={
@@ -384,6 +426,7 @@ export function NotebookEditor<T>(props: {
                                             {(formalCell) => (
                                                 <props.formalCellEditor
                                                     content={formalCell().content}
+                                                    baseline={props.diff?.baseline.get(cell.id)}
                                                     changeContent={(f) =>
                                                         props.changeNotebook((nb) =>
                                                             Nb.mutateCellContentById(
@@ -400,6 +443,7 @@ export function NotebookEditor<T>(props: {
                                         </Match>
                                     </Switch>
                                 </NotebookCell>
+                                {deletedCells(cellId)}
                             </li>
                         );
                     }}
@@ -420,6 +464,73 @@ export function NotebookEditor<T>(props: {
             </Show>
         </div>
     );
+}
+
+/** A cell that no longer exists in the notebook, shown as a read-only ghost.
+
+The cell isn't in the live document, so a formal cell is rendered by the usual
+cell editor with changes discarded, and a rich text cell as plain text.
+ */
+function DeletedNotebookCell<T>(props: {
+    cell: Cell<T>;
+    formalCellEditor: Component<FormalCellEditorProps<T>>;
+    cellLabel?: (content: T) => string | undefined;
+    focus: FocusHandle;
+}) {
+    const formalCell = () => (props.cell.tag === "formal" ? props.cell : undefined);
+    const richTextCell = () => (props.cell.tag === "rich-text" ? props.cell : undefined);
+
+    const tag = () => {
+        const cell = formalCell();
+        return cell && props.cellLabel?.(cell.content);
+    };
+
+    return (
+        <div class="cell" data-diff="deleted" inert>
+            <div class="cell-content">
+                <Switch>
+                    <Match when={richTextCell()}>
+                        {(cell) => (
+                            <p class="deleted-rich-text">{richTextToString(cell().content)}</p>
+                        )}
+                    </Match>
+                    <Match when={formalCell()}>
+                        {(cell) => (
+                            <props.formalCellEditor
+                                content={cell().content}
+                                changeContent={() => {}}
+                                focus={props.focus}
+                                actions={deletedCellActions}
+                            />
+                        )}
+                    </Match>
+                </Switch>
+            </div>
+            <Show when={tag()}>
+                <div class="cell-tag">{tag()}</div>
+            </Show>
+        </div>
+    );
+}
+
+const deletedCellActions: CellActions = {
+    activateAbove() {},
+    activateBelow() {},
+    deleteBackward() {},
+    deleteForward() {},
+    moveUp() {},
+    moveDown() {},
+};
+
+/** Flattens rich text to plain text, with blocks as line breaks. */
+function richTextToString(content: RichTextContent): string {
+    if (typeof content === "string") {
+        return content.replaceAll("\uFFFC", "\n").trim();
+    }
+    return content
+        .map((span) => (span.type === "text" ? span.value : "\n"))
+        .join("")
+        .trim();
 }
 
 /** A button that opens a popover with cell type completions.

@@ -85,6 +85,9 @@ export function isCellDragData(data: Record<string | symbol, unknown>): data is 
 
 type ClosestEdge = "top" | "bottom" | null;
 
+/** How a cell differs from a baseline version of its notebook. */
+export type CellDiffStatus = "added" | "changed" | "deleted";
+
 /** An individual cell in a notebook.
 
 This component contains UI elements common to any cell. The actual content of
@@ -104,6 +107,8 @@ export function NotebookCell(props: {
     setPopoverOpen?: (open: boolean) => void;
     currentDropTarget: string | null;
     setCurrentDropTarget: (cellId: string | null) => void;
+    /** Highlights the cell as differing from a baseline, if set. */
+    diff?: CellDiffStatus;
 }) {
     let rootRef!: HTMLDivElement;
     let handleRef!: HTMLButtonElement;
@@ -223,6 +228,7 @@ export function NotebookCell(props: {
         <div
             class="cell"
             classList={{ "cell-dragging": isDragging() }}
+            data-diff={props.diff}
             onMouseEnter={showGutter}
             onMouseLeave={hideGutter}
             ref={rootRef}
@@ -320,5 +326,9 @@ export function RichTextCellEditor(
  */
 export type FormalCellEditorProps<T> = CellEditorProps & {
     content: T;
+
+    /** Content of the cell at the diff baseline, if it has changed since. */
+    baseline?: T;
+
     changeContent: (f: (content: T) => void) => void;
 };
