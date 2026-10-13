@@ -19,6 +19,7 @@ import { DocumentHead } from "../../frontend/src/page/document_head";
 import { stdTheories } from "../../frontend/src/stdlib";
 import { TheoryLibraryContext } from "../../frontend/src/theory";
 import { rootFocus, useChildFocus } from "../../ui-components/src/util/focus";
+import { version } from "../package.json";
 import type { AnalysisDoc } from "./analysis_datatype";
 import { createNotebookDiff } from "./notebook_diff";
 
@@ -107,7 +108,8 @@ function ModelAndAnalysisPanes(props: {
     // oxlint-enable solid/reactivity
 
     return (
-        <div style={{ display: "flex", height: "100%" }}>
+        <div style={{ display: "flex", height: "100%", position: "relative" }}>
+            <div style={versionStyle}>v{version}</div>
             <div
                 style={{
                     ...paneStyle,
@@ -145,3 +147,13 @@ const paneStyle = {
 };
 
 const messageStyle = { padding: "52px" };
+
+const versionStyle = {
+    position: "absolute",
+    right: "8px",
+    bottom: "6px",
+    "font-size": "11px",
+    color: "rgba(0, 0, 0, 0.4)",
+    "pointer-events": "none",
+    "z-index": "1",
+} as const;
