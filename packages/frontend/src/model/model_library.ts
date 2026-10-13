@@ -22,7 +22,7 @@ import {
     type ModelValidationResult,
     type Uuid,
 } from "catlog-wasm";
-import { type Api, findAndMigrate, type LiveDoc, makeLiveDoc } from "../api";
+import { type Api, findAndMigrate, isScopeReplaced, type LiveDoc, makeLiveDoc } from "../api";
 import type { Theory, TheoryLibrary } from "../theory";
 import type { LiveModelDoc } from "./document";
 
@@ -184,7 +184,10 @@ export class ModelLibrary<RefId> {
 
     private async onChange(key: ModelKey, payload: DocHandleChangePayload<Document>) {
         const doc = payload.doc;
-        if (payload.patches.some((patch) => isPatchToFormalContent(doc, patch))) {
+        if (
+            isScopeReplaced(payload) ||
+            payload.patches.some((patch) => isPatchToFormalContent(doc, patch))
+        ) {
             const [theory, validatedModel] = await this.elaborateAndValidate(key, doc);
 
             const generation = (this.entries.get(key)?.generation ?? 0) + 1;
