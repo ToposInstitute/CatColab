@@ -24,12 +24,8 @@
     font-weight: 500;
 }
 
-.scrollViewport {
-    position: relative;
-    min-width: 0;
-}
-
 .scrollArea {
+    min-width: 0;
     overflow: auto;
     max-height: var(--table-editor-max-height, 70vh);
     outline: none;

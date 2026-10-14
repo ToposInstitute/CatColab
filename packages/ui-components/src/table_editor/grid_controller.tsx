@@ -10,9 +10,9 @@ import {
 } from "solid-js";
 
 import type { InstanceTable, LiteralValue, TableHeader, TableRow } from "catcolab-documents";
-import { fieldOf, fieldText } from "./display";
+import { type FocusHandle, useChildFocus } from "../util/focus";
+import { fieldText } from "./display";
 import { isEditableCell, isPrintableKey, parseValue } from "./editing";
-import { useGridFocus } from "./grid_focus";
 import {
     type CellKey,
     type MoveDirection,
@@ -24,72 +24,57 @@ import {
 /** The cell being edited, by ID, and the live text of its editor. */
 export type EditState = { rowId: string; headerId: string; text: string };
 
-type CellEditApi = {
-    /** Index of each header ID to its column position. */
-    headerIndex: Accessor<ReadonlyMap<string, number>>;
-
-    /** Whether the cell with the given key is being edited. */
-    isEditing: (key: CellKey) => boolean;
-
-    /** The live text of the open cell editor. */
-    editText: Accessor<string>;
-
-    /** Begin editing the cell with the given key, seeding the editor with
-    `text` or, if omitted, with the cell's display text. */
-    startEdit: (key: CellKey, text?: string) => void;
-
-    /** Update the draft text of the open editor. */
-    setEditText: (text: string) => void;
-
-    /** Discard the draft and return browser focus to its cell. */
-    cancelEdit: (cellElement: HTMLTableCellElement) => void;
-
-    /** Commit the draft and move the selection, restoring browser focus to
-    the edited cell only if it remains selected after a keyboard exit. */
-    commitEdit: (dir: MoveDirection | "blur", cellElement: HTMLTableCellElement) => void;
-
-    /** Toggle a boolean cell. */
-    toggleBool: (key: CellKey) => void;
-
-    /** Commit a row reference chosen from the completions popup, leaving the
-    selection in place. */
-    commitRowRef: (key: CellKey, target: TableRow, cellElement: HTMLTableCellElement) => void;
-
-    /** Clear the field of a cell. */
-    clearCell: (key: CellKey) => void;
-
-    /** Add a row through the table's callback, selecting the given column (or
-    the first column by default) once it appears. */
-    addRow: (headerId?: string) => void;
-
-    /** Stop waiting to select a row being added, as when the user leaves the
-    grid before it appears. The add request itself has already been dispatched
-    and is not withdrawn; the row simply appears without taking the
-    selection. */
-    cancelPendingSelection: () => void;
-
-    /** Handle a key pressed on a selected cell: editing, toggling, or
-    clearing. Returns whether the key was handled. */
-    onCellKey: (evt: KeyboardEvent, key: CellKey) => boolean;
+type GridControllerProps = {
+    focus: FocusHandle;
+    table: Accessor<InstanceTable>;
+    allTables: Accessor<ReadonlyArray<InstanceTable>>;
+    onSetField: (row: TableRow, header: TableHeader, value: LiteralValue | TableRow) => void;
+    onAddRow: () => void;
 };
 
-const Context = createContext<CellEditApi>();
+const Context = createContext<ReturnType<typeof createGridController>>();
 
-/** Provide literal cell editing for the grid.
+/** Own selection, focus restoration, and editing for one grid.
 
 Drafts live here so that they survive the editor being remounted in a
 different cell slot when rows or columns shift under it. Cells are resolved
 afresh by ID before every write so that they cannot go stale.
  */
-export function EditProvider(
-    props: ParentProps<{
-        table: Accessor<InstanceTable>;
-        allTables: Accessor<ReadonlyArray<InstanceTable>>;
-        onSetField: (row: TableRow, header: TableHeader, value: LiteralValue | TableRow) => void;
-        onAddRow: () => void;
-    }>,
-) {
-    const grid = useGridFocus();
+function createGridController(props: GridControllerProps) {
+    const parent: FocusHandle = {
+        hasFocus: () => props.focus.hasFocus(),
+        setFocused: (focused) => props.focus.setFocused(focused),
+    };
+    const children = useChildFocus<CellKey>(parent);
+    const activeKey = () => (parent.hasFocus() ? children.activeChild() : null);
+
+    // Remember only the selected row's position, not every row ever seen.
+    const selection = createMemo((previous: { key: CellKey; rowIndex: number } | null) => {
+        const key = activeKey();
+        if (key === null) {
+            return null;
+        }
+        const { headerId, rowId } = parseCellKey(key);
+        const { rows, headers } = props.table();
+        if (!rows.length || !headers.length) {
+            return null;
+        }
+        const currentIndex = rows.findIndex((row) => row.id === rowId);
+        const lastIndex =
+            previous && parseCellKey(previous.key).rowId === rowId ? previous.rowIndex : 0;
+        const rowIndex = currentIndex >= 0 ? currentIndex : Math.min(lastIndex, rows.length - 1);
+        const header = headers.find((header) => header.id === headerId) ?? headers[0]!;
+        return { key: makeCellKey(header.id, rows[rowIndex]!.id), rowIndex };
+    }, null);
+    createEffect(() => {
+        if (parent.hasFocus()) {
+            const key = selection()?.key ?? null;
+            if (key !== children.activeChild()) {
+                children.setActiveChild(key);
+            }
+        }
+    });
+
     const [edit, setEdit] = createSignal<EditState | null>(null);
     const headerIndex = createMemo(
         () => new Map(props.table().headers.map((header, index) => [header.id, index] as const)),
@@ -105,10 +90,10 @@ export function EditProvider(
     };
 
     const fieldAt = (row: TableRow, header: TableHeader) =>
-        fieldOf(row, headerIndex().get(header.id) ?? -1);
+        row.fields[headerIndex().get(header.id) ?? -1];
 
     const select = (key: CellKey) => {
-        grid.cellFocus(key).setFocused(true);
+        children.childFocus(key).setFocused(true);
     };
 
     /** The row IDs present when the next added row was promised the selection
@@ -134,7 +119,18 @@ export function EditProvider(
         props.onAddRow();
     };
 
-    const cancelPendingSelection = () => setPendingSelection(null);
+    const onFocusOut = (evt: FocusEvent & { currentTarget: HTMLDivElement }, leaveGrid = false) => {
+        const container = evt.currentTarget;
+        queueMicrotask(() => {
+            if (container.isConnected && !container.contains(document.activeElement)) {
+                // A row arriving after the user leaves must not steal selection.
+                setPendingSelection(null);
+                if (leaveGrid) {
+                    parent.setFocused(false);
+                }
+            }
+        });
+    };
 
     createEffect(() => {
         const pending = pendingSelection();
@@ -169,22 +165,36 @@ export function EditProvider(
                 rowId: cell.row.id,
                 headerId: cell.header.id,
                 text:
-                    text ?? fieldText(fieldAt(cell.row, cell.header), cell.header, props.allTables()),
+                    text ??
+                    fieldText(fieldAt(cell.row, cell.header), cell.header, props.allTables()),
             });
         });
     };
 
     const setEditText = (text: string) => setEdit((state) => (state ? { ...state, text } : state));
 
+    // Closing an editor must not steal focus on blur or after selection moved.
+    const finishEdit = (key: CellKey, cellElement?: HTMLTableCellElement, dir?: MoveDirection) => {
+        batch(() => {
+            setEdit(null);
+            if (dir) {
+                const target = neighborKey(props.table(), headerIndex(), key, dir);
+                if (!target && dir === "down") {
+                    addRow(parseCellKey(key).headerId);
+                } else {
+                    select(target ?? key);
+                }
+            }
+        });
+        if (activeKey() === key && edit() === null && cellElement?.isConnected) {
+            cellElement.focus({ preventScroll: true });
+        }
+    };
+
     const cancelEdit = (cellElement: HTMLTableCellElement) => {
         const state = edit();
-        if (!state) {
-            return;
-        }
-        const key = makeCellKey(state.headerId, state.rowId);
-        setEdit(null);
-        if (grid.activeKey() === key && edit() === null && cellElement.isConnected) {
-            cellElement.focus({ preventScroll: true });
+        if (state) {
+            finishEdit(makeCellKey(state.headerId, state.rowId), cellElement);
         }
     };
 
@@ -208,32 +218,10 @@ export function EditProvider(
         }
         if (dir === "blur") {
             // The browser is already transferring focus; only close the draft.
-            setEdit(null);
+            finishEdit(key);
             return;
         }
-        const target = neighborKey(props.table(), headerIndex(), key, dir);
-        if (!target && (dir === "down" || dir === "forward")) {
-            // Exiting the grid downward or forward adds a row, ready for
-            // further editing in the same column.
-            batch(() => {
-                setEdit(null);
-                addRow(state.headerId);
-            });
-            if (grid.activeKey() === key && edit() === null && cellElement.isConnected) {
-                cellElement.focus({ preventScroll: true });
-            }
-            return;
-        }
-        batch(() => {
-            setEdit(null);
-            select(target ?? key);
-        });
-        // A newly selected cell focuses itself. If selection stayed here,
-        // return browser focus directly to the edited cell.
-        if (grid.activeKey() === key && edit() === null && cellElement.isConnected) {
-            cellElement.focus({ preventScroll: true });
-        }
-        // Appending a row on exit comes with structural changes.
+        finishEdit(key, cellElement, dir);
     };
 
     const toggleBool = (key: CellKey) => {
@@ -257,10 +245,7 @@ export function EditProvider(
         if (cell) {
             props.onSetField(cell.row, cell.header, target);
         }
-        setEdit(null);
-        if (grid.activeKey() === key && edit() === null && cellElement.isConnected) {
-            cellElement.focus({ preventScroll: true });
-        }
+        finishEdit(key, cellElement);
     };
 
     const clearCell = (key: CellKey) => {
@@ -304,39 +289,39 @@ export function EditProvider(
             return;
         }
         const key = makeCellKey(state.headerId, state.rowId);
-        if (grid.activeKey() !== key || !findCell(key)) {
+        if (activeKey() !== key || !findCell(key)) {
             setEdit(null);
         }
     });
 
+    return {
+        activeKey,
+        cellFocus: children.childFocus,
+        headerIndex,
+        isEditing,
+        editText: () => edit()?.text ?? "",
+        startEdit,
+        setEditText,
+        cancelEdit,
+        commitEdit,
+        toggleBool,
+        commitRowRef,
+        addRow,
+        onFocusOut,
+        onCellKey,
+    };
+}
+
+export function GridProvider(props: ParentProps<GridControllerProps>) {
     return (
-        <Context.Provider
-            value={{
-                headerIndex,
-                isEditing,
-                editText: () => edit()?.text ?? "",
-                startEdit,
-                setEditText,
-                cancelEdit,
-                commitEdit,
-                toggleBool,
-                commitRowRef,
-                clearCell,
-                addRow,
-                cancelPendingSelection,
-                onCellKey,
-            }}
-        >
-            {props.children}
-        </Context.Provider>
+        <Context.Provider value={createGridController(props)}>{props.children}</Context.Provider>
     );
 }
 
-/** Access the edit controller of the enclosing grid. */
-export function useCellEdit(): CellEditApi {
-    const edit = useContext(Context);
-    if (!edit) {
-        throw new Error("Grid cells must be inside EditProvider");
+export function useGridController() {
+    const controller = useContext(Context);
+    if (!controller) {
+        throw new Error("Grid cells must be inside GridProvider");
     }
-    return edit;
+    return controller;
 }

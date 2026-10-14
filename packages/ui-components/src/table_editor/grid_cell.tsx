@@ -1,12 +1,12 @@
 import { createEffect, createMemo, on, Show } from "solid-js";
 
 import type { FieldValue, InstanceTable, TableHeader, TableRow } from "catcolab-documents";
+import type { FocusHandle } from "../util/focus";
 import { Cell } from "./cell";
 import { CellEditor } from "./cell_editor";
 import { codomainOf, defaultRowLabel } from "./display";
-import { useCellEdit } from "./edit";
 import { parseValue } from "./editing";
-import { useGridCellFocus } from "./grid_focus";
+import { useGridController } from "./grid_controller";
 import { makeCellKey } from "./navigation";
 import { fieldIsInvalid, issueMessage, type IssueLookup } from "./validation";
 
@@ -21,8 +21,13 @@ export function GridCell(props: {
     allTables: ReadonlyArray<InstanceTable>;
 }) {
     const key = createMemo(() => makeCellKey(props.header.id, props.row.id));
-    const { selected, focus } = useGridCellFocus(() => key());
-    const edit = useCellEdit();
+    const edit = useGridController();
+    const selected = createMemo(() => edit.activeKey() === key());
+    // Resolve lazily because Index slots can acquire different cell IDs.
+    const focus: FocusHandle = {
+        hasFocus: () => edit.cellFocus(key()).hasFocus(),
+        setFocused: (focused) => edit.cellFocus(key()).setFocused(focused),
+    };
     const editing = () => edit.isEditing(key());
     const issues = () => (props.field ? props.issuesAt(props.field.content.path) : []);
     const invalid = () =>

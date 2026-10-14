@@ -1,18 +1,11 @@
-import { createEffect, createSignal, Show, Index } from "solid-js";
+import { createSignal, Show, Index } from "solid-js";
 
 import type { InstanceTable, LiteralValue, TableHeader, TableRow } from "catcolab-documents";
 import type { FocusHandle } from "../util/focus";
 import { ColumnHeader } from "./column_header";
 import { COLUMN_WIDTHS, DELETE_COLUMN_WIDTH, EMPTY_COLUMN_WIDTH } from "./display";
-import { EditProvider, useCellEdit } from "./edit";
-import { GridFocus, useGridFocus } from "./grid_focus";
-import {
-    makeCellKey,
-    navigationDirection,
-    neighborKey,
-    parseCellKey,
-    type CellKey,
-} from "./navigation";
+import { GridProvider, useGridController } from "./grid_controller";
+import { navigationDirection, neighborKey } from "./navigation";
 import { TableRows } from "./table_rows";
 import type { IssueLookup } from "./validation";
 
@@ -30,69 +23,27 @@ type TableGridProps = {
 };
 
 export function TableGrid(props: TableGridProps) {
-    // Remember where each row was, so that the selection can stay at its
-    // position when the selected row is removed.
-    const lastRowPositions = new Map<string, number>();
-    createEffect(() => {
-        props.table.rows.forEach((row, index) => lastRowPositions.set(row.id, index));
-    });
-
-    /** Map a selected cell to the nearest cell that still exists.
-
-    A removed row is replaced by the row at its last known position; a removed
-    column by the first column. Returns null when no cell remains at all.
-     */
-    const repairSelection = (key: CellKey): CellKey | null => {
-        const { headerId, rowId } = parseCellKey(key);
-        const rows = props.table.rows;
-        const headers = props.table.headers;
-        if (rows.length === 0 || headers.length === 0) {
-            return null;
-        }
-        const rowIndex = rows.findIndex((row) => row.id === rowId);
-        const position =
-            rowIndex >= 0 ? rowIndex : Math.min(lastRowPositions.get(rowId) ?? 0, rows.length - 1);
-        const header = headers.find((candidate) => candidate.id === headerId) ?? headers[0]!;
-        return makeCellKey(header.id, rows[position]!.id);
-    };
-
     return (
-        <GridFocus
+        <GridProvider
             focus={props.focus}
-            repairSelection={repairSelection}
+            table={() => props.table}
+            allTables={() => props.allTables}
+            onSetField={props.onSetField}
+            onAddRow={props.onAddRow}
         >
-            <EditProvider
-                table={() => props.table}
-                allTables={() => props.allTables}
-                onSetField={props.onSetField}
-                onAddRow={props.onAddRow}
-            >
-                <div class={styles.scrollViewport}>
-                    <GridContent {...props} />
-                </div>
-                <Show when={props.table.label !== null}>
-                    <Footer />
-                </Show>
-            </EditProvider>
-        </GridFocus>
+            <GridContent {...props} />
+            <Show when={props.table.label !== null}>
+                <Footer />
+            </Show>
+        </GridProvider>
     );
 }
 
 /** The footer with the button for adding a row. */
 function Footer() {
-    const edit = useCellEdit();
+    const edit = useGridController();
     return (
-        <div
-            class={styles.footer}
-            onFocusOut={(evt) => {
-                const footer = evt.currentTarget;
-                queueMicrotask(() => {
-                    if (footer.isConnected && !footer.contains(document.activeElement)) {
-                        edit.cancelPendingSelection();
-                    }
-                });
-            }}
-        >
+        <div class={styles.footer} onFocusOut={(evt) => edit.onFocusOut(evt)}>
             <button class={styles.addRow} type="button" onClick={() => edit.addRow()}>
                 + Row
             </button>
@@ -101,8 +52,7 @@ function Footer() {
 }
 
 function GridContent(props: TableGridProps) {
-    const focus = useGridFocus();
-    const edit = useCellEdit();
+    const edit = useGridController();
     const headers = () => props.table.headers;
     const headerIndex = edit.headerIndex;
     const [deletingColumnId, setDeletingColumnId] = createSignal<string | null>(null);
@@ -111,19 +61,7 @@ function GridContent(props: TableGridProps) {
         <div
             class={styles.scrollArea}
             tabindex={-1}
-            onFocusOut={(evt) => {
-                const grid = evt.currentTarget;
-                const setFocused = props.focus.setFocused;
-                queueMicrotask(() => {
-                    if (grid.isConnected && !grid.contains(document.activeElement)) {
-                        // Leaving the grid cancels the pending selection of
-                        // a row being added: the user is gone, so the row
-                        // must not take the focus when it appears.
-                        edit.cancelPendingSelection();
-                        setFocused(false);
-                    }
-                });
-            }}
+            onFocusOut={(evt) => edit.onFocusOut(evt, true)}
             onKeyDown={(evt) => {
                 if (evt.defaultPrevented) {
                     return;
@@ -139,7 +77,7 @@ function GridContent(props: TableGridProps) {
                 ) {
                     return;
                 }
-                const key = focus.activeKey();
+                const key = edit.activeKey();
                 if (!key) {
                     return;
                 }
@@ -152,7 +90,7 @@ function GridContent(props: TableGridProps) {
                 }
                 const next = neighborKey(props.table, headerIndex(), key, direction);
                 if (next) {
-                    focus.cellFocus(next).setFocused(true);
+                    edit.cellFocus(next).setFocused(true);
                 }
                 evt.preventDefault();
             }}

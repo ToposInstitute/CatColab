@@ -16,11 +16,6 @@ export const EMPTY_COLUMN_WIDTH = 180;
 /** Width of the column holding the row deletion buttons. */
 export const DELETE_COLUMN_WIDTH = 36;
 
-/** The field of a row for a given header position. */
-export function fieldOf(row: TableRow, columnIndex: number): FieldValue | undefined {
-    return row.fields[columnIndex];
-}
-
 /** The table referenced by a `RowRef` column, if it can be resolved. */
 export function codomainOf(
     header: TableHeader,

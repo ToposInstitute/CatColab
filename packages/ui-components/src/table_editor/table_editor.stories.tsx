@@ -753,6 +753,13 @@ function ConcurrentTable(props: { initialSpec: TableSpec }) {
                 >
                     Insert column before
                 </button>
+                <button
+                    type="button"
+                    onMouseDown={(evt) => evt.preventDefault()}
+                    onClick={() => setSpec((spec) => ({ ...spec, rows: spec.rows.toReversed() }))}
+                >
+                    Reverse rows
+                </button>
             </p>
             <p data-testid="writes">{writes()}</p>
         </div>
@@ -829,6 +836,25 @@ export const RemoteDeleteOfEditedRow: Story = {
         const cells = canvas.getAllByRole("gridcell");
         await expect(cells[0]).toHaveTextContent("Second");
         await expect(cells[0]).toHaveFocus();
+    },
+};
+
+export const ReorderedSelectionAfterDelete: Story = {
+    render: () => <ConcurrentTable initialSpec={listSpec} />,
+    play: async ({ canvasElement }: { canvasElement: HTMLElement }) => {
+        const canvas = within(canvasElement);
+        await userEvent.click(canvas.getAllByRole("gridcell")[0]!);
+        await userEvent.click(canvas.getByRole("button", { name: "Reverse rows" }));
+        await waitFor(() => expect(canvas.getAllByRole("gridcell")[2]).toHaveFocus());
+        await expect(canvas.getAllByRole("gridcell")[2]).toHaveTextContent("First");
+
+        // Deleting the selected row uses its updated position and clamps to
+        // the last survivor, rather than falling back to its original slot.
+        await userEvent.click(canvas.getAllByRole("button", { name: "Delete row" })[2]!);
+        await waitFor(() => expect(canvas.getAllByRole("gridcell")).toHaveLength(2));
+        await expect(canvas.getAllByRole("gridcell")[1]).toHaveFocus();
+        await expect(canvas.getAllByRole("gridcell")[1]).toHaveTextContent("Second");
+        await expect(canvas.getByTestId("writes")).toHaveTextContent("0");
     },
 };
 

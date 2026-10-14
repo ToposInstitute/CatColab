@@ -1,10 +1,7 @@
 import type { LiteralValue, TableHeader } from "catcolab-documents";
 
 export function isEditableCell(header: TableHeader): boolean {
-    const tag = header.type.tag;
-    return (
-        tag === "Bool" || tag === "Int" || tag === "Float" || tag === "String" || tag === "RowRef"
-    );
+    return header.type.tag !== "Unknown";
 }
 
 /** Parse text committed by a cell editor into a literal field value.

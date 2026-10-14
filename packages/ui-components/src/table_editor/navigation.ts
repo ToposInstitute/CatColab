@@ -1,6 +1,6 @@
 import type { InstanceTable } from "catcolab-documents";
 
-export type MoveDirection = "up" | "down" | "left" | "right" | "forward" | "backward";
+export type MoveDirection = "up" | "down" | "left" | "right";
 
 /** Identifies a cell by header and row ID, so it is stable as either are shuffled. */
 export type CellKey = `${string}\u0000${string}`;
@@ -12,12 +12,6 @@ export function makeCellKey(headerId: string, rowId: string): CellKey {
 export function parseCellKey(key: CellKey): { headerId: string; rowId: string } {
     const sep = key.indexOf("\u0000");
     return { headerId: key.slice(0, sep), rowId: key.slice(sep + 1) };
-}
-
-export function firstCellKey(table: InstanceTable): CellKey | null {
-    const row = table.rows[0];
-    const header = table.headers[0];
-    return row && header ? makeCellKey(header.id, row.id) : null;
 }
 
 /** Return the adjacent cell key, or undefined at a grid boundary. */
@@ -41,18 +35,6 @@ export function neighborKey(
         colIndex -= 1;
     } else if (dir === "right") {
         colIndex += 1;
-    } else if (dir === "forward") {
-        colIndex += 1;
-        if (colIndex >= table.headers.length) {
-            rowIndex += 1;
-            colIndex = 0;
-        }
-    } else {
-        colIndex -= 1;
-        if (colIndex < 0) {
-            rowIndex -= 1;
-            colIndex = table.headers.length - 1;
-        }
     }
     const row = table.rows[rowIndex];
     const header = table.headers[colIndex];
