@@ -1,7 +1,6 @@
 import { createMemo, type Accessor } from "solid-js";
 
-import type { FieldValue, InstanceTable, TableHeader, TableIssue } from "catcolab-documents";
-import { codomainOf } from "./display";
+import type { TableIssue } from "catcolab-documents";
 
 /** Index issues by their full document path, not by mutable row/column positions. */
 export function createIssueIndex(issues: Accessor<ReadonlyArray<TableIssue>>) {
@@ -31,24 +30,4 @@ export function issueMessage(issue: TableIssue): string {
         return label ? `Constraint \`${label}\` is violated` : "Unnamed constraint is violated";
     }
     return issue.message;
-}
-
-/** Also detect stale/mistyped values when no validation issue was supplied. */
-export function fieldIsInvalid(
-    field: FieldValue | undefined,
-    header: TableHeader,
-    tables: ReadonlyArray<InstanceTable>,
-): boolean {
-    if (!field || field.tag === "Null" || header.type.tag === "Unknown") {
-        return false;
-    }
-    if (header.type.tag === "RowRef") {
-        const codomain = codomainOf(header, tables);
-        return (
-            field.tag !== "RowRef" ||
-            codomain?.label === null ||
-            !codomain?.rows.some((row) => row.id === field.content.id)
-        );
-    }
-    return field.tag !== header.type.tag;
 }

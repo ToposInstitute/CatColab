@@ -306,10 +306,11 @@ export const InvalidData: Story = {
         const tables = within(canvasElement).getAllByRole("grid");
         const cells = within(tables[1]!).getAllByRole("gridcell");
 
+        // Stored values are only marked invalid when field issues are supplied.
         await expect(cells[0]).toHaveTextContent("not an integer");
-        await expect(cells[0]).toHaveAttribute("aria-invalid", "true");
+        await expect(cells[0]).toHaveAttribute("aria-invalid", "false");
         await expect(cells[1]).toHaveTextContent("Team ?");
-        await expect(cells[1]).toHaveAttribute("aria-invalid", "true");
+        await expect(cells[1]).toHaveAttribute("aria-invalid", "false");
     },
 };
 
@@ -445,7 +446,8 @@ export const OrphanedTable: Story = {
             within(tables[0]!.closest("section")!).queryByRole("button", { name: "+ Row" }),
         ).not.toBeInTheDocument();
         await expect(unknownRef).toHaveTextContent("Unknown table row 1");
-        await expect(unknownRef).toHaveAttribute("aria-invalid", "true");
+        // A table-level issue does not imply a field-level issue for references.
+        await expect(unknownRef).toHaveAttribute("aria-invalid", "false");
 
         // Columns of an orphaned table go with the table, not one by one.
         await expect(

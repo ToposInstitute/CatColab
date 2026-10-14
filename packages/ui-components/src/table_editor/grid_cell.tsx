@@ -8,7 +8,7 @@ import { codomainOf, defaultRowLabel } from "./display";
 import { parseValue } from "./editing";
 import { useGridController } from "./grid_controller";
 import { makeCellKey } from "./navigation";
-import { fieldIsInvalid, issueMessage, type IssueLookup } from "./validation";
+import { issueMessage, type IssueLookup } from "./validation";
 
 import styles from "./table_editor.module.css";
 
@@ -30,8 +30,7 @@ export function GridCell(props: {
     };
     const editing = () => edit.isEditing(key());
     const issues = () => (props.field ? props.issuesAt(props.field.content.path) : []);
-    const invalid = () =>
-        issues().length > 0 || fieldIsInvalid(props.field, props.header, props.allTables);
+    const invalid = () => issues().length > 0;
 
     /** Possible values for a row-reference cell, with the current value
     highlighted. The target is committed by the completion itself. */
