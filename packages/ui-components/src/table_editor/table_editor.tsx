@@ -8,6 +8,7 @@ import type {
 import type { FocusHandle } from "../util/focus";
 import { TableGrid } from "./grid";
 import { TitleBar } from "./title_bar";
+import { createIssueIndex } from "./validation";
 
 import styles from "./table_editor.module.css";
 
@@ -54,12 +55,22 @@ export type TableEditorProps = {
 
 /** A spreadsheet-like editor for a tabular data instance. */
 export function TableEditor(props: TableEditorProps) {
+    const issuesAt = createIssueIndex(() => props.issues ?? []);
     return (
         <section
             class={`${styles.table}${props.class ? ` ${props.class}` : ""}`}
             classList={{ [styles.unknown]: props.table.label === null }}
+            title={
+                issuesAt([props.table.id])
+                    .map((issue) => issue.message)
+                    .join("\n") || undefined
+            }
         >
-            <TitleBar table={props.table} onHide={props.onHide} />
+            <TitleBar
+                table={props.table}
+                onHide={props.onHide}
+                onDeleteOrphanedTable={props.onDeleteOrphanedTable}
+            />
             <TableGrid
                 focus={props.focus}
                 table={props.table}
@@ -67,6 +78,8 @@ export function TableEditor(props: TableEditorProps) {
                 onSetField={props.onSetField}
                 onAddRow={props.onAddRow}
                 onDeleteRow={props.onDeleteRow}
+                issuesAt={issuesAt}
+                onDeleteOrphanedColumn={props.onDeleteOrphanedColumn}
             />
         </section>
     );

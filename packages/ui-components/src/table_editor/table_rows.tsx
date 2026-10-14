@@ -1,13 +1,18 @@
 import { Index, Show } from "solid-js";
 
-import type { InstanceTable, TableHeader, TableRow } from "catcolab-documents";
+import type { InstanceTable, TableHeader, TableIssue, TableRow } from "catcolab-documents";
 import { fieldOf } from "./display";
 import { GridCell } from "./grid_cell";
+import { RowHeader } from "./row_header";
+import type { IssueLookup } from "./validation";
 
 import styles from "./table_editor.module.css";
 
 /** The data rows of the grid. */
 export function TableRows(props: {
+    tableId: string;
+    issuesAt: IssueLookup;
+    deletingColumnId: string | null;
     rows: ReadonlyArray<TableRow>;
     headers: ReadonlyArray<TableHeader>;
     headerIndex: () => ReadonlyMap<string, number>;
@@ -20,6 +25,9 @@ export function TableRows(props: {
                 {(row) => (
                     <BodyRow
                         row={row()}
+                        issues={props.issuesAt([props.tableId, "rows", row().id])}
+                        issuesAt={props.issuesAt}
+                        deletingColumnId={props.deletingColumnId}
                         headers={props.headers}
                         headerIndex={props.headerIndex}
                         tables={props.tables}
@@ -33,6 +41,9 @@ export function TableRows(props: {
 
 /** A single data row: a row header, one cell per column, and a delete button. */
 function BodyRow(props: {
+    issues: ReadonlyArray<TableIssue>;
+    issuesAt: IssueLookup;
+    deletingColumnId: string | null;
     row: TableRow;
     headers: ReadonlyArray<TableHeader>;
     headerIndex: () => ReadonlyMap<string, number>;
@@ -41,7 +52,7 @@ function BodyRow(props: {
 }) {
     return (
         <tr aria-rowindex={props.row.index + 2}>
-            <th class={styles.rowHeader} scope="row" />
+            <RowHeader issues={props.issues} />
             <Show
                 when={props.headers.length > 0}
                 fallback={
@@ -58,6 +69,8 @@ function BodyRow(props: {
                             header={header()}
                             field={fieldOf(props.row, props.headerIndex().get(header().id) ?? -1)}
                             tables={props.tables}
+                            issuesAt={props.issuesAt}
+                            deleting={props.deletingColumnId === header().id}
                         />
                     )}
                 </Index>

@@ -8,10 +8,13 @@ import { useCellEdit } from "./edit";
 import { parseValue } from "./editing";
 import { useGridCellFocus } from "./grid_focus";
 import { makeCellKey } from "./navigation";
+import { fieldIsInvalid, issueMessage, type IssueLookup } from "./validation";
 
 import styles from "./table_editor.module.css";
 
 export function GridCell(props: {
+    issuesAt: IssueLookup;
+    deleting: boolean;
     row: TableRow;
     header: TableHeader;
     field: FieldValue | undefined;
@@ -21,6 +24,9 @@ export function GridCell(props: {
     const { selected, tabindex, focus } = useGridCellFocus(() => key());
     const edit = useCellEdit();
     const editing = () => edit.isEditing(key());
+    const issues = () => (props.field ? props.issuesAt(props.field.content.path) : []);
+    const invalid = () =>
+        issues().length > 0 || fieldIsInvalid(props.field, props.header, props.tables);
 
     /** Possible values for a row-reference cell, with the current value
     highlighted. The target is committed by the completion itself. */
@@ -60,7 +66,14 @@ export function GridCell(props: {
             role="gridcell"
             tabindex={editing() ? -1 : tabindex()}
             aria-selected={selected()}
-            classList={{ [styles.selected]: selected() }}
+            aria-invalid={invalid()}
+            aria-readonly={props.header.type.tag === "Unknown"}
+            title={issues().map(issueMessage).join("\n") || undefined}
+            classList={{
+                [styles.selected]: selected(),
+                [styles.invalid]: invalid(),
+                [styles.columnDeleting]: props.deleting,
+            }}
             onFocus={() => focus.setFocused(true)}
             onMouseDown={(evt) => {
                 // Some browsers do not focus the containing cell on click, and

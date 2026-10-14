@@ -1,4 +1,4 @@
-import { createEffect, Show, Index } from "solid-js";
+import { createEffect, createSignal, Show, Index } from "solid-js";
 
 import type { InstanceTable, LiteralValue, TableHeader, TableRow } from "catcolab-documents";
 import type { FocusHandle } from "../util/focus";
@@ -15,10 +15,13 @@ import {
     type CellKey,
 } from "./navigation";
 import { TableRows } from "./table_rows";
+import type { IssueLookup } from "./validation";
 
 import styles from "./table_editor.module.css";
 
 type TableGridProps = {
+    issuesAt: IssueLookup;
+    onDeleteOrphanedColumn?: (header: TableHeader) => void;
     focus: FocusHandle;
     table: InstanceTable;
     tables: ReadonlyArray<InstanceTable>;
@@ -99,6 +102,7 @@ function GridContent(props: TableGridProps) {
     const edit = useCellEdit();
     const headers = () => props.table.headers;
     const headerIndex = edit.headerIndex;
+    const [deletingColumnId, setDeletingColumnId] = createSignal<string | null>(null);
 
     return (
         <div
@@ -178,8 +182,24 @@ function GridContent(props: TableGridProps) {
                         >
                             <Index each={headers()}>
                                 {(header) => (
-                                    <th class={styles.columnHeader} scope="col">
-                                        <ColumnHeader header={header()} />
+                                    <th
+                                        class={styles.columnHeader}
+                                        classList={{
+                                            [styles.columnDeleting]:
+                                                deletingColumnId() === header().id,
+                                        }}
+                                        scope="col"
+                                    >
+                                        <ColumnHeader
+                                            header={header()}
+                                            onDelete={
+                                                props.table.label !== null &&
+                                                header().type.tag === "Unknown"
+                                                    ? props.onDeleteOrphanedColumn
+                                                    : undefined
+                                            }
+                                            onDeleting={setDeletingColumnId}
+                                        />
                                     </th>
                                 )}
                             </Index>
@@ -188,6 +208,9 @@ function GridContent(props: TableGridProps) {
                     </tr>
                 </thead>
                 <TableRows
+                    tableId={props.table.id}
+                    issuesAt={props.issuesAt}
+                    deletingColumnId={deletingColumnId()}
                     rows={props.table.rows}
                     headers={headers()}
                     headerIndex={headerIndex}
