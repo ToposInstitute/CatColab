@@ -168,7 +168,7 @@ export default function HomePage() {
                                         rel="noopener noreferrer"
                                     >
                                         <img
-                                            src="https://topos.institute/assets/logo-name.png"
+                                            src="/topos_logo_name.png"
                                             alt="Topos Institute"
                                             class="bottom-topos-logo"
                                         />
