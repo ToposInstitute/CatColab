@@ -1,4 +1,12 @@
-import { type Accessor, type ParentProps, createContext, createEffect, useContext } from "solid-js";
+import {
+    type Accessor,
+    type ParentProps,
+    createContext,
+    createEffect,
+    createMemo,
+    createSignal,
+    useContext,
+} from "solid-js";
 
 import { type FocusHandle, useChildFocus } from "../util/focus";
 import type { CellKey } from "./navigation";
@@ -7,6 +15,8 @@ type GridFocusContext = {
     activeKey: Accessor<CellKey | null>;
     tabStop: Accessor<CellKey | null>;
     cellFocus: (key: CellKey) => FocusHandle;
+    focusRequest: Accessor<{ key: CellKey; version: number } | null>;
+    requestFocus: (key: CellKey) => void;
 };
 
 const Context = createContext<GridFocusContext>();
@@ -24,6 +34,10 @@ export function GridFocus(
     };
     const children = useChildFocus<CellKey>(parent);
     const activeKey = () => (parent.hasFocus() ? children.activeChild() : null);
+    const [focusRequest, setFocusRequest] = createSignal<{ key: CellKey; version: number } | null>(
+        null,
+    );
+    let focusVersion = 0;
 
     createEffect(() => {
         if (parent.hasFocus() && children.activeChild() === null && props.firstCell) {
@@ -37,6 +51,10 @@ export function GridFocus(
                 activeKey,
                 tabStop: () => activeKey() ?? props.firstCell,
                 cellFocus: children.childFocus,
+                focusRequest,
+                // Requests are events, not pending work: cells observe the version
+                // change once. An editor closing or field updating cannot replay it.
+                requestFocus: (key) => setFocusRequest({ key, version: ++focusVersion }),
             }}
         >
             {props.children}
@@ -55,8 +73,15 @@ export function useGridFocus() {
 /** Resolve the key lazily: Index slots may acquire different row/header IDs. */
 export function useGridCellFocus(key: Accessor<CellKey>) {
     const grid = useGridFocus();
+    const selected = createMemo(() => grid.activeKey() === key());
+    const focusRequest = createMemo((version: number) => {
+        const request = grid.focusRequest();
+        // Requests for other cells are not focus events for this cell.
+        return request?.key === key() ? request.version : version;
+    }, 0);
     return {
-        selected: () => grid.activeKey() === key(),
+        selected,
+        focusRequest,
         tabindex: () => (grid.tabStop() === key() ? 0 : -1),
         focus: {
             hasFocus: () => grid.cellFocus(key()).hasFocus(),

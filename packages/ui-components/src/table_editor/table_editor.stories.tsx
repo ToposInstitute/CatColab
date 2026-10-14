@@ -90,7 +90,7 @@ function describeValue(value: LiteralValue | TableRow): string {
 Every committed field write is logged, so that stories can assert exactly-once
 commits.
  */
-function EditableTables(props: { initialSpecs: TableSpec[] }) {
+function EditableTables(props: { initialSpecs: TableSpec[]; remoteUpdates?: boolean }) {
     const [specs, setSpecs] = createSignal(props.initialSpecs);
     const [commits, setCommits] = createSignal<string[]>([]);
     const tables = () => specs().map(toInstanceTable);
@@ -123,6 +123,25 @@ function EditableTables(props: { initialSpecs: TableSpec[] }) {
 
     return (
         <div>
+            {props.remoteUpdates && (
+                <button
+                    type="button"
+                    onMouseDown={(evt) => evt.preventDefault()}
+                    onClick={() =>
+                        setSpecs((specs) =>
+                            specs.map((spec) => ({
+                                ...spec,
+                                rows: spec.rows.map((row) => ({
+                                    ...row,
+                                    values: { ...row.values, name: "Remote" },
+                                })),
+                            })),
+                        )
+                    }
+                >
+                    Remote update
+                </button>
+            )}
             <ol data-testid="commit-log">
                 <Index each={commits()}>{(commit) => <li>{commit()}</li>}</Index>
             </ol>
@@ -383,6 +402,123 @@ export const CommitWithTab: Story = {
             "team.name[team-atlas] = Greta",
         );
         await expect(cells[0]).toHaveAttribute("aria-selected", "false");
+    },
+};
+
+export const KeyboardExitFocus: Story = {
+    render: () => <EditableTables initialSpecs={[teamSpec]} />,
+    play: async ({ canvasElement }: { canvasElement: HTMLElement }) => {
+        const canvas = within(canvasElement);
+        const cells = canvas.getAllByRole("gridcell");
+        const last = cells[5]!;
+        // Repeated exits at a boundary must request focus even with no selection change.
+        await userEvent.click(last);
+        await userEvent.keyboard("7{Enter}");
+        await expect(last).toHaveFocus();
+        await expect(last).toHaveTextContent("7");
+        await userEvent.keyboard("8");
+        await userEvent.tab();
+        await expect(last).toHaveFocus();
+        await expect(last).toHaveTextContent("8");
+        await expect(canvas.getAllByRole("listitem")).toHaveLength(2);
+
+        await userEvent.keyboard("9{Escape}");
+        await expect(last).toHaveFocus();
+        await expect(last).toHaveTextContent("8");
+        await userEvent.keyboard("0{Escape}");
+        await expect(last).toHaveFocus();
+        await expect(canvas.getAllByRole("listitem")).toHaveLength(2);
+
+        await userEvent.keyboard("{F2}");
+        await userEvent.tab({ shift: true });
+        await expect(cells[4]).toHaveFocus();
+        await expect(canvas.getAllByRole("listitem")).toHaveLength(3);
+    },
+};
+
+export const BlurOutsideFocus: Story = {
+    render: () => (
+        <div>
+            <EditableTables initialSpecs={[teamSpec]} remoteUpdates />
+            <button type="button">Outside</button>
+            <div data-testid="outside-area">Non-focusable outside area</div>
+        </div>
+    ),
+    play: async ({ canvasElement }: { canvasElement: HTMLElement }) => {
+        const canvas = within(canvasElement);
+        const cells = canvas.getAllByRole("gridcell");
+        const outside = canvas.getByRole("button", { name: "Outside" });
+        const update = canvas.getByRole("button", { name: "Remote update" });
+
+        // A previous keyboard focus request must not replay on subsequent blur.
+        await userEvent.click(cells[0]!);
+        await userEvent.keyboard("Cancelled{Escape}");
+        await userEvent.keyboard("Greta");
+        await userEvent.click(outside);
+        await expect(outside).toHaveFocus();
+        await expect(cells[0]).toHaveTextContent("Greta");
+        await expect(cells[0]).toHaveAttribute("aria-selected", "false");
+        await expect(canvas.getAllByRole("listitem")).toHaveLength(1);
+        await userEvent.click(update);
+        await expect(outside).toHaveFocus();
+        await expect(cells[0]).toHaveTextContent("Remote");
+
+        // Invalid blur drops the draft without moving outside focus.
+        await userEvent.click(cells[1]!);
+        await userEvent.keyboard("invalid");
+        await userEvent.click(outside);
+        await expect(outside).toHaveFocus();
+        await expect(cells[1]).toHaveTextContent("5");
+        await expect(canvas.getAllByRole("listitem")).toHaveLength(1);
+
+        // Removing the focused editor while focus goes to body is not a restore request.
+        await userEvent.click(cells[0]!);
+        await userEvent.keyboard("Body");
+        await userEvent.click(canvas.getByTestId("outside-area"));
+        await expect(document.body).toHaveFocus();
+        await expect(cells[0]).toHaveTextContent("Body");
+        await expect(cells[0]).toHaveAttribute("aria-selected", "false");
+        await expect(canvas.getAllByRole("listitem")).toHaveLength(2);
+        await userEvent.click(update);
+        await expect(document.body).toHaveFocus();
+
+        // Re-entry and editing still work after blur and reactive updates.
+        await userEvent.click(cells[0]!);
+        await userEvent.keyboard("{F2}");
+        await expect(within(cells[0]!).getByRole("textbox")).toHaveFocus();
+        await userEvent.keyboard("{Escape}");
+        await expect(cells[0]).toHaveFocus();
+    },
+};
+
+export const ReactiveUpdateFocus: Story = {
+    render: () => <EditableTables initialSpecs={[teamSpec, personSpec]} remoteUpdates />,
+    play: async ({ canvasElement }: { canvasElement: HTMLElement }) => {
+        const canvas = within(canvasElement);
+        const update = canvas.getByRole("button", { name: "Remote update" });
+        const cells = within(canvas.getAllByRole("grid")[0]!).getAllByRole("gridcell");
+        await userEvent.click(cells[1]!);
+        await userEvent.click(update);
+        await expect(cells[1]).toHaveFocus();
+
+        await userEvent.click(cells[0]!);
+        await userEvent.keyboard("Draft");
+        const input = within(cells[0]!).getByRole("textbox");
+        await userEvent.click(update);
+        await expect(input).toHaveFocus();
+        await expect(input).toHaveValue("Draft");
+        await userEvent.keyboard("{Escape}");
+        await expect(cells[0]).toHaveFocus();
+        await expect(cells[0]).toHaveTextContent("Remote");
+        await expect(canvas.queryAllByRole("listitem")).toHaveLength(0);
+
+        // Selection is not an instruction to steal focus from a nested checkbox.
+        const checkbox = within(canvas.getAllByRole("grid")[1]!).getAllByRole("checkbox")[0]!;
+        await userEvent.click(checkbox);
+        checkbox.focus();
+        await userEvent.click(update);
+        await expect(checkbox).toHaveFocus();
+        await expect(canvas.getAllByRole("listitem")).toHaveLength(1);
     },
 };
 

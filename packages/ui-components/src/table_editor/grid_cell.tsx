@@ -1,4 +1,4 @@
-import { createEffect, Show } from "solid-js";
+import { createEffect, createMemo, on, Show } from "solid-js";
 
 import type { FieldValue, InstanceTable, TableHeader, TableRow } from "catcolab-documents";
 import { Cell } from "./cell";
@@ -16,33 +16,23 @@ export function GridCell(props: {
     field: FieldValue | undefined;
     tables: ReadonlyArray<InstanceTable>;
 }) {
-    const key = () => makeCellKey(props.header.id, props.row.id);
-    const { selected, tabindex, focus } = useGridCellFocus(key);
+    const key = createMemo(() => makeCellKey(props.header.id, props.row.id));
+    const { selected, tabindex, focus, focusRequest } = useGridCellFocus(() => key());
     const edit = useCellEdit();
     const editing = () => edit.isEditing(key());
 
     let tdRef!: HTMLTableCellElement;
 
-    // Keep DOM focus on the selected cell.
-    createEffect(() => {
-        if (selected() && !edit.isSuppressed(key()) && document.activeElement !== tdRef) {
-            tdRef.focus({ preventScroll: true });
-        }
-    });
-
-    // Regain focus when the editor closes without moving the selection, as on
-    // Escape. A commit from a blurred editor suppresses this: focus has
-    // already moved elsewhere.
-    createEffect(() => {
-        if (
-            !editing() &&
-            selected() &&
-            !edit.isSuppressed(key()) &&
-            document.activeElement === document.body
-        ) {
-            tdRef.focus({ preventScroll: true });
-        }
-    });
+    // Focus follows selection acquisition or an explicit keyboard-exit request.
+    // `on` leaves the callback untracked: closing an editor or updating a field
+    // is not itself a reason to move focus. TextInput owns focus while editing.
+    createEffect(
+        on([selected, key, focusRequest], ([isSelected]) => {
+            if (isSelected && !editing() && document.activeElement !== tdRef) {
+                tdRef.focus({ preventScroll: true });
+            }
+        }),
+    );
 
     return (
         <td

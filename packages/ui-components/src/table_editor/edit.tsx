@@ -59,10 +59,6 @@ type CellEditApi = {
 
     /** Whether the cell with the given key is the first cell of the grid. */
     isFirstCell: (key: CellKey) => boolean;
-
-    /** Whether refocusing the cell with the given key is temporarily
-    suppressed, as just after a commit from a blurred editor. */
-    isSuppressed: (key: CellKey) => boolean;
 };
 
 const Context = createContext<CellEditApi>();
@@ -82,7 +78,6 @@ export function EditProvider(
 ) {
     const grid = useGridFocus();
     const [edit, setEdit] = createSignal<EditState | null>(null);
-    const [suppressed, setSuppressed] = createSignal<CellKey | null>(null);
     const headerIndex = createMemo(
         () => new Map(props.table().headers.map((header, index) => [header.id, index] as const)),
     );
@@ -100,7 +95,6 @@ export function EditProvider(
         fieldOf(row, headerIndex().get(header.id) ?? -1);
 
     const select = (key: CellKey) => {
-        setSuppressed(null);
         grid.cellFocus(key).setFocused(true);
     };
 
@@ -127,7 +121,16 @@ export function EditProvider(
 
     const setEditText = (text: string) => setEdit((state) => (state ? { ...state, text } : state));
 
-    const cancelEdit = () => setEdit(null);
+    const cancelEdit = () => {
+        const state = edit();
+        if (!state) {
+            return;
+        }
+        batch(() => {
+            setEdit(null);
+            grid.requestFocus(makeCellKey(state.headerId, state.rowId));
+        });
+    };
 
     /** Commit the text of the open editor, writing to the cell by ID.
 
@@ -148,22 +151,20 @@ export function EditProvider(
             }
         }
         if (dir === "blur") {
-            // Focus has moved elsewhere; don't move the selection or steal it
-            // back to the edited cell. Suppression is applied before the
-            // editor unmounts, which drops the focus it held.
-            batch(() => {
-                setSuppressed(key);
-                setEdit(null);
-            });
+            // The browser is already transferring focus; only close the draft.
+            setEdit(null);
             return;
         }
-        setEdit(null);
-        const next = neighborKey(props.table(), headerIndex(), key, dir);
-        if (next) {
-            select(next);
-        }
-        // At the edge of the grid the selection stays put; appending a row on
-        // exit comes with structural changes.
+        const target = neighborKey(props.table(), headerIndex(), key, dir) ?? key;
+        batch(() => {
+            setEdit(null);
+            if (cell) {
+                select(target);
+                grid.requestFocus(target);
+            }
+        });
+        // At the edge of the grid, explicitly return focus to the same cell.
+        // Appending a row on exit comes with structural changes.
     };
 
     const toggleBool = (key: CellKey) => {
@@ -222,14 +223,6 @@ export function EditProvider(
         }
     });
 
-    // Suppression only applies while the suppressed cell is still selected.
-    createEffect(() => {
-        const key = suppressed();
-        if (key && grid.activeKey() !== key) {
-            setSuppressed(null);
-        }
-    });
-
     return (
         <Context.Provider
             value={{
@@ -244,7 +237,6 @@ export function EditProvider(
                 clearCell,
                 onCellKey,
                 isFirstCell,
-                isSuppressed: (key) => suppressed() === key,
             }}
         >
             {props.children}
