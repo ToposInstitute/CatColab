@@ -1,4 +1,4 @@
-import { createEffect, createMemo, on, Show } from "solid-js";
+import { createMemo, Show } from "solid-js";
 
 import type { FieldValue, InstanceTable, TableHeader, TableRow } from "catcolab-documents";
 import type { FocusHandle } from "../util/focus";
@@ -46,29 +46,15 @@ export function GridCell(props: {
         return codomain.rows.map((target) => ({
             name: defaultRowLabel(codomain, target),
             selected: target.id === currentId,
-            onComplete: () => edit.commitRowRef(key(), target, tdRef),
+            onComplete: () => edit.commitRowRef(key(), target),
         }));
     });
 
-    let tdRef!: HTMLTableCellElement;
-
-    // Move browser focus when this cell becomes selected. The editing check
-    // is untracked: closing an editor or updating a field must not move focus.
-    // TextInput owns browser focus while editing.
-    createEffect(
-        on([selected, key], ([isSelected]) => {
-            if (isSelected && !editing() && document.activeElement !== tdRef) {
-                tdRef.focus({ preventScroll: true });
-            }
-        }),
-    );
-
     return (
         <td
-            ref={tdRef}
+            id={edit.cellId(key())}
             class={styles.cell}
             role="gridcell"
-            tabindex={editing() ? -1 : 0}
             aria-selected={selected()}
             aria-invalid={invalid()}
             aria-readonly={props.header.type.tag === "Unknown"}
@@ -78,12 +64,13 @@ export function GridCell(props: {
                 [styles.invalid]: invalid(),
                 [styles.columnDeleting]: props.deleting,
             }}
-            onFocus={() => focus.setFocused(true)}
+            onFocus={() => edit.selectFromPointer(key())}
             onMouseDown={(evt) => {
-                // Some browsers do not focus the containing cell on click, and
-                // focusing must not steal focus from an open editor.
+                // Keep real focus on the grid, except in the active editor.
+                // Prevent native checkbox focus without preventing its click toggle.
                 if (!editing()) {
-                    evt.currentTarget.focus();
+                    evt.preventDefault();
+                    edit.selectFromPointer(key());
                 }
             }}
             onDblClick={() => {
@@ -115,8 +102,8 @@ export function GridCell(props: {
                     }
                     completions={completions()}
                     readOnly={props.header.type.tag === "RowRef"}
-                    onCommit={(dir) => edit.commitEdit(dir, tdRef)}
-                    onCancel={() => edit.cancelEdit(tdRef)}
+                    onCommit={edit.commitEdit}
+                    onCancel={edit.cancelEdit}
                 />
             </Show>
         </td>

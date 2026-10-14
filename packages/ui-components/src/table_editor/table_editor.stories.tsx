@@ -565,6 +565,13 @@ function SingleTable(props: { initialSpec: TableSpec; addRowDelay?: number }) {
     );
 }
 
+async function expectActiveCell(cell: HTMLElement) {
+    const grid = cell.closest('[role="grid"]')!;
+    await expect(grid).toHaveFocus();
+    await expect(grid).toHaveAttribute("aria-activedescendant", cell.id);
+    await expect(cell).toHaveAttribute("aria-selected", "true");
+}
+
 export const FocusBoundaries: Story = {
     render: () => (
         <div>
@@ -584,8 +591,6 @@ export const FocusBoundaries: Story = {
 
         await userEvent.click(cell);
         await userEvent.keyboard("{Enter}");
-        await userEvent.tab();
-        await waitFor(() => expect(canvas.getAllByRole("gridcell")[1]).toHaveFocus());
         await userEvent.tab();
         await expect(canvas.getByRole("button", { name: "+ Row" })).toHaveFocus();
         await userEvent.tab();
@@ -614,14 +619,14 @@ export const FocusAfterDelete: Story = {
         await waitFor(async () => {
             const firstCell = canvas.getAllByRole("gridcell")[0]!;
             await expect(firstCell).toHaveTextContent("First");
-            await expect(firstCell).toHaveFocus();
+            await expectActiveCell(firstCell);
         });
 
         await userEvent.click(canvas.getAllByRole("button", { name: "Delete row" })[0]!);
         await waitFor(async () => {
             const remainingCell = canvas.getByRole("gridcell");
             await expect(remainingCell).toHaveTextContent("Third");
-            await expect(remainingCell).toHaveFocus();
+            await expectActiveCell(remainingCell);
         });
     },
 };
@@ -660,7 +665,7 @@ export const AddRowButtonFocusesNewRow: Story = {
         await waitFor(async () => {
             const cells = canvas.getAllByRole("gridcell");
             await expect(cells).toHaveLength(2);
-            await expect(cells[1]).toHaveFocus();
+            await expectActiveCell(cells[1]!);
         });
     },
 };
@@ -693,7 +698,7 @@ export const ContinueEditingAfterAsyncAdd: Story = {
             const cells = canvas.getAllByRole("gridcell");
             await expect(cells).toHaveLength(3);
             await expect(cells[1]).toHaveTextContent("Updated second row");
-            await expect(cells[2]).toHaveFocus();
+            await expectActiveCell(cells[2]!);
         });
     },
 };
@@ -808,7 +813,7 @@ export const RemoteRowDeleteWhileEditing: Story = {
         await expect(cells).toHaveLength(2);
         await expect(cells[0]).toHaveTextContent("Edited");
         await expect(cells[1]).toHaveTextContent("Third");
-        await expect(cells[1]).toHaveFocus();
+        await expectActiveCell(cells[1]!);
         await expect(canvas.getByTestId("writes")).toHaveTextContent("1");
     },
 };
@@ -836,7 +841,7 @@ export const RemoteColumnInsertWhileEditing: Story = {
         await expect(cells[0]).toHaveTextContent("");
         await expect(cells[1]).toHaveTextContent("Edited");
         await expect(cells[3]).toHaveTextContent("Second");
-        await expect(cells[3]).toHaveFocus();
+        await expectActiveCell(cells[3]!);
         await expect(canvas.getByTestId("writes")).toHaveTextContent("1");
     },
 };
@@ -858,7 +863,7 @@ export const RemoteDeleteOfEditedRow: Story = {
         const cells = canvas.getAllByRole("gridcell");
         await expect(cells[0]).toHaveTextContent("Second");
         await expect(cells[1]).toHaveTextContent("Third");
-        await expect(cells[0]).toHaveFocus();
+        await expectActiveCell(cells[0]!);
     },
 };
 

@@ -60,21 +60,14 @@ function GridContent(props: TableGridProps) {
     return (
         <div
             class={styles.scrollArea}
-            tabindex={-1}
             onFocusOut={(evt) => edit.onFocusOut(evt, true)}
             onKeyDown={(evt) => {
-                if (evt.defaultPrevented) {
+                if (evt.defaultPrevented || evt.ctrlKey || evt.metaKey || evt.altKey) {
                     return;
                 }
-                // Leave the open cell editor to handle its own keys. Keys
-                // pressed on the boolean checkbox bubble and act on the
-                // selected cell.
+                // Editors and other controls handle their own keyboard events.
                 const target = evt.target as HTMLElement;
-                if (
-                    target !== evt.currentTarget &&
-                    target.tagName === "INPUT" &&
-                    (target as HTMLInputElement).type === "text"
-                ) {
+                if (target !== evt.currentTarget.querySelector("table")) {
                     return;
                 }
                 const key = edit.activeKey();
@@ -95,7 +88,21 @@ function GridContent(props: TableGridProps) {
                 evt.preventDefault();
             }}
         >
-            <table class={styles.grid} role="grid" aria-rowcount={props.table.rows.length + 1}>
+            <table
+                ref={edit.setGridElement}
+                class={styles.grid}
+                role="grid"
+                tabindex={edit.hasEditor() ? -1 : 0}
+                aria-rowcount={props.table.rows.length + 1}
+                aria-activedescendant={
+                    edit.activeKey() ? edit.cellId(edit.activeKey()!) : undefined
+                }
+                onFocus={(evt) => {
+                    if (evt.target === evt.currentTarget) {
+                        edit.enterGrid();
+                    }
+                }}
+            >
                 <colgroup>
                     <col class={styles.rowHeaderColumn} />
                     <Show
