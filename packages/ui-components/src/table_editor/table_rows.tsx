@@ -10,7 +10,7 @@ import styles from "./table_editor.module.css";
 export function TableRows(props: {
     rows: ReadonlyArray<TableRow>;
     headers: ReadonlyArray<TableHeader>;
-    headerIndex: () => Map<string, number>;
+    headerIndex: () => ReadonlyMap<string, number>;
     tables: ReadonlyArray<InstanceTable>;
 }) {
     return (
@@ -33,7 +33,7 @@ export function TableRows(props: {
 function BodyRow(props: {
     row: TableRow;
     headers: ReadonlyArray<TableHeader>;
-    headerIndex: () => Map<string, number>;
+    headerIndex: () => ReadonlyMap<string, number>;
     tables: ReadonlyArray<InstanceTable>;
 }) {
     return (

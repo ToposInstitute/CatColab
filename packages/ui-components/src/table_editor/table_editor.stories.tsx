@@ -1,4 +1,4 @@
-import { Index } from "solid-js";
+import { createSignal, Index } from "solid-js";
 import type { Meta, StoryObj } from "storybook-solidjs-vite";
 import { expect, userEvent, within } from "storybook/test";
 
@@ -13,6 +13,8 @@ import type {
 } from "catcolab-documents";
 import { rootFocus, useChildFocus } from "../util/focus";
 import { TableEditor } from "./table_editor";
+
+import styles from "./table_editor.module.css";
 
 const meta = {
     title: "Forms & Inputs/TableEditor",
@@ -75,25 +77,71 @@ function toFieldValue(
     return { tag: "String", content: { path, value } };
 }
 
-/** Renders read-only table editors backed by in-memory table specs. */
-function TableViews(props: { initialSpecs: TableSpec[] }) {
-    const tables = () => props.initialSpecs.map(toInstanceTable);
+/** Describes a committed field write for the commit log. */
+function describeValue(value: LiteralValue | TableRow): string {
+    if (typeof value === "object" && value !== null) {
+        return `row ${value.id}`;
+    }
+    return value === null ? "null" : String(value);
+}
+
+/** Renders editable table editors backed by in-memory table specs.
+
+Every committed field write is logged, so that stories can assert exactly-once
+commits.
+ */
+function EditableTables(props: { initialSpecs: TableSpec[] }) {
+    const [specs, setSpecs] = createSignal(props.initialSpecs);
+    const [commits, setCommits] = createSignal<string[]>([]);
+    const tables = () => specs().map(toInstanceTable);
     const focus = useChildFocus<string>(rootFocus);
 
+    const updateSpec = (tableId: string, update: (spec: TableSpec) => TableSpec) =>
+        setSpecs((specs) => specs.map((spec) => (spec.id === tableId ? update(spec) : spec)));
+
+    const setField = (
+        tableId: string,
+        row: TableRow,
+        header: TableHeader,
+        value: LiteralValue | TableRow,
+    ) => {
+        const stored: LiteralValue | { rowId: string } =
+            typeof value === "object" && value !== null ? { rowId: value.id } : value;
+        setCommits((commits) => [
+            ...commits,
+            `${tableId}.${header.id}[${row.id}] = ${describeValue(value)}`,
+        ]);
+        updateSpec(tableId, (spec) => ({
+            ...spec,
+            rows: spec.rows.map((specRow) =>
+                specRow.id === row.id
+                    ? { ...specRow, values: { ...specRow.values, [header.id]: stored } }
+                    : specRow,
+            ),
+        }));
+    };
+
     return (
-        <div style={{ display: "flex", "flex-wrap": "wrap", gap: "1.5rem" }}>
-            <Index each={tables()}>
-                {(table) => (
-                    <TableEditor
-                        table={table()}
-                        tables={tables()}
-                        focus={focus.childFocus(table().id)}
-                        onSetField={() => {}}
-                        onAddRow={() => {}}
-                        onDeleteRow={() => {}}
-                    />
-                )}
-            </Index>
+        <div>
+            <ol data-testid="commit-log">
+                <Index each={commits()}>{(commit) => <li>{commit()}</li>}</Index>
+            </ol>
+            <div style={{ display: "flex", "flex-wrap": "wrap", gap: "1.5rem" }}>
+                <Index each={tables()}>
+                    {(table) => (
+                        <TableEditor
+                            table={table()}
+                            tables={tables()}
+                            focus={focus.childFocus(table().id)}
+                            onSetField={(row, header, value) =>
+                                setField(table().id, row, header, value)
+                            }
+                            onAddRow={() => {}}
+                            onDeleteRow={() => {}}
+                        />
+                    )}
+                </Index>
+            </div>
         </div>
     );
 }
@@ -135,11 +183,211 @@ const personSpec: TableSpec = {
 };
 
 export const Summary: Story = {
-    render: () => <TableViews initialSpecs={[teamSpec, personSpec]} />,
+    render: () => <EditableTables initialSpecs={[teamSpec, personSpec]} />,
+};
+
+export const EditString: Story = {
+    render: () => <EditableTables initialSpecs={[teamSpec]} />,
+    play: async ({ canvasElement }: { canvasElement: HTMLElement }) => {
+        const canvas = within(canvasElement);
+        const cells = canvas.getAllByRole("gridcell");
+
+        // Typing on a selected cell replaces its content.
+        await userEvent.click(cells[0]!);
+        await userEvent.keyboard("Greta");
+        const input = within(cells[0]!).getByRole("textbox");
+        await expect(input).toHaveValue("Greta");
+
+        await userEvent.keyboard("{Enter}");
+        await expect(cells[0]).toHaveTextContent("Greta");
+        await expect(canvas.getAllByRole("listitem")).toHaveLength(1);
+        await expect(canvas.getAllByRole("listitem")[0]).toHaveTextContent(
+            "team.name[team-atlas] = Greta",
+        );
+
+        // Committing moves the selection down.
+        await expect(cells[2]).toHaveFocus();
+        await expect(cells[0]).toHaveAttribute("aria-selected", "false");
+        await expect(cells[2]).toHaveAttribute("aria-selected", "true");
+    },
+};
+
+export const InvalidIntReverts: Story = {
+    render: () => <EditableTables initialSpecs={[teamSpec]} />,
+    play: async ({ canvasElement }: { canvasElement: HTMLElement }) => {
+        const canvas = within(canvasElement);
+        const cells = canvas.getAllByRole("gridcell");
+
+        await userEvent.click(cells[1]!);
+        await userEvent.keyboard("abc");
+        const input = within(cells[1]!).getByRole("textbox");
+        await expect(input).toHaveValue("abc");
+        await expect(input).toHaveClass(styles.invalid);
+        await expect(cells[1]).toHaveClass(styles.selected);
+
+        await userEvent.keyboard("{Enter}");
+        // Invalid input is dropped: the cell keeps its previous value, but the
+        // selection still moves on.
+        await expect(cells[1]).toHaveTextContent("5");
+        await expect(cells[3]).toHaveFocus();
+        await expect(canvas.queryAllByRole("listitem")).toHaveLength(0);
+    },
+};
+
+export const EscapeCancels: Story = {
+    render: () => <EditableTables initialSpecs={[teamSpec]} />,
+    play: async ({ canvasElement }: { canvasElement: HTMLElement }) => {
+        const canvas = within(canvasElement);
+        const cells = canvas.getAllByRole("gridcell");
+
+        await userEvent.click(cells[0]!);
+        await userEvent.keyboard("Greta");
+        await userEvent.keyboard("{Escape}");
+        await expect(cells[0]).toHaveTextContent("Atlas");
+        await expect(cells[0]).toHaveFocus();
+        await expect(canvas.queryAllByRole("listitem")).toHaveLength(0);
+    },
+};
+
+export const BlurCommits: Story = {
+    render: () => <EditableTables initialSpecs={[teamSpec]} />,
+    play: async ({ canvasElement }: { canvasElement: HTMLElement }) => {
+        const canvas = within(canvasElement);
+        const cells = canvas.getAllByRole("gridcell");
+
+        await userEvent.click(cells[0]!);
+        await userEvent.keyboard("Greta");
+        // Committing from a blurred editor must not steal focus back: the
+        // clicked cell takes the selection.
+        await userEvent.click(cells[3]!);
+        await expect(cells[0]).toHaveTextContent("Greta");
+        await expect(cells[3]).toHaveFocus();
+        await expect(cells[3]).toHaveAttribute("aria-selected", "true");
+        await expect(cells[0]).toHaveAttribute("aria-selected", "false");
+        await expect(canvas.getAllByRole("listitem")).toHaveLength(1);
+    },
+};
+
+export const DeleteClears: Story = {
+    render: () => <EditableTables initialSpecs={[teamSpec]} />,
+    play: async ({ canvasElement }: { canvasElement: HTMLElement }) => {
+        const canvas = within(canvasElement);
+        const cells = canvas.getAllByRole("gridcell");
+
+        await userEvent.click(cells[0]!);
+        await userEvent.keyboard("{Delete}");
+        await expect(cells[0]).toHaveTextContent("");
+        await expect(canvas.getAllByRole("listitem")[0]).toHaveTextContent(
+            "team.name[team-atlas] = null",
+        );
+        // The selection stays put after clearing.
+        await expect(cells[0]).toHaveFocus();
+        await expect(canvas.getAllByRole("listitem")).toHaveLength(1);
+    },
+};
+
+export const ToggleBooleans: Story = {
+    render: () => (
+        <EditableTables
+            initialSpecs={[
+                {
+                    id: "boolean",
+                    label: "Boolean",
+                    columns: [{ id: "active", label: "active", type: "Bool" }],
+                    rows: [
+                        { id: "boolean-1", values: { active: true } },
+                        { id: "boolean-2", values: { active: false } },
+                    ],
+                },
+            ]}
+        />
+    ),
+    play: async ({ canvasElement }: { canvasElement: HTMLElement }) => {
+        const canvas = within(canvasElement);
+        const cells = canvas.getAllByRole("gridcell");
+        const checkbox = within(cells[0]!).getByRole("checkbox") as HTMLInputElement;
+
+        // Clicking the checkbox itself toggles the value.
+        await expect(checkbox).toBeChecked();
+        await userEvent.click(checkbox);
+        await expect(checkbox).not.toBeChecked();
+
+        // Enter and Space toggle the selected boolean cell as well.
+        await userEvent.keyboard("{Enter}");
+        await expect(checkbox).toBeChecked();
+        await userEvent.keyboard(" ");
+        await expect(checkbox).not.toBeChecked();
+
+        await expect(canvas.getAllByRole("listitem")).toHaveLength(3);
+        await expect(canvas.getAllByRole("listitem")[0]).toHaveTextContent("= false");
+        await expect(canvas.getAllByRole("listitem")[1]).toHaveTextContent("= true");
+        await expect(canvas.getAllByRole("listitem")[2]).toHaveTextContent("= false");
+    },
+};
+
+export const DoubleClickBooleanCell: Story = {
+    render: () => (
+        <EditableTables
+            initialSpecs={[
+                {
+                    id: "boolean",
+                    label: "Boolean",
+                    columns: [{ id: "active", label: "active", type: "Bool" }],
+                    rows: [{ id: "boolean-1", values: { active: true } }],
+                },
+            ]}
+        />
+    ),
+    play: async ({ canvasElement }: { canvasElement: HTMLElement }) => {
+        const canvas = within(canvasElement);
+        const cell = canvas.getAllByRole("gridcell")[0]!;
+        const checkbox = within(cell).getByRole("checkbox") as HTMLInputElement;
+
+        await expect(checkbox).toBeChecked();
+        await userEvent.dblClick(cell);
+        await expect(checkbox).not.toBeChecked();
+    },
+};
+
+export const CommitWithTab: Story = {
+    render: () => (
+        <div>
+            <button type="button">Before table</button>
+            <EditableTables initialSpecs={[teamSpec]} />
+        </div>
+    ),
+    play: async ({ canvasElement }: { canvasElement: HTMLElement }) => {
+        const canvas = within(canvasElement);
+        const cells = canvas.getAllByRole("gridcell");
+
+        await userEvent.click(cells[0]!);
+        await userEvent.keyboard("{Enter}");
+        await expect(within(cells[0]!).getByRole("textbox")).toHaveFocus();
+
+        // Tab commits and moves forward through the grid.
+        await userEvent.tab();
+        await expect(cells[1]).toHaveFocus();
+        await expect(canvas.getAllByRole("listitem")).toHaveLength(1);
+
+        await userEvent.tab({ shift: true });
+        await expect(cells[0]).toHaveFocus();
+
+        // At the first cell, Shift+Tab leaves the grid; the draft commits on
+        // blur without moving the selection.
+        await userEvent.keyboard("Greta");
+        await userEvent.tab({ shift: true });
+        await expect(canvas.getByRole("button", { name: "Before table" })).toHaveFocus();
+        await expect(cells[0]).toHaveTextContent("Greta");
+        await expect(canvas.getAllByRole("listitem")).toHaveLength(2);
+        await expect(canvas.getAllByRole("listitem")[1]).toHaveTextContent(
+            "team.name[team-atlas] = Greta",
+        );
+        await expect(cells[0]).toHaveAttribute("aria-selected", "false");
+    },
 };
 
 export const KeyboardNavigation: Story = {
-    render: () => <TableViews initialSpecs={[teamSpec]} />,
+    render: () => <EditableTables initialSpecs={[teamSpec]} />,
     play: async ({ canvasElement }: { canvasElement: HTMLElement }) => {
         const canvas = within(canvasElement);
         const cells = canvas.getAllByRole("gridcell");
@@ -158,7 +406,7 @@ export const KeyboardNavigation: Story = {
 };
 
 export const FocusBoundaries: Story = {
-    render: () => <TableViews initialSpecs={[teamSpec]} />,
+    render: () => <EditableTables initialSpecs={[teamSpec]} />,
     play: async ({ canvasElement }: { canvasElement: HTMLElement }) => {
         const canvas = within(canvasElement);
         const cells = canvas.getAllByRole("gridcell");
@@ -182,7 +430,7 @@ export const FocusReentry: Story = {
     render: () => (
         <div>
             <button type="button">Before</button>
-            <TableViews initialSpecs={[teamSpec, personSpec]} />
+            <EditableTables initialSpecs={[teamSpec, personSpec]} />
             <button type="button">After</button>
         </div>
     ),
@@ -217,7 +465,7 @@ export const FocusReentry: Story = {
 
 export const EmptyColumns: Story = {
     render: () => (
-        <TableViews
+        <EditableTables
             initialSpecs={[
                 {
                     id: "bare",
@@ -232,7 +480,7 @@ export const EmptyColumns: Story = {
 
 export const Unnamed: Story = {
     render: () => (
-        <TableViews
+        <EditableTables
             initialSpecs={[
                 {
                     id: "unnamed",

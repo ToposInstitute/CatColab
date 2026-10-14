@@ -1,9 +1,10 @@
-import { createMemo, Index, Show } from "solid-js";
+import { Show, Index } from "solid-js";
 
-import type { InstanceTable } from "catcolab-documents";
+import type { InstanceTable, LiteralValue, TableHeader, TableRow } from "catcolab-documents";
 import type { FocusHandle } from "../util/focus";
 import { ColumnHeader } from "./column_header";
 import { COLUMN_WIDTHS, EMPTY_COLUMN_WIDTH } from "./display";
+import { EditProvider, useCellEdit } from "./edit";
 import { GridFocus, useGridFocus } from "./grid_focus";
 import { firstCellKey, navigationDirection, neighborKey } from "./navigation";
 import { TableRows } from "./table_rows";
@@ -14,22 +15,28 @@ type TableGridProps = {
     focus: FocusHandle;
     table: InstanceTable;
     tables: ReadonlyArray<InstanceTable>;
+    onSetField: (row: TableRow, header: TableHeader, value: LiteralValue | TableRow) => void;
 };
 
 export function TableGrid(props: TableGridProps) {
     return (
         <GridFocus focus={props.focus} firstCell={firstCellKey(props.table)}>
-            <GridContent {...props} />
+            <EditProvider
+                table={() => props.table}
+                tables={() => props.tables}
+                onSetField={props.onSetField}
+            >
+                <GridContent {...props} />
+            </EditProvider>
         </GridFocus>
     );
 }
 
 function GridContent(props: TableGridProps) {
     const focus = useGridFocus();
+    const edit = useCellEdit();
     const headers = () => props.table.headers;
-    const headerIndex = createMemo(
-        () => new Map(headers().map((header, index) => [header.id, index] as const)),
-    );
+    const headerIndex = edit.headerIndex;
 
     return (
         <div
@@ -48,15 +55,27 @@ function GridContent(props: TableGridProps) {
                 if (evt.defaultPrevented) {
                     return;
                 }
-                // Leave nested inputs to handle their own keys.
+                // Leave the open cell editor to handle its own keys. Keys
+                // pressed on the boolean checkbox bubble and act on the
+                // selected cell.
                 const target = evt.target as HTMLElement;
-                if (target !== evt.currentTarget && target.getAttribute("role") !== "gridcell") {
+                if (
+                    target !== evt.currentTarget &&
+                    target.tagName === "INPUT" &&
+                    (target as HTMLInputElement).type === "text"
+                ) {
                     return;
                 }
                 // The container uses the same tab stop as the cells.
                 const key = focus.tabStop();
+                if (!key) {
+                    return;
+                }
                 const direction = navigationDirection(evt);
-                if (!key || !direction) {
+                if (!direction) {
+                    if (edit.onCellKey(evt, key)) {
+                        evt.preventDefault();
+                    }
                     return;
                 }
                 const next = neighborKey(props.table, headerIndex(), key, direction);

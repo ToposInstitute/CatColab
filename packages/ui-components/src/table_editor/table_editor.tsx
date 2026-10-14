@@ -63,7 +63,12 @@ export function TableEditor(props: TableEditorProps) {
         >
             <TitleBar table={props.table} onHide={props.onHide} />
             <div class={styles.scrollViewport}>
-                <TableGrid focus={props.focus} table={props.table} tables={props.tables} />
+                <TableGrid
+                    focus={props.focus}
+                    table={props.table}
+                    tables={props.tables}
+                    onSetField={props.onSetField}
+                />
             </div>
             <Show when={props.table.label !== null}>
                 <div class={styles.footer}>

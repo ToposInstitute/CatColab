@@ -10,6 +10,7 @@ export function Cell(props: {
     field: FieldValue | undefined;
     header: TableHeader;
     tables: ReadonlyArray<InstanceTable>;
+    onToggle?: () => void;
 }) {
     return (
         <Show
@@ -25,7 +26,13 @@ export function Cell(props: {
                 class={styles.checkbox}
                 checked={props.field?.tag === "Bool" && props.field.content.value}
                 tabindex={-1}
-                disabled
+                // Boolean cells toggle only when the checkbox itself is
+                // clicked; clicking elsewhere in the cell just selects it. The
+                // native toggle is deliberately not prevented: reverting it
+                // would fight with the reactively controlled `checked`
+                // property, which instead confirms the toggle when the new
+                // value flows back in.
+                onClick={() => props.onToggle?.()}
             />
         </Show>
     );
