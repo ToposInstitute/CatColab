@@ -2,19 +2,22 @@ import type { LiteralValue, TableHeader } from "catcolab-documents";
 
 /** Whether a cell under the given header can be edited in place.
 
-Boolean cells are toggled rather than edited as text. Row references are
-selected through completions and are not yet editable. Unknown columns are
-never editable.
+Boolean cells are toggled rather than edited as text, and row references are
+selected through completions rather than parsed from text. Unknown columns
+are never editable.
  */
 export function isEditableCell(header: TableHeader): boolean {
     const tag = header.type.tag;
-    return tag === "Bool" || tag === "Int" || tag === "Float" || tag === "String";
+    return (
+        tag === "Bool" || tag === "Int" || tag === "Float" || tag === "String" || tag === "RowRef"
+    );
 }
 
-/** Parse text committed by a cell editor into a field value.
+/** Parse text committed by a cell editor into a literal field value.
 
-An empty field parses to `null`, clearing the cell. Row references are not
-parsed here: they are committed through completions instead.
+An empty field parses to `null`, clearing the cell. Row references are never
+parsed here: they are committed through completions instead, so the read-only
+draft text of a row-reference editor is always invalid.
  */
 export function parseValue(
     header: TableHeader,

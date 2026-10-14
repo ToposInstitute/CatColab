@@ -3,6 +3,7 @@ import { createEffect, createMemo, on, Show } from "solid-js";
 import type { FieldValue, InstanceTable, TableHeader, TableRow } from "catcolab-documents";
 import { Cell } from "./cell";
 import { CellEditor } from "./cell_editor";
+import { codomainOf, defaultRowLabel } from "./display";
 import { useCellEdit } from "./edit";
 import { parseValue } from "./editing";
 import { useGridCellFocus } from "./grid_focus";
@@ -20,6 +21,24 @@ export function GridCell(props: {
     const { selected, tabindex, focus } = useGridCellFocus(() => key());
     const edit = useCellEdit();
     const editing = () => edit.isEditing(key());
+
+    /** Possible values for a row-reference cell, with the current value
+    highlighted. The target is committed by the completion itself. */
+    const completions = createMemo(() => {
+        if (props.header.type.tag !== "RowRef") {
+            return undefined;
+        }
+        const codomain = codomainOf(props.header, props.tables);
+        if (!codomain) {
+            return [];
+        }
+        const currentId = props.field?.tag === "RowRef" ? props.field.content.id : undefined;
+        return codomain.rows.map((target) => ({
+            name: defaultRowLabel(codomain, target),
+            selected: target.id === currentId,
+            onComplete: () => edit.commitRowRef(key(), target, tdRef),
+        }));
+    });
 
     let tdRef!: HTMLTableCellElement;
 
@@ -66,6 +85,7 @@ export function GridCell(props: {
                         header={props.header}
                         tables={props.tables}
                         onToggle={() => edit.toggleBool(key())}
+                        onOpenRowRef={() => edit.startEdit(key())}
                     />
                 }
             >
@@ -73,7 +93,11 @@ export function GridCell(props: {
                     focus={focus}
                     text={edit.editText()}
                     setText={edit.setEditText}
-                    validate={(text) => parseValue(props.header, text).ok}
+                    validate={(text) =>
+                        props.header.type.tag === "RowRef" || parseValue(props.header, text).ok
+                    }
+                    completions={completions()}
+                    readOnly={props.header.type.tag === "RowRef"}
                     canExitBackward={!edit.isFirstCell(key())}
                     onCommit={(dir) => edit.commitEdit(dir, tdRef)}
                     onCancel={() => edit.cancelEdit(tdRef)}

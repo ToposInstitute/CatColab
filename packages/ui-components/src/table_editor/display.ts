@@ -40,14 +40,38 @@ export function fieldText(
         return "";
     }
     if (field.tag === "RowRef") {
-        const codomain = codomainOf(header, tables);
-        const target = codomain?.rows.find((row) => row.id === field.content.id);
-        return codomain && target ? defaultRowLabel(codomain, target) : "?";
+        return rowRefText(field.content.id, header, tables);
     }
     if (field.tag === "Bool") {
         return field.content.value ? "true" : "false";
     }
     return String(field.content.value);
+}
+
+/** Display text for a row reference.
+
+A reference into the column's codomain displays the target row's label. A
+reference to a row of some other table displays that row's label, exposing a
+type error to the user. A reference to no row at all displays the codomain's
+name followed by a question mark.
+ */
+function rowRefText(
+    rowId: string,
+    header: TableHeader,
+    tables: ReadonlyArray<InstanceTable>,
+): string {
+    const codomain = codomainOf(header, tables);
+    const target = codomain?.rows.find((row) => row.id === rowId);
+    if (codomain && target) {
+        return defaultRowLabel(codomain, target);
+    }
+    for (const table of tables) {
+        const mistyped = table.rows.find((row) => row.id === rowId);
+        if (mistyped) {
+            return defaultRowLabel(table, mistyped);
+        }
+    }
+    return codomain ? `${tableDisplayName(codomain)} ?` : "?";
 }
 
 /** Default display label for a row referenced by a `RowRef` cell. */

@@ -93,6 +93,38 @@
     user-select: none;
 }
 
+.rowRefContent {
+    position: relative;
+    display: flex;
+    align-items: center;
+    height: 100%;
+}
+
+.rowRefContent .cellText {
+    flex: 1;
+    min-width: 0;
+    padding-right: calc(24px + 0.35rem);
+}
+
+.rowRefIndicator {
+    position: absolute;
+    top: 0;
+    right: 0.35rem;
+    display: grid;
+    place-items: center;
+    width: 24px;
+    height: 100%;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--color-text-secondary);
+    cursor: pointer;
+}
+
+.rowRefIndicator:hover {
+    color: var(--color-foreground);
+}
+
 /* A darker shade of the active-item highlight in the completions popup
 (--color-highlight-bg). An outline is used because, unlike an inset box
 shadow, it is painted above the cell editor input. */

@@ -1,5 +1,6 @@
 import { onCleanup } from "solid-js";
 
+import { type Completion } from "../completions";
 import { TextInput } from "../text_input";
 import type { FocusHandle } from "../util/focus";
 import type { MoveDirection } from "./navigation";
@@ -17,6 +18,13 @@ export function CellEditor(props: {
     setText: (text: string) => void;
     validate: (text: string) => boolean;
     canExitBackward: boolean;
+    /** Possible values, shown in a popup while the editor is focused.
+
+    Selecting a completion commits the cell through the completion itself.
+     */
+    completions?: Completion[];
+    /** Whether the editor text is read-only, as for row references. */
+    readOnly?: boolean;
     onCommit: (dir: MoveDirection | "blur") => void;
     onCancel: () => void;
 }) {
@@ -46,11 +54,19 @@ export function CellEditor(props: {
             text={props.text}
             setText={props.setText}
             focus={props.focus}
+            readOnly={props.readOnly}
+            completions={props.completions}
+            filterCompletionsByText={!props.readOnly}
             exitUp={() => commit("up")}
             exitDown={() => commit("down")}
             exitForward={() => commit("forward")}
             exitBackward={props.canExitBackward ? () => commit("backward") : undefined}
             createBelow={() => commit("down")}
+            onComplete={() => {
+                // The completion has committed the cell; don't also commit an
+                // exit direction.
+                finished = true;
+            }}
             interceptKeyDown={(evt) => {
                 if (evt.key === "Escape") {
                     finished = true;

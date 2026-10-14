@@ -51,6 +51,10 @@ type CellEditApi = {
     /** Toggle a boolean cell. */
     toggleBool: (key: CellKey) => void;
 
+    /** Commit a row reference chosen from the completions popup, leaving the
+    selection in place. */
+    commitRowRef: (key: CellKey, target: TableRow, cellElement: HTMLTableCellElement) => void;
+
     /** Clear the field of a cell. */
     clearCell: (key: CellKey) => void;
 
@@ -182,6 +186,23 @@ export function EditProvider(
         props.onSetField(cell.row, cell.header, !current);
     };
 
+    /** The row reference is committed by the completion itself; the editor
+    simply closes without moving the selection. */
+    const commitRowRef = (key: CellKey, target: TableRow, cellElement: HTMLTableCellElement) => {
+        const state = edit();
+        if (!state || makeCellKey(state.headerId, state.rowId) !== key) {
+            return;
+        }
+        const cell = resolveCell(key);
+        if (cell) {
+            props.onSetField(cell.row, cell.header, target);
+        }
+        setEdit(null);
+        if (grid.activeKey() === key && edit() === null && cellElement.isConnected) {
+            cellElement.focus({ preventScroll: true });
+        }
+    };
+
     const clearCell = (key: CellKey) => {
         const cell = resolveCell(key);
         if (!cell || !isEditableCell(cell.header)) {
@@ -202,6 +223,7 @@ export function EditProvider(
             return false;
         }
         const isBool = cell.header.type.tag === "Bool";
+        const isRowRef = cell.header.type.tag === "RowRef";
         if (evt.key === "Enter" || evt.key === "F2") {
             if (isBool) {
                 toggleBool(key);
@@ -213,7 +235,8 @@ export function EditProvider(
         } else if (evt.key === "Delete" || evt.key === "Backspace") {
             clearCell(key);
         } else if (!isBool && isPrintableKey(evt)) {
-            startEdit(key, evt.key);
+            // A row reference is read-only: any key just opens its completions.
+            startEdit(key, isRowRef ? undefined : evt.key);
         } else {
             return false;
         }
@@ -239,6 +262,7 @@ export function EditProvider(
                 cancelEdit,
                 commitEdit,
                 toggleBool,
+                commitRowRef,
                 clearCell,
                 onCellKey,
                 isFirstCell,

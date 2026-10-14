@@ -368,6 +368,135 @@ export const DoubleClickBooleanCell: Story = {
     },
 };
 
+/** The person table's columns are name, team, active, and score. */
+function personCell(column: number, row: number): number {
+    return row * 4 + column;
+}
+
+/** The cells of the person table, the second grid rendered. */
+function personCells(canvas: ReturnType<typeof within>): HTMLElement[] {
+    return within(canvas.getAllByRole("grid")[1]!).getAllByRole("gridcell");
+}
+
+export const ChooseRowRef: Story = {
+    render: () => <EditableTables initialSpecs={[teamSpec, personSpec]} />,
+    play: async ({ canvasElement }: { canvasElement: HTMLElement }) => {
+        const canvas = within(canvasElement);
+        const teamCell = personCells(canvas)[personCell(1, 1)]!; // Bob's team, currently Canopy.
+        const popup = within(document.body);
+
+        // Enter opens the completions popup with every row of the codomain.
+        await userEvent.click(teamCell);
+        await userEvent.keyboard("{Enter}");
+        const input = within(teamCell).getByRole("textbox");
+        await expect(input).toHaveFocus();
+        const options = popup.getAllByRole("option");
+        await expect(options).toHaveLength(3);
+
+        // The current value is highlighted initially.
+        await expect(options[2]).toHaveTextContent("Canopy");
+        await expect(options[2]).toHaveClass("active");
+
+        // Moving up and committing selects another row exactly once.
+        await userEvent.keyboard("{ArrowUp}");
+        await userEvent.keyboard("{Enter}");
+        await expect(teamCell).toHaveTextContent(`Team "Beacon"`);
+        await expect(popup.queryAllByRole("option")).toHaveLength(0);
+        await expect(teamCell).toHaveFocus();
+        await expect(teamCell).toHaveAttribute("aria-selected", "true");
+        await expect(canvas.getAllByRole("listitem")).toHaveLength(1);
+        await expect(canvas.getAllByRole("listitem")[0]).toHaveTextContent(
+            "person.team[person-bob] = row team-beacon",
+        );
+    },
+};
+
+export const ChooseRowRefByClick: Story = {
+    render: () => <EditableTables initialSpecs={[teamSpec, personSpec]} />,
+    play: async ({ canvasElement }: { canvasElement: HTMLElement }) => {
+        const canvas = within(canvasElement);
+        const teamCell = personCells(canvas)[personCell(1, 2)]!; // Cleo's team, currently empty.
+        const popup = within(document.body);
+
+        // The chevron indicator opens the completions popup. With no current
+        // value, the first option is highlighted.
+        const indicator = within(teamCell).getByRole("button", { name: "Choose a value" });
+        await userEvent.click(indicator);
+        const options = popup.getAllByRole("option");
+        await expect(options).toHaveLength(3);
+        await expect(options[0]).toHaveTextContent("Atlas");
+        await expect(options[0]).toHaveClass("active");
+
+        // Clicking an option commits it and returns focus to the cell.
+        await userEvent.click(options[1]!);
+        await expect(teamCell).toHaveTextContent(`Team "Beacon"`);
+        await expect(popup.queryAllByRole("option")).toHaveLength(0);
+        await expect(teamCell).toHaveFocus();
+        await expect(canvas.getAllByRole("listitem")).toHaveLength(1);
+
+        // The first Escape closes the popup but leaves the editor open; the
+        // second cancels the editor without changing the value.
+        await userEvent.keyboard("{Enter}");
+        await expect(within(teamCell).getByRole("textbox")).toHaveFocus();
+        await userEvent.keyboard("{Escape}");
+        await expect(popup.queryAllByRole("option")).toHaveLength(0);
+        await expect(within(teamCell).getByRole("textbox")).toHaveFocus();
+        await userEvent.keyboard("{Escape}");
+        await expect(teamCell).toHaveFocus();
+        await expect(teamCell).toHaveTextContent(`Team "Beacon"`);
+        await expect(canvas.getAllByRole("listitem")).toHaveLength(1);
+    },
+};
+
+export const ClearRowRef: Story = {
+    render: () => <EditableTables initialSpecs={[teamSpec, personSpec]} />,
+    play: async ({ canvasElement }: { canvasElement: HTMLElement }) => {
+        const canvas = within(canvasElement);
+        const teamCell = personCells(canvas)[personCell(1, 0)]!; // Ada's team, currently Atlas.
+
+        await userEvent.click(teamCell);
+        await userEvent.keyboard("{Delete}");
+        await expect(teamCell).toHaveTextContent("");
+        await expect(teamCell).toHaveFocus();
+        await expect(canvas.getAllByRole("listitem")).toHaveLength(1);
+        await expect(canvas.getAllByRole("listitem")[0]).toHaveTextContent(
+            "person.team[person-ada] = null",
+        );
+    },
+};
+
+export const BrokenRowRefs: Story = {
+    render: () => (
+        <EditableTables
+            initialSpecs={[
+                teamSpec,
+                personSpec,
+                {
+                    id: "broken",
+                    label: "Broken",
+                    columns: [{ id: "team", label: "team", type: { rowRef: "team" } }],
+                    rows: [
+                        // References a row of a different table.
+                        { id: "broken-mistyped", values: { team: { rowId: "person-ada" } } },
+                        // References no row at all.
+                        { id: "broken-missing", values: { team: { rowId: "team-nowhere" } } },
+                    ],
+                },
+            ]}
+        />
+    ),
+    play: async ({ canvasElement }: { canvasElement: HTMLElement }) => {
+        const canvas = within(canvasElement);
+        const grids = canvas.getAllByRole("grid");
+        const cells = within(grids[2]!).getAllByRole("gridcell");
+
+        // A mistyped reference displays the label of the row it points at.
+        await expect(cells[0]).toHaveTextContent(`Person "Ada"`);
+        // A dangling reference displays the codomain's name and a question mark.
+        await expect(cells[1]).toHaveTextContent("Team ?");
+    },
+};
+
 export const CommitWithTab: Story = {
     render: () => (
         <div>
