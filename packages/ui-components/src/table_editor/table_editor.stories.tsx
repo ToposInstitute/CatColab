@@ -1,5 +1,6 @@
 import { Index } from "solid-js";
 import type { Meta, StoryObj } from "storybook-solidjs-vite";
+import { expect, userEvent, within } from "storybook/test";
 
 import type {
     FieldValue,
@@ -135,6 +136,50 @@ const personSpec: TableSpec = {
 
 export const Summary: Story = {
     render: () => <TableViews initialSpecs={[teamSpec, personSpec]} />,
+};
+
+/** Click a cell and move the selection with the arrow keys. */
+export const KeyboardNavigation: Story = {
+    render: () => <TableViews initialSpecs={[teamSpec]} />,
+    play: async ({ canvasElement }: { canvasElement: HTMLElement }) => {
+        const canvas = within(canvasElement);
+        const cells = canvas.getAllByRole("gridcell");
+        await userEvent.click(cells[0]!);
+        await expect(cells[0]).toHaveFocus();
+        await expect(cells[0]).toHaveAttribute("aria-selected", "true");
+
+        await userEvent.keyboard("{ArrowRight}");
+        await expect(cells[1]).toHaveFocus();
+        await expect(cells[1]).toHaveAttribute("aria-selected", "true");
+        await expect(cells[0]).toHaveAttribute("aria-selected", "false");
+
+        await userEvent.keyboard("{ArrowDown}");
+        await expect(cells[3]).toHaveFocus();
+    },
+};
+
+/** The first cell is the initial tab stop; Tab exits the grid at its end. */
+export const FocusBoundaries: Story = {
+    render: () => <TableViews initialSpecs={[teamSpec]} />,
+    play: async ({ canvasElement }: { canvasElement: HTMLElement }) => {
+        const canvas = within(canvasElement);
+        const cells = canvas.getAllByRole("gridcell");
+        const addRow = canvas.getByRole("button", { name: "+ Row" });
+
+        await expect(cells[0]).toHaveAttribute("tabindex", "0");
+        await expect(cells[1]).toHaveAttribute("tabindex", "-1");
+
+        // Tab through the whole grid: every cell is visited once, then the
+        // add-row button after the last cell.
+        await userEvent.tab();
+        await expect(cells[0]).toHaveFocus();
+        for (let i = 1; i < cells.length; i++) {
+            await userEvent.tab();
+            await expect(cells[i]).toHaveFocus();
+        }
+        await userEvent.tab();
+        await expect(addRow).toHaveFocus();
+    },
 };
 
 export const EmptyColumns: Story = {

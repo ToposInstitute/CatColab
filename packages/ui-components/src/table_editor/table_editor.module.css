@@ -93,6 +93,14 @@
     user-select: none;
 }
 
+/* A darker shade of the active-item highlight in the completions popup
+(--color-highlight-bg). An outline is used because, unlike an inset box
+shadow, it is painted above the cell editor input. */
+.cell.selected {
+    outline: 2px solid #bdd0e2;
+    outline-offset: -2px;
+}
+
 .rowHeaderColumn {
     width: 16px;
 }

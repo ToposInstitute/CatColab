@@ -9,6 +9,7 @@ import type {
 } from "catcolab-documents";
 import type { FocusHandle } from "../util/focus";
 import { TableGrid } from "./grid";
+import { createSelectionController } from "./selection";
 import { TitleBar } from "./title_bar";
 
 import styles from "./table_editor.module.css";
@@ -56,6 +57,16 @@ export type TableEditorProps = {
 
 /** A spreadsheet-like editor for a tabular data instance. */
 export function TableEditor(props: TableEditorProps) {
+    // Forward to the prop lazily in case the handle changes.
+    const parentFocus: FocusHandle = {
+        hasFocus: () => props.focus.hasFocus(),
+        setFocused: (focused) => props.focus.setFocused(focused),
+    };
+    const selection = createSelectionController({
+        focus: parentFocus,
+        table: () => props.table,
+    });
+
     return (
         <section
             class={`${styles.table}${props.class ? ` ${props.class}` : ""}`}
@@ -63,7 +74,7 @@ export function TableEditor(props: TableEditorProps) {
         >
             <TitleBar table={props.table} onHide={props.onHide} />
             <div class={styles.scrollViewport}>
-                <TableGrid table={props.table} tables={props.tables} />
+                <TableGrid selection={selection} table={props.table} tables={props.tables} />
             </div>
             <Show when={props.table.label !== null}>
                 <div class={styles.footer}>
