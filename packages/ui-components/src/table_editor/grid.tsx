@@ -6,7 +6,14 @@ import { ColumnHeader } from "./column_header";
 import { COLUMN_WIDTHS, DELETE_COLUMN_WIDTH, EMPTY_COLUMN_WIDTH } from "./display";
 import { EditProvider, useCellEdit } from "./edit";
 import { GridFocus, useGridFocus } from "./grid_focus";
-import { firstCellKey, makeCellKey, navigationDirection, neighborKey, parseCellKey, type CellKey } from "./navigation";
+import {
+    firstCellKey,
+    makeCellKey,
+    navigationDirection,
+    neighborKey,
+    parseCellKey,
+    type CellKey,
+} from "./navigation";
 import { TableRows } from "./table_rows";
 
 import styles from "./table_editor.module.css";
@@ -48,7 +55,11 @@ export function TableGrid(props: TableGridProps) {
     };
 
     return (
-        <GridFocus focus={props.focus} firstCell={firstCellKey(props.table)} resolveCell={resolveCell}>
+        <GridFocus
+            focus={props.focus}
+            firstCell={firstCellKey(props.table)}
+            resolveCell={resolveCell}
+        >
             <EditProvider
                 table={() => props.table}
                 tables={() => props.tables}

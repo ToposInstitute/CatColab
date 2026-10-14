@@ -168,18 +168,13 @@ function EditableTables(props: { initialSpecs: TableSpec[]; remoteUpdates?: bool
                             onAddRow={() =>
                                 updateSpec(table().id, (spec) => ({
                                     ...spec,
-                                    rows: [
-                                        ...spec.rows,
-                                        { id: crypto.randomUUID(), values: {} },
-                                    ],
+                                    rows: [...spec.rows, { id: crypto.randomUUID(), values: {} }],
                                 }))
                             }
                             onDeleteRow={(row) =>
                                 updateSpec(table().id, (spec) => ({
                                     ...spec,
-                                    rows: spec.rows.filter(
-                                        (candidate) => candidate.id !== row.id,
-                                    ),
+                                    rows: spec.rows.filter((candidate) => candidate.id !== row.id),
                                 }))
                             }
                         />
@@ -400,7 +395,7 @@ function personCell(column: number, row: number): number {
 
 /** The cells of the person table, the second grid rendered. */
 function personCells(canvas: ReturnType<typeof within>): HTMLElement[] {
-    return within(canvas.getAllByRole("grid")[1]!).getAllByRole("gridcell");
+    return within(canvas.getAllByRole("grid")[1]).getAllByRole("gridcell");
 }
 
 export const ChooseRowRef: Story = {
@@ -557,16 +552,12 @@ function SingleTable(props: { initialSpec: TableSpec; addRowDelay?: number }) {
                         spec,
                         row,
                         header,
-                        typeof value === "object" && value !== null
-                            ? { rowId: value.id }
-                            : value,
+                        typeof value === "object" && value !== null ? { rowId: value.id } : value,
                     ),
                 )
             }
             onAddRow={() =>
-                props.addRowDelay === undefined
-                    ? addRow()
-                    : setTimeout(addRow, props.addRowDelay)
+                props.addRowDelay === undefined ? addRow() : setTimeout(addRow, props.addRowDelay)
             }
             onDeleteRow={(row) =>
                 setSpec((spec) => ({
@@ -949,13 +940,13 @@ export const KeyboardExitFocus: Story = {
         await expect(canvas.getAllByRole("listitem")).toHaveLength(2);
 
         // Exiting the last row downward adds a row, which takes the selection
-        // once it appears.
+        // once it appears, staying in the edited column.
         await userEvent.click(cells[5]!);
         await userEvent.keyboard("9{Enter}");
         await waitFor(async () => {
             const grown = canvas.getAllByRole("gridcell");
             await expect(grown).toHaveLength(8);
-            await expect(grown[6]).toHaveFocus();
+            await expect(grown[7]).toHaveFocus();
         });
 
         await userEvent.click(canvas.getAllByRole("gridcell")[7]!);
@@ -1163,4 +1154,334 @@ export const Unnamed: Story = {
             ]}
         />
     ),
+};
+
+/** A single table with externally supplied validation issues. */
+function IssueTable(props: {
+    table: () => InstanceTable;
+    tables?: () => ReadonlyArray<InstanceTable>;
+    issues?: ReadonlyArray<TableIssue>;
+    onSetField?: (row: TableRow, header: TableHeader, value: LiteralValue | TableRow) => void;
+    onHide?: () => void;
+    onDeleteOrphanedTable?: () => void;
+    onDeleteOrphanedColumn?: (header: TableHeader) => void;
+}) {
+    const focus = useChildFocus<string>(rootFocus);
+    return (
+        <TableEditor
+            table={props.table()}
+            tables={props.tables?.() ?? [props.table()]}
+            issues={props.issues}
+            focus={focus.childFocus(props.table().id)}
+            onSetField={props.onSetField ?? (() => {})}
+            onAddRow={() => {}}
+            onDeleteRow={() => {}}
+            onHide={props.onHide}
+            onDeleteOrphanedTable={props.onDeleteOrphanedTable}
+            onDeleteOrphanedColumn={props.onDeleteOrphanedColumn}
+        />
+    );
+}
+
+/** A table with an orphaned stored column and rows carrying various issues. */
+const validatedSpec: TableSpec = {
+    id: "table",
+    label: "Validated",
+    columns: [
+        { id: "name", label: "name", type: "String" },
+        { id: "old", label: null, type: "Unknown" },
+    ],
+    rows: [
+        { id: "a", values: { name: "Ada", old: "Stored" } },
+        { id: "b", values: { name: "Bob", old: "Old" } },
+    ],
+};
+
+const initialIssues: TableIssue[] = [
+    {
+        issueType: "MissingValue",
+        path: ["table", "rows", "a", "fields", "name"],
+        message: "First issue",
+    },
+    {
+        issueType: "MistypedLiteral",
+        path: ["table", "rows", "a", "fields", "name"],
+        message: "Second issue",
+    },
+    {
+        issueType: "OrphanedField",
+        path: ["table", "rows", "a", "fields", "old"],
+        message: "Orphaned field",
+    },
+    {
+        issueType: "EquationViolation",
+        path: ["table", "rows", "a"],
+        equationId: "eq",
+        equationLabel: ["law", "one"],
+        message: "Detailed violation",
+    },
+    {
+        issueType: "EquationViolation",
+        path: ["table", "rows", "a"],
+        equationId: "unnamed",
+        equationLabel: [],
+        message: "Another violation",
+    },
+];
+
+export const IndexedIssues: Story = {
+    render: () => {
+        const [spec, setSpec] = createSignal(validatedSpec);
+        return (
+            <div>
+                <button
+                    type="button"
+                    onMouseDown={(evt) => evt.preventDefault()}
+                    onClick={() =>
+                        setSpec((prev) => ({
+                            ...prev,
+                            columns: prev.columns.toReversed(),
+                            rows: prev.rows.toReversed(),
+                        }))
+                    }
+                >
+                    Reorder
+                </button>
+                <IssueTable table={() => toInstanceTable(spec())} issues={initialIssues} />
+            </div>
+        );
+    },
+    play: async ({ canvasElement }: { canvasElement: HTMLElement }) => {
+        const canvas = within(canvasElement);
+        const cells = canvas.getAllByRole("gridcell");
+        await expect(cells[0]).toHaveAttribute("aria-invalid", "true");
+        await expect(cells[0]).toHaveAttribute("title", "First issue\nSecond issue");
+        await expect(cells[1]).toHaveAttribute("title", "Orphaned field");
+        const rowHeaders = canvas.getAllByRole("rowheader");
+        await expect(rowHeaders[0]).toHaveClass(styles.invalid);
+        await userEvent.hover(rowHeaders[0]!);
+        // Corvu measures its hover safe area after paint and needs pointer coordinates.
+        await new Promise<void>((resolve) =>
+            requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+        );
+        const rect = rowHeaders[0]!.getBoundingClientRect();
+        await userEvent.pointer({
+            target: rowHeaders[0]!,
+            coords: { clientX: rect.x + rect.width / 2, clientY: rect.y + rect.height / 2 },
+        });
+        await waitFor(async () => {
+            const tooltip = within(document.body).getByRole("tooltip");
+            await expect(tooltip).toHaveTextContent("Constraint `law.one` is violated");
+            await expect(tooltip).toHaveTextContent("Unnamed constraint is violated");
+        });
+        await userEvent.unhover(rowHeaders[0]!);
+        await userEvent.click(cells[0]!);
+        await userEvent.click(canvas.getByRole("button", { name: "Reorder" }));
+        // Issues are indexed by path, so they follow the cells through the reorder.
+        const reordered = canvas.getAllByRole("gridcell");
+        await expect(reordered[3]).toHaveAttribute("title", "First issue\nSecond issue");
+        await expect(canvas.getAllByRole("rowheader")[1]).toHaveClass(styles.invalid);
+    },
+};
+
+export const InferredInvalidValues: Story = {
+    render: () => {
+        const mainSpec: TableSpec = {
+            id: "table",
+            label: "Validated",
+            columns: [
+                { id: "name", label: "number", type: "Int" },
+                { id: "old", label: "reference", type: { rowRef: "target" } },
+            ],
+            rows: [{ id: "a", values: { name: "not a number", old: { rowId: "missing" } } }],
+        };
+        const [target, setTarget] = createSignal<TableSpec>({
+            id: "target",
+            label: "Target",
+            columns: [],
+            rows: [],
+        });
+        return (
+            <div>
+                <button
+                    type="button"
+                    onClick={() =>
+                        setTarget((prev) => ({
+                            ...prev,
+                            rows: [{ id: "missing", values: {} }],
+                        }))
+                    }
+                >
+                    Resolve reference
+                </button>
+                <button
+                    type="button"
+                    onClick={() => setTarget((prev) => ({ ...prev, label: null }))}
+                >
+                    Orphan target
+                </button>
+                <IssueTable
+                    table={() => toInstanceTable(mainSpec)}
+                    tables={() => [toInstanceTable(mainSpec), toInstanceTable(target())]}
+                />
+            </div>
+        );
+    },
+    play: async ({ canvasElement }: { canvasElement: HTMLElement }) => {
+        const canvas = within(canvasElement);
+        const cells = canvas.getAllByRole("gridcell");
+        await expect(cells[0]).toHaveAttribute("aria-invalid", "true");
+        await expect(cells[1]).toHaveAttribute("aria-invalid", "true");
+        await userEvent.click(canvas.getByRole("button", { name: "Resolve reference" }));
+        await expect(cells[1]).toHaveAttribute("aria-invalid", "false");
+        await userEvent.click(canvas.getByRole("button", { name: "Orphan target" }));
+        await expect(cells[1]).toHaveAttribute("aria-invalid", "true");
+    },
+};
+
+/** A schema-backed table with a stored column whose schema morphism was removed. */
+export const DeleteOrphanedColumn: Story = {
+    render: () => {
+        const [spec, setSpec] = createSignal(validatedSpec);
+        return (
+            <IssueTable
+                table={() => toInstanceTable(spec())}
+                issues={initialIssues.filter((issue) => issue.issueType === "OrphanedField")}
+                onDeleteOrphanedColumn={(header) =>
+                    setSpec((prev) => ({
+                        ...prev,
+                        columns: prev.columns.filter((column) => column.id !== header.id),
+                    }))
+                }
+            />
+        );
+    },
+    play: async ({ canvasElement }: { canvasElement: HTMLElement }) => {
+        const canvas = within(canvasElement);
+        const remove = canvas.getByRole("button", { name: "Delete column" });
+        const headers = canvas.getAllByRole("columnheader");
+        const cells = canvas.getAllByRole("gridcell");
+        await expect(within(headers[1]!).queryByRole("button")).not.toBeInTheDocument();
+        await userEvent.hover(remove);
+        await expect(headers[2]).toHaveClass(styles.columnDeleting);
+        await expect(cells[1]).toHaveClass(styles.columnDeleting);
+        await userEvent.click(remove);
+        await expect(
+            canvas.queryByRole("button", { name: "Delete column" }),
+        ).not.toBeInTheDocument();
+        const remaining = canvas.getAllByRole("gridcell");
+        await expect(remaining).toHaveLength(2);
+        await expect(remaining[0]).toHaveTextContent("Ada");
+        await expect(remaining[1]).toHaveTextContent("Bob");
+    },
+};
+
+export const OrphanControls: Story = {
+    render: () => {
+        const [spec, setSpec] = createSignal(validatedSpec);
+        const [writes, setWrites] = createSignal(0);
+        const [hidden, setHidden] = createSignal(false);
+        const [deleted, setDeleted] = createSignal(false);
+        return (
+            <div>
+                <output data-testid="writes">{writes()}</output>
+                <output data-testid="hidden">{String(hidden())}</output>
+                <output data-testid="deleted">{String(deleted())}</output>
+                <button type="button" onClick={() => setSpec({ ...validatedSpec, label: null })}>
+                    Orphan table
+                </button>
+                <IssueTable
+                    table={() => toInstanceTable(spec())}
+                    issues={
+                        spec().label === null
+                            ? [
+                                  {
+                                      issueType: "OrphanedTable",
+                                      path: ["table"],
+                                      message: "Schema entity removed",
+                                  },
+                              ]
+                            : []
+                    }
+                    onSetField={() => setWrites((n) => n + 1)}
+                    onHide={() => setHidden(true)}
+                    onDeleteOrphanedTable={() => setDeleted(true)}
+                    onDeleteOrphanedColumn={() => {}}
+                />
+            </div>
+        );
+    },
+    play: async ({ canvasElement }: { canvasElement: HTMLElement }) => {
+        const canvas = within(canvasElement);
+        await expect(
+            canvas.queryByRole("button", { name: "Delete table" }),
+        ).not.toBeInTheDocument();
+        const unknown = canvas.getAllByRole("gridcell")[1]!;
+        await userEvent.click(unknown);
+        await expect(unknown).toHaveAttribute("aria-readonly", "true");
+        await userEvent.dblClick(unknown);
+        await expect(canvas.queryByRole("textbox")).not.toBeInTheDocument();
+        await expect(canvas.getByTestId("writes")).toHaveTextContent("0");
+        await userEvent.click(canvas.getByRole("button", { name: "Hide table" }));
+        await expect(canvas.getByTestId("hidden")).toHaveTextContent("true");
+        await userEvent.click(canvas.getByRole("button", { name: "Orphan table" }));
+        await expect(canvas.getByRole("grid").closest("section")).toHaveAttribute(
+            "title",
+            "Schema entity removed",
+        );
+        await expect(canvas.queryByRole("button", { name: "+ Row" })).not.toBeInTheDocument();
+        // Unknown columns in an orphaned table are removed with the table, not separately.
+        await expect(
+            canvas.queryByRole("button", { name: "Delete column" }),
+        ).not.toBeInTheDocument();
+        await userEvent.click(canvas.getByRole("button", { name: "Delete table" }));
+        await expect(canvas.getByTestId("deleted")).toHaveTextContent("true");
+    },
+};
+
+export const EnterOnLastRowKeepsColumn: Story = {
+    render: () => (
+        <EditableTables
+            initialSpecs={[
+                {
+                    id: "refFirst",
+                    label: "Ref first",
+                    columns: [
+                        { id: "team", label: "team", type: { rowRef: "team" } },
+                        { id: "name", label: "name", type: "String" },
+                    ],
+                    rows: [
+                        { id: "ref-first-1", values: {} },
+                        { id: "ref-first-2", values: {} },
+                    ],
+                },
+                teamSpec,
+            ]}
+        />
+    ),
+    play: async ({ canvasElement }: { canvasElement: HTMLElement }) => {
+        const canvas = within(canvasElement);
+        const grid = within(canvas.getAllByRole("grid")[0]!);
+        // Cells of the ref-first grid: team (even indices), name (odd).
+        const cells = grid.getAllByRole("gridcell");
+
+        await userEvent.click(cells[3]!);
+        await userEvent.keyboard("Greta");
+        // Exiting the last row downward adds a row, ready for further editing
+        // in the same column even though it is not the first column.
+        await userEvent.keyboard("{Enter}");
+        await expect(canvas.getAllByRole("listitem")).toHaveLength(1);
+        await expect(canvas.getAllByRole("listitem")[0]).toHaveTextContent(
+            "refFirst.name[ref-first-2] = Greta",
+        );
+
+        await waitFor(async () => {
+            const grown = grid.getAllByRole("gridcell");
+            await expect(grown).toHaveLength(6);
+            await expect(grown[5]).toHaveFocus();
+            await expect(grown[5]).toHaveAttribute("aria-selected", "true");
+            await expect(grown[4]).toHaveAttribute("aria-selected", "false");
+        });
+        await expect(cells[3]).toHaveTextContent("Greta");
+    },
 };

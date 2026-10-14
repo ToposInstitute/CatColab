@@ -58,9 +58,9 @@ type CellEditApi = {
     /** Clear the field of a cell. */
     clearCell: (key: CellKey) => void;
 
-    /** Add a row through the table's callback, selecting its first cell when
-    it appears. */
-    addRow: () => void;
+    /** Add a row through the table's callback, selecting the given column (or
+    the first column by default) once it appears. */
+    addRow: (headerId?: string) => void;
 
     /** Stop waiting to select a row being added, as when the user leaves the
     grid before it appears. The add request itself has already been dispatched
@@ -114,19 +114,26 @@ export function EditProvider(
         grid.cellFocus(key).setFocused(true);
     };
 
-    /** The set of row IDs present when the next added row was promised the
-    selection, or null when no selection is pending. */
-    const [pendingSelection, setPendingSelection] = createSignal<ReadonlySet<string> | null>(null);
+    /** The row IDs present when the next added row was promised the selection
+    along with the column it should take, or null when none is pending. */
+    const [pendingSelection, setPendingSelection] = createSignal<{
+        rows: ReadonlySet<string>;
+        headerId: string | null;
+    } | null>(null);
 
-    /** Add a row, selecting its first cell once it appears.
+    /** Add a row, selecting the given column (or the first column) of the row
+    once it appears.
 
     The callback does not report the new row's ID, so the row is identified as
     the first row that was not present when the request was made. If another
     row is added concurrently, the selection may land on it instead; the
     callback contract leaves this ambiguous.
      */
-    const addRow = () => {
-        setPendingSelection(new Set(props.table().rows.map((row) => row.id)));
+    const addRow = (headerId?: string) => {
+        setPendingSelection({
+            rows: new Set(props.table().rows.map((row) => row.id)),
+            headerId: headerId ?? null,
+        });
         props.onAddRow();
     };
 
@@ -138,14 +145,14 @@ export function EditProvider(
             return;
         }
         const table = props.table();
-        const newRow = table.rows.find((row) => !pending.has(row.id));
+        const newRow = table.rows.find((row) => !pending.rows.has(row.id));
         if (!newRow) {
             return;
         }
-        const header = table.headers[0];
+        const headerId = pending.headerId ?? table.headers[0]?.id;
         setPendingSelection(null);
-        if (header) {
-            select(makeCellKey(header.id, newRow.id));
+        if (headerId !== undefined) {
+            select(makeCellKey(headerId, newRow.id));
         }
     });
 
@@ -210,10 +217,10 @@ export function EditProvider(
         const target = neighborKey(props.table(), headerIndex(), key, dir);
         if (!target && (dir === "down" || dir === "forward")) {
             // Exiting the grid downward or forward adds a row, ready for
-            // further editing.
+            // further editing in the same column.
             batch(() => {
                 setEdit(null);
-                addRow();
+                addRow(state.headerId);
             });
             if (grid.activeKey() === key && edit() === null && cellElement.isConnected) {
                 cellElement.focus({ preventScroll: true });
