@@ -1,19 +1,31 @@
 import { createMemo, Index, Show } from "solid-js";
 
 import type { InstanceTable } from "catcolab-documents";
+import type { FocusHandle } from "../util/focus";
 import { ColumnHeader } from "./column_header";
 import { COLUMN_WIDTHS, EMPTY_COLUMN_WIDTH } from "./display";
-import { onCellKeyDown, type SelectionController } from "./selection";
+import { GridFocus, useGridFocus } from "./grid_focus";
+import { firstCellKey, navigationDirection, neighborKey } from "./navigation";
 import { TableRows } from "./table_rows";
 
 import styles from "./table_editor.module.css";
 
-/** The grid of column headers and data rows, including column sizing. */
-export function TableGrid(props: {
-    selection: SelectionController;
+type TableGridProps = {
+    focus: FocusHandle;
     table: InstanceTable;
     tables: ReadonlyArray<InstanceTable>;
-}) {
+};
+
+export function TableGrid(props: TableGridProps) {
+    return (
+        <GridFocus focus={props.focus} firstCell={firstCellKey(props.table)}>
+            <GridContent {...props} />
+        </GridFocus>
+    );
+}
+
+function GridContent(props: TableGridProps) {
+    const focus = useGridFocus();
     const headers = () => props.table.headers;
     const headerIndex = createMemo(
         () => new Map(headers().map((header, index) => [header.id, index] as const)),
@@ -23,16 +35,38 @@ export function TableGrid(props: {
         <div
             class={styles.scrollArea}
             tabindex={-1}
-            onKeyDown={(evt) => {
-                // The grid itself is focused, e.g. after the focused row was
-                // unmounted due to virtualization: act on the cell the
-                // selection is parked on.
-                if (evt.target === evt.currentTarget) {
-                    const key = props.selection.targetKey();
-                    if (key) {
-                        onCellKeyDown(props.selection, key, evt);
+            onFocusOut={(evt) => {
+                const grid = evt.currentTarget;
+                const setFocused = props.focus.setFocused;
+                queueMicrotask(() => {
+                    if (grid.isConnected && !grid.contains(document.activeElement)) {
+                        setFocused(false);
                     }
+                });
+            }}
+            onKeyDown={(evt) => {
+                if (evt.defaultPrevented) {
+                    return;
                 }
+                // Leave nested inputs to handle their own keys.
+                const target = evt.target as HTMLElement;
+                if (target !== evt.currentTarget && target.getAttribute("role") !== "gridcell") {
+                    return;
+                }
+                // The container uses the same tab stop as the cells.
+                const key = focus.tabStop();
+                const direction = navigationDirection(evt);
+                if (!key || !direction) {
+                    return;
+                }
+                const next = neighborKey(props.table, headerIndex(), key, direction);
+                if (!next && evt.key === "Tab") {
+                    return;
+                }
+                if (next) {
+                    focus.cellFocus(next).setFocused(true);
+                }
+                evt.preventDefault();
             }}
         >
             <table class={styles.grid} role="grid" aria-rowcount={props.table.rows.length + 1}>
@@ -67,7 +101,6 @@ export function TableGrid(props: {
                     </tr>
                 </thead>
                 <TableRows
-                    selection={props.selection}
                     rows={props.table.rows}
                     headers={headers()}
                     headerIndex={headerIndex}

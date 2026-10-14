@@ -138,7 +138,6 @@ export const Summary: Story = {
     render: () => <TableViews initialSpecs={[teamSpec, personSpec]} />,
 };
 
-/** Click a cell and move the selection with the arrow keys. */
 export const KeyboardNavigation: Story = {
     render: () => <TableViews initialSpecs={[teamSpec]} />,
     play: async ({ canvasElement }: { canvasElement: HTMLElement }) => {
@@ -158,7 +157,6 @@ export const KeyboardNavigation: Story = {
     },
 };
 
-/** The first cell is the initial tab stop; Tab exits the grid at its end. */
 export const FocusBoundaries: Story = {
     render: () => <TableViews initialSpecs={[teamSpec]} />,
     play: async ({ canvasElement }: { canvasElement: HTMLElement }) => {
@@ -169,8 +167,6 @@ export const FocusBoundaries: Story = {
         await expect(cells[0]).toHaveAttribute("tabindex", "0");
         await expect(cells[1]).toHaveAttribute("tabindex", "-1");
 
-        // Tab through the whole grid: every cell is visited once, then the
-        // add-row button after the last cell.
         await userEvent.tab();
         await expect(cells[0]).toHaveFocus();
         for (let i = 1; i < cells.length; i++) {
@@ -179,6 +175,43 @@ export const FocusBoundaries: Story = {
         }
         await userEvent.tab();
         await expect(addRow).toHaveFocus();
+    },
+};
+
+export const FocusReentry: Story = {
+    render: () => (
+        <div>
+            <button type="button">Before</button>
+            <TableViews initialSpecs={[teamSpec, personSpec]} />
+            <button type="button">After</button>
+        </div>
+    ),
+    play: async ({ canvasElement }: { canvasElement: HTMLElement }) => {
+        const canvas = within(canvasElement);
+        const grids = canvas.getAllByRole("grid");
+        const teamCells = within(grids[0]!).getAllByRole("gridcell");
+        const personCells = within(grids[1]!).getAllByRole("gridcell");
+        await userEvent.click(teamCells[1]!);
+        await userEvent.tab({ shift: true });
+        await expect(teamCells[0]).toHaveFocus();
+        await userEvent.tab({ shift: true });
+        await expect(canvas.getByRole("button", { name: "Before" })).toHaveFocus();
+        await expect(teamCells[0]).toHaveAttribute("aria-selected", "false");
+        await userEvent.tab();
+        await expect(teamCells[0]).toHaveFocus();
+
+        await userEvent.click(personCells[0]!);
+        await expect(personCells[0]).toHaveFocus();
+        await expect(teamCells[0]).toHaveAttribute("aria-selected", "false");
+        await userEvent.keyboard("{ArrowRight}");
+        await expect(personCells[1]).toHaveFocus();
+
+        await userEvent.click(canvas.getByRole("button", { name: "After" }));
+        await expect(personCells[1]).toHaveAttribute("aria-selected", "false");
+        await userEvent.tab({ shift: true });
+        await expect(canvas.getAllByRole("button", { name: "+ Row" })[1]).toHaveFocus();
+        await userEvent.tab({ shift: true });
+        await expect(personCells[0]).toHaveFocus();
     },
 };
 

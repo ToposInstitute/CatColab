@@ -3,13 +3,11 @@ import { Index, Show } from "solid-js";
 import type { InstanceTable, TableHeader, TableRow } from "catcolab-documents";
 import { fieldOf } from "./display";
 import { GridCell } from "./grid_cell";
-import type { SelectionController } from "./selection";
 
 import styles from "./table_editor.module.css";
 
 /** The data rows of the grid. */
 export function TableRows(props: {
-    selection: SelectionController;
     rows: ReadonlyArray<TableRow>;
     headers: ReadonlyArray<TableHeader>;
     headerIndex: () => Map<string, number>;
@@ -20,7 +18,6 @@ export function TableRows(props: {
             <Index each={props.rows}>
                 {(row) => (
                     <BodyRow
-                        selection={props.selection}
                         row={row()}
                         headers={props.headers}
                         headerIndex={props.headerIndex}
@@ -34,7 +31,6 @@ export function TableRows(props: {
 
 /** A single data row: a row header followed by one cell per column. */
 function BodyRow(props: {
-    selection: SelectionController;
     row: TableRow;
     headers: ReadonlyArray<TableHeader>;
     headerIndex: () => Map<string, number>;
@@ -50,7 +46,6 @@ function BodyRow(props: {
                 <Index each={props.headers}>
                     {(header) => (
                         <GridCell
-                            selection={props.selection}
                             row={props.row}
                             header={header()}
                             field={fieldOf(props.row, props.headerIndex().get(header().id) ?? -1)}
