@@ -12,6 +12,7 @@ export function TableRows(props: {
     headers: ReadonlyArray<TableHeader>;
     headerIndex: () => ReadonlyMap<string, number>;
     tables: ReadonlyArray<InstanceTable>;
+    onDeleteRow: (row: TableRow) => void;
 }) {
     return (
         <tbody>
@@ -22,6 +23,7 @@ export function TableRows(props: {
                         headers={props.headers}
                         headerIndex={props.headerIndex}
                         tables={props.tables}
+                        onDeleteRow={props.onDeleteRow}
                     />
                 )}
             </Index>
@@ -29,19 +31,25 @@ export function TableRows(props: {
     );
 }
 
-/** A single data row: a row header followed by one cell per column. */
+/** A single data row: a row header, one cell per column, and a delete button. */
 function BodyRow(props: {
     row: TableRow;
     headers: ReadonlyArray<TableHeader>;
     headerIndex: () => ReadonlyMap<string, number>;
     tables: ReadonlyArray<InstanceTable>;
+    onDeleteRow: (row: TableRow) => void;
 }) {
     return (
         <tr aria-rowindex={props.row.index + 2}>
             <th class={styles.rowHeader} scope="row" />
             <Show
                 when={props.headers.length > 0}
-                fallback={<td class={styles.cell} role="gridcell" />}
+                fallback={
+                    <>
+                        <td class={styles.cell} role="gridcell" />
+                        <td class={styles.deleteCell} />
+                    </>
+                }
             >
                 <Index each={props.headers}>
                     {(header) => (
@@ -53,6 +61,22 @@ function BodyRow(props: {
                         />
                     )}
                 </Index>
+                <td class={styles.deleteCell}>
+                    <button
+                        type="button"
+                        class={styles.deleteRow}
+                        title="Delete row"
+                        aria-label="Delete row"
+                        tabindex={-1}
+                        // Clicking must not move focus out of the grid: the
+                        // selection and any open editor are left alone until
+                        // the row is actually removed.
+                        onMouseDown={(evt) => evt.preventDefault()}
+                        onClick={() => props.onDeleteRow(props.row)}
+                    >
+                        ×
+                    </button>
+                </td>
             </Show>
         </tr>
     );

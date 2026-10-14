@@ -1,11 +1,5 @@
 import type { LiteralValue, TableHeader } from "catcolab-documents";
 
-/** Whether a cell under the given header can be edited in place.
-
-Boolean cells are toggled rather than edited as text, and row references are
-selected through completions rather than parsed from text. Unknown columns
-are never editable.
- */
 export function isEditableCell(header: TableHeader): boolean {
     const tag = header.type.tag;
     return (

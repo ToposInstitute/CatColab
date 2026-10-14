@@ -13,6 +13,9 @@ export const COLUMN_WIDTHS = {
 /** Width of the single column shown when a table has no headers. */
 export const EMPTY_COLUMN_WIDTH = 180;
 
+/** Width of the column holding the row deletion buttons. */
+export const DELETE_COLUMN_WIDTH = 36;
+
 /** The field of a row for a given header position. */
 export function fieldOf(row: TableRow, columnIndex: number): FieldValue | undefined {
     return row.fields[columnIndex];

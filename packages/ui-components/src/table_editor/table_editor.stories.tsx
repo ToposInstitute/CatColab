@@ -1,6 +1,6 @@
 import { createSignal, Index } from "solid-js";
 import type { Meta, StoryObj } from "storybook-solidjs-vite";
-import { expect, userEvent, within } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 
 import type {
     FieldValue,
@@ -85,6 +85,23 @@ function describeValue(value: LiteralValue | TableRow): string {
     return value === null ? "null" : String(value);
 }
 
+/** Apply a field write to a table spec. */
+function setSpecField(
+    spec: TableSpec,
+    row: TableRow,
+    header: TableHeader,
+    stored: LiteralValue | { rowId: string },
+): TableSpec {
+    return {
+        ...spec,
+        rows: spec.rows.map((candidate) =>
+            candidate.id === row.id
+                ? { ...candidate, values: { ...candidate.values, [header.id]: stored } }
+                : candidate,
+        ),
+    };
+}
+
 /** Renders editable table editors backed by in-memory table specs.
 
 Every committed field write is logged, so that stories can assert exactly-once
@@ -111,14 +128,7 @@ function EditableTables(props: { initialSpecs: TableSpec[]; remoteUpdates?: bool
             ...commits,
             `${tableId}.${header.id}[${row.id}] = ${describeValue(value)}`,
         ]);
-        updateSpec(tableId, (spec) => ({
-            ...spec,
-            rows: spec.rows.map((specRow) =>
-                specRow.id === row.id
-                    ? { ...specRow, values: { ...specRow.values, [header.id]: stored } }
-                    : specRow,
-            ),
-        }));
+        updateSpec(tableId, (spec) => setSpecField(spec, row, header, stored));
     };
 
     return (
@@ -155,8 +165,23 @@ function EditableTables(props: { initialSpecs: TableSpec[]; remoteUpdates?: bool
                             onSetField={(row, header, value) =>
                                 setField(table().id, row, header, value)
                             }
-                            onAddRow={() => {}}
-                            onDeleteRow={() => {}}
+                            onAddRow={() =>
+                                updateSpec(table().id, (spec) => ({
+                                    ...spec,
+                                    rows: [
+                                        ...spec.rows,
+                                        { id: crypto.randomUUID(), values: {} },
+                                    ],
+                                }))
+                            }
+                            onDeleteRow={(row) =>
+                                updateSpec(table().id, (spec) => ({
+                                    ...spec,
+                                    rows: spec.rows.filter(
+                                        (candidate) => candidate.id !== row.id,
+                                    ),
+                                }))
+                            }
                         />
                     )}
                 </Index>
@@ -497,6 +522,372 @@ export const BrokenRowRefs: Story = {
     },
 };
 
+const listSpec: TableSpec = {
+    id: "list",
+    label: "List",
+    columns: [{ id: "value", label: "value", type: "String" }],
+    rows: [
+        { id: "list-1", values: { value: "First" } },
+        { id: "list-2", values: { value: "Second" } },
+        { id: "list-3", values: { value: "Third" } },
+    ],
+};
+
+/** A single editable table backed by an in-memory table spec. */
+function SingleTable(props: { initialSpec: TableSpec; addRowDelay?: number }) {
+    // Initial story data, intentionally captured on mount.
+    const [spec, setSpec] = createSignal(props.initialSpec);
+    const table = () => toInstanceTable(spec());
+    const focus = useChildFocus<string>(rootFocus);
+
+    const addRow = () =>
+        setSpec((spec) => ({
+            ...spec,
+            rows: [...spec.rows, { id: crypto.randomUUID(), values: {} }],
+        }));
+
+    return (
+        <TableEditor
+            table={table()}
+            tables={[table()]}
+            focus={focus.childFocus(table().id)}
+            onSetField={(row, header, value) =>
+                setSpec((spec) =>
+                    setSpecField(
+                        spec,
+                        row,
+                        header,
+                        typeof value === "object" && value !== null
+                            ? { rowId: value.id }
+                            : value,
+                    ),
+                )
+            }
+            onAddRow={() =>
+                props.addRowDelay === undefined
+                    ? addRow()
+                    : setTimeout(addRow, props.addRowDelay)
+            }
+            onDeleteRow={(row) =>
+                setSpec((spec) => ({
+                    ...spec,
+                    rows: spec.rows.filter((candidate) => candidate.id !== row.id),
+                }))
+            }
+        />
+    );
+}
+
+export const FocusAfterDelete: Story = {
+    render: () => <SingleTable initialSpec={listSpec} />,
+    play: async ({ canvasElement }: { canvasElement: HTMLElement }) => {
+        const canvas = within(canvasElement);
+
+        await userEvent.click(canvas.getAllByRole("gridcell")[0]!);
+        // Deleting another row leaves the selection alone.
+        await userEvent.click(canvas.getAllByRole("button", { name: "Delete row" })[1]!);
+        await waitFor(async () => {
+            const firstCell = canvas.getAllByRole("gridcell")[0]!;
+            await expect(firstCell).toHaveTextContent("First");
+            await expect(firstCell).toHaveFocus();
+        });
+
+        // Deleting the selected row moves the selection to the row that took
+        // its position.
+        await userEvent.click(canvas.getAllByRole("button", { name: "Delete row" })[0]!);
+        await waitFor(async () => {
+            const remainingCell = canvas.getByRole("gridcell");
+            await expect(remainingCell).toHaveTextContent("Third");
+            await expect(remainingCell).toHaveFocus();
+        });
+    },
+};
+
+export const DeleteWithoutFocus: Story = {
+    render: () => (
+        <div>
+            <button type="button">Elsewhere</button>
+            <SingleTable initialSpec={listSpec} />
+        </div>
+    ),
+    play: async ({ canvasElement }: { canvasElement: HTMLElement }) => {
+        const canvas = within(canvasElement);
+        const elsewhere = canvas.getByRole("button", { name: "Elsewhere" });
+
+        await userEvent.click(elsewhere);
+        await userEvent.click(canvas.getAllByRole("button", { name: "Delete row" })[0]!);
+
+        // A remote-looking deletion must not restore the selection, and so
+        // never takes the focus back from wherever the user went.
+        await waitFor(() => expect(canvas.getAllByRole("gridcell")).toHaveLength(2));
+        await expect(elsewhere).toHaveFocus();
+        for (const cell of canvas.getAllByRole("gridcell")) {
+            await expect(cell).toHaveAttribute("aria-selected", "false");
+        }
+    },
+};
+
+export const AddRowButtonFocusesNewRow: Story = {
+    render: () => <SingleTable initialSpec={listSpec} addRowDelay={100} />,
+    play: async ({ canvasElement }: { canvasElement: HTMLElement }) => {
+        const canvas = within(canvasElement);
+        await userEvent.click(canvas.getByRole("button", { name: "+ Row" }));
+
+        // The new row appears asynchronously and takes the selection.
+        await waitFor(async () => {
+            const cells = canvas.getAllByRole("gridcell");
+            await expect(cells).toHaveLength(4);
+            await expect(cells[3]).toHaveFocus();
+            await expect(cells[3]).toHaveAttribute("aria-selected", "true");
+        });
+    },
+};
+
+export const PendingAddAbandonedOnLeave: Story = {
+    render: () => (
+        <div>
+            <SingleTable initialSpec={listSpec} addRowDelay={100} />
+            <button type="button">Elsewhere</button>
+        </div>
+    ),
+    play: async ({ canvasElement }: { canvasElement: HTMLElement }) => {
+        const canvas = within(canvasElement);
+        const elsewhere = canvas.getByRole("button", { name: "Elsewhere" });
+
+        // Request a row, then leave before it appears.
+        await userEvent.click(canvas.getByRole("button", { name: "+ Row" }));
+        await userEvent.click(elsewhere);
+
+        // The row still appears but does not take the focus or selection.
+        await waitFor(() => expect(canvas.getAllByRole("gridcell")).toHaveLength(4));
+        await expect(elsewhere).toHaveFocus();
+        for (const cell of canvas.getAllByRole("gridcell")) {
+            await expect(cell).toHaveAttribute("aria-selected", "false");
+        }
+    },
+};
+
+export const ContinueEditingAfterAsyncAdd: Story = {
+    render: () => (
+        <SingleTable
+            initialSpec={{
+                ...listSpec,
+                rows: [listSpec.rows[0]!, listSpec.rows[1]!],
+            }}
+            addRowDelay={300}
+        />
+    ),
+    play: async ({ canvasElement }: { canvasElement: HTMLElement }) => {
+        const canvas = within(canvasElement);
+        await userEvent.dblClick(canvas.getAllByRole("gridcell")[1]!);
+        const input = canvas.getByRole("textbox");
+        await userEvent.clear(input);
+        await userEvent.type(input, "Updated second row");
+        // Exiting the last row downward adds one after a short delay, ready
+        // for further editing.
+        await userEvent.keyboard("{Enter}");
+
+        await waitFor(async () => {
+            const cells = canvas.getAllByRole("gridcell");
+            await expect(cells).toHaveLength(3);
+            await expect(cells[1]).toHaveTextContent("Updated second row");
+            await expect(cells[2]).toHaveFocus();
+        });
+    },
+};
+
+/** A single table alongside buttons simulating concurrent changes to it.
+
+The buttons do not take focus, so clicking them leaves any open cell editor in
+place, as a remote change would.
+ */
+function ConcurrentTable(props: { initialSpec: TableSpec }) {
+    // Initial story data, intentionally captured on mount.
+    const [spec, setSpec] = createSignal(props.initialSpec);
+    const [writes, setWrites] = createSignal(0);
+    const table = () => toInstanceTable(spec());
+    const focus = useChildFocus<string>(rootFocus);
+
+    const removeFirstRow = () => setSpec((spec) => ({ ...spec, rows: spec.rows.slice(1) }));
+    const insertColumnBefore = () =>
+        setSpec((spec) => ({
+            ...spec,
+            columns: [{ id: "extra", label: "extra", type: "Int" }, ...spec.columns],
+        }));
+
+    return (
+        <div>
+            <TableEditor
+                table={table()}
+                tables={[table()]}
+                focus={focus.childFocus(table().id)}
+                onSetField={(row, header, value) => {
+                    setWrites((n) => n + 1);
+                    setSpec((spec) =>
+                        setSpecField(
+                            spec,
+                            row,
+                            header,
+                            typeof value === "object" && value !== null
+                                ? { rowId: value.id }
+                                : value,
+                        ),
+                    );
+                }}
+                onAddRow={() =>
+                    setSpec((spec) => ({
+                        ...spec,
+                        rows: [...spec.rows, { id: crypto.randomUUID(), values: {} }],
+                    }))
+                }
+                onDeleteRow={(row) =>
+                    setSpec((spec) => ({
+                        ...spec,
+                        rows: spec.rows.filter((candidate) => candidate.id !== row.id),
+                    }))
+                }
+            />
+            <p>
+                <button
+                    type="button"
+                    onMouseDown={(evt) => evt.preventDefault()}
+                    onClick={removeFirstRow}
+                >
+                    Remove first row
+                </button>
+                <button
+                    type="button"
+                    onMouseDown={(evt) => evt.preventDefault()}
+                    onClick={insertColumnBefore}
+                >
+                    Insert column before
+                </button>
+            </p>
+            <p data-testid="writes">{writes()}</p>
+        </div>
+    );
+}
+
+export const RemoteRowDeleteWhileEditing: Story = {
+    render: () => <ConcurrentTable initialSpec={listSpec} />,
+    play: async ({ canvasElement }: { canvasElement: HTMLElement }) => {
+        const canvas = within(canvasElement);
+        await userEvent.dblClick(canvas.getAllByRole("gridcell")[1]!);
+        const input = canvas.getByRole("textbox");
+        await userEvent.clear(input);
+        await userEvent.type(input, "Edited");
+
+        await userEvent.click(canvas.getByRole("button", { name: "Remove first row" }));
+        await waitFor(() => expect(canvas.getAllByRole("gridcell")).toHaveLength(2));
+        // The editor follows its row to the new position, keeping the text.
+        await expect(canvas.getByRole("textbox")).toHaveValue("Edited");
+        await expect(canvas.getByRole("textbox")).toHaveFocus();
+        await expect(canvas.getByTestId("writes")).toHaveTextContent("0");
+
+        await userEvent.keyboard("{Enter}");
+        const cells = canvas.getAllByRole("gridcell");
+        await expect(cells[0]).toHaveTextContent("Edited");
+        await expect(cells[1]).toHaveTextContent("Third");
+        await expect(cells[1]).toHaveFocus();
+        await expect(canvas.getByTestId("writes")).toHaveTextContent("1");
+    },
+};
+
+export const RemoteColumnInsertWhileEditing: Story = {
+    render: () => <ConcurrentTable initialSpec={listSpec} />,
+    play: async ({ canvasElement }: { canvasElement: HTMLElement }) => {
+        const canvas = within(canvasElement);
+        await userEvent.dblClick(canvas.getAllByRole("gridcell")[0]!);
+        const input = canvas.getByRole("textbox");
+        await userEvent.clear(input);
+        await userEvent.type(input, "Edited");
+
+        await userEvent.click(canvas.getByRole("button", { name: "Insert column before" }));
+        await waitFor(() => expect(canvas.getAllByRole("columnheader")).toHaveLength(4));
+        // The editor follows its column to the new position, keeping the text.
+        const editing = canvas.getByRole("textbox");
+        await expect(editing).toHaveValue("Edited");
+        await expect(editing).toHaveFocus();
+        await expect(canvas.getAllByRole("gridcell")[1]).toContainElement(editing);
+
+        await userEvent.keyboard("{Enter}");
+        const cells = canvas.getAllByRole("gridcell");
+        await expect(cells[0]).toHaveTextContent("");
+        await expect(cells[1]).toHaveTextContent("Edited");
+        await expect(cells[3]).toHaveTextContent("Second");
+        await expect(cells[3]).toHaveFocus();
+        await expect(canvas.getByTestId("writes")).toHaveTextContent("1");
+    },
+};
+
+export const RemoteDeleteOfEditedRow: Story = {
+    render: () => <ConcurrentTable initialSpec={listSpec} />,
+    play: async ({ canvasElement }: { canvasElement: HTMLElement }) => {
+        const canvas = within(canvasElement);
+        await userEvent.dblClick(canvas.getAllByRole("gridcell")[0]!);
+        const input = canvas.getByRole("textbox");
+        await userEvent.clear(input);
+        await userEvent.type(input, "Edited");
+
+        await userEvent.click(canvas.getByRole("button", { name: "Remove first row" }));
+        await waitFor(() => expect(canvas.getAllByRole("gridcell")).toHaveLength(2));
+        // The edit is dropped rather than written to whichever row took its
+        // place.
+        await expect(canvas.queryByRole("textbox")).not.toBeInTheDocument();
+        await expect(canvas.getByTestId("writes")).toHaveTextContent("0");
+        const cells = canvas.getAllByRole("gridcell");
+        await expect(cells[0]).toHaveTextContent("Second");
+        await expect(cells[0]).toHaveFocus();
+    },
+};
+
+export const DeleteRowWithLiveIndex: Story = {
+    render: () => {
+        const initial = toInstanceTable(listSpec);
+        const [rowIds, setRowIds] = createSignal(initial.rows.map((row) => row.id));
+        const table: InstanceTable = {
+            ...initial,
+            get rows() {
+                return initial.rows
+                    .filter((row) => rowIds().includes(row.id))
+                    .map((row) => ({
+                        id: row.id,
+                        fields: row.fields,
+                        // Like document-backed rows, removed rows report -1.
+                        get index() {
+                            return rowIds().indexOf(row.id);
+                        },
+                    }));
+            },
+        };
+        const focus = useChildFocus<string>(rootFocus);
+        return (
+            <TableEditor
+                table={table}
+                tables={[table]}
+                focus={focus.childFocus(table.id)}
+                onSetField={() => {}}
+                onAddRow={() => {}}
+                onDeleteRow={(row) => setRowIds((ids) => ids.filter((id) => id !== row.id))}
+            />
+        );
+    },
+    play: async ({ canvasElement }: { canvasElement: HTMLElement }) => {
+        const canvas = within(canvasElement);
+        await userEvent.click(canvas.getAllByRole("gridcell")[1]!);
+        await userEvent.click(canvas.getAllByRole("button", { name: "Delete row" })[1]!);
+        await waitFor(() => expect(canvas.getAllByRole("gridcell")).toHaveLength(2));
+        await expect(canvas.getByText("Third").closest("td")).toHaveFocus();
+
+        await userEvent.click(canvas.getAllByRole("button", { name: "Delete row" })[1]!);
+        await waitFor(() => expect(canvas.getAllByRole("gridcell")).toHaveLength(1));
+        await expect(canvas.getAllByRole("gridcell")[0]).toHaveFocus();
+
+        await userEvent.click(canvas.getByRole("button", { name: "Delete row" }));
+        await waitFor(() => expect(canvas.queryAllByRole("gridcell")).toHaveLength(0));
+    },
+};
+
 export const CommitWithTab: Story = {
     render: () => (
         <div>
@@ -539,29 +930,39 @@ export const KeyboardExitFocus: Story = {
     play: async ({ canvasElement }: { canvasElement: HTMLElement }) => {
         const canvas = within(canvasElement);
         const cells = canvas.getAllByRole("gridcell");
-        const last = cells[5]!;
+        const first = cells[0]!;
         // Repeated exits at a boundary must request focus even with no selection change.
-        await userEvent.click(last);
-        await userEvent.keyboard("7{Enter}");
-        await expect(last).toHaveFocus();
-        await expect(last).toHaveTextContent("7");
-        await userEvent.keyboard("8");
-        await userEvent.tab();
-        await expect(last).toHaveFocus();
-        await expect(last).toHaveTextContent("8");
+        await userEvent.click(first);
+        await userEvent.keyboard("7{ArrowUp}");
+        await expect(first).toHaveFocus();
+        await expect(first).toHaveTextContent("7");
+        await userEvent.keyboard("8{ArrowUp}");
+        await expect(first).toHaveFocus();
+        await expect(first).toHaveTextContent("8");
         await expect(canvas.getAllByRole("listitem")).toHaveLength(2);
 
         await userEvent.keyboard("9{Escape}");
-        await expect(last).toHaveFocus();
-        await expect(last).toHaveTextContent("8");
+        await expect(first).toHaveFocus();
+        await expect(first).toHaveTextContent("8");
         await userEvent.keyboard("0{Escape}");
-        await expect(last).toHaveFocus();
+        await expect(first).toHaveFocus();
         await expect(canvas.getAllByRole("listitem")).toHaveLength(2);
 
-        await userEvent.keyboard("{F2}");
-        await userEvent.tab({ shift: true });
-        await expect(cells[4]).toHaveFocus();
-        await expect(canvas.getAllByRole("listitem")).toHaveLength(3);
+        // Exiting the last row downward adds a row, which takes the selection
+        // once it appears.
+        await userEvent.click(cells[5]!);
+        await userEvent.keyboard("9{Enter}");
+        await waitFor(async () => {
+            const grown = canvas.getAllByRole("gridcell");
+            await expect(grown).toHaveLength(8);
+            await expect(grown[6]).toHaveFocus();
+        });
+
+        await userEvent.click(canvas.getAllByRole("gridcell")[7]!);
+        // Committing upward moves up the same column.
+        await userEvent.keyboard("1{ArrowUp}");
+        await expect(canvas.getAllByRole("gridcell")[5]).toHaveFocus();
+        await expect(canvas.getAllByRole("listitem")).toHaveLength(4);
     },
 };
 

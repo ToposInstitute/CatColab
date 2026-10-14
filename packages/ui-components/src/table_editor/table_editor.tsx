@@ -1,5 +1,3 @@
-import { Show } from "solid-js";
-
 import type {
     InstanceTable,
     LiteralValue,
@@ -62,21 +60,14 @@ export function TableEditor(props: TableEditorProps) {
             classList={{ [styles.unknown]: props.table.label === null }}
         >
             <TitleBar table={props.table} onHide={props.onHide} />
-            <div class={styles.scrollViewport}>
-                <TableGrid
-                    focus={props.focus}
-                    table={props.table}
-                    tables={props.tables}
-                    onSetField={props.onSetField}
-                />
-            </div>
-            <Show when={props.table.label !== null}>
-                <div class={styles.footer}>
-                    <button class={styles.addRow} type="button" onClick={() => props.onAddRow()}>
-                        + Row
-                    </button>
-                </div>
-            </Show>
+            <TableGrid
+                focus={props.focus}
+                table={props.table}
+                tables={props.tables}
+                onSetField={props.onSetField}
+                onAddRow={props.onAddRow}
+                onDeleteRow={props.onDeleteRow}
+            />
         </section>
     );
 }

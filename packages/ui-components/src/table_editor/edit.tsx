@@ -58,6 +58,16 @@ type CellEditApi = {
     /** Clear the field of a cell. */
     clearCell: (key: CellKey) => void;
 
+    /** Add a row through the table's callback, selecting its first cell when
+    it appears. */
+    addRow: () => void;
+
+    /** Stop waiting to select a row being added, as when the user leaves the
+    grid before it appears. The add request itself has already been dispatched
+    and is not withdrawn; the row simply appears without taking the
+    selection. */
+    cancelPendingSelection: () => void;
+
     /** Handle a key pressed on a selected cell: editing, toggling, or
     clearing. Returns whether the key was handled. */
     onCellKey: (evt: KeyboardEvent, key: CellKey) => boolean;
@@ -79,6 +89,7 @@ export function EditProvider(
         table: Accessor<InstanceTable>;
         tables: Accessor<ReadonlyArray<InstanceTable>>;
         onSetField: (row: TableRow, header: TableHeader, value: LiteralValue | TableRow) => void;
+        onAddRow: () => void;
     }>,
 ) {
     const grid = useGridFocus();
@@ -102,6 +113,41 @@ export function EditProvider(
     const select = (key: CellKey) => {
         grid.cellFocus(key).setFocused(true);
     };
+
+    /** The set of row IDs present when the next added row was promised the
+    selection, or null when no selection is pending. */
+    const [pendingSelection, setPendingSelection] = createSignal<ReadonlySet<string> | null>(null);
+
+    /** Add a row, selecting its first cell once it appears.
+
+    The callback does not report the new row's ID, so the row is identified as
+    the first row that was not present when the request was made. If another
+    row is added concurrently, the selection may land on it instead; the
+    callback contract leaves this ambiguous.
+     */
+    const addRow = () => {
+        setPendingSelection(new Set(props.table().rows.map((row) => row.id)));
+        props.onAddRow();
+    };
+
+    const cancelPendingSelection = () => setPendingSelection(null);
+
+    createEffect(() => {
+        const pending = pendingSelection();
+        if (!pending) {
+            return;
+        }
+        const table = props.table();
+        const newRow = table.rows.find((row) => !pending.has(row.id));
+        if (!newRow) {
+            return;
+        }
+        const header = table.headers[0];
+        setPendingSelection(null);
+        if (header) {
+            select(makeCellKey(header.id, newRow.id));
+        }
+    });
 
     const isEditing = (key: CellKey) => {
         const state = edit();
@@ -161,12 +207,22 @@ export function EditProvider(
             setEdit(null);
             return;
         }
-        const target = neighborKey(props.table(), headerIndex(), key, dir) ?? key;
+        const target = neighborKey(props.table(), headerIndex(), key, dir);
+        if (!target && (dir === "down" || dir === "forward")) {
+            // Exiting the grid downward or forward adds a row, ready for
+            // further editing.
+            batch(() => {
+                setEdit(null);
+                addRow();
+            });
+            if (grid.activeKey() === key && edit() === null && cellElement.isConnected) {
+                cellElement.focus({ preventScroll: true });
+            }
+            return;
+        }
         batch(() => {
             setEdit(null);
-            if (cell) {
-                select(target);
-            }
+            select(target ?? key);
         });
         // A newly selected cell focuses itself. If selection stayed here,
         // return browser focus directly to the edited cell.
@@ -243,10 +299,14 @@ export function EditProvider(
         return true;
     };
 
-    // A draft is only meaningful while its cell is selected.
+    // A draft is only meaningful while its cell is selected and still exists.
     createEffect(() => {
         const state = edit();
-        if (state && grid.activeKey() !== makeCellKey(state.headerId, state.rowId)) {
+        if (!state) {
+            return;
+        }
+        const key = makeCellKey(state.headerId, state.rowId);
+        if (grid.activeKey() !== key || !resolveCell(key)) {
             setEdit(null);
         }
     });
@@ -264,6 +324,8 @@ export function EditProvider(
                 toggleBool,
                 commitRowRef,
                 clearCell,
+                addRow,
+                cancelPendingSelection,
                 onCellKey,
                 isFirstCell,
             }}
