@@ -2,7 +2,7 @@ import { Index, Show } from "solid-js";
 
 import type { InstanceTable, TableHeader, TableRow } from "catcolab-documents";
 import { GridCell } from "./grid_cell";
-import { RowHeader } from "./row_header";
+import { RowIssueTooltip } from "./row_issue_tooltip";
 import type { IssueLookup } from "./validation";
 
 import styles from "./table_editor.module.css";
@@ -23,7 +23,9 @@ export function TableRows(props: {
             <Index each={props.rows}>
                 {(row) => (
                     <tr aria-rowindex={row().index + 2}>
-                        <RowHeader issues={props.issuesAt([props.tableId, "rows", row().id])} />
+                        <RowIssueTooltip
+                            issues={props.issuesAt([props.tableId, "rows", row().id])}
+                        />
                         <Show
                             when={props.headers.length > 0}
                             fallback={

@@ -6,8 +6,8 @@ import { issueMessage } from "./validation";
 
 import styles from "./table_editor.module.css";
 
-/** Row-level constraints have their own indicator rather than marking every field. */
-export function RowHeader(props: { issues: ReadonlyArray<TableIssue> }) {
+/** Tooltip listing the issues that apply to a row as a whole, shown on its row header. */
+export function RowIssueTooltip(props: { issues: ReadonlyArray<TableIssue> }) {
     return (
         <Show when={props.issues.length > 0} fallback={<th class={styles.rowHeader} scope="row" />}>
             <Tooltip hoverableContent={false} openOnFocus={false}>
