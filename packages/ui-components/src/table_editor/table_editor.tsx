@@ -20,7 +20,7 @@ export type TableEditorProps = {
 
     Used to resolve the rows referenced by `RowRef` columns.
      */
-    tables: ReadonlyArray<InstanceTable>;
+    allTables: ReadonlyArray<InstanceTable>;
 
     /** Validation issues for this table and its fields, matched by `path`. */
     issues?: ReadonlyArray<TableIssue>;
@@ -74,7 +74,7 @@ export function TableEditor(props: TableEditorProps) {
             <TableGrid
                 focus={props.focus}
                 table={props.table}
-                tables={props.tables}
+                allTables={props.allTables}
                 onSetField={props.onSetField}
                 onAddRow={props.onAddRow}
                 onDeleteRow={props.onDeleteRow}

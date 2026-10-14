@@ -18,7 +18,7 @@ export function GridCell(props: {
     row: TableRow;
     header: TableHeader;
     field: FieldValue | undefined;
-    tables: ReadonlyArray<InstanceTable>;
+    allTables: ReadonlyArray<InstanceTable>;
 }) {
     const key = createMemo(() => makeCellKey(props.header.id, props.row.id));
     const { selected, focus } = useGridCellFocus(() => key());
@@ -26,7 +26,7 @@ export function GridCell(props: {
     const editing = () => edit.isEditing(key());
     const issues = () => (props.field ? props.issuesAt(props.field.content.path) : []);
     const invalid = () =>
-        issues().length > 0 || fieldIsInvalid(props.field, props.header, props.tables);
+        issues().length > 0 || fieldIsInvalid(props.field, props.header, props.allTables);
 
     /** Possible values for a row-reference cell, with the current value
     highlighted. The target is committed by the completion itself. */
@@ -34,7 +34,7 @@ export function GridCell(props: {
         if (props.header.type.tag !== "RowRef") {
             return undefined;
         }
-        const codomain = codomainOf(props.header, props.tables);
+        const codomain = codomainOf(props.header, props.allTables);
         if (!codomain) {
             return [];
         }
@@ -96,7 +96,7 @@ export function GridCell(props: {
                     <Cell
                         field={props.field}
                         header={props.header}
-                        tables={props.tables}
+                        allTables={props.allTables}
                         onToggle={() => edit.toggleBool(key())}
                         onOpenRowRef={() => edit.startEdit(key())}
                     />

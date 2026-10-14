@@ -160,7 +160,7 @@ function EditableTables(props: { initialSpecs: TableSpec[]; remoteUpdates?: bool
                     {(table) => (
                         <TableEditor
                             table={table()}
-                            tables={tables()}
+                            allTables={tables()}
                             focus={focus.childFocus(table().id)}
                             onSetField={(row, header, value) =>
                                 setField(table().id, row, header, value)
@@ -544,7 +544,7 @@ function SingleTable(props: { initialSpec: TableSpec; addRowDelay?: number }) {
     return (
         <TableEditor
             table={table()}
-            tables={[table()]}
+            allTables={[table()]}
             focus={focus.childFocus(table().id)}
             onSetField={(row, header, value) =>
                 setSpec((spec) =>
@@ -710,7 +710,7 @@ function ConcurrentTable(props: { initialSpec: TableSpec }) {
         <div>
             <TableEditor
                 table={table()}
-                tables={[table()]}
+                allTables={[table()]}
                 focus={focus.childFocus(table().id)}
                 onSetField={(row, header, value) => {
                     setWrites((n) => n + 1);
@@ -855,7 +855,7 @@ export const DeleteRowWithLiveIndex: Story = {
         return (
             <TableEditor
                 table={table}
-                tables={[table]}
+                allTables={[table]}
                 focus={focus.childFocus(table.id)}
                 onSetField={() => {}}
                 onAddRow={() => {}}
@@ -1182,7 +1182,7 @@ export const Unnamed: Story = {
 /** A single table with externally supplied validation issues. */
 function IssueTable(props: {
     table: () => InstanceTable;
-    tables?: () => ReadonlyArray<InstanceTable>;
+    allTables?: () => ReadonlyArray<InstanceTable>;
     issues?: ReadonlyArray<TableIssue>;
     onSetField?: (row: TableRow, header: TableHeader, value: LiteralValue | TableRow) => void;
     onHide?: () => void;
@@ -1193,7 +1193,7 @@ function IssueTable(props: {
     return (
         <TableEditor
             table={props.table()}
-            tables={props.tables?.() ?? [props.table()]}
+            allTables={props.allTables?.() ?? [props.table()]}
             issues={props.issues}
             focus={focus.childFocus(props.table().id)}
             onSetField={props.onSetField ?? (() => {})}
@@ -1345,7 +1345,7 @@ export const InferredInvalidValues: Story = {
                 </button>
                 <IssueTable
                     table={() => toInstanceTable(mainSpec)}
-                    tables={() => [toInstanceTable(mainSpec), toInstanceTable(target())]}
+                    allTables={() => [toInstanceTable(mainSpec), toInstanceTable(target())]}
                 />
             </div>
         );

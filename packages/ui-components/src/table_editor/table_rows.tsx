@@ -16,7 +16,7 @@ export function TableRows(props: {
     rows: ReadonlyArray<TableRow>;
     headers: ReadonlyArray<TableHeader>;
     headerIndex: () => ReadonlyMap<string, number>;
-    tables: ReadonlyArray<InstanceTable>;
+    allTables: ReadonlyArray<InstanceTable>;
     onDeleteRow: (row: TableRow) => void;
 }) {
     return (
@@ -30,7 +30,7 @@ export function TableRows(props: {
                         deletingColumnId={props.deletingColumnId}
                         headers={props.headers}
                         headerIndex={props.headerIndex}
-                        tables={props.tables}
+                        allTables={props.allTables}
                         onDeleteRow={props.onDeleteRow}
                     />
                 )}
@@ -47,7 +47,7 @@ function BodyRow(props: {
     row: TableRow;
     headers: ReadonlyArray<TableHeader>;
     headerIndex: () => ReadonlyMap<string, number>;
-    tables: ReadonlyArray<InstanceTable>;
+    allTables: ReadonlyArray<InstanceTable>;
     onDeleteRow: (row: TableRow) => void;
 }) {
     return (
@@ -68,7 +68,7 @@ function BodyRow(props: {
                             row={props.row}
                             header={header()}
                             field={fieldOf(props.row, props.headerIndex().get(header().id) ?? -1)}
-                            tables={props.tables}
+                            allTables={props.allTables}
                             issuesAt={props.issuesAt}
                             deleting={props.deletingColumnId === header().id}
                         />

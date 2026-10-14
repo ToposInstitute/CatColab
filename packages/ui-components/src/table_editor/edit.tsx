@@ -84,7 +84,7 @@ afresh by ID before every write so that they cannot go stale.
 export function EditProvider(
     props: ParentProps<{
         table: Accessor<InstanceTable>;
-        tables: Accessor<ReadonlyArray<InstanceTable>>;
+        allTables: Accessor<ReadonlyArray<InstanceTable>>;
         onSetField: (row: TableRow, header: TableHeader, value: LiteralValue | TableRow) => void;
         onAddRow: () => void;
     }>,
@@ -169,7 +169,7 @@ export function EditProvider(
                 rowId: cell.row.id,
                 headerId: cell.header.id,
                 text:
-                    text ?? fieldText(fieldAt(cell.row, cell.header), cell.header, props.tables()),
+                    text ?? fieldText(fieldAt(cell.row, cell.header), cell.header, props.allTables()),
             });
         });
     };

@@ -11,11 +11,11 @@ a labeled reference with a completion indicator for a row-reference column. */
 export function Cell(props: {
     field: FieldValue | undefined;
     header: TableHeader;
-    tables: ReadonlyArray<InstanceTable>;
+    allTables: ReadonlyArray<InstanceTable>;
     onToggle?: () => void;
     onOpenRowRef?: () => void;
 }) {
-    const text = () => fieldText(props.field, props.header, props.tables);
+    const text = () => fieldText(props.field, props.header, props.allTables);
     return (
         <Show
             when={props.header.type.tag === "Bool"}

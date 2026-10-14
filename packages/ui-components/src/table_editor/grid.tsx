@@ -23,7 +23,7 @@ type TableGridProps = {
     onDeleteOrphanedColumn?: (header: TableHeader) => void;
     focus: FocusHandle;
     table: InstanceTable;
-    tables: ReadonlyArray<InstanceTable>;
+    allTables: ReadonlyArray<InstanceTable>;
     onSetField: (row: TableRow, header: TableHeader, value: LiteralValue | TableRow) => void;
     onAddRow: () => void;
     onDeleteRow: (row: TableRow) => void;
@@ -63,7 +63,7 @@ export function TableGrid(props: TableGridProps) {
         >
             <EditProvider
                 table={() => props.table}
-                tables={() => props.tables}
+                allTables={() => props.allTables}
                 onSetField={props.onSetField}
                 onAddRow={props.onAddRow}
             >
@@ -213,7 +213,7 @@ function GridContent(props: TableGridProps) {
                     rows={props.table.rows}
                     headers={headers()}
                     headerIndex={headerIndex}
-                    tables={props.tables}
+                    allTables={props.allTables}
                     onDeleteRow={props.onDeleteRow}
                 />
             </table>
