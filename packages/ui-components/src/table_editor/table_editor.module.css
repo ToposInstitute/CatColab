@@ -1,0 +1,145 @@
+.table {
+    display: flex;
+    flex-direction: column;
+    width: fit-content;
+    max-width: 100%;
+    border: 1px solid var(--color-gray-450);
+    background: var(--color-background);
+}
+
+.header {
+    position: sticky;
+    left: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.4rem 0.75rem;
+    background: var(--color-gray-50);
+}
+
+.label {
+    margin: 0;
+    margin-right: auto;
+    font-size: 1.05rem;
+    font-weight: 500;
+}
+
+.scrollViewport {
+    position: relative;
+    min-width: 0;
+}
+
+.scrollArea {
+    overflow: auto;
+    max-height: var(--table-editor-max-height, 70vh);
+    outline: none;
+}
+
+.grid {
+    width: max-content;
+    border-collapse: collapse;
+    table-layout: fixed;
+}
+
+.columnHeader {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    height: 28px;
+    padding: 0 0.5rem;
+    border: 1px solid var(--color-gray-450);
+    border-top: none;
+    background: var(--color-gray-50);
+    font-weight: 500;
+    text-align: left;
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+.columnContent {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+}
+
+.columnLabel {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.unnamed {
+    color: var(--color-text-secondary);
+    font-style: italic;
+}
+
+.cell {
+    position: relative;
+    height: 28px;
+    padding: 0;
+    border: 1px solid var(--color-gray-450);
+    vertical-align: middle;
+    overflow: hidden;
+    white-space: nowrap;
+    outline: none;
+}
+
+.cellText {
+    display: block;
+    padding: 0 0.5rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    user-select: none;
+}
+
+.rowHeaderColumn {
+    width: 16px;
+}
+
+.rowHeader {
+    padding: 0;
+    border: 1px solid var(--color-gray-450);
+    background: var(--color-gray-50);
+}
+
+.checkbox {
+    display: block;
+    margin: 0 auto;
+}
+
+.table.unknown {
+    background: var(--color-icon-button-danger-hover);
+}
+
+.table.unknown .header,
+.table.unknown .columnHeader {
+    background: var(--color-icon-button-danger-hover);
+}
+
+.footer {
+    position: sticky;
+    left: 0;
+    display: flex;
+    background: var(--color-gray-50);
+}
+
+.table.unknown .footer {
+    background: var(--color-icon-button-danger-hover);
+}
+
+.addRow {
+    display: block;
+    width: 100%;
+    padding: 0.45rem 0.75rem;
+    border: 0;
+    background: transparent;
+    color: var(--color-text-secondary);
+    font-size: 0.8rem;
+    cursor: pointer;
+}
+
+.addRow:hover {
+    background: var(--color-button-utility-hover-bg);
+    color: var(--color-foreground);
+}
