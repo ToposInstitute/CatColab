@@ -41,11 +41,12 @@ type CellEditApi = {
     /** Update the draft text of the open editor. */
     setEditText: (text: string) => void;
 
-    /** Discard the draft and close the editor. */
-    cancelEdit: () => void;
+    /** Discard the draft and return browser focus to its cell. */
+    cancelEdit: (cellElement: HTMLTableCellElement) => void;
 
-    /** Commit the draft of the edited cell and move the selection. */
-    commitEdit: (dir: MoveDirection | "blur") => void;
+    /** Commit the draft and move the selection, restoring browser focus to
+    the edited cell only if it remains selected after a keyboard exit. */
+    commitEdit: (dir: MoveDirection | "blur", cellElement: HTMLTableCellElement) => void;
 
     /** Toggle a boolean cell. */
     toggleBool: (key: CellKey) => void;
@@ -121,15 +122,16 @@ export function EditProvider(
 
     const setEditText = (text: string) => setEdit((state) => (state ? { ...state, text } : state));
 
-    const cancelEdit = () => {
+    const cancelEdit = (cellElement: HTMLTableCellElement) => {
         const state = edit();
         if (!state) {
             return;
         }
-        batch(() => {
-            setEdit(null);
-            grid.requestFocus(makeCellKey(state.headerId, state.rowId));
-        });
+        const key = makeCellKey(state.headerId, state.rowId);
+        setEdit(null);
+        if (grid.activeKey() === key && edit() === null && cellElement.isConnected) {
+            cellElement.focus({ preventScroll: true });
+        }
     };
 
     /** Commit the text of the open editor, writing to the cell by ID.
@@ -137,7 +139,7 @@ export function EditProvider(
     The write is skipped when the row or column has since been removed, or when
     the text does not parse, in which case the cell keeps its previous value.
      */
-    const commitEdit = (dir: MoveDirection | "blur") => {
+    const commitEdit = (dir: MoveDirection | "blur", cellElement: HTMLTableCellElement) => {
         const state = edit();
         if (state === null) {
             return;
@@ -160,10 +162,13 @@ export function EditProvider(
             setEdit(null);
             if (cell) {
                 select(target);
-                grid.requestFocus(target);
             }
         });
-        // At the edge of the grid, explicitly return focus to the same cell.
+        // A newly selected cell focuses itself. If selection stayed here,
+        // return browser focus directly to the edited cell.
+        if (grid.activeKey() === key && edit() === null && cellElement.isConnected) {
+            cellElement.focus({ preventScroll: true });
+        }
         // Appending a row on exit comes with structural changes.
     };
 

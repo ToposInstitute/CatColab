@@ -17,17 +17,17 @@ export function GridCell(props: {
     tables: ReadonlyArray<InstanceTable>;
 }) {
     const key = createMemo(() => makeCellKey(props.header.id, props.row.id));
-    const { selected, tabindex, focus, focusRequest } = useGridCellFocus(() => key());
+    const { selected, tabindex, focus } = useGridCellFocus(() => key());
     const edit = useCellEdit();
     const editing = () => edit.isEditing(key());
 
     let tdRef!: HTMLTableCellElement;
 
-    // Focus follows selection acquisition or an explicit keyboard-exit request.
-    // `on` leaves the callback untracked: closing an editor or updating a field
-    // is not itself a reason to move focus. TextInput owns focus while editing.
+    // Move browser focus when this cell becomes selected. The editing check
+    // is untracked: closing an editor or updating a field must not move focus.
+    // TextInput owns browser focus while editing.
     createEffect(
-        on([selected, key, focusRequest], ([isSelected]) => {
+        on([selected, key], ([isSelected]) => {
             if (isSelected && !editing() && document.activeElement !== tdRef) {
                 tdRef.focus({ preventScroll: true });
             }
@@ -75,8 +75,8 @@ export function GridCell(props: {
                     setText={edit.setEditText}
                     validate={(text) => parseValue(props.header, text).ok}
                     canExitBackward={!edit.isFirstCell(key())}
-                    onCommit={(dir) => edit.commitEdit(dir)}
-                    onCancel={edit.cancelEdit}
+                    onCommit={(dir) => edit.commitEdit(dir, tdRef)}
+                    onCancel={() => edit.cancelEdit(tdRef)}
                 />
             </Show>
         </td>
