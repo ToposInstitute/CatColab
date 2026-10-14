@@ -461,7 +461,7 @@ pub async fn initialize_user_state_doc(
         .execute(&state.db)
         .await?;
 
-    // Ideally we'd delete the old document from storage here, but samod 0.13 has no repo-level
+    // Ideally we'd delete the old document from storage here, but samod 0.15 has no repo-level
     // delete API.
 
     info!(user_id = %user_id, doc_id = %doc_id, "Initialized fresh user state document");

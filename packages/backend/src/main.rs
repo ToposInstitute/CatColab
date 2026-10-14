@@ -226,7 +226,9 @@ async fn websocket_handler(
     State(acceptor): State<samod::AcceptorHandle>,
 ) -> axum::response::Response {
     ws.on_upgrade(|socket| async move {
-        acceptor.accept_axum(socket).expect("Failed to accept WebSocket connection");
+        acceptor
+            .accept_axum(socket, None)
+            .expect("Failed to accept WebSocket connection");
     })
 }
 
