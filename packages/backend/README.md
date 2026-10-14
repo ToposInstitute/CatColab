@@ -85,6 +85,11 @@ These are references to documents, referring to them by their latest snapshot: t
 
 This table refers to our users. We use Firebase so our `id` in this table are Firebase user IDs.
 
+User state is rebuilt from PostgreSQL into a fresh Automerge document on the first
+load per backend process. Subsequent requests use the cached ID. The new ID is
+saved to `users.state_doc_id`; old documents remain in storage. Clients holding
+the old ID must fetch the new ID to receive updates.
+
 ### snapshots
 
 These are timestamped snapshots of the Automerge document.
