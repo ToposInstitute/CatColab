@@ -70,9 +70,12 @@ function EditableTables(props: {
     initialSpecs: TableSpec[];
     issues?: TableIssue[];
     hideable?: boolean;
+    trackWrites?: boolean;
+    remoteUpdates?: boolean;
 }) {
     // Initial story data, intentionally captured on mount.
     const [specs, setSpecs] = createSignal(props.initialSpecs);
+    const [commits, setCommits] = createSignal<string[]>([]);
     const [hidden, setHidden] = createSignal<ReadonlySet<string>>(new Set());
     const tables = () => specs().map(toInstanceTable);
     const focus = useChildFocus<string>(rootFocus);
@@ -89,6 +92,9 @@ function EditableTables(props: {
         header: TableHeader,
         value: LiteralValue | TableRow,
     ) => {
+        if (props.trackWrites) {
+            setCommits((commits) => [...commits, `${tableId}.${header.id}[${row.id}]`]);
+        }
         const stored = typeof value === "object" && value !== null ? { rowId: value.id } : value;
         updateSpec(tableId, (spec) => ({
             ...spec,
@@ -126,26 +132,52 @@ function EditableTables(props: {
         }));
 
     return (
-        <div style={{ display: "flex", "flex-wrap": "wrap", gap: "1.5rem" }}>
-            <Index each={visibleTables()}>
-                {(table) => (
-                    <TableEditor
-                        table={table()}
-                        allTables={tables()}
-                        issues={props.issues?.filter((issue) => issue.path[0] === table().id)}
-                        focus={focus.childFocus(table().id)}
-                        onSetField={(row, header, value) =>
-                            setField(table().id, row, header, value)
-                        }
-                        onAddRow={() => addRow(table().id)}
-                        onDeleteRow={(row) => deleteRow(table().id, row)}
-                        onHide={props.hideable ? () => hide(table().id) : undefined}
-                        onDeleteOrphanedTable={() => deleteTable(table().id)}
-                        onDeleteOrphanedColumn={(header) => deleteColumn(table().id, header)}
-                    />
-                )}
-            </Index>
-        </div>
+        <>
+            {props.remoteUpdates && (
+                <button
+                    type="button"
+                    onMouseDown={(evt) => evt.preventDefault()}
+                    onClick={() =>
+                        setSpecs((specs) =>
+                            specs.map((spec) => ({
+                                ...spec,
+                                rows: spec.rows.map((row) => ({
+                                    ...row,
+                                    values: { ...row.values, name: "Remote" },
+                                })),
+                            })),
+                        )
+                    }
+                >
+                    Remote update
+                </button>
+            )}
+            {props.trackWrites && (
+                <ol data-testid="commit-log">
+                    <Index each={commits()}>{(commit) => <li>{commit()}</li>}</Index>
+                </ol>
+            )}
+            <div style={{ display: "flex", "flex-wrap": "wrap", gap: "1.5rem" }}>
+                <Index each={visibleTables()}>
+                    {(table) => (
+                        <TableEditor
+                            table={table()}
+                            allTables={tables()}
+                            issues={props.issues?.filter((issue) => issue.path[0] === table().id)}
+                            focus={focus.childFocus(table().id)}
+                            onSetField={(row, header, value) =>
+                                setField(table().id, row, header, value)
+                            }
+                            onAddRow={() => addRow(table().id)}
+                            onDeleteRow={(row) => deleteRow(table().id, row)}
+                            onHide={props.hideable ? () => hide(table().id) : undefined}
+                            onDeleteOrphanedTable={() => deleteTable(table().id)}
+                            onDeleteOrphanedColumn={(header) => deleteColumn(table().id, header)}
+                        />
+                    )}
+                </Index>
+            </div>
+        </>
     );
 }
 

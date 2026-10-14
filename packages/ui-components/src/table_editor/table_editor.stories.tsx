@@ -127,16 +127,35 @@ export const OrphanedColumn: Story = {
 export const AddingRows: Story = {
     render: () => (
         <div>
-            <p>
-                Edit the last cell and press Enter to add a row. The next row appears after a short
-                delay, ready for you to keep typing.
-            </p>
+            <p>Edit the last cell and press Enter to add a row and keep typing.</p>
             <SingleTable
                 initialSpec={{
                     ...focusSpec,
                     rows: [...focusSpec.rows, { id: "focus-2", values: { value: "Second" } }],
                 }}
-                addRowDelay={300}
+            />
+        </div>
+    ),
+};
+
+export const ScrollIndicators: Story = {
+    render: () => (
+        <div style={{ width: "240px", "--table-editor-max-height": "120px" }}>
+            <EditableTables
+                initialSpecs={[
+                    {
+                        id: "scroll-indicators",
+                        label: "Scrollable table",
+                        columns: [
+                            { id: "first", label: "First", type: "String" },
+                            { id: "second", label: "Second", type: "String" },
+                        ],
+                        rows: Array.from({ length: 12 }, (_, index) => ({
+                            id: `row-${index}`,
+                            values: { first: `Value ${index}`, second: "Other" },
+                        })),
+                    },
+                ]}
             />
         </div>
     ),

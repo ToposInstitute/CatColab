@@ -2,6 +2,7 @@ import { createSignal } from "solid-js";
 import { userEvent, waitFor, within } from "storybook/test";
 import { test, expect } from "vitest";
 
+import type { LiteralValue } from "catcolab-documents";
 import { mount } from "../test/mount";
 import { rootFocus, useChildFocus } from "../util/focus";
 import { TableEditor } from "./table_editor";
@@ -722,4 +723,336 @@ test("StableColumnWidths", async () => {
     expect(within(rowRefCell).getByRole("textbox")).toHaveFocus();
     expect(table.getBoundingClientRect().width).toBe(tableWidth);
     expect(rowRefCell.getBoundingClientRect().width).toBe(columnWidth);
+});
+
+test("VirtualizedRows", async () => {
+    const canvasElement = mount(() => (
+        <EditableTables
+            trackWrites
+            initialSpecs={[
+                {
+                    id: "large",
+                    label: "Large table",
+                    columns: [{ id: "value", label: "Value", type: "String" }],
+                    rows: Array.from({ length: 10000 }, (_, index) => ({
+                        id: `row-${index}`,
+                        values: { value: `Value ${index}` },
+                    })),
+                },
+            ]}
+        />
+    ));
+
+    const canvas = within(canvasElement);
+    const table = canvas.getByRole("grid");
+    const scrollArea = table.parentElement!;
+    await waitFor(() => expect(canvas.getAllByRole("gridcell").length).toBeLessThan(100));
+    const first = canvas.getAllByRole("gridcell")[0]!;
+    expect(first.closest("tr")!.getBoundingClientRect().height).toBe(29);
+    await userEvent.click(first);
+    // Moving past the rendered window mounts the next row before focusing it.
+    await userEvent.keyboard("{ArrowDown>40/}");
+    await waitFor(() => expectActiveCell(canvas.getByText("Value 40").closest("td")!));
+    // Manual scrolling may recycle the focused row, but keeps keyboard focus
+    // in the grid rather than losing it to the document body.
+    scrollArea.scrollTop = scrollArea.scrollHeight;
+    scrollArea.dispatchEvent(new Event("scroll"));
+    await waitFor(() => expect(canvas.getByText("Value 9999")).toBeInTheDocument());
+    expect(table).toHaveFocus();
+    expect(table).not.toHaveAttribute("aria-activedescendant");
+    expect(canvas.getAllByRole("gridcell").length).toBeLessThan(100);
+    await userEvent.keyboard("{ArrowUp}");
+    await waitFor(() => expectActiveCell(canvas.getByText("Value 39").closest("td")!));
+    await userEvent.dblClick(canvas.getByText("Value 39").closest("td")!);
+    await userEvent.keyboard(" updated");
+    scrollArea.scrollTop = scrollArea.scrollHeight;
+    scrollArea.dispatchEvent(new Event("scroll"));
+    await waitFor(() => expect(canvas.getByText("Value 9999")).toBeInTheDocument());
+    expect(scrollArea).toHaveFocus();
+    scrollArea.scrollTop = 39 * 29;
+    scrollArea.dispatchEvent(new Event("scroll"));
+    await waitFor(() => expect(canvas.getByText("Value 39 updated")).toBeInTheDocument());
+    expect(scrollArea).toHaveFocus();
+    expect(canvas.getAllByRole("listitem")).toHaveLength(1);
+    expect(canvas.getByText("Value 39 updated").closest("tr")).toHaveAttribute(
+        "aria-rowindex",
+        "41",
+    );
+    scrollArea.scrollTop = scrollArea.scrollHeight;
+    scrollArea.dispatchEvent(new Event("scroll"));
+    await waitFor(() => expect(canvas.getByText("Value 9999")).toBeInTheDocument());
+    await userEvent.dblClick(canvas.getByText("Value 9999").closest("td")!);
+    await userEvent.keyboard("{Enter}");
+    await waitFor(() => expect(table).toHaveAttribute("aria-rowcount", "10002"));
+    await waitFor(() => expectActiveCell(canvas.getAllByRole("gridcell").at(-1)!));
+    await userEvent.click(canvas.getAllByRole("button", { name: "Delete row" }).at(-1)!);
+    await waitFor(() => expect(table).toHaveAttribute("aria-rowcount", "10001"));
+    await waitFor(() => expectActiveCell(canvas.getByText("Value 9999").closest("td")!));
+    // The grid remains the single cell-navigation Tab stop after focus leaves.
+    canvasElement.tabIndex = -1;
+    canvasElement.focus();
+    await waitFor(() => expect(table.tabIndex).toBe(0));
+});
+
+test("ScrollIndicators", async () => {
+    const canvasElement = mount(() => (
+        <div style={{ width: "240px", "--table-editor-max-height": "120px" }}>
+            <EditableTables
+                initialSpecs={[
+                    {
+                        id: "scroll-indicators",
+                        label: "Scrollable table",
+                        columns: [
+                            { id: "first", label: "First", type: "String" },
+                            { id: "second", label: "Second", type: "String" },
+                        ],
+                        rows: Array.from({ length: 12 }, (_, index) => ({
+                            id: `row-${index}`,
+                            values: { first: `Value ${index}`, second: "Other" },
+                        })),
+                    },
+                ]}
+            />
+        </div>
+    ));
+
+    const canvas = within(canvasElement);
+    const table = canvas.getByRole("grid");
+    const scrollArea = table.parentElement!;
+    const container = canvasElement.firstElementChild as HTMLElement;
+    const hasCue = (direction: string) =>
+        canvasElement.querySelector(`[data-scroll-direction="${direction}"]`) !== null;
+    await waitFor(async () => {
+        expect(hasCue("bottom")).toBe(true);
+        expect(hasCue("right")).toBe(true);
+        expect(hasCue("top")).toBe(false);
+        expect(hasCue("left")).toBe(false);
+    });
+    scrollArea.scrollTop = scrollArea.scrollHeight;
+    scrollArea.scrollLeft = scrollArea.scrollWidth;
+    scrollArea.dispatchEvent(new Event("scroll"));
+    await waitFor(async () => {
+        expect(hasCue("top")).toBe(true);
+        expect(hasCue("left")).toBe(true);
+        expect(hasCue("bottom")).toBe(false);
+        expect(hasCue("right")).toBe(false);
+    });
+    container.style.width = "600px";
+    container.style.setProperty("--table-editor-max-height", "600px");
+    await waitFor(() =>
+        expect(canvasElement.querySelectorAll("[data-scroll-direction]")).toHaveLength(0),
+    );
+    // Adding/removing content updates overflow even if viewport width is unchanged.
+    container.style.setProperty("--table-editor-max-height", "400px");
+    await userEvent.click(canvas.getByRole("button", { name: "+ Row" }));
+    await waitFor(() => expect(table).toHaveAttribute("aria-rowcount", "14"));
+    await waitFor(() => expect(hasCue("top")).toBe(true));
+    await userEvent.click(canvas.getAllByRole("button", { name: "Delete row" }).at(-1)!);
+    await waitFor(() =>
+        expect(canvasElement.querySelectorAll("[data-scroll-direction]")).toHaveLength(0),
+    );
+});
+
+test("ScrollStability", async () => {
+    const canvasElement = mount(() => (
+        <div style={{ width: "260px", "--table-editor-max-height": "150px" }}>
+            <EditableTables
+                remoteUpdates
+                trackWrites
+                initialSpecs={[
+                    {
+                        id: "wide",
+                        label: "Wide",
+                        columns: [
+                            { id: "name", label: "Name", type: "String" },
+                            { id: "enabled", label: "Enabled", type: "Bool" },
+                            { id: "team", label: "Team", type: { rowRef: "team" } },
+                            { id: "last", label: "Last", type: "String" },
+                        ],
+                        rows: Array.from({ length: 100 }, (_, index) => ({
+                            id: `wide-${index}`,
+                            values: {
+                                name: `Name ${index}`,
+                                enabled: false,
+                                last: `Last ${index}`,
+                            },
+                        })),
+                    },
+                    teamSpec,
+                ]}
+            />
+        </div>
+    ));
+
+    const canvas = within(canvasElement);
+    const table = canvas.getAllByRole("grid")[0]!;
+    const area = table.parentElement!;
+    const container = canvasElement.firstElementChild as HTMLElement;
+    area.scrollTop = 30 * 29;
+    area.dispatchEvent(new Event("scroll"));
+    await waitFor(() => expect(within(table).getByText("Name 30")).toBeInTheDocument());
+    const name = within(table).getByText("Name 30").closest("td")!;
+    await userEvent.dblClick(name);
+    await userEvent.keyboard(" updated");
+    expect(name.closest("tr")!.getBoundingClientRect().height).toBe(29);
+    const top = area.scrollTop;
+    const left = area.scrollLeft;
+    // Blur closes the editor without changing the selected cell or either offset.
+    area.focus({ preventScroll: true });
+    await waitFor(() => expect(name).toHaveTextContent("Name 30 updated"));
+    expect(area.scrollTop).toBe(top);
+    expect(area.scrollLeft).toBe(left);
+    expect(canvas.getAllByRole("listitem")).toHaveLength(1);
+    await userEvent.click(canvas.getByRole("button", { name: "Remote update" }));
+    await waitFor(() => expect(name).toHaveTextContent("Remote"));
+    expect(area.scrollTop).toBe(top);
+    expect(area.scrollLeft).toBe(left);
+
+    await userEvent.keyboard("{ArrowRight}");
+    const row = name.closest("tr")!;
+    const checkbox = within(row).getByRole("checkbox");
+    const boolLeft = area.scrollLeft;
+    await userEvent.click(checkbox);
+    expect(checkbox).toBeChecked();
+    expect(area.scrollTop).toBe(top);
+    expect(area.scrollLeft).toBe(boolLeft);
+    await userEvent.keyboard("{ArrowRight}");
+    const refCell = within(row).getAllByRole("gridcell")[2]!;
+    await expectActiveCell(refCell);
+    expect(area.scrollLeft).toBeGreaterThan(0);
+    await userEvent.keyboard("{Enter}");
+    const refLeft = area.scrollLeft;
+    await userEvent.click(within(document.body).getAllByRole("option")[0]!);
+    await expectActiveCell(refCell);
+    expect(area.scrollTop).toBe(top);
+    expect(area.scrollLeft).toBe(refLeft);
+    expect(canvas.getAllByRole("listitem")).toHaveLength(3);
+
+    // Resize while focused: keep the selected row below the sticky header.
+    container.style.setProperty("--table-editor-max-height", "100px");
+    container.style.width = "240px";
+    await waitFor(() => expect(area.clientHeight).toBeLessThanOrEqual(100));
+    await waitFor(() =>
+        expect(refCell.getBoundingClientRect().right).toBeLessThanOrEqual(
+            area.getBoundingClientRect().left + area.clientWidth + 1,
+        ),
+    );
+    await expectActiveCell(refCell);
+    const bounds = refCell.getBoundingClientRect();
+    expect(bounds.top).toBeGreaterThanOrEqual(
+        table.querySelector("thead")!.getBoundingClientRect().bottom - 1,
+    );
+    // Recycling an open popup closes it without a stray field write.
+    await userEvent.keyboard("{Enter}");
+    area.scrollTop = area.scrollHeight;
+    area.dispatchEvent(new Event("scroll"));
+    await waitFor(() => expect(within(table).getByText("Last 99")).toBeInTheDocument());
+    expect(area).toHaveFocus();
+    expect(within(document.body).queryAllByRole("option")).toHaveLength(0);
+    expect(canvas.getAllByRole("listitem")).toHaveLength(3);
+    // No focus theft when the old selection is manually brought back into view.
+    area.scrollTop = 30 * 29;
+    area.dispatchEvent(new Event("scroll"));
+    await waitFor(() => expect(table.querySelector('[aria-rowindex="32"]')).toBeInTheDocument());
+    expect(area).toHaveFocus();
+    // Leaving after recycling keeps all visible cells reachable by Tab.
+    const outside = canvas.getByRole("button", { name: "Remote update" });
+    outside.focus();
+    await waitFor(() => expect(table.tabIndex).toBe(0));
+    await userEvent.tab();
+    await waitFor(() => expect(table.contains(document.activeElement)).toBe(true));
+});
+
+/** A table alongside buttons simulating structural changes from elsewhere. */
+function StructuralChangesTable() {
+    // Initial story data, intentionally captured on mount.
+    const [spec, setSpec] = createSignal<TableSpec>({
+        id: "structural",
+        label: "Structural",
+        columns: [{ id: "name", label: "Name", type: "String" }],
+        rows: Array.from({ length: 1000 }, (_, index) => ({
+            id: `row-${index}`,
+            values: { name: `Row ${index}` },
+        })),
+    });
+    const [writes, setWrites] = createSignal(0);
+    const focus = useChildFocus<string>(rootFocus);
+    const table = () => toInstanceTable(spec());
+    return (
+        <div style={{ "--table-editor-max-height": "150px" }}>
+            <button
+                onMouseDown={(evt) => evt.preventDefault()}
+                onClick={() => setSpec((s) => ({ ...s, rows: s.rows.slice(900) }))}
+            >
+                Remove prefix
+            </button>
+            <button
+                onMouseDown={(evt) => evt.preventDefault()}
+                onClick={() => setSpec((s) => ({ ...s, rows: s.rows.slice(0, -1) }))}
+            >
+                Remove edited row
+            </button>
+            <button onClick={() => setSpec((s) => ({ ...s, rows: s.rows.slice(0, 2) }))}>
+                Shrink outside
+            </button>
+            <span data-testid="write-count">{writes()}</span>
+            <TableEditor
+                table={table()}
+                allTables={[table()]}
+                focus={focus.childFocus("table")}
+                onSetField={(row, header, value) => {
+                    setWrites((n) => n + 1);
+                    setSpec((s) => setSpecField(s, row, header, value as LiteralValue));
+                }}
+                onAddRow={() =>
+                    setTimeout(
+                        () =>
+                            setSpec((s) => ({
+                                ...s,
+                                rows: [...s.rows, { id: "appended", values: {} }],
+                            })),
+                        100,
+                    )
+                }
+                onDeleteRow={(row) =>
+                    setSpec((s) => ({ ...s, rows: s.rows.filter((r) => r.id !== row.id) }))
+                }
+            />
+        </div>
+    );
+}
+
+test("VirtualizedStructuralChanges", async () => {
+    const canvasElement = mount(() => <StructuralChangesTable />);
+
+    const canvas = within(canvasElement);
+    const table = canvas.getByRole("grid");
+    const area = table.parentElement!;
+    area.scrollTop = area.scrollHeight;
+    area.dispatchEvent(new Event("scroll"));
+    await waitFor(() => expect(canvas.getByText("Row 999")).toBeInTheDocument());
+    await userEvent.dblClick(canvas.getByText("Row 999").closest("td")!);
+    await userEvent.keyboard(" draft");
+    await userEvent.click(canvas.getByRole("button", { name: "Remove prefix" }));
+    await waitFor(() => expect(table).toHaveAttribute("aria-rowcount", "101"));
+    expect(canvas.getByRole("textbox")).toHaveValue("Row 999 draft");
+    expect(canvas.getByRole("textbox")).toHaveFocus();
+    expect(canvas.getByRole("textbox").closest("tr")).toHaveAttribute("aria-rowindex", "101");
+    expect(canvas.getByTestId("write-count")).toHaveTextContent("0");
+    await userEvent.click(canvas.getByRole("button", { name: "Remove edited row" }));
+    await waitFor(() => expectActiveCell(canvas.getByText("Row 998").closest("td")!));
+    expect(canvas.queryByRole("textbox")).not.toBeInTheDocument();
+    expect(canvas.getByTestId("write-count")).toHaveTextContent("0");
+    // Leave before a delayed append arrives: it must not regain browser focus.
+    await userEvent.click(canvas.getByRole("button", { name: "+ Row" }));
+    const outside = canvas.getByRole("button", { name: "Shrink outside" });
+    outside.focus();
+    await waitFor(() => expect(table).toHaveAttribute("aria-rowcount", "101"));
+    expect(outside).toHaveFocus();
+    // Large unfocused shrink clamps the stale virtual offset and spacer.
+    await userEvent.click(outside);
+    await waitFor(() => expect(table).toHaveAttribute("aria-rowcount", "3"));
+    await waitFor(() => expect(area.scrollTop).toBe(0));
+    expect(canvas.getByText("Row 900")).toBeInTheDocument();
+    expect(outside).toHaveFocus();
 });

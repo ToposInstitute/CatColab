@@ -1,4 +1,5 @@
 .table {
+    box-sizing: border-box;
     display: flex;
     flex-direction: column;
     width: fit-content;
@@ -22,6 +23,77 @@
     margin-right: auto;
     font-size: 1.05rem;
     font-weight: 500;
+}
+
+.scrollViewport {
+    position: relative;
+    min-width: 0;
+}
+
+/* Cues stay at viewport edges without covering the scrollbar or intercepting input. */
+.scrollIndicators {
+    position: absolute;
+    inset: 0 auto auto 0;
+    z-index: 3;
+    pointer-events: none;
+    overflow: hidden;
+}
+
+.scrollIndicators::before {
+    position: absolute;
+    inset: 0 0 auto;
+    height: 1px;
+    background: var(--color-gray-450);
+    opacity: 0.65;
+    content: "";
+}
+
+.scrollTop,
+.scrollBottom,
+.scrollLeft,
+.scrollRight {
+    position: absolute;
+}
+
+.scrollTop,
+.scrollBottom {
+    left: 0;
+    right: 0;
+    height: 10px;
+}
+
+.scrollTop {
+    top: var(--scroll-header-height);
+    background: linear-gradient(to bottom, rgb(0 0 0 / 20%), transparent);
+}
+
+.scrollBottom {
+    bottom: 0;
+    background: linear-gradient(to top, rgb(0 0 0 / 20%), transparent);
+}
+
+.scrollLeft,
+.scrollRight {
+    top: var(--scroll-header-height);
+    bottom: 0;
+    width: 10px;
+}
+
+.scrollLeft {
+    left: 0;
+    background: linear-gradient(to right, rgb(0 0 0 / 20%), transparent);
+}
+
+.scrollRight {
+    right: 0;
+    background: linear-gradient(to left, rgb(0 0 0 / 20%), transparent);
+}
+
+.spacer,
+.spacer td {
+    padding: 0;
+    border: none;
+    line-height: 0;
 }
 
 .scrollArea {
@@ -237,14 +309,14 @@ shadow, it is painted above the cell editor input. */
         inset 0 3px 0 #d87878;
 }
 
-.grid tbody tr:last-child .cell.columnDeleting {
+.grid tbody .lastRow .cell.columnDeleting {
     box-shadow:
         inset 3px 0 0 #d87878,
         inset -3px 0 0 #d87878,
         inset 0 -3px 0 #d87878;
 }
 
-.grid:not(:has(tbody tr)) .columnHeader.columnDeleting {
+.grid:not(:has(tbody tr:not(.spacer))) .columnHeader.columnDeleting {
     box-shadow: inset 0 0 0 3px #d87878;
 }
 
