@@ -96,7 +96,7 @@ export function EditProvider(
     );
 
     /** The cell for a cell key, resolved against the current table. */
-    const resolveCell = (key: CellKey) => {
+    const findCell = (key: CellKey) => {
         const { headerId, rowId } = parseCellKey(key);
         const table = props.table();
         const row = table.rows.find((row) => row.id === rowId);
@@ -159,7 +159,7 @@ export function EditProvider(
     };
 
     const startEdit = (key: CellKey, text?: string) => {
-        const cell = resolveCell(key);
+        const cell = findCell(key);
         if (!cell || !isEditableCell(cell.header)) {
             return;
         }
@@ -199,7 +199,7 @@ export function EditProvider(
             return;
         }
         const key = makeCellKey(state.headerId, state.rowId);
-        const cell = resolveCell(key);
+        const cell = findCell(key);
         if (cell) {
             const parsed = parseValue(cell.header, state.text);
             if (parsed.ok) {
@@ -237,7 +237,7 @@ export function EditProvider(
     };
 
     const toggleBool = (key: CellKey) => {
-        const cell = resolveCell(key);
+        const cell = findCell(key);
         if (!cell || cell.header.type.tag !== "Bool") {
             return;
         }
@@ -253,7 +253,7 @@ export function EditProvider(
         if (!state || makeCellKey(state.headerId, state.rowId) !== key) {
             return;
         }
-        const cell = resolveCell(key);
+        const cell = findCell(key);
         if (cell) {
             props.onSetField(cell.row, cell.header, target);
         }
@@ -264,7 +264,7 @@ export function EditProvider(
     };
 
     const clearCell = (key: CellKey) => {
-        const cell = resolveCell(key);
+        const cell = findCell(key);
         if (!cell || !isEditableCell(cell.header)) {
             return;
         }
@@ -272,7 +272,7 @@ export function EditProvider(
     };
 
     const onCellKey = (evt: KeyboardEvent, key: CellKey): boolean => {
-        const cell = resolveCell(key);
+        const cell = findCell(key);
         if (!cell || !isEditableCell(cell.header)) {
             return false;
         }
@@ -304,7 +304,7 @@ export function EditProvider(
             return;
         }
         const key = makeCellKey(state.headerId, state.rowId);
-        if (grid.activeKey() !== key || !resolveCell(key)) {
+        if (grid.activeKey() !== key || !findCell(key)) {
             setEdit(null);
         }
     });

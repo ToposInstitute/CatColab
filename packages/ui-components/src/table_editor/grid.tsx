@@ -42,7 +42,7 @@ export function TableGrid(props: TableGridProps) {
     A removed row is replaced by the row at its last known position; a removed
     column by the first column. Returns null when no cell remains at all.
      */
-    const resolveCell = (key: CellKey): CellKey | null => {
+    const repairSelection = (key: CellKey): CellKey | null => {
         const { headerId, rowId } = parseCellKey(key);
         const rows = props.table.rows;
         const headers = props.table.headers;
@@ -59,7 +59,7 @@ export function TableGrid(props: TableGridProps) {
     return (
         <GridFocus
             focus={props.focus}
-            resolveCell={resolveCell}
+            repairSelection={repairSelection}
         >
             <EditProvider
                 table={() => props.table}

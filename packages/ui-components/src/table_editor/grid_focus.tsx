@@ -19,14 +19,14 @@ const Context = createContext<GridFocusContext>();
 
 /** Provide notebook-style child focus handles for cells.
 
-When `resolveCell` is given, it is asked to map the selected cell to a cell
+When `repairSelection` is given, it is asked to map the selected cell to a cell
 that still exists; rows and columns may be removed or shifted concurrently
 with the selection.
  */
 export function GridFocus(
     props: ParentProps<{
         focus: FocusHandle;
-        resolveCell?: (key: CellKey) => CellKey | null;
+        repairSelection?: (key: CellKey) => CellKey | null;
     }>,
 ) {
     const parent: FocusHandle = {
@@ -45,10 +45,10 @@ export function GridFocus(
             return;
         }
         const key = children.activeChild();
-        if (key === null || !props.resolveCell) {
+        if (key === null || !props.repairSelection) {
             return;
         }
-        const repaired = props.resolveCell(key);
+        const repaired = props.repairSelection(key);
         if (repaired !== key) {
             children.setActiveChild(repaired);
         }
