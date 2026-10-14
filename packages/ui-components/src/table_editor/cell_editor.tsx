@@ -17,7 +17,6 @@ export function CellEditor(props: {
     text: string;
     setText: (text: string) => void;
     validate: (text: string) => boolean;
-    canExitBackward: boolean;
     /** Possible values, shown in a popup while the editor is focused.
 
     Selecting a completion commits the cell through the completion itself.
@@ -59,8 +58,6 @@ export function CellEditor(props: {
             filterCompletionsByText={!props.readOnly}
             exitUp={() => commit("up")}
             exitDown={() => commit("down")}
-            exitForward={() => commit("forward")}
-            exitBackward={props.canExitBackward ? () => commit("backward") : undefined}
             createBelow={() => commit("down")}
             onComplete={() => {
                 // The completion has committed the cell; don't also commit an

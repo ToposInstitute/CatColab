@@ -894,7 +894,7 @@ export const CommitWithTab: Story = {
         await userEvent.keyboard("{Enter}");
         await expect(within(cells[0]!).getByRole("textbox")).toHaveFocus();
 
-        // Tab commits and moves forward through the grid.
+        // Native Tab navigation commits on blur and focuses the next cell.
         await userEvent.tab();
         await expect(cells[1]).toHaveFocus();
         await expect(canvas.getAllByRole("listitem")).toHaveLength(1);
@@ -913,6 +913,23 @@ export const CommitWithTab: Story = {
             "team.name[team-atlas] = Greta",
         );
         await expect(cells[0]).toHaveAttribute("aria-selected", "false");
+
+        // Shift+Tab from an editor commits without returning to its own cell.
+        await userEvent.click(cells[1]!);
+        await userEvent.keyboard("9");
+        await expect(cells[1]).toHaveAttribute("tabindex", "-1");
+        await userEvent.tab({ shift: true });
+        await expect(cells[0]).toHaveFocus();
+        await expect(cells[1]).toHaveTextContent("9");
+        await expect(canvas.getAllByRole("listitem")).toHaveLength(3);
+
+        // Tab from the last editor leaves the grid without appending a row.
+        await userEvent.click(cells[5]!);
+        await userEvent.keyboard("8");
+        await userEvent.tab();
+        await expect(canvas.getByRole("button", { name: "+ Row" })).toHaveFocus();
+        await expect(canvas.getAllByRole("gridcell")).toHaveLength(6);
+        await expect(canvas.getAllByRole("listitem")).toHaveLength(4);
     },
 };
 
@@ -1070,7 +1087,7 @@ export const FocusBoundaries: Story = {
         const addRow = canvas.getByRole("button", { name: "+ Row" });
 
         await expect(cells[0]).toHaveAttribute("tabindex", "0");
-        await expect(cells[1]).toHaveAttribute("tabindex", "-1");
+        await expect(cells[1]).toHaveAttribute("tabindex", "0");
 
         await userEvent.tab();
         await expect(cells[0]).toHaveFocus();
@@ -1116,7 +1133,13 @@ export const FocusReentry: Story = {
         await userEvent.tab({ shift: true });
         await expect(canvas.getAllByRole("button", { name: "+ Row" })[1]).toHaveFocus();
         await userEvent.tab({ shift: true });
-        await expect(personCells[0]).toHaveFocus();
+        await expect(personCells[personCells.length - 1]).toHaveFocus();
+
+        // Nested checkbox/reference controls do not add duplicate tab stops.
+        for (let i = personCells.length - 2; i >= 0; i--) {
+            await userEvent.tab({ shift: true });
+            await expect(personCells[i]).toHaveFocus();
+        }
     },
 };
 

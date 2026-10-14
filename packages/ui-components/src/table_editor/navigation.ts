@@ -59,7 +59,7 @@ export function neighborKey(
     return row && header ? makeCellKey(header.id, row.id) : undefined;
 }
 
-/** Map arrows and Tab to grid directions. */
+/** Map arrow keys to grid directions; Tab follows browser focus order. */
 export function navigationDirection(event: KeyboardEvent): MoveDirection | undefined {
     switch (event.key) {
         case "ArrowUp":
@@ -70,8 +70,6 @@ export function navigationDirection(event: KeyboardEvent): MoveDirection | undef
             return "left";
         case "ArrowRight":
             return "right";
-        case "Tab":
-            return event.shiftKey ? "backward" : "forward";
         default:
             return undefined;
     }

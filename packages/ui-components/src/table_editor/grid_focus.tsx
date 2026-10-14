@@ -12,13 +12,12 @@ import type { CellKey } from "./navigation";
 
 type GridFocusContext = {
     activeKey: Accessor<CellKey | null>;
-    tabStop: Accessor<CellKey | null>;
     cellFocus: (key: CellKey) => FocusHandle;
 };
 
 const Context = createContext<GridFocusContext>();
 
-/** Provide cell focus handles and a single grid tab stop.
+/** Provide notebook-style child focus handles for cells.
 
 When `resolveCell` is given, it is asked to map the selected cell to a cell
 that still exists; rows and columns may be removed or shifted concurrently
@@ -27,7 +26,6 @@ with the selection.
 export function GridFocus(
     props: ParentProps<{
         focus: FocusHandle;
-        firstCell: CellKey | null;
         resolveCell?: (key: CellKey) => CellKey | null;
     }>,
 ) {
@@ -37,12 +35,6 @@ export function GridFocus(
     };
     const children = useChildFocus<CellKey>(parent);
     const activeKey = () => (parent.hasFocus() ? children.activeChild() : null);
-
-    createEffect(() => {
-        if (parent.hasFocus() && children.activeChild() === null && props.firstCell) {
-            children.setActiveChild(props.firstCell);
-        }
-    });
 
     // Follow structural changes while the grid has focus: if the selected row
     // or column is removed, select the nearest surviving cell. When the grid
@@ -66,7 +58,6 @@ export function GridFocus(
         <Context.Provider
             value={{
                 activeKey,
-                tabStop: () => activeKey() ?? props.firstCell,
                 cellFocus: children.childFocus,
             }}
         >
@@ -89,7 +80,6 @@ export function useGridCellFocus(key: Accessor<CellKey>) {
     const selected = createMemo(() => grid.activeKey() === key());
     return {
         selected,
-        tabindex: () => (grid.tabStop() === key() ? 0 : -1),
         focus: {
             hasFocus: () => grid.cellFocus(key()).hasFocus(),
             setFocused: (focused: boolean) => grid.cellFocus(key()).setFocused(focused),

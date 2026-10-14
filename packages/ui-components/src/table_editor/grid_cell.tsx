@@ -21,7 +21,7 @@ export function GridCell(props: {
     tables: ReadonlyArray<InstanceTable>;
 }) {
     const key = createMemo(() => makeCellKey(props.header.id, props.row.id));
-    const { selected, tabindex, focus } = useGridCellFocus(() => key());
+    const { selected, focus } = useGridCellFocus(() => key());
     const edit = useCellEdit();
     const editing = () => edit.isEditing(key());
     const issues = () => (props.field ? props.issuesAt(props.field.content.path) : []);
@@ -64,7 +64,7 @@ export function GridCell(props: {
             ref={tdRef}
             class={styles.cell}
             role="gridcell"
-            tabindex={editing() ? -1 : tabindex()}
+            tabindex={editing() ? -1 : 0}
             aria-selected={selected()}
             aria-invalid={invalid()}
             aria-readonly={props.header.type.tag === "Unknown"}
@@ -111,7 +111,6 @@ export function GridCell(props: {
                     }
                     completions={completions()}
                     readOnly={props.header.type.tag === "RowRef"}
-                    canExitBackward={!edit.isFirstCell(key())}
                     onCommit={(dir) => edit.commitEdit(dir, tdRef)}
                     onCancel={() => edit.cancelEdit(tdRef)}
                 />

@@ -71,9 +71,6 @@ type CellEditApi = {
     /** Handle a key pressed on a selected cell: editing, toggling, or
     clearing. Returns whether the key was handled. */
     onCellKey: (evt: KeyboardEvent, key: CellKey) => boolean;
-
-    /** Whether the cell with the given key is the first cell of the grid. */
-    isFirstCell: (key: CellKey) => boolean;
 };
 
 const Context = createContext<CellEditApi>();
@@ -274,12 +271,6 @@ export function EditProvider(
         props.onSetField(cell.row, cell.header, null);
     };
 
-    const isFirstCell = (key: CellKey) => {
-        const table = props.table();
-        const { headerId, rowId } = parseCellKey(key);
-        return table.rows[0]?.id === rowId && table.headers[0]?.id === headerId;
-    };
-
     const onCellKey = (evt: KeyboardEvent, key: CellKey): boolean => {
         const cell = resolveCell(key);
         if (!cell || !isEditableCell(cell.header)) {
@@ -334,7 +325,6 @@ export function EditProvider(
                 addRow,
                 cancelPendingSelection,
                 onCellKey,
-                isFirstCell,
             }}
         >
             {props.children}

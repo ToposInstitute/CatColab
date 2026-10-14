@@ -7,7 +7,6 @@ import { COLUMN_WIDTHS, DELETE_COLUMN_WIDTH, EMPTY_COLUMN_WIDTH } from "./displa
 import { EditProvider, useCellEdit } from "./edit";
 import { GridFocus, useGridFocus } from "./grid_focus";
 import {
-    firstCellKey,
     makeCellKey,
     navigationDirection,
     neighborKey,
@@ -60,19 +59,13 @@ export function TableGrid(props: TableGridProps) {
     return (
         <GridFocus
             focus={props.focus}
-            firstCell={firstCellKey(props.table)}
             resolveCell={resolveCell}
         >
             <EditProvider
                 table={() => props.table}
                 tables={() => props.tables}
                 onSetField={props.onSetField}
-                // Regain the grid's focus so that the new row's cell can take
-                // it when the row appears.
-                onAddRow={() => {
-                    props.focus.setFocused(true);
-                    props.onAddRow();
-                }}
+                onAddRow={props.onAddRow}
             >
                 <div class={styles.scrollViewport}>
                     <GridContent {...props} />
@@ -89,7 +82,17 @@ export function TableGrid(props: TableGridProps) {
 function Footer() {
     const edit = useCellEdit();
     return (
-        <div class={styles.footer}>
+        <div
+            class={styles.footer}
+            onFocusOut={(evt) => {
+                const footer = evt.currentTarget;
+                queueMicrotask(() => {
+                    if (footer.isConnected && !footer.contains(document.activeElement)) {
+                        edit.cancelPendingSelection();
+                    }
+                });
+            }}
+        >
             <button class={styles.addRow} type="button" onClick={() => edit.addRow()}>
                 + Row
             </button>
@@ -136,8 +139,7 @@ function GridContent(props: TableGridProps) {
                 ) {
                     return;
                 }
-                // The container uses the same tab stop as the cells.
-                const key = focus.tabStop();
+                const key = focus.activeKey();
                 if (!key) {
                     return;
                 }
@@ -149,9 +151,6 @@ function GridContent(props: TableGridProps) {
                     return;
                 }
                 const next = neighborKey(props.table, headerIndex(), key, direction);
-                if (!next && evt.key === "Tab") {
-                    return;
-                }
                 if (next) {
                     focus.cellFocus(next).setFocused(true);
                 }
