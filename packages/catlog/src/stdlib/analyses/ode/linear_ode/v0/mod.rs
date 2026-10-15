@@ -1,4 +1,3 @@
-//! Version 0 of `linear_ode`.
-
-pub(crate) mod linear_ode;
-pub(crate) use linear_ode::*;
+/// Version 0 of `linear_ode`.
+pub mod linear_ode;
+pub use linear_ode::*;
