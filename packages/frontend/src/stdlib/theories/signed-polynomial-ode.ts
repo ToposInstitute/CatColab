@@ -50,11 +50,6 @@ export default function createSignedPolynomialODETheory(theoryMeta: TheoryMeta):
             },
         ],
         modelAnalyses: [
-            analyses.polynomialODEEquations({
-                getEquations(model, data) {
-                    return thSignedPolynomialODE.polynomialODEEquations(model, data);
-                },
-            }),
             analyses.polynomialODESimulation({
                 signedContributions: true,
                 simulate(model, data) {

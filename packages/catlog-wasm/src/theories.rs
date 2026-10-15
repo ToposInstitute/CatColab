@@ -476,17 +476,12 @@ impl ThPolynomialODE {
         model: &DblModel,
         data: analyses::ode::PolynomialODEProblemData,
     ) -> Result<ODEResultWithEquations, String> {
-        polynomial_ode_simulation(model, data)
-    }
-
-    /// Returns the symbolic equations in LaTeX format.
-    #[wasm_bindgen(js_name = "polynomialODEEquations")]
-    pub fn polynomial_ode_equations(
-        &self,
-        model: &DblModel,
-        data: PolynomialODEEquationsData,
-    ) -> Result<LatexEquations, String> {
-        polynomial_ode_equations(model, data)
+        let system =
+            analyses::ode::PolynomialODEAnalysis::default().build_system(model.modal_nonunital()?);
+        ode_semantics_simulation::<
+            analyses::ode::PolynomialODESemantics,
+            analyses::ode::PolynomialODEProblemData,
+        >(model, data, system)
     }
 }
 
@@ -513,17 +508,12 @@ impl ThSignedPolynomialODE {
         model: &DblModel,
         data: analyses::ode::PolynomialODEProblemData,
     ) -> Result<ODEResultWithEquations, String> {
-        polynomial_ode_simulation(model, data)
-    }
-
-    /// Returns the symbolic equations in LaTeX format.
-    #[wasm_bindgen(js_name = "polynomialODEEquations")]
-    pub fn polynomial_ode_equations(
-        &self,
-        model: &DblModel,
-        data: PolynomialODEEquationsData,
-    ) -> Result<LatexEquations, String> {
-        polynomial_ode_equations(model, data)
+        let system =
+            analyses::ode::PolynomialODEAnalysis::default().build_system(model.modal_nonunital()?);
+        ode_semantics_simulation::<
+            analyses::ode::PolynomialODESemantics,
+            analyses::ode::PolynomialODEProblemData,
+        >(model, data, system)
     }
 }
 
