@@ -286,7 +286,6 @@ mod tests {
 
     use super::*;
     use crate::{
-        latex::{Latex, LatexEquation, LatexEquations, wrap_with_backslash_text},
         stdlib::{analyses::ode::ODESemanticsGeneralProblemData, models::*, theories::*},
         tt,
     };
@@ -364,26 +363,5 @@ mod tests {
             dA = Coefficient(f) X Y^2
         "#]);
         expected.assert_eq(&sys.to_string());
-    }
-
-    // LaTeX tests.
-    #[test]
-    fn lotka_volterra_equations_latex() {
-        let th = Rc::new(th_signed_polynomial_ode_system());
-        let model = signed_lotka_volterra_dynamics(th);
-        let system = PolynomialODEAnalysis::default().build_system(&model);
-        let equations =
-            system.to_latex_equations_with_map(|name| wrap_with_backslash_text(name.to_string()));
-        let expected = LatexEquations(vec![
-            LatexEquation {
-                lhs: Latex("\\frac{\\mathrm{d}}{\\mathrm{d}t} A".to_string()),
-                rhs: Latex("\\lambda_{\\text{A_growth}} \\cdot A - \\lambda_{\\text{BA_interaction}} \\cdot A \\cdot B".to_string()),
-            },
-            LatexEquation {
-                lhs: Latex("\\frac{\\mathrm{d}}{\\mathrm{d}t} B".to_string()),
-                rhs: Latex("\\lambda_{\\text{AB_interaction}} \\cdot A \\cdot B + \\lambda_{\\text{B_growth}} \\cdot B".to_string()),
-            },
-        ]);
-        assert_eq!(expected, equations);
     }
 }

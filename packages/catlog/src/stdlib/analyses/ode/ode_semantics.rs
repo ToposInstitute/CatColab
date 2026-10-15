@@ -37,7 +37,6 @@ use crate::{
         },
         theory::{NonUnital, Unital},
     },
-    latex::{Latex, ToLatexWithMap},
     one::FgCategory,
     simulate::ode::{NumericalPolynomialSystem, ODEProblem, PolynomialSystem},
     stdlib::{
@@ -128,17 +127,9 @@ impl DblModelForODESemantics for ModalDblModel<NonUnital> {}
 
 /// The type of the parameters in the ODE system need to be sufficiently nice, though
 /// (again) these bounds are not particularly restrictive. The two that will need the most
-/// manual effort for implementation are `Display` and `ToLatex`, which govern how these
-/// coefficients should be rendered. The `Display` trait is used for debugging whereas the
-/// `ToLatex` trait is used for user-facing display.
-pub trait ODEParameterType: Eq + Ord + Clone + fmt::Display + ToLatexWithMap {}
-
-/// The simplest type for parameters is `QualifiedName`.
-impl ToLatexWithMap for QualifiedName {
-    fn to_latex_with_map<T: Fn(&QualifiedName) -> String>(&self, f: T) -> Latex {
-        Latex(f(self))
-    }
-}
+/// manual effort for implementation is `Display`, which governs how these coefficients should be
+/// rendered.
+pub trait ODEParameterType: Eq + Ord + Clone + fmt::Display {}
 
 impl ODEParameterType for QualifiedName {}
 
