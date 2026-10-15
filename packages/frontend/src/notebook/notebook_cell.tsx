@@ -16,7 +16,7 @@ import MessageSquarePlus from "lucide-solid/icons/message-square-plus";
 import Plus from "lucide-solid/icons/plus";
 import Trash2 from "lucide-solid/icons/trash-2";
 import type { EditorView } from "prosemirror-view";
-import { createEffect, createSignal, type JSX, onCleanup, Show } from "solid-js";
+import { createEffect, createSignal, type JSX, on, onCleanup, Show } from "solid-js";
 
 import type { Uuid } from "catcolab-document-types";
 import { type Completion, Completions, type FocusHandle, IconButton } from "catcolab-ui-components";
@@ -103,6 +103,12 @@ export type CellComments = {
 
     /** Called when the popover showing the cell's threads closes. */
     onClose?: () => void;
+
+    /** Whether the cell should be highlighted. */
+    isHighlighted: boolean;
+
+    /** Called when the cell gains or loses focus. */
+    select: (selected: boolean) => void;
 };
 
 /** An individual cell in a notebook.
@@ -151,6 +157,22 @@ export function NotebookCell(props: {
             props.comments?.onClose?.();
         }
     };
+
+    createEffect(
+        on(
+            () => props.focus.hasFocus(),
+            (focused) => props.comments?.select(focused),
+        ),
+    );
+
+    const isCommentHighlighted = () => props.comments?.isHighlighted ?? false;
+    createEffect(
+        on(isCommentHighlighted, (highlighted) => {
+            if (highlighted && !props.focus.hasFocus()) {
+                rootRef.scrollIntoView({ block: "nearest", behavior: "smooth" });
+            }
+        }),
+    );
 
     const completions = (): Completion[] => [
         {
@@ -274,6 +296,7 @@ export function NotebookCell(props: {
             class="cell"
             classList={{ "cell-dragging": isDragging() }}
             data-diff={props.diff}
+            data-comment-highlight={isCommentHighlighted() ? "" : undefined}
             onMouseEnter={showGutter}
             onMouseLeave={hideGutter}
             ref={rootRef}
