@@ -15,7 +15,7 @@
         "ci": "pnpm run build:tcm && tsc --noEmit && oxlint --deny-warnings && oxfmt --check . && stylelint 'src/**/*.css'",
         "dev": "pnpm run build:tcm && storybook dev -p 6006 --no-version-updates --no-open",
         "build": "pnpm run build:tcm && NODE_ENV=production storybook build",
-        "test": "vitest --project=storybook"
+        "test": "vitest run"
     },
     "dependencies": {
         "@corvu/dialog": "^0.2.4",
