@@ -1,0 +1,101 @@
+{
+    "name": "Company structure",
+    "notebook": {
+        "cellContents": {
+            "019eb625-a3b2-77da-a6de-5f8719d3fcbd": {
+                "content": {
+                    "id": "019eb625-a3b2-77da-a6de-5bccfb206eb7",
+                    "name": "Employee",
+                    "obType": {
+                        "content": "Entity",
+                        "tag": "Basic"
+                    },
+                    "tag": "object"
+                },
+                "id": "019eb625-a3b2-77da-a6de-5f8719d3fcbd",
+                "tag": "formal"
+            },
+            "019eb626-0903-771a-89af-17381757f96f": {
+                "content": {
+                    "id": "019eb626-0903-771a-89af-134874a0e958",
+                    "name": "Department",
+                    "obType": {
+                        "content": "Entity",
+                        "tag": "Basic"
+                    },
+                    "tag": "object"
+                },
+                "id": "019eb626-0903-771a-89af-17381757f96f",
+                "tag": "formal"
+            },
+            "019eb626-561b-70e8-9604-a9e893271975": {
+                "content": {
+                    "cod": {
+                        "content": "019eb626-0903-771a-89af-134874a0e958",
+                        "tag": "Basic"
+                    },
+                    "dom": {
+                        "content": "019eb625-a3b2-77da-a6de-5bccfb206eb7",
+                        "tag": "Basic"
+                    },
+                    "id": "019eb626-561b-70e8-9604-a4e28f5af151",
+                    "morType": {
+                        "content": {
+                            "content": "Entity",
+                            "tag": "Basic"
+                        },
+                        "tag": "Hom"
+                    },
+                    "name": "WorksIn",
+                    "tag": "morphism"
+                },
+                "id": "019eb626-561b-70e8-9604-a9e893271975",
+                "tag": "formal"
+            },
+            "019eb626-9e40-7237-88cd-ffcd2f7d0671": {
+                "content": {
+                    "cod": {
+                        "content": "019eb626-a6a8-742d-b2a0-e90358f0f3a3",
+                        "tag": "Basic"
+                    },
+                    "dom": {
+                        "content": "019eb625-a3b2-77da-a6de-5bccfb206eb7",
+                        "tag": "Basic"
+                    },
+                    "id": "019eb626-9e40-7237-88cd-fad1dc30494c",
+                    "morType": {
+                        "content": "Attr",
+                        "tag": "Basic"
+                    },
+                    "name": "favourite",
+                    "tag": "morphism"
+                },
+                "id": "019eb626-9e40-7237-88cd-ffcd2f7d0671",
+                "tag": "formal"
+            },
+            "019eb626-a6a8-742d-b2a0-ee8bca6bc085": {
+                "content": {
+                    "id": "019eb626-a6a8-742d-b2a0-e90358f0f3a3",
+                    "name": "drink",
+                    "obType": {
+                        "content": "AttrType",
+                        "tag": "Basic"
+                    },
+                    "tag": "object"
+                },
+                "id": "019eb626-a6a8-742d-b2a0-ee8bca6bc085",
+                "tag": "formal"
+            }
+        },
+        "cellOrder": [
+            "019eb625-a3b2-77da-a6de-5f8719d3fcbd",
+            "019eb626-0903-771a-89af-17381757f96f",
+            "019eb626-561b-70e8-9604-a9e893271975",
+            "019eb626-9e40-7237-88cd-ffcd2f7d0671",
+            "019eb626-a6a8-742d-b2a0-ee8bca6bc085"
+        ]
+    },
+    "theory": "simple-schema",
+    "type": "model",
+    "version": "2"
+}
