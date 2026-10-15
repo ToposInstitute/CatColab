@@ -14,7 +14,6 @@ use catlog::zero::name;
 use super::latex::LatexEquations;
 use super::model_morphism::{MotifOccurrence, MotifsOptions, motifs};
 use super::result::JsResult;
-use super::theories::MassActionAnalysisLogic;
 use super::{analyses::*, model::DblModel, theory::DblTheory};
 
 /// The empty or initial theory.
