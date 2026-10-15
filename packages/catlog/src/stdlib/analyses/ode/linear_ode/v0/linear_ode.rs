@@ -12,13 +12,11 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "serde-wasm")]
 use tsify::Tsify;
 
-use super::{ODEAnalysis, Parameter, SignedCoefficientBuilder};
+use crate::dbl::model::DiscreteDblModel;
+use crate::one::QualifiedPath;
 use crate::simulate::ode::{NumericalPolynomialSystem, ODEProblem, PolynomialSystem};
-use crate::{
-    dbl::model::DiscreteDblModel,
-    one::QualifiedPath,
-    zero::{QualifiedName, rig::Monomial},
-};
+use crate::stdlib::analyses::ode::{ODEAnalysis, Parameter, SignedCoefficientBuilder};
+use crate::zero::{QualifiedName, rig::Monomial};
 
 /// Data defining a linear ODE problem for a model.
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]

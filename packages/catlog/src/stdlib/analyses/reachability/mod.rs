@@ -1,8 +1,5 @@
 //! Reachability analyses of models.
 
-use serde::{Deserialize, Serialize};
-use serde_json::Value;
-use serde_wasm_bindgen::{from_value, Serializer};
 use wasm_bindgen::prelude::*;
 
 mod v0;

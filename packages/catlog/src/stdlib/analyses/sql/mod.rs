@@ -1,8 +1,5 @@
 //! Produces a valid SQL data manipulation script from a model in the theory of schemas.
 
-use serde::{Deserialize, Serialize};
-use serde_json::Value;
-use serde_wasm_bindgen::{Serializer, from_value};
 use wasm_bindgen::prelude::*;
 
 mod v0;
