@@ -71,7 +71,7 @@ function createGridController(props: GridControllerProps) {
     const regions = useChildFocus<"grid" | "footer">(tableFocus);
     const parent = regions.childFocus("grid");
     const children = useChildFocus<CellKey>(parent);
-    const activeKey = () => (parent.hasFocus() ? children.activeChild() : null);
+    const activeKey = createMemo(() => (parent.hasFocus() ? children.activeChild() : null));
     const instanceId = createUniqueId();
     function cellId(key: CellKey): string {
         return `${instanceId}-${encodeURIComponent(key)}`;
@@ -140,11 +140,15 @@ function createGridController(props: GridControllerProps) {
     // Navigation changes logical selection, not the browser's focused cell.
     createEffect(
         on([activeKey, gridElement, () => edit() !== null], ([key, element, editing]) => {
-            if (key && element && !editing) {
+            if (
+                key &&
+                element &&
+                !editing &&
+                // A blur/recycle can deliberately park focus on the container.
+                document.activeElement !== element.parentElement
+            ) {
                 element.focus({ preventScroll: true });
-                document
-                    .getElementById(cellId(key))
-                    ?.scrollIntoView({ block: "nearest", inline: "nearest" });
+                // The viewport reveals virtual rows and mounted cells separately.
             }
         }),
     );

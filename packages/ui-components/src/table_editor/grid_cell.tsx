@@ -1,4 +1,4 @@
-import { createMemo, Show } from "solid-js";
+import { createEffect, createMemo, on, Show, useContext } from "solid-js";
 
 import type { FieldValue, InstanceTable, TableHeader, TableRow } from "catcolab-documents";
 import type { FocusHandle } from "../util/focus";
@@ -9,6 +9,7 @@ import { parseValue } from "./editing";
 import { useGridController } from "./grid_controller";
 import { makeCellKey } from "./navigation";
 import { issueMessage, type IssueLookup } from "./validation";
+import { ViewportContext } from "./viewport";
 
 import styles from "./table_editor.module.css";
 
@@ -30,6 +31,7 @@ export function GridCell(props: {
         hasFocus: () => edit.cellFocus(key()).hasFocus(),
         setFocused: (focused) => edit.cellFocus(key()).setFocused(focused),
     };
+    const viewport = useContext(ViewportContext);
     const editing = () => edit.isEditing(key());
     const issues = () => (props.field ? props.issuesAt(props.field.content.path) : []);
     const invalid = () => issues().length > 0;
@@ -52,8 +54,20 @@ export function GridCell(props: {
         }));
     });
 
+    let tdRef!: HTMLTableCellElement;
+
+    // Reveal mounted selections without moving browser focus off the grid.
+    createEffect(
+        on([selected, key, () => viewport?.parked()], ([isSelected]) => {
+            if (isSelected && !viewport?.parked()) {
+                viewport?.revealCell(tdRef);
+            }
+        }),
+    );
+
     return (
         <td
+            ref={tdRef}
             id={edit.cellId(key())}
             class={styles.cell}
             role="gridcell"

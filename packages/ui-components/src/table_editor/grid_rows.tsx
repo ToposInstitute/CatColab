@@ -13,6 +13,9 @@ export function GridRows(props: {
     issuesAt: IssueLookup;
     deletingColumnId: string | null;
     rows: ReadonlyArray<TableRow>;
+    totalRows: number;
+    topSpacer: number;
+    bottomSpacer: number;
     headers: ReadonlyArray<TableHeader>;
     headerIndex: () => ReadonlyMap<string, number>;
     allTables: ReadonlyArray<InstanceTable>;
@@ -20,10 +23,14 @@ export function GridRows(props: {
 }) {
     return (
         <tbody>
+            <Spacer height={props.topSpacer} columns={Math.max(props.headers.length, 1) + 2} />
             <Index each={props.rows}>
                 {(row) => (
                     // ARIA row indices are one-based, and row 1 is the column header.
-                    <tr aria-rowindex={row().index + 2}>
+                    <tr
+                        aria-rowindex={row().index + 2}
+                        classList={{ [styles.lastRow]: row().index === props.totalRows - 1 }}
+                    >
                         <RowIssueTooltip
                             issues={props.issuesAt([props.tableId, "rows", row().id])}
                         />
@@ -70,6 +77,17 @@ export function GridRows(props: {
                     </tr>
                 )}
             </Index>
+            <Spacer height={props.bottomSpacer} columns={Math.max(props.headers.length, 1) + 2} />
         </tbody>
+    );
+}
+
+function Spacer(props: { height: number; columns: number }) {
+    return (
+        <Show when={props.height > 0}>
+            <tr aria-hidden="true" class={styles.spacer}>
+                <td colspan={props.columns} style={{ height: `${props.height}px` }} />
+            </tr>
+        </Show>
     );
 }
