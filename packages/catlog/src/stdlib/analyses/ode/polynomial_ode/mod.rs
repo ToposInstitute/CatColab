@@ -16,6 +16,7 @@ use serde_json::Value;
 use serde_wasm_bindgen::{Serializer, from_value};
 use wasm_bindgen::prelude::*;
 
+#[allow(dead_code)]
 mod v0;
 mod v1;
 
