@@ -33,6 +33,14 @@
     opacity: 0.6;
 }
 
+.cell[data-comment-highlight] {
+    --comment-tint: color-mix(in srgb, #facc15 22%, transparent);
+    border-radius: 4px;
+    background: var(--comment-tint);
+    box-shadow: 0 0 0 3px var(--comment-tint);
+    transition: background 0.15s ease;
+}
+
 .deleted-rich-text {
     margin: 0;
     white-space: pre-wrap;

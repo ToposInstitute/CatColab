@@ -1,4 +1,4 @@
-import type { AutomergeUrl, DocHandle } from "@automerge/automerge-repo";
+import type { AutomergeUrl, DocHandle, Repo } from "@automerge/automerge-repo";
 import { subscribe } from "@inkandswitch/patchwork-providers";
 import { type Accessor, createEffect, createSignal, For, onCleanup } from "solid-js";
 
@@ -46,12 +46,13 @@ Patchwork's `comment-thread` tool. Threads are created as the current contact,
 with an empty draft comment for the author to fill in.
  */
 export function createNotebookComments(
-    element: HTMLElement,
+    element: HTMLElement & { repo: Repo },
     handle: Accessor<DocHandle<unknown>>,
     doc: Accessor<object>,
 ): NotebookComments {
     const [contactUrl, setContactUrl] = createSignal<AutomergeUrl>();
     onCleanup(subscribe<AutomergeUrl>(element, { type: "patchwork:contact" }, setContactUrl));
+    const focus = createPatchworkFocus(element);
 
     const subHandle = () => handle() as SubHandle;
     const cellUrl = (cellId: Uuid) => subHandle().sub("notebook", "cellContents", cellId).url;
@@ -127,7 +128,65 @@ export function createNotebookComments(
                 }
             });
         },
+
+        isHighlighted: (cellId) => focus.urls().has(cellUrl(cellId)),
+
+        // The cell being edited is Patchwork's selection while it has focus, so
+        // the comments sidebar picks out its threads.
+        select(cellId, selected) {
+            const url = cellUrl(cellId);
+            focus.handle()?.change((focusDoc) => {
+                const isSelected = Object.keys(focusDoc.selection ?? {}).join(" ") === url;
+                if (selected && !isSelected) {
+                    focusDoc.selection = { [url]: true };
+                } else if (!selected && isSelected) {
+                    focusDoc.selection = {};
+                }
+            });
+        },
     };
+}
+
+/** Patchwork's shared record of where the user's attention is.
+
+`selection` is owned by the active editor; `highlight` is emphasis added by
+other views, such as the comments sidebar while a thread is hovered.
+ */
+type FocusDoc = {
+    selection: Record<AutomergeUrl, true>;
+    highlight: Record<AutomergeUrl, true>;
+};
+
+/** The focus document, and the URLs it currently selects or highlights. */
+function createPatchworkFocus(element: HTMLElement & { repo: Repo }) {
+    const [handle, setHandle] = createSignal<DocHandle<FocusDoc>>();
+    onCleanup(
+        subscribe<AutomergeUrl>(element, { type: "patchwork:focus" }, (url) => {
+            void element.repo.find<FocusDoc>(url).then(setHandle);
+        }),
+    );
+
+    const [urls, setUrls] = createSignal<ReadonlySet<string>>(new Set());
+    createEffect(() => {
+        const focusHandle = handle();
+        if (!focusHandle) {
+            return;
+        }
+        const update = () => {
+            const focusDoc = focusHandle.doc();
+            setUrls(
+                new Set([
+                    ...Object.keys(focusDoc?.selection ?? {}),
+                    ...Object.keys(focusDoc?.highlight ?? {}),
+                ]),
+            );
+        };
+        update();
+        focusHandle.on("change", update);
+        onCleanup(() => focusHandle.off("change", update));
+    });
+
+    return { handle, urls };
 }
 
 /** A comment thread, shown by Patchwork's `comment-thread` tool. */

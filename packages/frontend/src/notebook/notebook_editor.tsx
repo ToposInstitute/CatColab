@@ -112,6 +112,13 @@ export type NotebookComments = {
 
     /** Called when the popover showing a cell's threads closes. */
     onClose?: (cellId: Uuid) => void;
+
+    /** Whether a cell should be highlighted, such as while one of its threads
+    is hovered elsewhere. */
+    isHighlighted?: (cellId: Uuid) => boolean;
+
+    /** Called when a cell gains or loses focus. */
+    select?: (cellId: Uuid, selected: boolean) => void;
 };
 
 /** Notebook editor based on Automerge.
@@ -561,6 +568,10 @@ function cellComments(comments: NotebookComments, cellId: Uuid): CellComments {
         add: () => comments.add(cellId),
         view: () => comments.view(cellId),
         onClose: () => comments.onClose?.(cellId),
+        get isHighlighted() {
+            return comments.isHighlighted?.(cellId) ?? false;
+        },
+        select: (selected) => comments.select?.(cellId, selected),
     };
 }
 
