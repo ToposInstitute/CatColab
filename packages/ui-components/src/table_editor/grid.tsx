@@ -22,6 +22,7 @@ type TableGridProps = {
     onDeleteRow: (row: TableRow) => void;
 };
 
+/** The truly editable part of the [`TableEditor`]. */
 export function TableGrid(props: TableGridProps) {
     return (
         <GridProvider

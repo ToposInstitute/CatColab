@@ -12,6 +12,8 @@ import { issueMessage, type IssueLookup } from "./validation";
 
 import styles from "./table_editor.module.css";
 
+/** The "outer box" of the cell. This is the container for the [`CellEditor`].
+ * It handles highlighting and connects clicks to the grid controller. */
 export function GridCell(props: {
     issuesAt: IssueLookup;
     deleting: boolean;
