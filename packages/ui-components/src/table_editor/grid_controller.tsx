@@ -11,7 +11,13 @@ import {
     useContext,
 } from "solid-js";
 
-import type { InstanceTable, LiteralValue, TableHeader, TableRow } from "catcolab-documents";
+import type {
+    FieldValue,
+    InstanceTable,
+    LiteralValue,
+    TableHeader,
+    TableRow,
+} from "catcolab-documents";
 import { type FocusHandle, useChildFocus } from "../util/focus";
 import { fieldText } from "./display";
 import { isEditableCell, isPrintableKey, parseValue } from "./editing";
@@ -25,6 +31,20 @@ import {
 
 /** The cell being edited, by ID, and the live text of its editor. */
 export type EditState = { rowId: string; headerId: string; text: string };
+
+/** A cell resolved against the current table. */
+type Cell = { row: TableRow; header: TableHeader };
+
+/** The selected cell, tracked by key and by the position of its row. */
+type Selection = { key: CellKey; rowIndex: number };
+
+/** The row IDs present when the next added row was promised the selection,
+along with the column it should take. */
+type PendingSelection = {
+    rows: ReadonlySet<string>;
+    headerId: string | null;
+    owner: "grid" | "footer";
+};
 
 type GridControllerProps = {
     focus: FocusHandle;
@@ -53,11 +73,13 @@ function createGridController(props: GridControllerProps) {
     const children = useChildFocus<CellKey>(parent);
     const activeKey = () => (parent.hasFocus() ? children.activeChild() : null);
     const instanceId = createUniqueId();
-    const cellId = (key: CellKey) => `${instanceId}-${encodeURIComponent(key)}`;
+    function cellId(key: CellKey): string {
+        return `${instanceId}-${encodeURIComponent(key)}`;
+    }
     const [gridElement, setGridElement] = createSignal<HTMLTableElement>();
 
     // Remember only the selected row's position, not every row ever seen.
-    const selection = createMemo((previous: { key: CellKey; rowIndex: number } | null) => {
+    const selection = createMemo((previous: Selection | null) => {
         const key = activeKey();
         if (key === null) {
             return null;
@@ -89,16 +111,17 @@ function createGridController(props: GridControllerProps) {
     );
 
     /** The cell for a cell key, resolved against the current table. */
-    const findCell = (key: CellKey) => {
+    function findCell(key: CellKey): Cell | undefined {
         const { headerId, rowId } = parseCellKey(key);
         const table = props.table();
         const row = table.rows.find((row) => row.id === rowId);
         const header = table.headers.find((header) => header.id === headerId);
         return row && header ? { row, header } : undefined;
-    };
+    }
 
-    const fieldAt = (row: TableRow, header: TableHeader) =>
-        row.fields[headerIndex().get(header.id) ?? -1];
+    function fieldAt(row: TableRow, header: TableHeader): FieldValue | undefined {
+        return row.fields[headerIndex().get(header.id) ?? -1];
+    }
 
     const select = (key: CellKey) => {
         children.childFocus(key).setFocused(true);
@@ -138,11 +161,7 @@ function createGridController(props: GridControllerProps) {
 
     /** The row IDs present when the next added row was promised the selection
     along with the column it should take, or null when none is pending. */
-    const [pendingSelection, setPendingSelection] = createSignal<{
-        rows: ReadonlySet<string>;
-        headerId: string | null;
-        owner: "grid" | "footer";
-    } | null>(null);
+    const [pendingSelection, setPendingSelection] = createSignal<PendingSelection | null>(null);
 
     /** Add a row, selecting the given column (or the first column) of the row
     once it appears.
@@ -198,10 +217,10 @@ function createGridController(props: GridControllerProps) {
         }
     });
 
-    const isEditing = (key: CellKey) => {
+    function isEditing(key: CellKey): boolean {
         const state = edit();
         return state !== null && makeCellKey(state.headerId, state.rowId) === key;
-    };
+    }
 
     const startEdit = (key: CellKey, text?: string) => {
         const cell = findCell(key);
@@ -299,7 +318,7 @@ function createGridController(props: GridControllerProps) {
         props.onSetField(cell.row, cell.header, null);
     };
 
-    const onCellKey = (evt: KeyboardEvent, key: CellKey): boolean => {
+    function onCellKey(evt: KeyboardEvent, key: CellKey): boolean {
         const cell = findCell(key);
         if (!cell || !isEditableCell(cell.header)) {
             return false;
@@ -323,7 +342,7 @@ function createGridController(props: GridControllerProps) {
             return false;
         }
         return true;
-    };
+    }
 
     // A draft is only meaningful while its cell is selected and still exists.
     createEffect(() => {

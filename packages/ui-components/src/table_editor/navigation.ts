@@ -9,7 +9,9 @@ export function makeCellKey(headerId: string, rowId: string): CellKey {
     return `${headerId}\u0000${rowId}`;
 }
 
-export function parseCellKey(key: CellKey): { headerId: string; rowId: string } {
+type ParsedCellKey = { headerId: string; rowId: string };
+
+export function parseCellKey(key: CellKey): ParsedCellKey {
     const sep = key.indexOf("\u0000");
     return { headerId: key.slice(0, sep), rowId: key.slice(sep + 1) };
 }

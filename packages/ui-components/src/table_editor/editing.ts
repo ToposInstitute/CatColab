@@ -4,16 +4,16 @@ export function isEditableCell(header: TableHeader): boolean {
     return header.type.tag !== "Unknown";
 }
 
+/** The result of parsing cell text: a literal value or a parse failure. */
+type ParsedValue = { ok: true; value: LiteralValue } | { ok: false };
+
 /** Parse text committed by a cell editor into a literal field value.
 
 An empty field parses to `null`, clearing the cell. Row references are never
 parsed here: they are committed through completions instead, so the read-only
 draft text of a row-reference editor is always invalid.
  */
-export function parseValue(
-    header: TableHeader,
-    text: string,
-): { ok: true; value: LiteralValue } | { ok: false } {
+export function parseValue(header: TableHeader, text: string): ParsedValue {
     const trimmed = text.trim();
     if (trimmed === "") {
         return { ok: true, value: null };
