@@ -1,10 +1,3 @@
-//! Mass-action ODE analysis of models.
-//!
-//! Such ODEs are based on the *law of mass action* familiar from chemistry and
-//! mathematical epidemiology. Here, however, we also consider a generalised version
-//! where we do not require that mass be preserved. This allows the construction
-//! of systems of arbitrary polynomial (first-order) ODEs.
-
 use std::{collections::HashMap, fmt};
 
 use indexmap::IndexMap;
@@ -24,7 +17,7 @@ use crate::dbl::{
 use crate::one::FgCategory;
 use crate::simulate::ode::{NumericalPolynomialSystem, ODEProblem, PolynomialSystem};
 use crate::stdlib::analyses::petri::transition_interface;
-use crate::zero::{QualifiedName, alg::Polynomial, name, rig::Monomial};
+use crate::zero::{alg::Polynomial, name, rig::Monomial, QualifiedName};
 
 /// There are three types of mass-action semantics, each more expressive than the previous:
 /// - balanced
