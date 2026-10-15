@@ -1,4 +1,4 @@
-import { createSignal, Show, Index } from "solid-js";
+import { createSignal, Show, Index, onCleanup } from "solid-js";
 
 import type { InstanceTable, LiteralValue, TableHeader, TableRow } from "catcolab-documents";
 import type { FocusHandle } from "../util/focus";
@@ -39,11 +39,38 @@ export function TableGrid(props: TableGridProps) {
     );
 }
 
+/** Translate browser boundary exits into logical focus changes before an
+editor's blur handler or teardown can swallow the bubbling focusout event. */
+function bindFocusBoundary(element: HTMLElement, leave: () => void) {
+    const onBlur = (evt: FocusEvent) => {
+        const next = evt.relatedTarget;
+        if (next instanceof Node) {
+            if (!element.contains(next)) {
+                leave();
+            }
+        } else {
+            // Removal and window blur have no destination. Allow focus restoration
+            // after DOM changes before interpreting this as an exit.
+            queueMicrotask(() => {
+                if (element.isConnected && !element.contains(document.activeElement)) {
+                    leave();
+                }
+            });
+        }
+    };
+    element.addEventListener("blur", onBlur, true);
+    onCleanup(() => element.removeEventListener("blur", onBlur, true));
+}
+
 /** The footer with the button for adding a row. */
 function Footer() {
     const edit = useGridController();
     return (
-        <div class={styles.footer} onFocusOut={(evt) => edit.onFocusOut(evt)}>
+        <div
+            class={styles.footer}
+            ref={(element) => bindFocusBoundary(element, edit.leaveFooter)}
+            onFocusIn={() => edit.enterFooter()}
+        >
             <button class={styles.addRow} type="button" onClick={() => edit.addRow()}>
                 + Row
             </button>
@@ -60,7 +87,7 @@ function GridContent(props: TableGridProps) {
     return (
         <div
             class={styles.scrollArea}
-            onFocusOut={(evt) => edit.onFocusOut(evt, true)}
+            ref={(element) => bindFocusBoundary(element, edit.leaveGrid)}
             onKeyDown={(evt) => {
                 if (evt.defaultPrevented || evt.ctrlKey || evt.metaKey || evt.altKey) {
                     return;
@@ -93,6 +120,7 @@ function GridContent(props: TableGridProps) {
                 class={styles.grid}
                 role="grid"
                 tabindex={edit.hasEditor() ? -1 : 0}
+                // Include the column header row in the grid's total row count.
                 aria-rowcount={props.table.rows.length + 1}
                 aria-activedescendant={
                     edit.activeKey() ? edit.cellId(edit.activeKey()!) : undefined

@@ -43,16 +43,18 @@ different cell slot when rows or columns shift under it. Cells are resolved
 afresh by ID before every write so that they cannot go stale.
  */
 function createGridController(props: GridControllerProps) {
-    const parent: FocusHandle = {
+    const tableFocus: FocusHandle = {
         hasFocus: () => props.focus.hasFocus(),
         setFocused: (focused) => props.focus.setFocused(focused),
     };
+    // The footer can own a pending row selection without selecting a grid cell.
+    const regions = useChildFocus<"grid" | "footer">(tableFocus);
+    const parent = regions.childFocus("grid");
     const children = useChildFocus<CellKey>(parent);
     const activeKey = () => (parent.hasFocus() ? children.activeChild() : null);
     const instanceId = createUniqueId();
     const cellId = (key: CellKey) => `${instanceId}-${encodeURIComponent(key)}`;
     const [gridElement, setGridElement] = createSignal<HTMLTableElement>();
-    const focusGrid = () => gridElement()?.focus({ preventScroll: true });
 
     // Remember only the selected row's position, not every row ever seen.
     const selection = createMemo((previous: { key: CellKey; rowIndex: number } | null) => {
@@ -114,9 +116,9 @@ function createGridController(props: GridControllerProps) {
 
     // Navigation changes logical selection, not the browser's focused cell.
     createEffect(
-        on([activeKey, gridElement], ([key, element]) => {
-            if (key && element && !edit()) {
-                focusGrid();
+        on([activeKey, gridElement, () => edit() !== null], ([key, element, editing]) => {
+            if (key && element && !editing) {
+                element.focus({ preventScroll: true });
                 document
                     .getElementById(cellId(key))
                     ?.scrollIntoView({ block: "nearest", inline: "nearest" });
@@ -126,13 +128,12 @@ function createGridController(props: GridControllerProps) {
 
     /** Commit the previous draft before selecting a different cell. */
     const selectFromPointer = (key: CellKey) => {
-        if (edit() && !isEditing(key)) {
-            commitEdit("blur");
-        }
-        select(key);
-        if (!isEditing(key)) {
-            focusGrid();
-        }
+        batch(() => {
+            if (edit() && !isEditing(key)) {
+                commitEdit();
+            }
+            select(key);
+        });
     };
 
     /** The row IDs present when the next added row was promised the selection
@@ -140,6 +141,7 @@ function createGridController(props: GridControllerProps) {
     const [pendingSelection, setPendingSelection] = createSignal<{
         rows: ReadonlySet<string>;
         headerId: string | null;
+        owner: "grid" | "footer";
     } | null>(null);
 
     /** Add a row, selecting the given column (or the first column) of the row
@@ -154,26 +156,34 @@ function createGridController(props: GridControllerProps) {
         setPendingSelection({
             rows: new Set(props.table().rows.map((row) => row.id)),
             headerId: headerId ?? null,
+            owner: regions.activeChild() ?? "grid",
         });
         props.onAddRow();
     };
 
-    const onFocusOut = (evt: FocusEvent & { currentTarget: HTMLElement }, leaveGrid = false) => {
-        const container = evt.currentTarget;
-        queueMicrotask(() => {
-            if (container.isConnected && !container.contains(document.activeElement)) {
-                // A row arriving after the user leaves must not steal selection.
-                setPendingSelection(null);
-                if (leaveGrid) {
-                    parent.setFocused(false);
-                }
-            }
+    const enterFooter = () => {
+        batch(() => {
+            commitEdit();
+            regions.childFocus("footer").setFocused(true);
+        });
+    };
+
+    const leaveTable = () => {
+        batch(() => {
+            // Commit before ownership loss invalidates the draft.
+            commitEdit();
+            setPendingSelection(null);
+            tableFocus.setFocused(false);
         });
     };
 
     createEffect(() => {
         const pending = pendingSelection();
         if (!pending) {
+            return;
+        }
+        if (!regions.childFocus(pending.owner).hasFocus()) {
+            setPendingSelection(null);
             return;
         }
         const table = props.table();
@@ -198,10 +208,10 @@ function createGridController(props: GridControllerProps) {
         if (!cell || !isEditableCell(cell.header)) {
             return;
         }
-        if (edit() && !isEditing(key)) {
-            commitEdit("blur");
-        }
         batch(() => {
+            if (edit() && !isEditing(key)) {
+                commitEdit();
+            }
             select(key);
             setEdit({
                 rowId: cell.row.id,
@@ -215,8 +225,7 @@ function createGridController(props: GridControllerProps) {
 
     const setEditText = (text: string) => setEdit((state) => (state ? { ...state, text } : state));
 
-    // Closing an editor must not steal focus on blur or after selection moved.
-    const finishEdit = (key: CellKey, restoreFocus = false, dir?: MoveDirection) => {
+    const finishEdit = (key: CellKey, dir?: MoveDirection) => {
         batch(() => {
             setEdit(null);
             if (dir) {
@@ -228,15 +237,12 @@ function createGridController(props: GridControllerProps) {
                 }
             }
         });
-        if (restoreFocus && parent.hasFocus() && edit() === null) {
-            focusGrid();
-        }
     };
 
     const cancelEdit = () => {
         const state = edit();
         if (state) {
-            finishEdit(makeCellKey(state.headerId, state.rowId), true);
+            finishEdit(makeCellKey(state.headerId, state.rowId));
         }
     };
 
@@ -245,7 +251,7 @@ function createGridController(props: GridControllerProps) {
     The write is skipped when the row or column has since been removed, or when
     the text does not parse, in which case the cell keeps its previous value.
      */
-    const commitEdit = (dir: MoveDirection | "blur") => {
+    const commitEdit = (dir?: MoveDirection) => {
         const state = edit();
         if (state === null) {
             return;
@@ -258,22 +264,7 @@ function createGridController(props: GridControllerProps) {
                 props.onSetField(cell.row, cell.header, parsed.value);
             }
         }
-        if (dir === "blur") {
-            // The browser is already transferring focus; only close the draft.
-            finishEdit(key);
-            // Unmounting the input during blur can prevent its focusout from
-            // reaching the grid. Check the completed browser focus transfer.
-            // oxlint-disable-next-line solid/reactivity -- Read focus once after the browser finishes transferring it.
-            queueMicrotask(() => {
-                const element = gridElement();
-                if (element?.isConnected && !element.contains(document.activeElement)) {
-                    setPendingSelection(null);
-                    parent.setFocused(false);
-                }
-            });
-            return;
-        }
-        finishEdit(key, true, dir);
+        finishEdit(key, dir);
     };
 
     const toggleBool = (key: CellKey) => {
@@ -297,7 +288,7 @@ function createGridController(props: GridControllerProps) {
         if (cell) {
             props.onSetField(cell.row, cell.header, target);
         }
-        finishEdit(key, true);
+        finishEdit(key);
     };
 
     const clearCell = (key: CellKey) => {
@@ -341,12 +332,11 @@ function createGridController(props: GridControllerProps) {
             return;
         }
         const key = makeCellKey(state.headerId, state.rowId);
-        if (activeKey() !== key || !findCell(key)) {
+        if (!findCell(key)) {
             setEdit(null);
-            // Removing a focused editor must leave a usable keyboard target.
-            if (parent.hasFocus()) {
-                focusGrid();
-            }
+        } else if (activeKey() !== key) {
+            // Logical transfers can also originate outside this controller.
+            commitEdit();
         }
     });
 
@@ -355,6 +345,17 @@ function createGridController(props: GridControllerProps) {
         cellId,
         setGridElement,
         enterGrid,
+        enterFooter,
+        leaveGrid: () => {
+            if (parent.hasFocus()) {
+                leaveTable();
+            }
+        },
+        leaveFooter: () => {
+            if (regions.childFocus("footer").hasFocus()) {
+                leaveTable();
+            }
+        },
         selectFromPointer,
         cellFocus: children.childFocus,
         headerIndex,
@@ -368,7 +369,6 @@ function createGridController(props: GridControllerProps) {
         toggleBool,
         commitRowRef,
         addRow,
-        onFocusOut,
         onCellKey,
     };
 }

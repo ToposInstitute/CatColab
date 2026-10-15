@@ -22,6 +22,7 @@ export function TableRows(props: {
         <tbody>
             <Index each={props.rows}>
                 {(row) => (
+                    // ARIA row indices are one-based, and row 1 is the column header.
                     <tr aria-rowindex={row().index + 2}>
                         <RowIssueTooltip
                             issues={props.issuesAt([props.tableId, "rows", row().id])}

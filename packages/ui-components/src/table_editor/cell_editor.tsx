@@ -24,27 +24,22 @@ export function CellEditor(props: {
     completions?: Completion[];
     /** Whether the editor text is read-only, as for row references. */
     readOnly?: boolean;
-    onCommit: (dir: MoveDirection | "blur") => void;
+    onCommit: (dir: MoveDirection) => void;
     onCancel: () => void;
 }) {
     let finished = false;
 
-    // An editor unmounted by a concurrent change must not commit from the
-    // `blur` that removing its focused input fires.
+    // Ignore completion or keyboard callbacks after the editor is removed.
     onCleanup(() => {
         finished = true;
     });
 
-    const commit = (dir: MoveDirection | "blur") => {
+    const commit = (dir: MoveDirection) => {
         if (!finished) {
             finished = true;
             props.onCommit(dir);
         }
     };
-
-    // The focus directive in `TextInput` reports the focus state once on
-    // mount, which must not be mistaken for losing focus.
-    let hadFocus = false;
 
     return (
         <TextInput
@@ -71,14 +66,6 @@ export function CellEditor(props: {
                     return true;
                 }
                 return false;
-            }}
-            hasFocused={() => {
-                hadFocus = true;
-            }}
-            hasBlurred={() => {
-                if (hadFocus) {
-                    commit("blur");
-                }
             }}
         />
     );
