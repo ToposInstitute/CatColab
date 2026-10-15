@@ -4,7 +4,6 @@ import type {
     MorType,
     ObType,
     StochasticMassActionProblemData,
-    MassActionEquationsData,
 } from "catlog-wasm";
 import type { DiagramAnalysisMeta, ModelAnalysisMeta } from "../theory";
 import * as GraphLayoutConfig from "../visualization/graph_layout_config";
@@ -191,47 +190,42 @@ export function massAction(
         help,
         component: (props) => <MassAction title={name} {...otherOptions} {...props} />,
         initialContent: () => ({
-            massConservationType: { type: "Balanced" },
-            rates: {},
-            transitionProductionRates: {},
-            transitionConsumptionRates: {},
-            placeProductionRates: {},
-            placeConsumptionRates: {},
-            initialValues: {},
-            duration: 10,
+            variant: "Balanced",
+            balanced: {
+                generalData: {
+                    initialValues: {},
+                    duration: 10,
+                },
+                parameterData: {
+                    rates: {},
+                },
+            },
+            unbalanced: {
+                generalData: {
+                    initialValues: {},
+                    duration: 10,
+                },
+                parameterData: {
+                    productionRates: {},
+                    consumptionRates: {},
+                },
+            },
+            perPlace: {
+                generalData: {
+                    initialValues: {},
+                    duration: 10,
+                },
+                parameterData: {
+                    productionRates: {},
+                    consumptionRates: {},
+                },
+            },
         }),
     };
 }
 
 const MassAction = lazy(() => import("./analyses/mass_action"));
 
-export function massActionEquations(
-    options: Partial<AnalysisOptions> & {
-        ratesHaveGranularity: boolean;
-        getEquations: Simulators.MassActionEquations;
-    },
-): ModelAnalysisMeta<MassActionEquationsData> {
-    const {
-        id = "mass-action-equations",
-        name = "Mass-action dynamics equations",
-        description = "Display the symbolic mass-action dynamics equations",
-        help = "mass-action-equations",
-        ...otherOptions
-    } = options;
-    return {
-        id,
-        name,
-        description,
-        help,
-        component: (props) => (
-            <MassActionEquationsDisplay title={name} {...otherOptions} {...props} />
-        ),
-        initialContent: () => ({
-            massConservationType: { type: "Balanced" },
-        }),
-    };
-}
-const MassActionEquationsDisplay = lazy(() => import("./analyses/mass_action_equations"));
 
 export function stochasticMassAction(
     options: Partial<AnalysisOptions> & {

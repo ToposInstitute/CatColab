@@ -332,19 +332,31 @@ impl ThCategoryLinks {
     pub fn mass_action(
         &self,
         model: &DblModel,
-        data: analyses::ode::MassActionProblemData,
+        data: analyses::ode::RestrictedMassActionProblemData,
     ) -> Result<ODEResultWithEquations, String> {
-        mass_action_simulation(model, data, MassActionAnalysisLogic::StockFlow)
-    }
-
-    /// Returns the symbolic mass-action equations in LaTeX format.
-    #[wasm_bindgen(js_name = "massActionEquations")]
-    pub fn mass_action_equations(
-        &self,
-        model: &DblModel,
-        data: MassActionEquationsData,
-    ) -> Result<LatexEquations, String> {
-        mass_action_equations(model, data, MassActionAnalysisLogic::StockFlow)
+        match data.variant {
+            analyses::ode::MassActionVariant::Balanced => {
+                let balanced_system = analyses::ode::StockFlowBalancedMassActionAnalysis::default()
+                    .build_system(model.discrete_tab()?);
+                ode_semantics_simulation::<
+                    analyses::ode::StockFlowBalancedMassActionSemantics,
+                    analyses::ode::BalancedMassActionProblemData,
+                >(model, data.balanced, balanced_system)
+            }
+            analyses::ode::MassActionVariant::Unbalanced => {
+                let unbalanced_system =
+                    analyses::ode::StockFlowUnbalancedMassActionAnalysis::default()
+                        .build_system(model.discrete_tab()?);
+                ode_semantics_simulation::<
+                    analyses::ode::StockFlowUnbalancedMassActionSemantics,
+                    analyses::ode::UnbalancedMassActionProblemData,
+                >(model, data.unbalanced, unbalanced_system)
+            }
+            catlog::stdlib::analyses::ode::MassActionVariant::PerPlace => {
+                Err("Categories with links do not support fully unbalanced mass-action semantics."
+                    .to_string())
+            }
+        }
     }
 }
 
@@ -369,9 +381,31 @@ impl ThCategorySignedLinks {
     pub fn mass_action(
         &self,
         model: &DblModel,
-        data: analyses::ode::MassActionProblemData,
+        data: analyses::ode::RestrictedMassActionProblemData,
     ) -> Result<ODEResultWithEquations, String> {
-        mass_action_simulation(model, data, MassActionAnalysisLogic::StockFlow)
+        match data.variant {
+            analyses::ode::MassActionVariant::Balanced => {
+                let balanced_system = analyses::ode::StockFlowBalancedMassActionAnalysis::default()
+                    .build_system(model.discrete_tab()?);
+                ode_semantics_equations::<analyses::ode::StockFlowBalancedMassActionSemantics>(
+                    model,
+                    balanced_system,
+                )
+            }
+            analyses::ode::MassActionVariant::Unbalanced => {
+                let unbalanced_system =
+                    analyses::ode::StockFlowUnbalancedMassActionAnalysis::default()
+                        .build_system(model.discrete_tab()?);
+                ode_semantics_equations::<analyses::ode::StockFlowUnbalancedMassActionSemantics>(
+                    model,
+                    unbalanced_system,
+                )
+            }
+            analyses::ode::MassActionVariant::PerPlace => {
+                Err("Categories with links do not support fully unbalanced mass-action semantics."
+                    .to_string())
+            }
+        }
     }
 
     /// Returns the symbolic mass-action equations in LaTeX format.
@@ -408,17 +442,33 @@ impl ThSymMonoidalCategory {
         model: &DblModel,
         data: analyses::ode::MassActionProblemData,
     ) -> Result<ODEResultWithEquations, String> {
-        mass_action_simulation(model, data, MassActionAnalysisLogic::PetriNet)
-    }
-
-    /// Returns the symbolic mass-action equations in LaTeX format.
-    #[wasm_bindgen(js_name = "massActionEquations")]
-    pub fn mass_action_equations(
-        &self,
-        model: &DblModel,
-        data: MassActionEquationsData,
-    ) -> Result<LatexEquations, String> {
-        mass_action_equations(model, data, MassActionAnalysisLogic::PetriNet)
+        match data.variant {
+            analyses::ode::MassActionVariant::Balanced => {
+                let balanced_system = analyses::ode::PetriNetBalancedMassActionAnalysis::default()
+                    .build_system(model.modal_unital()?);
+                ode_semantics_simulation::<
+                    analyses::ode::PetriNetBalancedMassActionSemantics,
+                    analyses::ode::BalancedMassActionProblemData,
+                >(model, data.balanced, balanced_system)
+            }
+            analyses::ode::MassActionVariant::Unbalanced => {
+                let unbalanced_system =
+                    analyses::ode::PetriNetUnbalancedMassActionAnalysis::default()
+                        .build_system(model.modal_unital()?);
+                ode_semantics_simulation::<
+                    analyses::ode::PetriNetUnbalancedMassActionSemantics,
+                    analyses::ode::UnbalancedMassActionProblemData,
+                >(model, data.unbalanced, unbalanced_system)
+            }
+            analyses::ode::MassActionVariant::PerPlace => {
+                let per_place_system = analyses::ode::PetriNetPerPlaceMassActionAnalysis::default()
+                    .build_system(model.modal_unital()?);
+                ode_semantics_simulation::<
+                    analyses::ode::PetriNetPerPlaceMassActionSemantics,
+                    analyses::ode::PerPlaceMassActionProblemData,
+                >(model, data.per_place, per_place_system)
+            }
+        }
     }
 
     /// Simulates the stochastic mass-action system derived from a model.
