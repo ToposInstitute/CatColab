@@ -3,7 +3,6 @@
     flex-direction: column;
     width: fit-content;
     max-width: 100%;
-    overflow-x: auto;
     border: 1px solid var(--color-gray-450);
     background: var(--color-background);
 }
@@ -25,21 +24,11 @@
     font-weight: 500;
 }
 
-.deleteTable,
-.deleteColumn {
-    flex: none;
-    margin: 0;
-    font-size: 0.9rem;
-}
-
-.deleteTable {
-    padding: 0.3rem 0.75rem;
-}
-
-.deleteColumn {
-    margin: 0.5rem 0 0.3rem 0.5rem;
-    padding: 0.1rem 0.6rem;
-    line-height: 1.4;
+.scrollArea {
+    min-width: 0;
+    overflow: auto;
+    max-height: var(--table-editor-max-height, 70vh);
+    outline: none;
 }
 
 .grid {
@@ -49,9 +38,13 @@
 }
 
 .columnHeader {
+    position: sticky;
+    top: 0;
+    z-index: 2;
     height: 28px;
     padding: 0 0.5rem;
     border: 1px solid var(--color-gray-450);
+    border-top: none;
     background: var(--color-gray-50);
     font-weight: 500;
     text-align: left;
@@ -88,14 +81,6 @@
     outline: none;
 }
 
-/* A darker shade of the active-item highlight in the completions popup
-(--color-highlight-bg). An outline is used because, unlike an inset box
-shadow, it is painted above the cell editor input. */
-.cell.selected {
-    outline: 2px solid #bdd0e2;
-    outline-offset: -2px;
-}
-
 .cellText {
     display: block;
     padding: 0 0.5rem;
@@ -109,6 +94,12 @@ shadow, it is painted above the cell editor input. */
     display: flex;
     align-items: center;
     height: 100%;
+}
+
+.rowRefContent .cellText {
+    flex: 1;
+    min-width: 0;
+    padding-right: calc(24px + 0.35rem);
 }
 
 .rowRefIndicator {
@@ -130,48 +121,60 @@ shadow, it is painted above the cell editor input. */
     color: var(--color-foreground);
 }
 
-.rowRefIndicator:disabled {
-    cursor: default;
-}
-
-.cellInput {
-    display: block;
-    box-sizing: border-box;
-    min-width: 0;
-    width: 100%;
-    height: 100%;
-    padding: 0 0.5rem;
-    border: none;
-
-    /* Transparent so cell state backgrounds show through the editor. */
-    background: transparent;
-    font: inherit;
-    outline: none;
-}
-
-.cellInput:read-only {
-    caret-color: transparent;
-    cursor: default;
-}
-
-.rowRefContent .cellText,
-.rowRefContent .cellInput {
-    padding-right: calc(24px + 0.35rem);
-}
-
-.rowRefContent .cellText {
-    flex: 1;
-    min-width: 0;
-}
-
-/* Highlight the whole cell, not just the input, when the content is invalid. */
-.cell.invalid,
-.cell:has(.cellInput.invalid) {
-    background: var(--color-form-invalid-bg);
+/* A darker shade of the active-item highlight in the completions popup
+(--color-highlight-bg). An outline is used because, unlike an inset box
+shadow, it is painted above the cell editor input. */
+.cell.selected {
+    outline: 2px solid #bdd0e2;
+    outline-offset: -2px;
 }
 
 .rowHeaderColumn {
     width: 16px;
+}
+
+.deleteCell {
+    position: relative;
+    height: 28px;
+    padding: 0;
+    border: 1px solid var(--color-gray-450);
+    text-align: center;
+    vertical-align: middle;
+}
+
+.deleteRow {
+    position: absolute;
+    inset: 0;
+    display: inline-grid;
+    place-items: center;
+    width: 100%;
+    height: 100%;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--color-text-secondary);
+    font-size: 1rem;
+    font-weight: 600;
+    line-height: 1;
+    cursor: pointer;
+}
+
+/* Row about to be deleted: a border around the whole row. */
+.grid tr:has(.deleteCell:hover) {
+    position: relative;
+}
+
+.grid tr:has(.deleteCell:hover)::after {
+    position: absolute;
+    z-index: 1;
+    inset: 0;
+    border: 3px solid #d87878;
+    pointer-events: none;
+    content: "";
+}
+
+.deleteCell:hover .deleteRow {
+    color: #d87878;
 }
 
 .rowHeader {
@@ -194,56 +197,33 @@ shadow, it is painted above the cell editor input. */
     list-style: none;
 }
 
-.checkbox {
-    display: block;
-    margin: 0 auto;
+.deleteTable,
+.deleteColumn {
+    flex: none;
+    margin: 0;
+    font-size: 0.9rem;
 }
 
-.deleteCell {
-    position: relative;
-    height: 28px;
-    padding: 0;
-    border: 1px solid var(--color-gray-450);
-    text-align: center;
-    vertical-align: middle;
+.deleteTable {
+    padding: 0.3rem 0.75rem;
 }
 
-.grid tr:has(.deleteCell:hover) {
-    position: relative;
+.deleteColumn {
+    margin: 0.5rem 0 0.3rem 0.5rem;
+    padding: 0.1rem 0.6rem;
+    line-height: 1.4;
 }
 
-.grid tr:has(.deleteCell:hover)::after {
-    position: absolute;
-    z-index: 1;
-    inset: 0;
-    border: 3px solid #d87878;
-    pointer-events: none;
-    content: "";
+.table:has(.deleteTable:hover) {
+    outline: 3px solid #d87878;
+    outline-offset: -1px;
 }
 
-.deleteRow {
-    position: absolute;
-    inset: 0;
-    display: inline-grid;
-    place-items: center;
-    width: 100%;
-    height: 100%;
-    padding: 0;
-    border: 0;
-    background: transparent;
-    color: var(--color-text-secondary);
-    font-size: 1rem;
-    font-weight: 600;
-    line-height: 1;
-    cursor: pointer;
+.columnHeader:has(.deleteColumn) {
+    background: var(--color-form-invalid-bg);
 }
 
-.deleteCell:hover .deleteRow {
-    color: #d87878;
-}
-
-/* Column about to be deleted: sides on every cell, top on the header, bottom
-on the last row. Inset shadows leave the collapsed borders alone. */
+/* Preview column deletion without disturbing collapsed borders or selection. */
 .columnDeleting {
     box-shadow:
         inset 3px 0 0 #d87878,
@@ -268,6 +248,41 @@ on the last row. Inset shadows leave the collapsed borders alone. */
     box-shadow: inset 0 0 0 3px #d87878;
 }
 
+.checkbox {
+    display: block;
+    margin: 0 auto;
+}
+
+.cellInput {
+    display: block;
+    box-sizing: border-box;
+    min-width: 0;
+    width: 100%;
+    height: 100%;
+    padding: 0 0.5rem;
+    border: none;
+
+    /* Transparent so cell state backgrounds show through the editor. */
+    background: transparent;
+    font: inherit;
+    outline: none;
+}
+
+/* Highlight the whole cell, not just the input, when the content is invalid. */
+.cell.invalid,
+.cell:has(.cellInput.invalid) {
+    background: var(--color-form-invalid-bg);
+}
+
+.table.unknown {
+    background: var(--color-icon-button-danger-hover);
+}
+
+.table.unknown .header,
+.table.unknown .columnHeader {
+    background: var(--color-icon-button-danger-hover);
+}
+
 .footer {
     position: sticky;
     left: 0;
@@ -275,23 +290,6 @@ on the last row. Inset shadows leave the collapsed borders alone. */
     background: var(--color-gray-50);
 }
 
-.table.unknown {
-    background: var(--color-icon-button-danger-hover);
-}
-
-/* Table about to be deleted, matching the row and column highlights. Drawn
-over the border rather than inset, where the sticky header would cover it. */
-.table:has(.deleteTable:hover) {
-    outline: 3px solid #d87878;
-    outline-offset: -1px;
-}
-
-.columnHeader:has(.deleteColumn) {
-    background: var(--color-form-invalid-bg);
-}
-
-.table.unknown .header,
-.table.unknown .columnHeader,
 .table.unknown .footer {
     background: var(--color-icon-button-danger-hover);
 }

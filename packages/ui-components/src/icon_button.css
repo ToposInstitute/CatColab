@@ -56,6 +56,9 @@
 }
 
 .tooltip-content {
+    /* Above the sticky table column headers, which use z-index: 2 in the root
+    stacking context. */
+    z-index: 10;
     border-radius: 0.5rem;
     color: var(--color-background);
     background-color: var(--color-tooltip-bg);

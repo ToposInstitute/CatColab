@@ -11,7 +11,7 @@ import type {
     TableIssue,
     TableRow,
 } from "catcolab-documents";
-import { rootFocus, useChildFocus } from "../util/focus";
+import { type FocusHandle, rootFocus, useChildFocus } from "../util/focus";
 import { TableEditor } from "./table_editor";
 
 const meta = {
@@ -141,7 +141,7 @@ function EditableTables(props: {
                 {(table) => (
                     <TableEditor
                         table={table()}
-                        tables={tables()}
+                        allTables={tables()}
                         issues={props.issues?.filter((issue) => issue.path[0] === table().id)}
                         focus={focus.childFocus(table().id)}
                         onSetField={(row, header, value) =>
@@ -274,6 +274,7 @@ export const RowRefHighlightsCurrent: Story = {
 
         await userEvent.keyboard("{Enter}");
         await expect(cell).toHaveTextContent('Team "Beacon"');
+        await expectActiveCell(cell);
     },
 };
 
@@ -306,10 +307,11 @@ export const InvalidData: Story = {
         const tables = within(canvasElement).getAllByRole("grid");
         const cells = within(tables[1]!).getAllByRole("gridcell");
 
+        // Stored values are only marked invalid when field issues are supplied.
         await expect(cells[0]).toHaveTextContent("not an integer");
-        await expect(cells[0]).toHaveAttribute("aria-invalid", "true");
+        await expect(cells[0]).toHaveAttribute("aria-invalid", "false");
         await expect(cells[1]).toHaveTextContent("Team ?");
-        await expect(cells[1]).toHaveAttribute("aria-invalid", "true");
+        await expect(cells[1]).toHaveAttribute("aria-invalid", "false");
     },
 };
 
@@ -445,7 +447,8 @@ export const OrphanedTable: Story = {
             within(tables[0]!.closest("section")!).queryByRole("button", { name: "+ Row" }),
         ).not.toBeInTheDocument();
         await expect(unknownRef).toHaveTextContent("Unknown table row 1");
-        await expect(unknownRef).toHaveAttribute("aria-invalid", "true");
+        // A table-level issue does not imply a field-level issue for references.
+        await expect(unknownRef).toHaveAttribute("aria-invalid", "false");
 
         // Columns of an orphaned table go with the table, not one by one.
         await expect(
@@ -530,7 +533,7 @@ const focusSpec: TableSpec = {
 };
 
 /** Renders a single editable table backed by an in-memory table spec. */
-function SingleTable(props: { initialSpec: TableSpec; addRowDelay?: number }) {
+function SingleTable(props: { initialSpec: TableSpec; addRowDelay?: number; focus?: FocusHandle }) {
     // Initial story data, intentionally captured on mount.
     const [spec, setSpec] = createSignal(props.initialSpec);
     const table = () => toInstanceTable(spec());
@@ -545,8 +548,8 @@ function SingleTable(props: { initialSpec: TableSpec; addRowDelay?: number }) {
     return (
         <TableEditor
             table={table()}
-            tables={[table()]}
-            focus={focus.childFocus("table")}
+            allTables={[table()]}
+            focus={props.focus ?? focus.childFocus("table")}
             onSetField={(row, header, value) =>
                 setSpec((spec) => setSpecField(spec, row, header, value))
             }
@@ -563,12 +566,20 @@ function SingleTable(props: { initialSpec: TableSpec; addRowDelay?: number }) {
     );
 }
 
+async function expectActiveCell(cell: HTMLElement) {
+    const grid = cell.closest('[role="grid"]')!;
+    await expect(grid).toHaveFocus();
+    await expect(grid).toHaveAttribute("aria-activedescendant", cell.id);
+    await expect(cell).toHaveAttribute("aria-selected", "true");
+}
+
 export const FocusBoundaries: Story = {
     render: () => (
         <div>
             <button type="button">Before table</button>
             <SingleTable initialSpec={focusSpec} />
             <button type="button">After table</button>
+            <p>Non-focusable outside content</p>
         </div>
     ),
     play: async ({ canvasElement }: { canvasElement: HTMLElement }) => {
@@ -577,17 +588,130 @@ export const FocusBoundaries: Story = {
 
         await userEvent.click(cell);
         await userEvent.keyboard("{Enter}");
+        await userEvent.clear(canvas.getByRole("textbox"));
+        await userEvent.type(canvas.getByRole("textbox"), "Committed on exit");
         await userEvent.tab({ shift: true });
         await expect(canvas.getByRole("button", { name: "Before table" })).toHaveFocus();
+        await expect(cell).toHaveTextContent("Committed on exit");
+        await expect(cell).toHaveAttribute("aria-selected", "false");
+        await expect(canvas.queryByRole("textbox")).not.toBeInTheDocument();
 
         await userEvent.click(cell);
         await userEvent.keyboard("{Enter}");
         await userEvent.tab();
-        await waitFor(() => expect(canvas.getAllByRole("gridcell")[1]).toHaveFocus());
-        await userEvent.tab();
         await expect(canvas.getByRole("button", { name: "+ Row" })).toHaveFocus();
+        await expect(cell).toHaveAttribute("aria-selected", "false");
         await userEvent.tab();
         await expect(canvas.getByRole("button", { name: "After table" })).toHaveFocus();
+
+        await userEvent.dblClick(cell);
+        await userEvent.click(canvas.getByText("Non-focusable outside content"));
+        await waitFor(() => expect(canvas.queryByRole("textbox")).not.toBeInTheDocument());
+        await expect(cell).toHaveAttribute("aria-selected", "false");
+        await expect(canvas.getByRole("grid")).not.toHaveFocus();
+    },
+};
+
+export const CommitAndCancelWithinGrid: Story = {
+    render: () => (
+        <SingleTable
+            initialSpec={{
+                ...focusSpec,
+                rows: [...focusSpec.rows, { id: "focus-2", values: { value: "Second" } }],
+            }}
+        />
+    ),
+    play: async ({ canvasElement }: { canvasElement: HTMLElement }) => {
+        const canvas = within(canvasElement);
+        const [first, second] = canvas.getAllByRole("gridcell");
+        await userEvent.dblClick(first!);
+        await userEvent.clear(canvas.getByRole("textbox"));
+        await userEvent.type(canvas.getByRole("textbox"), "Committed on selection");
+        await userEvent.click(second!);
+        await expect(first).toHaveTextContent("Committed on selection");
+        await expectActiveCell(second!);
+
+        await userEvent.keyboard("{Enter}");
+        await userEvent.type(canvas.getByRole("textbox"), "Discard this");
+        await userEvent.keyboard("{Escape}");
+        await expect(canvas.queryByRole("textbox")).not.toBeInTheDocument();
+        await expect(second).toHaveTextContent("Second");
+        await expectActiveCell(second!);
+    },
+};
+
+export const LogicalFocusTransfer: Story = {
+    render: () => {
+        const focus = useChildFocus<"table" | "outside">(rootFocus);
+        return (
+            <div>
+                <SingleTable
+                    initialSpec={focusSpec}
+                    focus={focus.childFocus("table")}
+                    addRowDelay={500}
+                />
+                <button
+                    type="button"
+                    onMouseDown={(evt) => evt.preventDefault()}
+                    onClick={() => focus.childFocus("outside").setFocused(true)}
+                >
+                    Transfer logical focus
+                </button>
+            </div>
+        );
+    },
+    play: async ({ canvasElement }: { canvasElement: HTMLElement }) => {
+        const canvas = within(canvasElement);
+        const cell = canvas.getByRole("gridcell");
+        await userEvent.dblClick(cell);
+        await userEvent.clear(canvas.getByRole("textbox"));
+        await userEvent.type(canvas.getByRole("textbox"), "Committed by logical transfer");
+        await userEvent.click(canvas.getByRole("button", { name: "Transfer logical focus" }));
+
+        await expect(cell).toHaveTextContent("Committed by logical transfer");
+        await expect(cell).toHaveAttribute("aria-selected", "false");
+        await expect(canvas.queryByRole("textbox")).not.toBeInTheDocument();
+        await expect(canvas.getByRole("grid")).not.toHaveFocus();
+
+        await userEvent.dblClick(cell);
+        await userEvent.keyboard("{Enter}");
+        await userEvent.click(canvas.getByRole("button", { name: "Transfer logical focus" }));
+        await waitFor(() => expect(canvas.getAllByRole("gridcell")).toHaveLength(2));
+        // Browser focus never moved, but it must not reclaim logical ownership.
+        await expect(canvas.getByRole("grid")).toHaveFocus();
+        for (const candidate of canvas.getAllByRole("gridcell")) {
+            await expect(candidate).toHaveAttribute("aria-selected", "false");
+        }
+    },
+};
+
+export const LeaveBeforeAsyncAdd: Story = {
+    render: () => (
+        <div>
+            <SingleTable initialSpec={focusSpec} addRowDelay={500} />
+            <button type="button">Elsewhere</button>
+        </div>
+    ),
+    play: async ({ canvasElement }: { canvasElement: HTMLElement }) => {
+        const canvas = within(canvasElement);
+        const elsewhere = canvas.getByRole("button", { name: "Elsewhere" });
+
+        await userEvent.dblClick(canvas.getByRole("gridcell"));
+        await userEvent.keyboard("{Enter}");
+        await userEvent.click(elsewhere);
+        await waitFor(() => expect(canvas.getAllByRole("gridcell")).toHaveLength(2));
+        await expect(elsewhere).toHaveFocus();
+        for (const cell of canvas.getAllByRole("gridcell")) {
+            await expect(cell).toHaveAttribute("aria-selected", "false");
+        }
+
+        await userEvent.click(canvas.getByRole("button", { name: "+ Row" }));
+        await userEvent.click(elsewhere);
+        await waitFor(() => expect(canvas.getAllByRole("gridcell")).toHaveLength(3));
+        await expect(elsewhere).toHaveFocus();
+        for (const cell of canvas.getAllByRole("gridcell")) {
+            await expect(cell).toHaveAttribute("aria-selected", "false");
+        }
     },
 };
 
@@ -612,14 +736,14 @@ export const FocusAfterDelete: Story = {
         await waitFor(async () => {
             const firstCell = canvas.getAllByRole("gridcell")[0]!;
             await expect(firstCell).toHaveTextContent("First");
-            await expect(firstCell).toHaveFocus();
+            await expectActiveCell(firstCell);
         });
 
         await userEvent.click(canvas.getAllByRole("button", { name: "Delete row" })[0]!);
         await waitFor(async () => {
             const remainingCell = canvas.getByRole("gridcell");
             await expect(remainingCell).toHaveTextContent("Third");
-            await expect(remainingCell).toHaveFocus();
+            await expectActiveCell(remainingCell);
         });
     },
 };
@@ -658,7 +782,7 @@ export const AddRowButtonFocusesNewRow: Story = {
         await waitFor(async () => {
             const cells = canvas.getAllByRole("gridcell");
             await expect(cells).toHaveLength(2);
-            await expect(cells[1]).toHaveFocus();
+            await expectActiveCell(cells[1]!);
         });
     },
 };
@@ -691,7 +815,7 @@ export const ContinueEditingAfterAsyncAdd: Story = {
             const cells = canvas.getAllByRole("gridcell");
             await expect(cells).toHaveLength(3);
             await expect(cells[1]).toHaveTextContent("Updated second row");
-            await expect(cells[2]).toHaveFocus();
+            await expectActiveCell(cells[2]!);
         });
     },
 };
@@ -736,7 +860,7 @@ function ConcurrentTable(props: { initialSpec: TableSpec }) {
         <div>
             <TableEditor
                 table={table()}
-                tables={[table()]}
+                allTables={[table()]}
                 focus={focus.childFocus("table")}
                 onSetField={(row, header, value) => {
                     setWrites((n) => n + 1);
@@ -806,7 +930,7 @@ export const RemoteRowDeleteWhileEditing: Story = {
         await expect(cells).toHaveLength(2);
         await expect(cells[0]).toHaveTextContent("Edited");
         await expect(cells[1]).toHaveTextContent("Third");
-        await expect(cells[1]).toHaveFocus();
+        await expectActiveCell(cells[1]!);
         await expect(canvas.getByTestId("writes")).toHaveTextContent("1");
     },
 };
@@ -834,7 +958,7 @@ export const RemoteColumnInsertWhileEditing: Story = {
         await expect(cells[0]).toHaveTextContent("");
         await expect(cells[1]).toHaveTextContent("Edited");
         await expect(cells[3]).toHaveTextContent("Second");
-        await expect(cells[3]).toHaveFocus();
+        await expectActiveCell(cells[3]!);
         await expect(canvas.getByTestId("writes")).toHaveTextContent("1");
     },
 };
@@ -856,7 +980,7 @@ export const RemoteDeleteOfEditedRow: Story = {
         const cells = canvas.getAllByRole("gridcell");
         await expect(cells[0]).toHaveTextContent("Second");
         await expect(cells[1]).toHaveTextContent("Third");
-        await expect(cells[0]).toHaveFocus();
+        await expectActiveCell(cells[0]!);
     },
 };
 

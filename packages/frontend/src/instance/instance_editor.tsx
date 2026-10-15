@@ -72,7 +72,7 @@ export function InstanceEditor(props: {
                                 {(table) => (
                                     <TableEditor
                                         table={table()}
-                                        tables={tables()}
+                                        allTables={tables()}
                                         issues={issuesForTable(table().id)}
                                         focus={focus.childFocus(table().id)}
                                         onHide={() => tableList.hide(props.refId, table().id)}
