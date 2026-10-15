@@ -41,8 +41,8 @@ const solidStoreIdFor = (handle: SolidStoreHandle): string => {
 
 const solidStore: DocumentStore<SolidStoreHandle> = {
     async createHandle(initialDoc) {
-        const draftDoc = structuredClone(initialDoc as Document);
-        const [docView, setDocView] = createStore<Document>(initialDoc as Document);
+        const draftDoc = structuredClone(initialDoc);
+        const [docView, setDocView] = createStore<Document>(initialDoc);
         return { draftDoc, docView, setDocView, listeners: new Set() };
     },
     getDocumentView: (handle) => handle.docView,

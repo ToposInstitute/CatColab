@@ -7,14 +7,10 @@ import type {
     InvalidModelEqn,
     ModelPresentation,
 } from "catlog-wasm";
-import { createReactiveView, type DocumentStore } from "../document-store";
+import { getDocumentSnapshot, type DocumentStore } from "../document-store";
 import type { Issue } from "../result";
 import type { Shape } from "../shape";
-import {
-    elaboratedModelFromPresentation,
-    type ModelValidation,
-    type ModelValidationView,
-} from "./elaborated-model";
+import { elaboratedModelFromPresentation, type ModelValidation } from "./elaborated-model";
 
 function formalCellForGenerator(
     notebook: Notebook<ModelJudgment>,
@@ -167,12 +163,10 @@ export async function validateModelDocument(
     }
 }
 
-/** The validation surface of a notebook: one-shot validation, validation
-callbacks, and live validation views. */
+/** One-shot validation and change callbacks for a notebook. */
 export interface NotebookValidator<S extends Shape> {
     validate(): Promise<ModelValidation<S>>;
     onValidate(callback: (result: ModelValidation<S>) => void): () => void;
-    createValidationView(): ModelValidationView<S>;
 }
 
 /** Create the validation machinery for a notebook over a document store.
@@ -203,10 +197,7 @@ export function createNotebookValidator<Handle, S extends Shape>(
                 coreTheory = shape.getCoreTheory();
             }
             const theory = await coreTheory;
-            const document = store.copyValue(
-                handle,
-                store.getDocumentView(handle),
-            ) as ModelDocument;
+            const document = getDocumentSnapshot(store, handle) as Readonly<ModelDocument>;
             return await validateModelDocument(document, theory, store.getDocumentRef(handle).id);
         } catch (error) {
             return {
@@ -226,15 +217,11 @@ export function createNotebookValidator<Handle, S extends Shape>(
         };
     }
 
-    let latestValidationState: ModelValidationState = {
-        issues: [{ message: "The notebook has not been validated yet." }],
-    };
     const validationStateListeners = new Set<(state: ModelValidationState) => void>();
     let unsubscribeValidationSource: (() => void) | undefined;
     let revalidationCounter = 0;
 
     function publishValidationState(state: ModelValidationState): void {
-        latestValidationState = state;
         for (const listener of validationStateListeners) {
             listener(state);
         }
@@ -284,25 +271,6 @@ export function createNotebookValidator<Handle, S extends Shape>(
             return subscribeToValidationState((state) => {
                 callback(modelValidationFromState(state));
             });
-        },
-        createValidationView(): ModelValidationView<S> {
-            const reactiveView = createReactiveView(store, latestValidationState);
-            const dispose = subscribeToValidationState((state) => {
-                reactiveView.replace(state);
-            });
-
-            const model = elaboratedModelFromPresentation(
-                shape,
-                () => reactiveView.current.presentation,
-            );
-
-            return {
-                model,
-                get issues(): ReadonlyArray<Issue> {
-                    return reactiveView.current.issues;
-                },
-                dispose,
-            };
         },
     };
 }

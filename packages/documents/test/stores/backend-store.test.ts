@@ -64,7 +64,7 @@ const backendStore: DocumentStore<StoreHandle> = {
     },
     copyValue: (handle, value) => {
         const doc = handle.docHandle.doc();
-        const objId = getObjectId(value as object);
+        const objId = getObjectId(value);
         if (objId === null) {
             throw new Error("value is not part of the document");
         }
