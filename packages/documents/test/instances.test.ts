@@ -5,18 +5,10 @@ import type { Document } from "catcolab-document-types";
 import {
     atomicTypeOfAttributeType,
     createBinder,
+    createInMemoryStore,
     defineShape,
-    type DocumentRef,
-    type DocumentStore,
     type Result,
 } from "catcolab-documents";
-
-function refOf<Handle, Version>(
-    store: DocumentStore<Handle, Version>,
-    handle: Handle,
-): DocumentRef {
-    return store.getDocumentRef(handle);
-}
 
 function expectOk<T, E>(result: Result<T, E>): T {
     expect(result.tag).toBe("Ok");
@@ -76,7 +68,7 @@ describe("instance document creation", () => {
         expect(instance.shape).toBe(SimpleSchema);
         expect(instance.document.type).toBe("instance");
         expect(instance.document.tables).toEqual({});
-        expect(instance.document.instanceOf._id).toBe(refOf(binder.store, schema.handle).id);
+        expect(instance.document.instanceOf._id).toBe(binder.getDocumentRef(schema.handle).id);
         expect(instance.document.instanceOf.type).toBe("instance-of");
 
         const dumped = instance.dump();
@@ -119,7 +111,7 @@ describe("instance document creation", () => {
             expect(predatorPrey.shape).toBe(SimpleSchema);
             expect(predatorPrey.document.tables).toEqual({});
             expect(predatorPrey.document.instanceOf._id).toBe(
-                refOf(binder.store, causalLoop.handle).id,
+                binder.getDocumentRef(causalLoop.handle).id,
             );
         },
     );
@@ -142,7 +134,7 @@ describe("instance document creation", () => {
         );
 
         const loaded = expectOk(
-            await binder.loadInstanceFromRef(schema, refOf(binder.store, instance.handle)),
+            await binder.loadInstanceFromRef(schema, binder.getDocumentRef(instance.handle)),
         );
 
         expect(loaded.title).toBe("Company instance");
@@ -231,7 +223,8 @@ describe("instance schema validation", () => {
     });
 
     test("a validation view tracks schema and instance changes", async () => {
-        const binder = createBinder();
+        const store = createInMemoryStore();
+        const binder = createBinder(store);
         const schema = await binder.createNotebook(SimpleSchema, { title: "Company schema" });
         schema.add(Entity, { label: "Person" });
         const instance = expectOk(
@@ -247,7 +240,7 @@ describe("instance schema validation", () => {
             .poll(() => view.tables.map((table) => table.label))
             .toEqual(["Person", "Company"]);
 
-        binder.store.changeDocument(instance.handle, (document) => {
+        store.changeDocument(instance.handle, (document) => {
             const stored = document as unknown as StoredInstanceForTest;
             stored.tables["ghost-table"] = {
                 rows: { "ghost-row": { fields: { mystery: { Int: 3 } } } },
@@ -401,7 +394,8 @@ describe("tabular instances", () => {
         "mistyped row references and literals report their field paths",
         { timeout: 20_000 },
         async () => {
-            const binder = createBinder();
+            const store = createInMemoryStore();
+            const binder = createBinder(store);
             const schema = await binder.createNotebook(SimpleSchema, {
                 title: "Company schema",
             });
@@ -438,7 +432,7 @@ describe("tabular instances", () => {
             );
             const bob = expectOk(await instance.addRow(personTable, { name: "Bob" }));
 
-            binder.store.changeDocument(instance.document as Document, (document) => {
+            store.changeDocument(instance.document as Document, (document) => {
                 const stored = document as unknown as StoredInstanceForTest;
                 const table = stored.tables[personTable.id];
                 if (table === undefined) {
@@ -570,7 +564,8 @@ describe("tabular instances", () => {
         "schema and instance issues are reported with usable partial tables",
         { timeout: 20_000 },
         async () => {
-            const binder = createBinder();
+            const store = createInMemoryStore();
+            const binder = createBinder(store);
             const schema = await binder.createNotebook(SimpleSchema, {
                 title: "Company schema",
             });
@@ -587,7 +582,7 @@ describe("tabular instances", () => {
             }
             const alice = expectOk(await instance.addRow(personTable, { name: "Alice" }));
 
-            binder.store.changeDocument(instance.document as Document, (document) => {
+            store.changeDocument(instance.document as Document, (document) => {
                 const stored = document as unknown as StoredInstanceForTest;
                 const row = stored.tables[personTable.id]?.rows[alice.id];
                 if (row === undefined) {
@@ -633,7 +628,8 @@ describe("tabular instances", () => {
         "an orphaned stored table is reported and derived from its stored fields",
         { timeout: 20_000 },
         async () => {
-            const binder = createBinder();
+            const store = createInMemoryStore();
+            const binder = createBinder(store);
             const schema = await binder.createNotebook(SimpleSchema, {
                 title: "Company schema",
             });
@@ -642,7 +638,7 @@ describe("tabular instances", () => {
                 await binder.createInstance(schema, { title: "Company instance" }),
             );
 
-            binder.store.changeDocument(instance.document as Document, (document) => {
+            store.changeDocument(instance.document as Document, (document) => {
                 const stored = document as unknown as StoredInstanceForTest;
                 stored.tables["ghost-table"] = {
                     rows: { "ghost-row": { fields: { mystery: { Int: 3 } } } },
@@ -683,14 +679,15 @@ describe("tabular instances", () => {
 
 describe("deleting orphaned instance data", () => {
     test("deleteOrphanedTable removes a stored table absent from the schema", async () => {
-        const binder = createBinder();
+        const store = createInMemoryStore();
+        const binder = createBinder(store);
         const schema = await binder.createNotebook(SimpleSchema, { title: "Company schema" });
         schema.add(Entity, { label: "Person" });
         const instance = expectOk(
             await binder.createInstance(schema, { title: "Company instance" }),
         );
 
-        binder.store.changeDocument(instance.document as Document, (document) => {
+        store.changeDocument(instance.document as Document, (document) => {
             const stored = document as unknown as StoredInstanceForTest;
             stored.tables["ghost-table"] = {
                 rows: { "ghost-row": { fields: { mystery: { Int: 3 } } } },
@@ -734,7 +731,8 @@ describe("deleting orphaned instance data", () => {
     });
 
     test("deleteOrphanedColumn strips a stored field absent from the schema", async () => {
-        const binder = createBinder();
+        const store = createInMemoryStore();
+        const binder = createBinder(store);
         const schema = await binder.createNotebook(SimpleSchema, { title: "Company schema" });
         const person = schema.add(Entity, { label: "Person" });
         const string = schema.add(AttrType, { label: "String" });
@@ -751,7 +749,7 @@ describe("deleting orphaned instance data", () => {
         const alice = expectOk(await instance.addRow(personTable, { name: "Alice" }));
         const bob = expectOk(await instance.addRow(personTable, { name: "Bob" }));
 
-        binder.store.changeDocument(instance.document as Document, (document) => {
+        store.changeDocument(instance.document as Document, (document) => {
             const stored = document as unknown as StoredInstanceForTest;
             const rows = stored.tables[personTable.id]?.rows;
             if (rows === undefined) {
@@ -777,7 +775,8 @@ describe("deleting orphaned instance data", () => {
     });
 
     test("deleteOrphanedColumn refuses schema headers and orphaned tables", async () => {
-        const binder = createBinder();
+        const store = createInMemoryStore();
+        const binder = createBinder(store);
         const schema = await binder.createNotebook(SimpleSchema, { title: "Company schema" });
         const person = schema.add(Entity, { label: "Person" });
         const string = schema.add(AttrType, { label: "String" });
@@ -793,7 +792,7 @@ describe("deleting orphaned instance data", () => {
         }
         const alice = expectOk(await instance.addRow(personTable, { name: "Alice" }));
 
-        binder.store.changeDocument(instance.document as Document, (document) => {
+        store.changeDocument(instance.document as Document, (document) => {
             const stored = document as unknown as StoredInstanceForTest;
             stored.tables["ghost-table"] = {
                 rows: { "ghost-row": { fields: { mystery: { Int: 3 } } } },

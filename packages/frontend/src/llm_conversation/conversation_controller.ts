@@ -126,7 +126,7 @@ export function createLLMConversationController(
         try {
             const result = await runLLMConversationTurn(
                 conversation(),
-                binder.store,
+                binder,
                 key,
                 userInput,
                 handleTurnEvent,

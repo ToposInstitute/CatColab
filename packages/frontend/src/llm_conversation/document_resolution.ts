@@ -1,9 +1,4 @@
-import type { DocumentStore, Shape, SupportedDocument } from "catcolab-documents";
-import {
-    instanceFromStore,
-    llmConversationFromStore,
-    modelNotebookFromStore,
-} from "catcolab-documents";
+import type { Binder, Result, Shape, SupportedDocument } from "catcolab-documents";
 import { notebookShapes, shapeForTheory } from "../model/shapes";
 
 /** A document resolved from a handle, together with the ref id of the model
@@ -18,23 +13,25 @@ export type ResolvedSupportedDocument<Handle, Version> = {
  * frontend cannot load the document.
  */
 export async function resolveSupportedDocument<Handle, Version>(
-    store: DocumentStore<Handle, Version>,
+    binder: Binder<Handle, Version>,
     handle: Handle,
 ): Promise<ResolvedSupportedDocument<Handle, Version> | undefined> {
-    const view = store.getDocumentView(handle);
+    const view = binder.getDocumentView(handle);
     switch (view.type) {
         case "model": {
             const shape = shapeForTheory(notebookShapes, view.theory);
             return shape === undefined
                 ? undefined
                 : {
-                      document: modelNotebookFromStore(shape, store, handle),
-                      modelRefId: store.getDocumentRef(handle).id,
+                      document: await loaded(
+                          binder.loadNotebookFromRef(shape, binder.getDocumentRef(handle)),
+                      ),
+                      modelRefId: binder.getDocumentRef(handle).id,
                   };
         }
         case "instance": {
-            const schemaHandle = await handleForRef(store, view.instanceOf);
-            const schemaView = store.getDocumentView(schemaHandle);
+            const schemaHandle = await handleForRef(binder, view.instanceOf);
+            const schemaView = binder.getDocumentView(schemaHandle);
             if (schemaView.type !== "model") {
                 return undefined;
             }
@@ -42,23 +39,34 @@ export async function resolveSupportedDocument<Handle, Version>(
             return schemaShape === undefined
                 ? undefined
                 : {
-                      document: instanceFromStore(
-                          modelNotebookFromStore(schemaShape, store, schemaHandle),
-                          store,
-                          handle,
+                      document: await loaded(
+                          binder.loadInstanceFromRef(
+                              await loaded(
+                                  binder.loadNotebookFromRef(
+                                      schemaShape,
+                                      binder.getDocumentRef(schemaHandle),
+                                  ),
+                              ),
+                              binder.getDocumentRef(handle),
+                          ),
                       ),
-                      modelRefId: store.getDocumentRef(schemaHandle).id,
+                      modelRefId: binder.getDocumentRef(schemaHandle).id,
                   };
         }
         case "llmconversation": {
             const inner = await resolveSupportedDocument(
-                store,
-                await handleForRef(store, view.llmConversationOf),
+                binder,
+                await handleForRef(binder, view.llmConversationOf),
             );
             return inner === undefined
                 ? undefined
                 : {
-                      document: llmConversationFromStore(store, handle, inner.document),
+                      document: await loaded(
+                          binder.loadLLMConversationFromRef(
+                              inner.document,
+                              binder.getDocumentRef(handle),
+                          ),
+                      ),
                       modelRefId: inner.modelRefId,
                   };
         }
@@ -70,10 +78,10 @@ export async function resolveSupportedDocument<Handle, Version>(
 
 /** Resolve a link to the handle of the document it points at. */
 async function handleForRef<Handle, Version>(
-    store: DocumentStore<Handle, Version>,
+    binder: Binder<Handle, Version>,
     ref: { _id: string; _version: string | null; _server: string },
 ): Promise<Handle> {
-    const result = await store.getHandle({
+    const result = await binder.getHandle({
         id: ref._id,
         version: ref._version,
         server: ref._server,
@@ -85,4 +93,12 @@ async function handleForRef<Handle, Version>(
         );
     }
     return result.content;
+}
+
+async function loaded<T>(result: Promise<Result<T>>): Promise<T> {
+    const value = await result;
+    if (value.tag === "Err") {
+        throw new Error(value.content.map((issue) => issue.message).join("\n"));
+    }
+    return value.content;
 }
