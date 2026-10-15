@@ -8,7 +8,7 @@ import type { IssueLookup } from "./validation";
 import styles from "./table_editor.module.css";
 
 /** The data rows of the grid. */
-export function TableRows(props: {
+export function GridRows(props: {
     tableId: string;
     issuesAt: IssueLookup;
     deletingColumnId: string | null;

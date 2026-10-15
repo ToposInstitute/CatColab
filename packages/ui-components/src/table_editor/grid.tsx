@@ -5,8 +5,8 @@ import type { FocusHandle } from "../util/focus";
 import { ColumnHeader } from "./column_header";
 import { COLUMN_WIDTHS, DELETE_COLUMN_WIDTH, EMPTY_COLUMN_WIDTH } from "./display";
 import { GridProvider, useGridController } from "./grid_controller";
+import { GridRows } from "./grid_rows";
 import { navigationDirection, neighborKey } from "./navigation";
-import { TableRows } from "./table_rows";
 import type { IssueLookup } from "./validation";
 
 import styles from "./table_editor.module.css";
@@ -179,7 +179,7 @@ function GridContent(props: TableGridProps) {
                         <th class={styles.columnHeader} scope="col" />
                     </tr>
                 </thead>
-                <TableRows
+                <GridRows
                     tableId={props.table.id}
                     issuesAt={props.issuesAt}
                     deletingColumnId={deletingColumnId()}
