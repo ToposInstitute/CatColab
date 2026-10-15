@@ -58,6 +58,70 @@
     align-self: flex-start;
 }
 
+.cell-comments {
+    flex: none;
+    align-self: flex-start;
+    margin-left: 8px;
+    line-height: 0;
+}
+
+.cell-comments-bubble {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 6px;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--color-gray-600, #888);
+    font: inherit;
+    font-size: 11px;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.1s ease;
+
+    &:hover {
+        background: var(--color-gray-200, #eee);
+        color: var(--color-gray-700, #555);
+    }
+}
+
+.cell:hover .cell-comments-bubble,
+.cell-comments-bubble:focus-visible {
+    opacity: 1;
+}
+
+.cell-comments.active .cell-comments-bubble {
+    opacity: 1;
+    background: var(--color-gray-200, #eee);
+    color: var(--color-gray-700, #555);
+}
+
+/* Cells are positioned, so later cells would otherwise paint over (and catch
+   clicks meant for) the popup. The popup is the card; the comment view's own
+   card is flattened into it. */
+.cell-comments-popup {
+    z-index: 10;
+    width: min(340px, 92vw);
+    max-height: 60vh;
+    overflow: auto;
+    padding: 4px 4px 8px;
+    background: var(--comments-bg, var(--color-background));
+    border: 1px solid var(--comments-border, #ddd);
+    border-radius: 8px;
+    box-shadow: 0 6px 16px rgb(0 0 0 / 0.1);
+
+    & .comments-thread-card {
+        border: none;
+        box-shadow: none;
+        background: transparent;
+    }
+
+    & .comments-thread-actions {
+        padding: 0 4px;
+    }
+}
+
 .cell-content {
     flex-grow: 1;
     height: auto;

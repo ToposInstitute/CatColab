@@ -14,6 +14,7 @@ import { type FocusHandle } from "catcolab-ui-components";
 import {
     type CellConstructor,
     type FormalCellEditorProps,
+    type NotebookComments,
     NotebookEditor,
     type NotebookDiff,
 } from "../notebook";
@@ -29,6 +30,7 @@ export function ModelNotebookEditor(props: {
     liveModel: LiveModelDoc;
     focus: FocusHandle;
     diff?: NotebookDiff<ModelJudgment>;
+    comments?: NotebookComments;
 }) {
     const liveDoc = () => props.liveModel.liveDoc;
 
@@ -53,6 +55,7 @@ export function ModelNotebookEditor(props: {
                 duplicateCell={Model.duplicateModelJudgment}
                 focus={props.focus}
                 diff={props.diff}
+                comments={props.comments}
             />
         </LiveModelContext.Provider>
     );

@@ -1,5 +1,5 @@
-import type { DocHandle, Repo } from "@automerge/automerge-repo";
-import { createResource, Match, Switch } from "solid-js";
+import type { AutomergeUrl, DocHandle, Repo } from "@automerge/automerge-repo";
+import { type Accessor, createEffect, createResource, Match, onCleanup, Switch } from "solid-js";
 import { render } from "solid-js/web";
 
 import {
@@ -21,6 +21,7 @@ import { TheoryLibraryContext } from "../../frontend/src/theory";
 import { rootFocus, useChildFocus } from "../../ui-components/src/util/focus";
 import { version } from "../package.json";
 import type { AnalysisDoc } from "./analysis_datatype";
+import { createNotebookComments } from "./notebook_comments";
 import { createNotebookDiff } from "./notebook_diff";
 
 import "../../ui-components/src/global.css";
@@ -105,6 +106,21 @@ function ModelAndAnalysisPanes(props: {
         props.element,
         () => props.modelAnalysis.liveDoc.docHandle,
     );
+    const modelComments = createNotebookComments(
+        props.element,
+        () => props.modelAnalysis.liveModel.liveDoc.docHandle,
+        () => props.modelAnalysis.liveModel.liveDoc.doc,
+    );
+    const analysisComments = createNotebookComments(
+        props.element,
+        () => props.modelAnalysis.liveDoc.docHandle,
+        () => props.modelAnalysis.liveDoc.doc,
+    );
+    announceMounted(
+        props.element,
+        () => props.modelAnalysis.liveModel.liveDoc.docHandle.url,
+        "catcolab-model",
+    );
     // oxlint-enable solid/reactivity
 
     return (
@@ -121,6 +137,7 @@ function ModelAndAnalysisPanes(props: {
                     liveModel={props.modelAnalysis.liveModel}
                     focus={childFocus("model")}
                     diff={modelDiff()}
+                    comments={modelComments}
                 />
             </div>
             <div style={paneStyle}>
@@ -129,10 +146,22 @@ function ModelAndAnalysisPanes(props: {
                     liveAnalysis={props.modelAnalysis}
                     focus={childFocus("analysis")}
                     diff={analysisDiff()}
+                    comments={analysisComments}
                 />
             </div>
         </div>
     );
+}
+
+/** Tell Patchwork a document is shown here, as `<patchwork-view>` does for the
+documents it mounts, so host services such as the comments provider watch it.
+ */
+function announceMounted(element: HTMLElement, url: Accessor<AutomergeUrl>, toolId: string) {
+    createEffect(() => {
+        const init = { detail: { url: url(), toolId }, bubbles: true, composed: true };
+        element.dispatchEvent(new CustomEvent("patchwork:mounted", init));
+        onCleanup(() => element.dispatchEvent(new CustomEvent("patchwork:unmounted", init)));
+    });
 }
 
 function asModelAnalysis(liveAnalysis: LiveAnalysisDoc): LiveModelAnalysisDoc | undefined {
