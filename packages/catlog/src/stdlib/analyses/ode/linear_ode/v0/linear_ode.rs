@@ -1,8 +1,3 @@
-//! Constant-coefficient linear first-order ODE analysis of models.
-//!
-//! The main entry point for this module is
-//! [`linear_ode_analysis`](SignedCoefficientBuilder::linear_ode_analysis).
-
 use std::collections::HashMap;
 use std::hash::Hash;
 use std::ops::Add;
