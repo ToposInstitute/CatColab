@@ -158,6 +158,18 @@ export function NotebookCell(props: {
         }
     };
 
+    // Resolving the last open thread leaves nothing to show.
+    createEffect(
+        on(
+            () => props.comments?.count ?? 0,
+            (count, previous) => {
+                if (count === 0 && (previous ?? 0) > 0 && isCommentsOpen()) {
+                    changeCommentsOpen(false);
+                }
+            },
+        ),
+    );
+
     createEffect(
         on(
             () => props.focus.hasFocus(),

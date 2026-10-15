@@ -53,6 +53,7 @@ export function createNotebookComments(
     const [contactUrl, setContactUrl] = createSignal<AutomergeUrl>();
     onCleanup(subscribe<AutomergeUrl>(element, { type: "patchwork:contact" }, setContactUrl));
     const focus = createPatchworkFocus(element);
+    const [ownSelection, setOwnSelection] = createSignal<string>();
 
     const subHandle = () => handle() as SubHandle;
     const cellUrl = (cellId: Uuid) => subHandle().sub("notebook", "cellContents", cellId).url;
@@ -129,12 +130,26 @@ export function createNotebookComments(
             });
         },
 
-        isHighlighted: (cellId) => focus.urls().has(cellUrl(cellId)),
+        // A cell is highlighted when a thread on it is hovered or selected in
+        // the comments sidebar, but not when the sidebar is only echoing the
+        // cell that has focus here.
+        isHighlighted(cellId) {
+            const url = cellUrl(cellId);
+            return (
+                focus.highlighted().has(url) &&
+                !(ownSelection() === url && focus.selected() === url)
+            );
+        },
 
         // The cell being edited is Patchwork's selection while it has focus, so
         // the comments sidebar picks out its threads.
         select(cellId, selected) {
             const url = cellUrl(cellId);
+            if (selected) {
+                setOwnSelection(url);
+            } else if (ownSelection() === url) {
+                setOwnSelection(undefined);
+            }
             focus.handle()?.change((focusDoc) => {
                 const isSelected = Object.keys(focusDoc.selection ?? {}).join(" ") === url;
                 if (selected && !isSelected) {
@@ -157,7 +172,8 @@ type FocusDoc = {
     highlight: Record<AutomergeUrl, true>;
 };
 
-/** The focus document, and the URLs it currently selects or highlights. */
+/** The focus document, the URLs it highlights, and its selection (the URLs
+joined by spaces). */
 function createPatchworkFocus(element: HTMLElement & { repo: Repo }) {
     const [handle, setHandle] = createSignal<DocHandle<FocusDoc>>();
     onCleanup(
@@ -166,7 +182,8 @@ function createPatchworkFocus(element: HTMLElement & { repo: Repo }) {
         }),
     );
 
-    const [urls, setUrls] = createSignal<ReadonlySet<string>>(new Set());
+    const [highlighted, setHighlighted] = createSignal<ReadonlySet<string>>(new Set());
+    const [selected, setSelected] = createSignal("");
     createEffect(() => {
         const focusHandle = handle();
         if (!focusHandle) {
@@ -174,19 +191,15 @@ function createPatchworkFocus(element: HTMLElement & { repo: Repo }) {
         }
         const update = () => {
             const focusDoc = focusHandle.doc();
-            setUrls(
-                new Set([
-                    ...Object.keys(focusDoc?.selection ?? {}),
-                    ...Object.keys(focusDoc?.highlight ?? {}),
-                ]),
-            );
+            setHighlighted(new Set(Object.keys(focusDoc?.highlight ?? {})));
+            setSelected(Object.keys(focusDoc?.selection ?? {}).join(" "));
         };
         update();
         focusHandle.on("change", update);
         onCleanup(() => focusHandle.off("change", update));
     });
 
-    return { handle, urls };
+    return { handle, highlighted, selected };
 }
 
 /** A comment thread, shown by Patchwork's `comment-thread` tool. */
