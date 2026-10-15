@@ -18,7 +18,7 @@ pub fn current_version() -> String {
 /// The current version of stochastic mass-action.
 pub mod current {
     // This should always track the latest version, and is the only version that is exported.
-    pub use crate::stdlib::analyses::stochastic::mass_action::v0::mass_action::*;
+    pub use crate::stdlib::analyses::stochastic::stochastic_mass_action::v0::stochastic_mass_action::*;
 }
 
 /// Versioned stochastic mass-action problem data.
