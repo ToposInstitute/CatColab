@@ -36,7 +36,7 @@ import { type Command, EditorState, type Plugin, type Transaction } from "prosem
 import { EditorView } from "prosemirror-view";
 import { createEffect, createSignal, type JSX, onCleanup, Show } from "solid-js";
 
-import { useDocHandleReady } from "../../api/document";
+import { isScopeReplaced, useDocHandleReady } from "../../api/document";
 import {
     decreaseIndent,
     doIfAtBottom,
@@ -280,8 +280,8 @@ export const RichTextEditor = (
             },
         });
 
-        const onRemoteChange = ({ patches }: DocHandleChangePayload<unknown>) => {
-            if (hasStructuralReplacement(patches, props.path)) {
+        const onRemoteChange = (payload: DocHandleChangePayload<unknown>) => {
+            if (isScopeReplaced(payload) || hasStructuralReplacement(payload.patches, props.path)) {
                 setReinitTrigger((c) => c + 1);
             }
         };

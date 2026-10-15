@@ -11,10 +11,12 @@ import ArrowDown from "lucide-solid/icons/arrow-down";
 import ArrowUp from "lucide-solid/icons/arrow-up";
 import Copy from "lucide-solid/icons/copy";
 import GripVertical from "lucide-solid/icons/grip-vertical";
+import MessageSquare from "lucide-solid/icons/message-square";
+import MessageSquarePlus from "lucide-solid/icons/message-square-plus";
 import Plus from "lucide-solid/icons/plus";
 import Trash2 from "lucide-solid/icons/trash-2";
 import type { EditorView } from "prosemirror-view";
-import { createEffect, createSignal, type JSX, onCleanup, Show } from "solid-js";
+import { createEffect, createSignal, type JSX, on, onCleanup, Show } from "solid-js";
 
 import type { Uuid } from "catcolab-document-types";
 import { type Completion, Completions, type FocusHandle, IconButton } from "catcolab-ui-components";
@@ -85,6 +87,30 @@ export function isCellDragData(data: Record<string | symbol, unknown>): data is 
 
 type ClosestEdge = "top" | "bottom" | null;
 
+/** How a cell differs from a baseline version of its notebook. */
+export type CellDiffStatus = "added" | "changed" | "deleted";
+
+/** Comments on a cell, supplied by whatever hosts the notebook. */
+export type CellComments = {
+    /** Number of open comment threads on the cell. */
+    count: number;
+
+    /** Start a new comment thread on the cell. */
+    add: () => void;
+
+    /** Render the cell's comment threads, shown in a popover. */
+    view: () => JSX.Element;
+
+    /** Called when the popover showing the cell's threads closes. */
+    onClose?: () => void;
+
+    /** Whether the cell should be highlighted. */
+    isHighlighted: boolean;
+
+    /** Called when the cell gains or loses focus. */
+    select: (selected: boolean) => void;
+};
+
 /** An individual cell in a notebook.
 
 This component contains UI elements common to any cell. The actual content of
@@ -104,6 +130,10 @@ export function NotebookCell(props: {
     setPopoverOpen?: (open: boolean) => void;
     currentDropTarget: string | null;
     setCurrentDropTarget: (cellId: string | null) => void;
+    /** Highlights the cell as differing from a baseline, if set. */
+    diff?: CellDiffStatus;
+    /** Comments on the cell, if the notebook supports them. */
+    comments?: CellComments;
 }) {
     let rootRef!: HTMLDivElement;
     let handleRef!: HTMLButtonElement;
@@ -115,6 +145,46 @@ export function NotebookCell(props: {
     const [isMenuOpen, setMenuOpen] = createSignal(false);
     const openMenu = () => setMenuOpen(true);
     const closeMenu = () => setMenuOpen(false);
+
+    const [isCommentsOpen, setCommentsOpen] = createSignal(false);
+    const hasComments = () => (props.comments?.count ?? 0) > 0;
+    const changeCommentsOpen = (open: boolean) => {
+        if (open && !hasComments()) {
+            props.comments?.add();
+        }
+        setCommentsOpen(open);
+        if (!open) {
+            props.comments?.onClose?.();
+        }
+    };
+
+    // Resolving the last open thread leaves nothing to show.
+    createEffect(
+        on(
+            () => props.comments?.count ?? 0,
+            (count, previous) => {
+                if (count === 0 && (previous ?? 0) > 0 && isCommentsOpen()) {
+                    changeCommentsOpen(false);
+                }
+            },
+        ),
+    );
+
+    createEffect(
+        on(
+            () => props.focus.hasFocus(),
+            (focused) => props.comments?.select(focused),
+        ),
+    );
+
+    const isCommentHighlighted = () => props.comments?.isHighlighted ?? false;
+    createEffect(
+        on(isCommentHighlighted, (highlighted) => {
+            if (highlighted && !props.focus.hasFocus()) {
+                rootRef.scrollIntoView({ block: "nearest", behavior: "smooth" });
+            }
+        }),
+    );
 
     const completions = (): Completion[] => [
         {
@@ -141,6 +211,20 @@ export function NotebookCell(props: {
             icon: <ArrowDown size={16} />,
             onComplete: props.actions.moveDown,
         },
+        ...(props.comments
+            ? [
+                  {
+                      name: "Add comment",
+                      icon: <MessageSquarePlus size={16} />,
+                      onComplete: () => {
+                          props.comments?.add();
+                          // Once the menu has closed, so that closing it doesn't
+                          // also dismiss the comments.
+                          setTimeout(() => setCommentsOpen(true));
+                      },
+                  },
+              ]
+            : []),
     ];
 
     const [closestEdge, setClosestEdge] = createSignal<ClosestEdge>(null);
@@ -223,6 +307,8 @@ export function NotebookCell(props: {
         <div
             class="cell"
             classList={{ "cell-dragging": isDragging() }}
+            data-diff={props.diff}
+            data-comment-highlight={isCommentHighlighted() ? "" : undefined}
             onMouseEnter={showGutter}
             onMouseLeave={hideGutter}
             ref={rootRef}
@@ -278,6 +364,35 @@ export function NotebookCell(props: {
             <Show when={props.tag}>
                 <div class="cell-tag">{props.tag}</div>
             </Show>
+            <Show when={props.comments}>
+                <div
+                    class="cell-comments"
+                    classList={{ active: hasComments() || isCommentsOpen() }}
+                >
+                    <Popover
+                        open={isCommentsOpen()}
+                        onOpenChange={changeCommentsOpen}
+                        closeOnOutsideFocus={false}
+                        closeOnOutsidePointerStrategy="pointerdown"
+                        restoreFocus={false}
+                        placement="right-start"
+                        floatingOptions={{ flip: true, shift: true }}
+                    >
+                        <Popover.Trigger
+                            class="cell-comments-bubble"
+                            aria-label={hasComments() ? "Show comments" : "Add comment"}
+                        >
+                            <MessageSquare size={14} />
+                            <Show when={(props.comments?.count ?? 0) > 1}>
+                                <span>{props.comments?.count}</span>
+                            </Show>
+                        </Popover.Trigger>
+                        <Popover.Content class="cell-comments-popup">
+                            {props.comments?.view()}
+                        </Popover.Content>
+                    </Popover>
+                </div>
+            </Show>
         </div>
     );
 }
@@ -320,5 +435,9 @@ export function RichTextCellEditor(
  */
 export type FormalCellEditorProps<T> = CellEditorProps & {
     content: T;
+
+    /** Content of the cell at the diff baseline, if it has changed since. */
+    baseline?: T;
+
     changeContent: (f: (content: T) => void) => void;
 };
