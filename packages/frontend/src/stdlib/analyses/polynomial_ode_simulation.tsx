@@ -67,10 +67,10 @@ export default function PolynomialODESimulation(
         },
         createNumericalColumn({
             name: "Initial value",
-            data: (id) => props.content.initialValues[id],
+            data: (id) => props.content.generalData.initialValues[id],
             setData: (id, data) =>
                 props.changeContent((content) => {
-                    content.initialValues[id] = data;
+                    content.generalData.initialValues[id] = data;
                 }),
         }),
     ];
@@ -92,12 +92,12 @@ export default function PolynomialODESimulation(
         },
         createNumericalColumn({
             name: "Coefficient (𝜆)",
-            data: (mor) => props.content.coefficients[mor],
+            data: (mor) => props.content.parameterData.coefficients[mor],
             validate: validateSign(),
             default: 1,
             setData: (mor, data) =>
                 props.changeContent((content) => {
-                    content.coefficients[mor] = data;
+                    content.parameterData.coefficients[mor] = data;
                 }),
         }),
     ];
@@ -106,11 +106,11 @@ export default function PolynomialODESimulation(
     const toplevelSchema: ColumnSchema<null>[] = [
         createNumericalColumn({
             name: "Duration",
-            data: (_) => props.content.duration,
+            data: (_) => props.content.generalData.duration,
             validate: (_, data) => data >= 0,
             setData: (_, data) =>
                 props.changeContent((content) => {
-                    content.duration = data;
+                    content.generalData.duration = data;
                 }),
         }),
     ];
