@@ -1,6 +1,6 @@
 import { lazy } from "solid-js";
 
-import { ThCategoryLinks } from "catlog-wasm";
+import { ThCategorySignedLinks } from "catlog-wasm";
 import { Theory, type TheoryMeta } from "../../theory";
 import * as analyses from "../analyses";
 
@@ -10,13 +10,12 @@ const MorphismCellEditor = lazy(() => import("../../model/morphism_cell_editor")
 import styles from "../styles.module.css";
 import svgStyles from "../svg_styles.module.css";
 
-export default function createPrimitiveStockFlowTheory(theoryMeta: TheoryMeta): Theory {
-    const thCategoryLinks = new ThCategoryLinks();
+export default function createPrimitiveSignedStockFlowTheory(theoryMeta: TheoryMeta): Theory {
+    const thCategorySignedLinks = new ThCategorySignedLinks();
 
     return new Theory({
         ...theoryMeta,
-        theory: thCategoryLinks.theory(),
-        inclusions: ["primitive-signed-stock-flow"],
+        theory: thCategorySignedLinks.theory(),
         onlyFreeModels: true,
         modelTypes: [
             {
@@ -45,10 +44,21 @@ export default function createPrimitiveStockFlowTheory(theoryMeta: TheoryMeta): 
                 tag: "MorType",
                 morType: { tag: "Basic", content: "Link" },
                 editor: MorphismCellEditor,
-                name: "Link",
-                description: "Influence of a stock on a flow",
+                name: "Positive link",
+                description: "Positive influence of a stock on a flow",
+                arrowStyle: "plus",
                 preferUnnamed: true,
-                shortcut: ["L"],
+                shortcut: ["P"],
+            },
+            {
+                tag: "MorType",
+                morType: { tag: "Basic", content: "NegativeLink" },
+                editor: MorphismCellEditor,
+                name: "Negative link",
+                description: "Negative influence of a stock on a flow",
+                arrowStyle: "minus",
+                preferUnnamed: true,
+                shortcut: ["N"],
             },
         ],
         modelAnalyses: [
@@ -57,22 +67,6 @@ export default function createPrimitiveStockFlowTheory(theoryMeta: TheoryMeta): 
                 name: "Visualization",
                 description: "Visualize the stock and flow diagram",
                 help: "visualization",
-            }),
-            analyses.massAction({
-                ratesHaveGranularity: false,
-                simulate(model, data) {
-                    return thCategoryLinks.massAction(model, data);
-                },
-                transitionType: {
-                    tag: "Hom",
-                    content: { tag: "Basic", content: "Object" },
-                },
-            }),
-            analyses.massActionEquations({
-                ratesHaveGranularity: false,
-                getEquations(model, data) {
-                    return thCategoryLinks.massActionEquations(model, data);
-                },
             }),
         ],
     });
