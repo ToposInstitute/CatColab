@@ -1,0 +1,149 @@
+{
+    "analysisOf": {
+        "_id": "01996276-ca06-76d2-91e6-64877568032c",
+        "_server": "backend-next.catcolab.org",
+        "_version": null,
+        "type": "analysis-of"
+    },
+    "analysisType": "model",
+    "name": "SEIR mass-action",
+    "notebook": {
+        "cellContents": {
+            "019eda8b-f53a-74c1-9fe8-8af359b67b9f": {
+                "content": {
+                    "content": {
+                        "balanced": {
+                            "generalData": {
+                                "duration": 10,
+                                "initialValues": {
+                                    "0199627d-ce48-7468-845b-4f12dfdeb5da": 1,
+                                    "0199627d-f42e-74e8-89bd-ae7dc44a3d93": 5,
+                                    "0199627e-070b-731e-8ca7-0799a031a084": 3,
+                                    "0199627e-1ee6-7034-9f4f-78ac147dd01f": 0
+                                }
+                            },
+                            "parameterData": {
+                                "rates": {
+                                    "0199627e-363f-708d-8683-b51142e5fcc1": 1.1,
+                                    "0199627e-77cd-75c0-a07b-3c5ff3863716": 1.2,
+                                    "0199627e-a1eb-76aa-949d-87312dfd25ba": 1.3
+                                }
+                            }
+                        },
+                        "perPlace": {
+                            "generalData": {
+                                "duration": 10,
+                                "initialValues": {
+                                    "0199627d-ce48-7468-845b-4f12dfdeb5da": 2,
+                                    "0199627d-f42e-74e8-89bd-ae7dc44a3d93": 2,
+                                    "0199627e-070b-731e-8ca7-0799a031a084": 3,
+                                    "0199627e-1ee6-7034-9f4f-78ac147dd01f": 1
+                                }
+                            },
+                            "parameterData": {
+                                "consumptionRates": {
+                                    "0199627e-363f-708d-8683-b51142e5fcc1": {
+                                        "0199627d-ce48-7468-845b-4f12dfdeb5da": 3.1,
+                                        "0199627e-070b-731e-8ca7-0799a031a084": 3.2
+                                    },
+                                    "0199627e-77cd-75c0-a07b-3c5ff3863716": {
+                                        "0199627d-f42e-74e8-89bd-ae7dc44a3d93": 3.3
+                                    },
+                                    "0199627e-a1eb-76aa-949d-87312dfd25ba": {
+                                        "0199627e-070b-731e-8ca7-0799a031a084": 3.4
+                                    }
+                                },
+                                "productionRates": {
+                                    "0199627e-363f-708d-8683-b51142e5fcc1": {
+                                        "0199627d-f42e-74e8-89bd-ae7dc44a3d93": 2.1,
+                                        "0199627e-070b-731e-8ca7-0799a031a084": 2.2
+                                    },
+                                    "0199627e-77cd-75c0-a07b-3c5ff3863716": {
+                                        "0199627e-070b-731e-8ca7-0799a031a084": 2.3
+                                    },
+                                    "0199627e-a1eb-76aa-949d-87312dfd25ba": {
+                                        "0199627e-1ee6-7034-9f4f-78ac147dd01f": 2.4
+                                    }
+                                }
+                            }
+                        },
+                        "unbalanced": {
+                            "generalData": {
+                                "duration": 10,
+                                "initialValues": {
+                                    "0199627d-ce48-7468-845b-4f12dfdeb5da": 4,
+                                    "0199627d-f42e-74e8-89bd-ae7dc44a3d93": 0,
+                                    "0199627e-070b-731e-8ca7-0799a031a084": 5,
+                                    "0199627e-1ee6-7034-9f4f-78ac147dd01f": 1
+                                }
+                            },
+                            "parameterData": {
+                                "consumptionRates": {
+                                    "0199627e-363f-708d-8683-b51142e5fcc1": 1.7,
+                                    "0199627e-77cd-75c0-a07b-3c5ff3863716": 1.8,
+                                    "0199627e-a1eb-76aa-949d-87312dfd25ba": 1.9
+                                },
+                                "productionRates": {
+                                    "0199627e-363f-708d-8683-b51142e5fcc1": 1.4,
+                                    "0199627e-77cd-75c0-a07b-3c5ff3863716": 1.5,
+                                    "0199627e-a1eb-76aa-949d-87312dfd25ba": 1.6
+                                }
+                            }
+                        },
+                        "variant": "Balanced"
+                    },
+                    "id": "mass-action",
+                    "version": "1"
+                },
+                "id": "019eda8b-f53a-74c1-9fe8-8af359b67b9f",
+                "tag": "formal"
+            },
+            "019eda8b-fe8f-70ed-9232-558942f7a45c": {
+                "content": {
+                    "content": {
+                        "balanced": {
+                            "generalData": {
+                                "duration": 10,
+                                "initialValues": {}
+                            },
+                            "parameterData": {
+                                "rates": {}
+                            }
+                        },
+                        "perPlace": {
+                            "generalData": {
+                                "duration": 10,
+                                "initialValues": {}
+                            },
+                            "parameterData": {
+                                "consumptionRates": {},
+                                "productionRates": {}
+                            }
+                        },
+                        "unbalanced": {
+                            "generalData": {
+                                "duration": 10,
+                                "initialValues": {}
+                            },
+                            "parameterData": {
+                                "consumptionRates": {},
+                                "productionRates": {}
+                            }
+                        },
+                        "variant": "Balanced"
+                    },
+                    "id": "mass-action-equations",
+                    "version": "1"
+                },
+                "id": "019eda8b-fe8f-70ed-9232-558942f7a45c",
+                "tag": "formal"
+            }
+        },
+        "cellOrder": [
+            "019eda8b-fe8f-70ed-9232-558942f7a45c",
+            "019eda8b-f53a-74c1-9fe8-8af359b67b9f"
+        ]
+    },
+    "type": "analysis",
+    "version": "2"
+}
