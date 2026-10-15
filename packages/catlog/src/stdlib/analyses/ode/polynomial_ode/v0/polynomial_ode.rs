@@ -1,4 +1,3 @@
-//! ODE analysis of models of the logic of systems of polynomial ODEs.
 use std::collections::HashMap;
 
 use indexmap::IndexMap;
@@ -16,7 +15,7 @@ use crate::{
         theory::NonUnital,
     },
     simulate::ode::{NumericalPolynomialSystem, ODEProblem, PolynomialSystem},
-    zero::{QualifiedName, alg::Polynomial, name, rig::Monomial},
+    zero::{alg::Polynomial, name, rig::Monomial, QualifiedName},
 };
 
 use super::{ODEAnalysis, Parameter};

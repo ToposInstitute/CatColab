@@ -1,5 +1,3 @@
-//! Reachability analyses of models.
-
 use itertools::Itertools;
 use std::collections::HashMap;
 

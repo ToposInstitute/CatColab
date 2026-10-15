@@ -1,8 +1,3 @@
-//! Lotka-Volterra ODE analysis of models.
-//!
-//! The main entry point for this module is
-//! [`lotka_volterra_analysis`](SignedCoefficientBuilder::lotka_volterra_analysis).
-
 use std::collections::HashMap;
 use std::hash::Hash;
 use std::ops::Add;
@@ -22,7 +17,7 @@ use crate::simulate::ode::{NumericalPolynomialSystem, ODEProblem, PolynomialSyst
 use crate::{
     dbl::model::DiscreteDblModel,
     one::QualifiedPath,
-    zero::{QualifiedName, alg::Polynomial, rig::Monomial},
+    zero::{alg::Polynomial, rig::Monomial, QualifiedName},
 };
 
 /// Data defining a Lotka-Volterra ODE problem for a model.

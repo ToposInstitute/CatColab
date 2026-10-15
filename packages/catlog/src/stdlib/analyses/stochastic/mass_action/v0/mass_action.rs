@@ -1,7 +1,3 @@
-//! Stochastic mass action anaylsis of ODEs.
-//!
-//! These stochastic mass-action use statistical methods to apply transitions.
-
 use indexmap::IndexMap;
 use rebop::gillespie;
 use std::collections::HashMap;
@@ -9,7 +5,7 @@ use std::collections::HashMap;
 use crate::{
     dbl::{modal::*, model::FpDblModel, theory::Unital},
     stdlib::analyses::{ode::ODESolution, petri::transition_interface},
-    zero::{QualifiedName, name},
+    zero::{name, QualifiedName},
 };
 
 #[cfg(feature = "serde")]
