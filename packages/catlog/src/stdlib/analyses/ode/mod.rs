@@ -13,7 +13,7 @@ use serde::{Deserialize, Serialize};
 use tsify::Tsify;
 
 use crate::simulate::ode::{ODEProblem, ODESystem};
-use crate::zero::{alg::Polynomial, QualifiedName};
+use crate::zero::{QualifiedName, alg::Polynomial};
 
 /// Symbolic parameter in a polynomial system.
 pub type Parameter<Id> = Polynomial<Id, f32, i8>;

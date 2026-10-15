@@ -1,12 +1,3 @@
-use crate::{
-    dbl::model::*,
-    one::{
-        Path,
-        graph::FinGraph,
-        graph_algorithms::{ToposortData, toposort_lenient},
-    },
-    zero::{QualifiedLabel, QualifiedName, name},
-};
 use derive_more::Constructor;
 use indexmap::IndexMap;
 use itertools::Itertools;
@@ -18,6 +9,14 @@ use sea_query::{
 };
 use sqlformat::{Dialect, format};
 use std::fmt;
+
+use crate::dbl::model::*;
+use crate::one::{
+    Path,
+    graph::FinGraph,
+    graph_algorithms::{ToposortData, toposort_lenient},
+};
+use crate::zero::{QualifiedLabel, QualifiedName, name};
 
 impl Iden for QualifiedName {
     fn unquoted(&self, s: &mut dyn Write) {

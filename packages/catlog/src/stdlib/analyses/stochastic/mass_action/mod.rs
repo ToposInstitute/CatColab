@@ -4,7 +4,7 @@
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use serde_wasm_bindgen::{from_value, Serializer};
+use serde_wasm_bindgen::{Serializer, from_value};
 use wasm_bindgen::prelude::*;
 
 mod v0;
@@ -18,7 +18,7 @@ pub fn current_version() -> String {
 /// The current version of stochastic mass-action.
 pub mod current {
     // This should always track the latest version, and is the only version that is exported.
-    pub use crate::stdlib::analyses::ode::lotka_volterra::v0::lotka_volterra::*;
+    pub use crate::stdlib::analyses::stochastic::mass_action::v0::mass_action::*;
 }
 
 /// Versioned stochastic mass-action problem data.

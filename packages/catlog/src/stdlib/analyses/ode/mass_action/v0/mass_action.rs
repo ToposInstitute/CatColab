@@ -9,15 +9,15 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "serde-wasm")]
 use tsify::Tsify;
 
-use super::{ODEAnalysis, Parameter};
 use crate::dbl::{
     model::{DiscreteTabModel, FpDblModel, ModalDblModel, TabEdge},
     theory::{ModalMorType, ModalObType, TabMorType, TabObType, Unital},
 };
 use crate::one::FgCategory;
 use crate::simulate::ode::{NumericalPolynomialSystem, ODEProblem, PolynomialSystem};
+use crate::stdlib::analyses::ode::{ODEAnalysis, Parameter};
 use crate::stdlib::analyses::petri::transition_interface;
-use crate::zero::{alg::Polynomial, name, rig::Monomial, QualifiedName};
+use crate::zero::{QualifiedName, alg::Polynomial, name, rig::Monomial};
 
 /// There are three types of mass-action semantics, each more expressive than the previous:
 /// - balanced
