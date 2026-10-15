@@ -3,13 +3,12 @@
 use serde::{Deserialize, Serialize};
 use tsify::Tsify;
 
-use catlog::simulate::ode::PolynomialSystem;
-use catlog::stdlib::analyses::ode;
-use catlog::zero::QualifiedName;
+use catlog::{
+    latex::LatexEquations, simulate::ode::PolynomialSystem, stdlib::analyses::ode,
+    zero::QualifiedName,
+};
 
-use super::latex::{LatexEquations, latex_mor_names, latex_mor_names_mass_action, latex_ob_names};
-use super::model::DblModel;
-use super::result::JsResult;
+use super::{latex::latex_names, model::DblModel, result::JsResult};
 
 /// The result of an ODE analysis, containing the solution when successful.
 #[derive(Serialize, Deserialize, Tsify)]
@@ -50,10 +49,7 @@ pub(crate) fn polynomial_ode_equations(
     _data: PolynomialODEEquationsData,
 ) -> Result<LatexEquations, String> {
     let sys = polynomial_ode_system(model);
-    let equations = sys?
-        .map_variables(latex_ob_names(model))
-        .extend_scalars(|param| param.map_variables(latex_mor_names(model)))
-        .to_latex_equations();
+    let equations = sys?.to_latex_equations_with_map(|param| latex_names(model)(param));
     Ok(LatexEquations(equations))
 }
 
@@ -65,12 +61,12 @@ pub(crate) fn polynomial_ode_simulation(
     let sys = polynomial_ode_system(model);
     let sys_extended_scalars = ode::extend_polynomial_ode_scalars(sys?, &data);
     let latex_equations =
-        sys_extended_scalars.map_variables(latex_ob_names(model)).to_latex_equations();
+        sys_extended_scalars.map_variables(latex_names(model)).to_latex_equations();
     let analysis = ode::polynomial_ode_analysis(sys_extended_scalars, data);
     let solution = analysis.solve_with_defaults().map_err(|err| format!("{err:?}"));
     Ok(ODEResultWithEquations {
         solution: ODEResult(solution.into()),
-        latex_equations: LatexEquations(latex_equations),
+        latex_equations,
     })
 }
 
@@ -135,11 +131,11 @@ pub(crate) fn mass_action_simulation(
     let sys = mass_action_system(model, data.mass_conservation_type, logic);
     let sys_extended_scalars = ode::extend_mass_action_scalars(sys?, &data);
     let latex_equations =
-        sys_extended_scalars.map_variables(latex_ob_names(model)).to_latex_equations();
+        sys_extended_scalars.map_variables(latex_names(model)).to_latex_equations();
     let analysis = ode::into_mass_action_analysis(sys_extended_scalars, data);
     let solution = analysis.solve_with_defaults().map_err(|err| format!("{err:?}"));
     Ok(ODEResultWithEquations {
         solution: ODEResult(solution.into()),
-        latex_equations: LatexEquations(latex_equations),
+        latex_equations,
     })
 }
