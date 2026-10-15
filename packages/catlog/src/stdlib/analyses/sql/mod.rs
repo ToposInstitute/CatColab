@@ -1,5 +1,6 @@
 //! Produces a valid SQL data manipulation script from a model in the theory of schemas.
 
+#[cfg(feature = "serde-wasm")]
 use wasm_bindgen::prelude::*;
 
 mod v0;

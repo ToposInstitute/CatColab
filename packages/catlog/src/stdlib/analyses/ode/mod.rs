@@ -84,4 +84,4 @@ pub use polynomial_ode::current::*;
 
 // Helper crates
 pub mod signed_coefficients;
-pub(crate) use signed_coefficients::*;
+pub use signed_coefficients::*;

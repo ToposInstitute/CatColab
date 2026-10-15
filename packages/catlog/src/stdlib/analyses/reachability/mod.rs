@@ -1,9 +1,13 @@
 //! Reachability analyses of models.
 
+#[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
-use serde_wasm_bindgen::{Serializer, from_value};
-use wasm_bindgen::prelude::*;
+#[cfg(feature = "serde-wasm")]
+use {
+    serde_json::Value,
+    serde_wasm_bindgen::{Serializer, from_value},
+    wasm_bindgen::prelude::*,
+};
 
 mod v0;
 

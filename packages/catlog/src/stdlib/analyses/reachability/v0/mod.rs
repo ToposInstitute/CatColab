@@ -1,4 +1,3 @@
-//! Version 0 of `reachability`.
-
-pub(crate) mod reachability;
-pub(crate) use reachability::*;
+/// Version 0 of `reachability`.
+pub mod reachability;
+pub use reachability::*;

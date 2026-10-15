@@ -1,4 +1,3 @@
-//! Version 0 of `mass_action`.
-
-pub(crate) mod mass_action;
-pub(crate) use mass_action::*;
+/// Version 0 of `mass_action`.
+pub mod mass_action;
+pub use mass_action::*;
