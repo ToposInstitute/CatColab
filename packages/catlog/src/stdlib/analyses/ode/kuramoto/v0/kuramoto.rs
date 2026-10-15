@@ -1,5 +1,3 @@
-//! Kuramoto ODE analsysis of models.
-
 use std::collections::HashMap;
 
 use indexmap::IndexMap;

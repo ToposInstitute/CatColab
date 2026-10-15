@@ -1,4 +1,3 @@
-//! Produces a valid SQL data manipulation script from a model in the theory of schemas.
 use crate::{
     dbl::model::*,
     one::{
