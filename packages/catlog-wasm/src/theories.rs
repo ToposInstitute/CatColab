@@ -8,6 +8,7 @@ use wasm_bindgen::prelude::*;
 
 use catlog::dbl::theory::{self as theory, NonUnital, Unital};
 use catlog::one::Path;
+use catlog::stdlib::analyses::ode::ODESemanticsAnalysis;
 use catlog::stdlib::{analyses, models, theories, theory_morphisms};
 use catlog::zero::name;
 
@@ -148,17 +149,14 @@ impl ThSignedCategory {
     pub fn lotka_volterra(
         &self,
         model: &DblModel,
-        data: analyses::ode::lotka_volterra::LotkaVolterraProblemData,
-    ) -> Result<ODEResult, String> {
-        Ok(ODEResult(
-            analyses::ode::SignedCoefficientBuilder::new(name("Object"))
-                .add_positive(Path::Id(name("Object")))
-                .add_negative(name("Negative").into())
-                .lotka_volterra_analysis(model.discrete()?, data)
-                .solve_with_defaults()
-                .map_err(|err| format!("{err:?}"))
-                .into(),
-        ))
+        data: analyses::ode::LotkaVolterraProblemData,
+    ) -> Result<ODEResultWithEquations, String> {
+        let system = analyses::ode::lotka_volterra::LotkaVolterraAnalysis::default()
+            .build_system(model.discrete()?);
+        ode_semantics_simulation::<
+            analyses::ode::lotka_volterra::LotkaVolterraSemantics,
+            analyses::ode::lotka_volterra::LotkaVolterraProblemData,
+        >(model, data, system)
     }
 
     /// Simulate the linear ODE system derived from a model.
@@ -167,16 +165,13 @@ impl ThSignedCategory {
         &self,
         model: &DblModel,
         data: analyses::ode::linear_ode::LinearODEProblemData,
-    ) -> Result<ODEResult, String> {
-        Ok(ODEResult(
-            analyses::ode::SignedCoefficientBuilder::new(name("Object"))
-                .add_positive(Path::Id(name("Object")))
-                .add_negative(name("Negative").into())
-                .linear_ode_analysis(model.discrete()?, data)
-                .solve_with_defaults()
-                .map_err(|err| format!("{err:?}"))
-                .into(),
-        ))
+    ) -> Result<ODEResultWithEquations, String> {
+        let system =
+            analyses::ode::linear_ode::LinearODEAnalysis::default().build_system(model.discrete()?);
+        ode_semantics_simulation::<
+            analyses::ode::linear_ode::LinearODESemantics,
+            analyses::ode::linear_ode::LinearODEProblemData,
+        >(model, data, system)
     }
 }
 
