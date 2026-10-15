@@ -3,6 +3,7 @@ import { init, type MappedSchemaSpec, SchemaAdapter } from "@automerge/prosemirr
 import type { Node, Schema } from "prosemirror-model";
 import type { Plugin } from "prosemirror-state";
 
+import { textSyncHandle } from "./automerge_text";
 import { basicSchema } from "./basic_schema";
 import { catcolabSchema } from "./catcolab_schema";
 import { katexSchema } from "./katex_schema";
@@ -36,7 +37,7 @@ export function proseMirrorAutomergeInit(
     pmDoc: Node;
     automergePlugin: Plugin;
 } {
-    const { schema, pmDoc, plugin } = init(handle, path, {
+    const { schema, pmDoc, plugin } = init(textSyncHandle(handle, path), path, {
         schemaAdapter: new SchemaAdapter(customSchemaSpec),
     });
 

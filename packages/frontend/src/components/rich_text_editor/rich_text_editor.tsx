@@ -1,4 +1,4 @@
-import type { Patch, Prop } from "@automerge/automerge";
+import type { Prop } from "@automerge/automerge";
 import type { DocHandle, DocHandleChangePayload } from "@automerge/automerge-repo";
 import {
     makeBlockMathInputRule,
@@ -37,6 +37,7 @@ import { EditorView } from "prosemirror-view";
 import { createEffect, createSignal, type JSX, onCleanup, Show } from "solid-js";
 
 import { useDocHandleReady } from "../../api/document";
+import { hasStructuralReplacement, hasTextAtPath } from "./automerge_text";
 import {
     decreaseIndent,
     doIfAtBottom,
@@ -127,6 +128,29 @@ export const RichTextEditor = (
 
     const [reinitTrigger, setReinitTrigger] = createSignal(0);
 
+    // Keep listening even when the text path is absent, so undo can restore it.
+    // Defer rebuilding until change notification finishes: the plugin's
+    // listener may still be called for the current event.
+    createEffect(() => {
+        const handle = props.handle;
+        const path = props.path;
+        let disposed = false;
+        const onRemoteChange = ({ patches }: DocHandleChangePayload<unknown>) => {
+            if (hasStructuralReplacement(patches, path)) {
+                queueMicrotask(() => {
+                    if (!disposed) {
+                        setReinitTrigger((c) => c + 1);
+                    }
+                });
+            }
+        };
+        handle.on("change", onRemoteChange);
+        onCleanup(() => {
+            disposed = true;
+            handle.off("change", onRemoteChange);
+        });
+    });
+
     createEffect(() => {
         // NOTE: Make the effect depend on the given ID to ensure that this
         // component updates when the Automerge handle and path both stay the
@@ -138,10 +162,13 @@ export const RichTextEditor = (
             return;
         }
 
-        const { schema, pmDoc, automergePlugin } = proseMirrorAutomergeInit(
-            props.handle,
-            props.path,
-        );
+        const handle = props.handle;
+        const path = props.path;
+        if (!hasTextAtPath(handle.doc(), path)) {
+            return;
+        }
+
+        const { schema, pmDoc, automergePlugin } = proseMirrorAutomergeInit(handle, path);
 
         const blockMathInputRule = makeBlockMathInputRule(
             REGEX_BLOCK_MATH_DOLLARS,
@@ -178,7 +205,7 @@ export const RichTextEditor = (
             dispatchTransaction: (tx: Transaction) => {
                 // XXX: It appears that automerge-prosemirror can dispatch
                 // transactions even after the view has been destroyed.
-                if (view.isDestroyed) {
+                if (view.isDestroyed || !hasTextAtPath(handle.doc(), path)) {
                     return;
                 }
 
@@ -280,17 +307,7 @@ export const RichTextEditor = (
             },
         });
 
-        const onRemoteChange = ({ patches }: DocHandleChangePayload<unknown>) => {
-            if (hasStructuralReplacement(patches, props.path)) {
-                setReinitTrigger((c) => c + 1);
-            }
-        };
-        props.handle.on("change", onRemoteChange);
-
-        onCleanup(() => {
-            props.handle.off("change", onRemoteChange);
-            view.destroy();
-        });
+        onCleanup(() => view.destroy());
     });
 
     return (
@@ -493,29 +510,5 @@ function TooltipButton(props: {
                 </button>
             </div>
         </Show>
-    );
-}
-
-/** True when `candidate` is a prefix of (or equal to) `target`. */
-function isPathPrefixOf(candidate: Prop[], target: Prop[]): boolean {
-    if (candidate.length > target.length) {
-        return false;
-    }
-    for (let i = 0; i < candidate.length; i++) {
-        if (candidate[i] !== target[i]) {
-            return false;
-        }
-    }
-    return true;
-}
-
-/**
- * Detect patches that indicate structural replacement of the text object or
- * one of its ancestors. `@automerge/prosemirror`'s `gatherPatches` skips these,
- * leaving the ProseMirror document out of sync with the Automerge state.
- */
-function hasStructuralReplacement(patches: Patch[], textPath: Prop[]): boolean {
-    return patches.some(
-        (p) => (p.action === "put" || p.action === "del") && isPathPrefixOf(p.path, textPath),
     );
 }
