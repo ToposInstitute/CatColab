@@ -5,6 +5,7 @@ import { monorepoDedupe } from "@catcolab-dev-tools/vite-plugin-monorepo-dedupe"
 import { storybookTest } from "@storybook/addon-vitest/vitest-plugin";
 import { playwright } from "@vitest/browser-playwright";
 import { defineConfig } from "vite";
+import solid from "vite-plugin-solid";
 
 const configDir = path.dirname(fileURLToPath(import.meta.url));
 
@@ -24,6 +25,21 @@ export default defineConfig({
     },
     test: {
         projects: [
+            {
+                extends: true,
+                plugins: [solid()],
+                test: {
+                    name: "components",
+                    include: ["src/**/*.test.{ts,tsx}"],
+                    browser: {
+                        enabled: true,
+                        headless: true,
+                        provider: playwright(),
+                        instances: [{ browser: "chromium" }],
+                    },
+                    setupFiles: ["./src/test/setup.ts"],
+                },
+            },
             {
                 extends: true,
                 plugins: [
