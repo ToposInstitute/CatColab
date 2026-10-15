@@ -1,5 +1,4 @@
 use serde::{Deserialize, Serialize};
-use tsify::{Tsify, declare};
 use uuid::Uuid;
 
 use super::rich_text::RichTextContent;
@@ -9,9 +8,8 @@ use crate::v1;
 ///
 /// Unlike [`v1::NotebookCell`], stem cells (placeholders awaiting a chosen
 /// type) are no longer part of the data model.
-#[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Tsify)]
+#[derive(PartialEq, Eq, Debug, Serialize, Deserialize)]
 #[serde(tag = "tag")]
-#[tsify(into_wasm_abi, from_wasm_abi)]
 pub enum NotebookCell<T> {
     /// A rich-text cell.
     #[serde(rename = "rich-text")]
@@ -26,7 +24,6 @@ pub enum NotebookCell<T> {
 }
 
 /// Short-hand declaration for readability.
-#[declare]
 pub type Cell<T> = NotebookCell<T>;
 
 impl<T> NotebookCell<T> {
