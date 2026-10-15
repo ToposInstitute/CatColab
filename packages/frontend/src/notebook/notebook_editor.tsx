@@ -33,6 +33,7 @@ import {
 import { materializeFromAutomerge } from "../util/materialize_from_automerge";
 import {
     type CellActions,
+    type CellComments,
     type CellDiffStatus,
     type CellDragData,
     type FormalCellEditorProps,
@@ -90,6 +91,29 @@ export type NotebookDiff<T> = {
     deleted: { cell: Cell<T>; after: Uuid | null }[];
 };
 
+/** Comments on the cells of a notebook.
+
+Supplied by whatever hosts the notebook, which decides where comment threads
+are stored and how they are shown.
+ */
+export type NotebookComments = {
+    /** Number of open comment threads on a cell. */
+    count: (cellId: Uuid) => number;
+
+    /** Start a new comment thread on a cell. */
+    add: (cellId: Uuid) => void;
+
+    /** Render a cell's comment threads, shown in a popover beside the cell.
+
+    The popover is not portalled, so events from the rendered threads bubble up
+    through the notebook.
+     */
+    view: (cellId: Uuid) => JSX.Element;
+
+    /** Called when the popover showing a cell's threads closes. */
+    onClose?: (cellId: Uuid) => void;
+};
+
 /** Notebook editor based on Automerge.
 
 A notebook has two types of cells:
@@ -120,6 +144,9 @@ export function NotebookEditor<T>(props: {
 
     /** Differences from a baseline to highlight, if any. */
     diff?: NotebookDiff<T>;
+
+    /** Comments on cells. If omitted, the notebook offers no comments. */
+    comments?: NotebookComments;
 }) {
     // oxlint-disable-next-line solid/reactivity -- Focus handles are stable for a mounted notebook.
     const cellFocus = useChildFocus<Uuid>(props.focus);
@@ -397,6 +424,9 @@ export function NotebookEditor<T>(props: {
                                     cellId={cell.id}
                                     index={i()}
                                     diff={props.diff?.cells.get(cellId)}
+                                    comments={
+                                        props.comments && cellComments(props.comments, cellId)
+                                    }
                                     focus={focus()}
                                     actions={cellActions}
                                     tag={
@@ -521,6 +551,18 @@ const deletedCellActions: CellActions = {
     moveUp() {},
     moveDown() {},
 };
+
+/** Binds a notebook's comments to one of its cells. */
+function cellComments(comments: NotebookComments, cellId: Uuid): CellComments {
+    return {
+        get count() {
+            return comments.count(cellId);
+        },
+        add: () => comments.add(cellId),
+        view: () => comments.view(cellId),
+        onClose: () => comments.onClose?.(cellId),
+    };
+}
 
 /** Flattens rich text to plain text, with blocks as line breaks. */
 function richTextToString(content: RichTextContent): string {
