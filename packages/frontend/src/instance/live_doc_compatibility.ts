@@ -114,5 +114,7 @@ export async function createInstance(
     if (instance.tag === "Err") {
         throw new Error(instance.content.map((issue) => issue.message).join("\n"));
     }
-    return instance.content.handle.ref.id;
+    const refId = instance.content.handle.ref.id;
+    instance.content.dispose();
+    return refId;
 }
