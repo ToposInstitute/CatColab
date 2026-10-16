@@ -13,7 +13,7 @@ import { instanceShapes, shapeForTheory as shapeForTheoryIn } from "../model/sha
 type SupportedInstanceShape = (typeof instanceShapes)[number];
 
 /** An instance loaded through a frontend document binder. */
-export type ApiInstance = Instance<ApiDocumentHandle, SupportedInstanceShape, ApiDocumentVersion>;
+export type ApiInstance = Instance<SupportedInstanceShape, ApiDocumentHandle, ApiDocumentVersion>;
 
 /** An instance document "live" for compatibility with existing container components.
 

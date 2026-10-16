@@ -36,7 +36,7 @@ export interface Binder<Handle, Version> {
     createInstance<S extends Shape>(
         schema: Notebook<S, ModelDocument, Handle, Version>,
         options: { title: string },
-    ): Promise<Result<Instance<Handle, S, Version>>>;
+    ): Promise<Result<Instance<S, Handle, Version>>>;
 
     createLLMConversation<Attachment extends SupportedDocument<Shape, Handle, Version>>(
         attachment: Attachment,
@@ -52,7 +52,7 @@ export interface Binder<Handle, Version> {
     loadInstanceFromRef<S extends Shape>(
         schema: Notebook<S, ModelDocument, Handle, Version>,
         ref: DocumentRef,
-    ): Promise<Result<Instance<Handle, S, Version>>>;
+    ): Promise<Result<Instance<S, Handle, Version>>>;
 
     /** Load the supported document at a ref. Model notebooks are loaded with
      * the given candidate shapes, matched by theory. */

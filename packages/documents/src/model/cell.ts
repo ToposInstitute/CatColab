@@ -20,8 +20,8 @@ import { getEquationCell, type EquationCell } from "./equation";
 export const CellKind = {
     RichText: "rich-text" satisfies RichTextCell["kind"],
     Object: "object" satisfies ObjectCell<ObjectType>["kind"],
-    Morphism: "morphism" satisfies MorphismCell<Shape, MorphismType>["kind"],
-    PathEquation: "path-equation" satisfies EquationCell<Shape>["kind"],
+    Morphism: "morphism" satisfies MorphismCell["kind"],
+    PathEquation: "path-equation" satisfies EquationCell["kind"],
 } as const;
 
 export interface ObjectCell<O extends ObjectType> {
@@ -34,7 +34,7 @@ export interface ObjectCell<O extends ObjectType> {
     delete(): void;
 }
 
-export interface MorphismCell<S extends Shape, M extends MorphismType> {
+export interface MorphismCell<S extends Shape = Shape, M extends MorphismType = MorphismType> {
     readonly kind: "morphism";
     readonly id: string;
     readonly type: M;
@@ -52,7 +52,7 @@ export interface MorphismCell<S extends Shape, M extends MorphismType> {
     delete(): void;
 }
 
-export type CellOf<S extends Shape> =
+export type CellOf<S extends Shape = Shape> =
     | RichTextCell
     | ObjectCell<ObjectTypesOf<S>>
     | MorphismCell<S, MorphismTypesOf<S>>

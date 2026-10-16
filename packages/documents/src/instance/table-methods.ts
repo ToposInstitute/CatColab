@@ -6,7 +6,7 @@ import type { QualifiedLabel } from "catlog-wasm";
 import type { DocumentStore } from "../document-store";
 import type { ElaboratedModel, ObjectJudgment } from "../model/elaborated-model";
 import type { Issue, Result } from "../result";
-import type { InstanceCapableShape, ObjectType, Shape } from "../shape";
+import type { InstanceCapableShape, ObjectType } from "../shape";
 import type { FieldPath } from "./errors";
 import type { ParsedTables } from "./parsed-document";
 import { parsedInstanceTables } from "./parsed-source";
@@ -83,7 +83,7 @@ export function addInstanceRowsToStore<Handle, Version>(
     shape: InstanceCapableShape,
     store: DocumentStore<Handle, Version>,
     handle: Handle,
-    schemaModel: ElaboratedModel<Shape>,
+    schemaModel: ElaboratedModel,
     additions: ReadonlyArray<{
         table: InstanceTable;
         values: ReadonlyArray<Record<string, LiteralValue | TableRow>>;
@@ -142,7 +142,7 @@ export function updateInstanceFieldsByLabelInStore<Handle, Version>(
     shape: InstanceCapableShape,
     store: DocumentStore<Handle, Version>,
     handle: Handle,
-    schemaModel: ElaboratedModel<Shape>,
+    schemaModel: ElaboratedModel,
     updates: ReadonlyArray<{
         row: TableRow;
         values: ReadonlyArray<Record<string, LiteralValue | TableRow>>;
@@ -182,7 +182,7 @@ export function updateInstanceFieldByIdInStore<Handle, Version>(
     shape: InstanceCapableShape,
     store: DocumentStore<Handle, Version>,
     handle: Handle,
-    schemaModel: ElaboratedModel<Shape>,
+    schemaModel: ElaboratedModel,
     row: TableRow,
     field: { id: string },
     value: LiteralValue | TableRow,
@@ -220,7 +220,7 @@ export function deleteOrphanedTableFromStore<Handle, Version>(
     shape: InstanceCapableShape,
     store: DocumentStore<Handle, Version>,
     handle: Handle,
-    schemaModel: ElaboratedModel<Shape>,
+    schemaModel: ElaboratedModel,
     tableId: string,
 ): Result<void> {
     const schemaTables = instanceTablesFromModel(shape, store, handle, schemaModel);
@@ -246,7 +246,7 @@ export function deleteOrphanedFieldFromStore<Handle, Version>(
     shape: InstanceCapableShape,
     store: DocumentStore<Handle, Version>,
     handle: Handle,
-    schemaModel: ElaboratedModel<Shape>,
+    schemaModel: ElaboratedModel,
     tableId: string,
     fieldId: string,
 ): Result<void> {
@@ -410,7 +410,7 @@ export function instanceTablesFromModel<Handle, Version>(
     shape: InstanceCapableShape,
     store: DocumentStore<Handle, Version>,
     handle: Handle,
-    schemaModel: ElaboratedModel<Shape>,
+    schemaModel: ElaboratedModel,
 ): readonly InstanceTable[] {
     const judgments = schemaModel.judgments();
     const tableObjects = schemaModel
