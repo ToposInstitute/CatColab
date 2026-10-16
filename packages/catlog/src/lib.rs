@@ -23,6 +23,7 @@ pub mod egglog_util;
 pub mod validate;
 
 pub mod dbl;
+pub mod latex;
 pub mod one;
 pub mod simulate;
 pub mod stdlib;

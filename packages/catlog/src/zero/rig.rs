@@ -22,6 +22,9 @@ use std::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 use derivative::Derivative;
 use duplicate::duplicate_item;
 
+use crate::latex::{Latex, ToLatex, ToLatexWithMap};
+use crate::zero::QualifiedName;
+
 /// A commutative monoid, written additively.
 pub trait AdditiveMonoid: Add<Output = Self> + Zero {}
 
@@ -586,35 +589,36 @@ where
     }
 }
 
-impl<Var, Exp> Monomial<Var, Exp>
+impl<Var, Exp> ToLatexWithMap for Monomial<Var, Exp>
 where
-    Var: Display,
-    Exp: Display + PartialEq + One,
+    Var: Display + ToLatexWithMap,
+    Exp: Display + ToLatex + PartialEq + One,
 {
     /// Convert to a LaTeX string, separating variables with `\cdot`.
-    pub fn to_latex(&self) -> String {
+    fn to_latex_with_map<F: Fn(&QualifiedName) -> String>(&self, f: F) -> Latex {
         let fmt_power = |var: &Var, exp: &Exp| {
+            let Latex(var_latex) = var.to_latex_with_map(|variable| f(variable));
             if exp.is_one() {
-                format!("{var}")
+                var_latex.to_string()
             } else {
                 let exp = exp.to_string();
                 if exp.len() == 1 {
-                    format!("{var}^{exp}")
+                    format!("{var_latex}^{exp}")
                 } else {
-                    format!("{var}^{{{exp}}}")
+                    format!("{var_latex}^{{{exp}}}")
                 }
             }
         };
         let mut pairs = self.0.iter();
         let Some((var, exp)) = pairs.next() else {
-            return "1".to_string();
+            return Latex("1".to_string());
         };
         let mut output = fmt_power(var, exp);
         for (var, exp) in pairs {
             output.push_str(" \\cdot ");
             output.push_str(&fmt_power(var, exp));
         }
-        output
+        Latex(output)
     }
 }
 
@@ -743,7 +747,7 @@ mod tests {
 
         let monomial: Monomial<char, u32> = Monomial::one();
         assert_eq!(monomial.to_string(), "1");
-        assert_eq!(monomial.to_latex(), "1");
+        assert_eq!(monomial.to_latex(), Latex("1".to_string()));
 
         let monomial: Monomial<_, u32> = [('x', 1), ('y', 0), ('x', 2)].into_iter().collect();
         assert_eq!(monomial.normalize().to_string(), "x^3");
@@ -752,6 +756,6 @@ mod tests {
         assert_eq!(monomial.normalize().to_string(), "x y^{-2}");
 
         let monomial: Monomial<_, i32> = [('x', 1), ('y', 2), ('z', -1)].into_iter().collect();
-        assert_eq!(monomial.to_latex(), "x \\cdot y^2 \\cdot z^{-1}");
+        assert_eq!(monomial.to_latex(), Latex("x \\cdot y^2 \\cdot z^{-1}".to_string()));
     }
 }
