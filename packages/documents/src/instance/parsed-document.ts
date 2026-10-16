@@ -1,5 +1,6 @@
 import type * as DocumentTypes from "catcolab-document-types";
-import type { Document, Link } from "catcolab-document-types";
+import type { Link } from "catcolab-document-types";
+import type { DeepReadonly } from "../deep-freeze";
 import type { Issue, Result } from "../result";
 
 /* Parsing of the underlying JSON of an instance document.
@@ -35,7 +36,7 @@ declare const parsed: unique symbol;
 A branded newtype of the stored shape: only `parseInstanceTables` constructs
 it, which guarantees that every table's row order lists exactly the keys of
 its rows, each once, and that every row has a `fields` record. */
-export type ParsedTables = Readonly<Record<string, DocumentTypes.Table>> & {
+export type ParsedTables = DeepReadonly<Record<string, DocumentTypes.Table>> & {
     readonly [parsed]: true;
 };
 
@@ -109,7 +110,7 @@ export function parseInstanceTables(value: unknown): WithIssues<ParsedTables> {
     if (issues.length === 0) {
         return { value: value as ParsedTables, issues };
     }
-    return { value: repairedTables as ParsedTables, issues };
+    return { value: repairedTables as unknown as ParsedTables, issues };
 }
 
 /** Parse a row order so that it lists exactly the kept rows, each once.
@@ -181,7 +182,7 @@ issues alongside the parsed document.
 
 */
 export function parseInstanceDocument(
-    document: Readonly<Document>,
+    document: unknown,
 ): Result<WithIssues<ParsedInstanceDocument>, ReadonlyArray<StructuralIssue>> {
     const value: unknown = document;
     if (!isRecord(value)) {
@@ -219,4 +220,40 @@ export function parseInstanceDocument(
             })),
         },
     };
+}
+
+// Snapshot identity, not ownership or listener order, determines cache validity.
+const tablesCache = new WeakMap<DeepReadonly<DocumentTypes.Document>, WithIssues<ParsedTables>>();
+
+/** Parse the tables of a document snapshot, caching by snapshot identity.
+
+Repeated calls with the same snapshot return the same parsed tables, so callers
+may rely on referential stability across re-reads of an unchanged document.
+Issue paths are relative to the document's `tables` map. */
+export function getTables(
+    snapshot: DeepReadonly<DocumentTypes.Document>,
+): WithIssues<ParsedTables> {
+    const cached = tablesCache.get(snapshot);
+    if (cached !== undefined) {
+        return cached;
+    }
+    const result = parseInstanceDocument(snapshot);
+    const tables: WithIssues<ParsedTables> =
+        result.tag === "Err"
+            ? {
+                  value: parseInstanceTables({}).value,
+                  issues: result.content.map((issue) => ({
+                      message: `Cannot parse instance document (${issue.path.map(String).join(".")}): ${issue.message}`,
+                      path: [],
+                  })),
+              }
+            : {
+                  value: result.content.value.tables,
+                  issues: result.content.issues.map((issue) => ({
+                      message: issue.message,
+                      path: issue.path.slice(1),
+                  })),
+              };
+    tablesCache.set(snapshot, tables);
+    return tables;
 }
