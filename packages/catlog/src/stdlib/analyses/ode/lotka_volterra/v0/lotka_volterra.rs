@@ -1,8 +1,3 @@
-//! Lotka-Volterra ODE analysis of models.
-//!
-//! The main entry point for this module is
-//! [`lotka_volterra_analysis`](SignedCoefficientBuilder::lotka_volterra_analysis).
-
 use std::collections::HashMap;
 use std::hash::Hash;
 use std::ops::Add;
@@ -17,13 +12,11 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "serde-wasm")]
 use tsify::Tsify;
 
-use super::{ODEAnalysis, Parameter, SignedCoefficientBuilder};
+use crate::dbl::model::DiscreteDblModel;
+use crate::one::QualifiedPath;
 use crate::simulate::ode::{NumericalPolynomialSystem, ODEProblem, PolynomialSystem};
-use crate::{
-    dbl::model::DiscreteDblModel,
-    one::QualifiedPath,
-    zero::{QualifiedName, alg::Polynomial, rig::Monomial},
-};
+use crate::stdlib::analyses::ode::{ODEAnalysis, Parameter, SignedCoefficientBuilder};
+use crate::zero::{QualifiedName, alg::Polynomial, rig::Monomial};
 
 /// Data defining a Lotka-Volterra ODE problem for a model.
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]

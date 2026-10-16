@@ -69,16 +69,19 @@ impl<Sys> ODEAnalysis<Sys> {
     }
 }
 
+// Analyses
 pub mod kuramoto;
 pub mod linear_ode;
 pub mod lotka_volterra;
 pub mod mass_action;
 pub mod polynomial_ode;
-pub mod signed_coefficients;
 
-pub use kuramoto::*;
-pub use linear_ode::*;
-pub use lotka_volterra::*;
-pub use mass_action::*;
-pub use polynomial_ode::*;
+pub use kuramoto::current::*;
+pub use linear_ode::current::*;
+pub use lotka_volterra::current::*;
+pub use mass_action::current::*;
+pub use polynomial_ode::current::*;
+
+// Helper crates
+pub mod signed_coefficients;
 pub use signed_coefficients::*;

@@ -1,4 +1,3 @@
-//! ODE analysis of models of the logic of systems of polynomial ODEs.
 use std::collections::HashMap;
 
 use indexmap::IndexMap;
@@ -9,17 +8,15 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "serde-wasm")]
 use tsify::Tsify;
 
-use crate::{
-    dbl::{
-        modal::{ModalMorType, ModalObType, ModeApp},
-        model::{FpDblModel, ModalDblModel, ModalOb, MutDblModel},
-        theory::NonUnital,
-    },
-    simulate::ode::{NumericalPolynomialSystem, ODEProblem, PolynomialSystem},
-    zero::{QualifiedName, alg::Polynomial, name, rig::Monomial},
+use crate::dbl::{
+    modal::{ModalMorType, ModalObType, ModeApp},
+    model::{FpDblModel, ModalDblModel, ModalOb, MutDblModel},
+    theory::NonUnital,
 };
+use crate::simulate::ode::{NumericalPolynomialSystem, ODEProblem, PolynomialSystem};
+use crate::zero::{QualifiedName, alg::Polynomial, name, rig::Monomial};
 
-use super::{ODEAnalysis, Parameter};
+use crate::stdlib::analyses::ode::{ODEAnalysis, Parameter};
 
 /// Data defining an unbalanced mass-action ODE problem for a model.
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
