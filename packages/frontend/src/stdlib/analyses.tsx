@@ -1,11 +1,10 @@
 import { lazy } from "solid-js";
 
 import type {
-    MassActionEquationsData,
     MorType,
     ObType,
-    PolynomialODEEquationsData,
     StochasticMassActionProblemData,
+    MassActionEquationsData,
 } from "catlog-wasm";
 import type { DiagramAnalysisMeta, ModelAnalysisMeta } from "../theory";
 import * as GraphLayoutConfig from "../visualization/graph_layout_config";
@@ -124,9 +123,13 @@ export function linearODE(
         help,
         component: (props) => <LinearODE simulate={simulate} title={name} {...props} />,
         initialContent: () => ({
-            coefficients: {},
-            initialValues: {},
-            duration: 10,
+            generalData: {
+                initialValues: {},
+                duration: 10,
+            },
+            parameterData: {
+                coefficients: {},
+            },
         }),
     };
 }
@@ -152,10 +155,14 @@ export function lotkaVolterra(
         help,
         component: (props) => <LotkaVolterra simulate={simulate} title={name} {...props} />,
         initialContent: () => ({
-            interactionCoefficients: {},
-            growthRates: {},
-            initialValues: {},
-            duration: 10,
+            generalData: {
+                initialValues: {},
+                duration: 10,
+            },
+            parameterData: {
+                interactionCoefficients: {},
+                growthRates: {},
+            },
         }),
     };
 }
