@@ -157,20 +157,20 @@ describe("transactions", () => {
         const schema = await binder.createNotebook(SimpleSchema, { title: "Example schema" });
 
         const { tx, draftDocs } = await binder.beginTransaction({ schema });
-        const draftRef = binder.store.getDocumentRef(draftDocs.schema.handle);
+        const draftRef = binder.getDocumentRef(draftDocs.schema.handle);
 
         // The draft's own ref resolves to the draft, while the source's ref
         // keeps resolving to the committed document.
-        const resolvedDraft = expectOk(await binder.store.getHandle(draftRef));
+        const resolvedDraft = expectOk(await binder.getHandle(draftRef));
         expect(resolvedDraft).toBe(draftDocs.schema.handle);
         const resolvedSource = expectOk(
-            await binder.store.getHandle(binder.store.getDocumentRef(schema.handle)),
+            await binder.getHandle(binder.getDocumentRef(schema.handle)),
         );
         expect(resolvedSource).toBe(schema.handle);
 
         tx.commit();
         // Once committed, the draft's ref no longer resolves.
-        expect((await binder.store.getHandle(draftRef)).tag).toBe("Err");
+        expect((await binder.getHandle(draftRef)).tag).toBe("Err");
     });
 
     test(

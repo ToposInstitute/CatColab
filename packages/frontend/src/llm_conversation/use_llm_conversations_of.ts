@@ -3,15 +3,17 @@ import { stringify as uuidStringify } from "uuid";
 
 import { type ApiDocumentHandle, useApi, useBinder } from "../api";
 import { useUserState } from "../user/user_state_context";
+import { resolveSupportedDocument } from "./document_resolution";
+import type { ApiLLMConversation, ApiLLMConversationAttachment } from "./live_doc_compatibility";
 
 export type ScopedLLMConversation = {
-    conversation: ApiDocumentHandle;
-    attachment: ApiDocumentHandle;
+    conversation: ApiLLMConversation;
+    attachment: ApiLLMConversationAttachment;
 };
 
 /** LLM conversations in the one-level relation scope of the given documents, newest first.
 
-Resolved through the binder's store, re-resolving whenever the relations of the
+Resolved through the binder, re-resolving whenever the relations of the
 documents change in the user state.
  */
 export function useLLMConversationsOf(
@@ -44,7 +46,7 @@ export function useLLMConversationsOf(
     const [conversations] = createResource(source, async (ids) => {
         const origins = await Promise.all(
             ids.map(async (id) => {
-                const handle = await binder.store.getHandle({
+                const handle = await binder.getHandle({
                     id,
                     version: null,
                     server: api.serverHost,
@@ -64,14 +66,14 @@ export function useLLMConversationsOf(
                 }
                 scope.set(origin.ref.id, origin);
                 const [dependsOn, usedBy] = await Promise.all([
-                    binder.store.listDependsOn(origin),
-                    binder.store.listUsedBy(origin),
+                    binder.listDependsOn(origin),
+                    binder.listUsedBy(origin),
                 ]);
                 for (const handle of [
                     ...Object.values(dependsOn).flat(),
                     ...Object.values(usedBy).flat(),
                 ]) {
-                    if (handle.docView.type !== "llmconversation") {
+                    if (binder.getDocumentView(handle).type !== "llmconversation") {
                         scope.set(handle.ref.id, handle);
                     }
                 }
@@ -80,20 +82,33 @@ export function useLLMConversationsOf(
 
         const conversations = await Promise.all(
             [...scope.values()].map(async (attachment) => {
-                const usedBy = await binder.store.listUsedBy(attachment);
-                return usedBy["llmconversation-of"].map((conversation) => ({
-                    conversation,
-                    attachment,
-                }));
+                const resolved = await resolveSupportedDocument(binder, attachment);
+                if (!resolved) {
+                    return [];
+                }
+                const usedBy = await binder.listUsedBy(attachment);
+                return (
+                    await Promise.all(
+                        usedBy["llmconversation-of"].map(async (handle) => {
+                            const result = await binder.loadLLMConversationFromRef(
+                                resolved.document,
+                                handle.ref,
+                            );
+                            return result.tag === "Ok"
+                                ? { conversation: result.content, attachment: resolved.document }
+                                : undefined;
+                        }),
+                    )
+                ).filter((item) => item !== undefined);
             }),
         );
         const byRefId = new Map(
-            conversations.flat().map((item) => [item.conversation.ref.id, item]),
+            conversations.flat().map((item) => [item.conversation.handle.ref.id, item]),
         );
         return [...byRefId.values()].toSorted(
             (a, b) =>
-                (userState.documents[b.conversation.ref.id]?.createdAt ?? 0) -
-                (userState.documents[a.conversation.ref.id]?.createdAt ?? 0),
+                (userState.documents[b.conversation.handle.ref.id]?.createdAt ?? 0) -
+                (userState.documents[a.conversation.handle.ref.id]?.createdAt ?? 0),
         );
     });
 
