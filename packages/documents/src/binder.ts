@@ -19,7 +19,6 @@ import type { Commit, Transaction } from "./transaction";
 export interface Binder<Handle, Version> {
     getHandle(ref: DocumentRef): Promise<Result<Handle>>;
     getDocumentRef(handle: Handle): DocumentRef;
-    getDocumentView(handle: Handle): Readonly<Document>;
     listUsedBy(handle: Handle): Promise<HandlesByLinkType<Handle>>;
     listDependsOn(handle: Handle): Promise<HandlesByLinkType<Handle>>;
 
@@ -54,6 +53,20 @@ export interface Binder<Handle, Version> {
         ref: DocumentRef,
     ): Promise<Result<Instance<Handle, S, Version>>>;
 
+    /** Load the supported document at a ref. Model notebooks are loaded with
+     * the given candidate shapes, matched by theory. */
+    loadSupportedDocumentFromRef(
+        shapes: ReadonlyArray<Shape & { readonly theory: string }>,
+        ref: DocumentRef,
+    ): Promise<Result<SupportedDocument<Shape, Handle, Version>>>;
+
+    /** Load a document dump into the store as a supported document. Model
+     * notebooks are loaded with the given candidate shapes, matched by theory. */
+    loadSupportedDocument(
+        shapes: ReadonlyArray<Shape & { readonly theory: string }>,
+        document: Document,
+    ): Promise<Result<SupportedDocument<Shape, Handle, Version>>>;
+
     beginTransaction<Docs extends Record<string, SupportedDocument<Shape, Handle, Version>>>(
         docs: Docs,
     ): Promise<{ tx: Transaction<Handle, Version>; draftDocs: Docs }>;
@@ -80,10 +93,82 @@ export function createBinder<Handle, Version>(
 function binderFromStore<Handle, Version>(
     store: DocumentStore<Handle, Version>,
 ): Binder<Handle, Version> {
-    return {
+    async function loadSupportedDocumentFromRef(
+        shapes: ReadonlyArray<Shape & { readonly theory: string }>,
+        ref: DocumentRef,
+    ): Promise<Result<SupportedDocument<Shape, Handle, Version>>> {
+        const result = await store.getHandle(ref);
+        if (result.tag === "Err") {
+            return result;
+        }
+        const handle = result.content;
+        const document = store.getDocumentView(handle);
+        switch (document.type) {
+            case "model": {
+                const shape = shapes.find((candidate) => candidate.theory === document.theory);
+                if (shape === undefined) {
+                    return {
+                        tag: "Err",
+                        content: [
+                            {
+                                message: `No shape is available for theory "${document.theory}".`,
+                                path: ["theory"],
+                            },
+                        ],
+                    };
+                }
+                return binder.loadNotebookFromRef(shape, ref);
+            }
+            case "instance": {
+                const schemaResult = await loadSupportedDocumentFromRef(shapes, {
+                    id: document.instanceOf._id,
+                    version: document.instanceOf._version,
+                    server: document.instanceOf._server,
+                });
+                if (schemaResult.tag === "Err") {
+                    return schemaResult;
+                }
+                const schema = schemaResult.content;
+                if (schema.type !== "model") {
+                    return {
+                        tag: "Err",
+                        content: [
+                            {
+                                message: `The schema of an instance must be a model document, not "${schema.type}".`,
+                                path: ["instanceOf"],
+                            },
+                        ],
+                    };
+                }
+                return binder.loadInstanceFromRef(schema, ref);
+            }
+            case "llmconversation": {
+                const attachmentResult = await loadSupportedDocumentFromRef(shapes, {
+                    id: document.llmConversationOf._id,
+                    version: document.llmConversationOf._version,
+                    server: document.llmConversationOf._server,
+                });
+                if (attachmentResult.tag === "Err") {
+                    return attachmentResult;
+                }
+                return binder.loadLLMConversationFromRef(attachmentResult.content, ref);
+            }
+            default:
+                return {
+                    tag: "Err",
+                    content: [
+                        {
+                            message: `Cannot load a document of type "${document.type}".`,
+                            path: ["type"],
+                        },
+                    ],
+                };
+        }
+    }
+
+    const binder: Binder<Handle, Version> = {
         getHandle: (ref) => store.getHandle(ref),
         getDocumentRef: (handle) => store.getDocumentRef(handle),
-        getDocumentView: (handle) => store.getDocumentView(handle),
         listUsedBy: (handle) => store.listUsedBy(handle),
         listDependsOn: (handle) => store.listDependsOn(handle),
         async createNotebook<S extends Shape & { readonly theory: string }>(
@@ -285,6 +370,14 @@ function binderFromStore<Handle, Version>(
                 content: instanceFromStore(schema, store, result.content),
             };
         },
+        loadSupportedDocumentFromRef,
+        async loadSupportedDocument(
+            shapes: ReadonlyArray<Shape & { readonly theory: string }>,
+            document: Document,
+        ): Promise<Result<SupportedDocument<Shape, Handle, Version>>> {
+            const handle = await store.createHandle(document);
+            return loadSupportedDocumentFromRef(shapes, store.getDocumentRef(handle));
+        },
         async beginTransaction<
             Docs extends Record<string, SupportedDocument<Shape, Handle, Version>>,
         >(docs: Docs): Promise<{ tx: Transaction<Handle, Version>; draftDocs: Docs }> {
@@ -317,13 +410,9 @@ function binderFromStore<Handle, Version>(
                 doc: SupportedDocument<Shape, Handle, Version>,
             ): Promise<SupportedDocument<Shape, Handle, Version> | undefined> {
                 const draftHandle = draftHandleBySource.get(doc.handle)!;
-                switch (doc.document.type) {
+                switch (doc.type) {
                     case "model": {
-                        return modelNotebookFromStore(
-                            (doc as Notebook<Shape, ModelDocument, Handle, Version>).shape,
-                            store,
-                            draftHandle,
-                        );
+                        return modelNotebookFromStore(doc.shape, store, draftHandle);
                     }
                     case "instance": {
                         //  bind it to the schema's own draft when the schema is
@@ -350,23 +439,14 @@ function binderFromStore<Handle, Version>(
                                 `The schema of instance "${doc.title}" is not a model document.`,
                             );
                         }
-                        const schema = modelNotebookFromStore(
-                            (doc as Notebook<Shape, ModelDocument, Handle, Version>).shape,
-                            store,
-                            schemaHandle,
-                        );
+                        const schema = modelNotebookFromStore(doc.shape, store, schemaHandle);
                         return instanceFromStore(schema, store, draftHandle);
                     }
                     case "llmconversation": {
                         // binds to the draft of the document it is attached to
                         // when that document is also staged in the transaction,
                         // and otherwise to the real document.
-                        const attachment = (
-                            doc as LLMConversation<
-                                SupportedDocument<Shape, Handle, Version>,
-                                Handle
-                            >
-                        ).attachment;
+                        const attachment = doc.attachment;
                         if (draftHandleBySource.has(attachment.handle)) {
                             const attachmentDraft = drafts.get(attachment.handle);
                             if (attachmentDraft === undefined) {
@@ -445,4 +525,5 @@ function binderFromStore<Handle, Version>(
             return { tx, draftDocs };
         },
     };
+    return binder;
 }
