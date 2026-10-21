@@ -5,7 +5,7 @@
 // defines `getRichTextRef`, which adds an `editorRef` field to `RichText`
 // cells that the editor component makes use of.
 import * as Automerge from "@automerge/automerge";
-import { type Doc, getBackend, getObjectId, type Patch } from "@automerge/automerge";
+import { getBackend, getObjectId, type Patch } from "@automerge/automerge";
 import {
     type DocHandle,
     type DocHandleChangePayload,
@@ -39,7 +39,7 @@ function makeAutomergeRichTextStore(): DocumentStore<StoreHandle> {
     const repo = new Repo();
     return {
         createHandle: async (initialDoc) => {
-            const docHandle = repo.create<Document>(initialDoc as Document);
+            const docHandle = repo.create<Document>(initialDoc);
             return { docHandle, docView: makeDocumentProjection(docHandle) };
         },
         getDocumentView: (handle) => handle.docView,
@@ -49,7 +49,7 @@ function makeAutomergeRichTextStore(): DocumentStore<StoreHandle> {
             return () => handle.docHandle.off("change", callback);
         },
         copyValue: (handle, value) => {
-            const objId = getObjectId(value as object);
+            const objId = getObjectId(value);
             if (objId === null) {
                 throw new Error("value is not part of the document");
             }
@@ -167,7 +167,7 @@ describe.skip("rich text handling", () => {
         }
         const docHandle = ref.docHandle as DocHandle<Document>;
         docHandle.change((doc) => {
-            Automerge.splice(doc as Doc<unknown>, [...ref.path], 0, 5, "Howdy");
+            Automerge.splice(doc, [...ref.path], 0, 5, "Howdy");
         });
         expect(view.state.doc.textContent).toBe("Howdy from ProseMirror");
 
