@@ -9,6 +9,7 @@ import type { ElaboratedModel, ObjectJudgment } from "../model/elaborated-model"
 import type { Issue, Result } from "../result";
 import type { InstanceCapableShape, ObjectType } from "../shape";
 import type { DeepReadonly } from "../util/deep-readonly";
+import { atomicTypeOfAttributeType } from "./atomic-types";
 import { getInstanceData, type RowData, type TableData } from "./data";
 import type { FieldPath } from "./errors";
 import type {
@@ -19,7 +20,6 @@ import type {
     TableHeader,
     TableRow,
 } from "./tables";
-import { atomicTypeOfAttributeType } from "./validation";
 
 type TableIndex = ReadonlyMap<string, TableData>;
 
