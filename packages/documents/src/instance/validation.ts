@@ -1,26 +1,111 @@
 /* This code is expected to be replaced by catlog implementations in the future once a commitment to the mathematical account of instances has been made. */
 
 import type * as DocumentTypes from "catcolab-document-types";
-import type { QualifiedLabel } from "catlog-wasm";
-import type { InstanceData } from "./data";
+import type { DocumentStore } from "../document-store";
+import type { ModelDocument } from "../model/document";
+import type { Notebook } from "../model/document";
+import type { ModelValidation } from "../model/elaborated-model";
+import { assertInstanceCapableShape, type Shape } from "../shape";
+import { parseInstanceData, type InstanceData } from "./data";
+import type { InstanceValidation } from "./document";
+import { validatePathEquations } from "./equation-validation";
+import {
+    instanceTablesFromModel,
+    indexInstanceTables,
+    readInstancePath,
+    tablesWithOrphanedData,
+} from "./table-methods";
+
+export { atomicTypeOfAttributeType } from "./atomic-types";
 import type { FieldPath, TableFieldIssue, TableIssue } from "./errors";
 import type { InstanceTable, LiteralType, TableHeader } from "./tables";
 
-/** Decide which concrete atomic type an attribute type's qualified label
-    denotes. The first label segment decides. This function is intended to be
-    temporary and should be replaced once we have an account of typing with
-    which we are satisfied. */
-export function atomicTypeOfAttributeType(label: QualifiedLabel): LiteralType {
-    const name = label[0];
-    switch (name) {
-        case "Bool":
-        case "Int":
-        case "Float":
-        case "String":
-            return name;
-        default:
-            return "String";
+/** Current-document validation and change callbacks for an instance. */
+export interface InstanceValidator<S extends Shape = Shape> {
+    validate(): Promise<InstanceValidation<S>>;
+    onValidate(callback: (validation: InstanceValidation<S>) => void): () => void;
+}
+
+/** Combine schema validation with the current instance document. */
+export function createInstanceValidator<Handle, S extends Shape, Version>(
+    schema: Notebook<S, ModelDocument, Handle, Version>,
+    store: DocumentStore<Handle, Version>,
+    handle: Handle,
+): InstanceValidator<S> {
+    const shape = schema.shape;
+    assertInstanceCapableShape(shape);
+    const instanceShape = shape;
+
+    function validateInstance(schemaValidation: ModelValidation<S>): InstanceValidation<S> {
+        const parsed = parseInstanceData(store.getDocumentSnapshot(handle));
+        const data = parsed.tag === "Err" ? undefined : parsed.content.value;
+        const storedTables = indexInstanceTables(data?.tables ?? []);
+        const structuralIssues =
+            parsed.tag === "Err"
+                ? parsed.content.map((issue) => ({
+                      message: `Cannot parse instance document (${issue.path.map(String).join(".")}): ${issue.message}`,
+                      path: [],
+                  }))
+                : parsed.content.issues.map((issue) => ({
+                      message: issue.message,
+                      path: issue.path.slice(1),
+                  }));
+
+        const schemaTables = instanceTablesFromModel(
+            instanceShape,
+            storedTables,
+            schemaValidation.model,
+        );
+        const tables = tablesWithOrphanedData(storedTables, schemaTables);
+        const issues = [
+            ...structuralIssues.map((issue) => ({
+                message: issue.message,
+                path: issue.path,
+                issueType: "MalformedDocument" as const,
+            })),
+            ...(data === undefined ? [] : validateInstanceTables(data, schemaTables)),
+            ...validatePathEquations(tables, schemaValidation.model),
+        ];
+        const validation: InstanceValidation<S> = {
+            modelValidation: schemaValidation,
+            tables,
+            issues,
+            get: (path) => readInstancePath(storedTables, tables, path),
+        };
+        return validation;
     }
+
+    return {
+        async validate() {
+            return validateInstance(await schema.validate());
+        },
+        onValidate(callback) {
+            let active = true;
+            let latestModelValidation: ModelValidation<S> | undefined;
+
+            function notify(validation: InstanceValidation<S>): void {
+                if (active) {
+                    callback(validation);
+                }
+            }
+
+            const unsubscribeInstance = store.subscribe(handle, () => {
+                if (latestModelValidation !== undefined) {
+                    notify(validateInstance(latestModelValidation));
+                }
+            });
+            const unsubscribeSchema = schema.onValidate((modelValidation) => {
+                latestModelValidation = modelValidation;
+                notify(validateInstance(modelValidation));
+            });
+
+            return () => {
+                active = false;
+                unsubscribeInstance();
+                unsubscribeSchema();
+            };
+        },
+    };
 }
 
 /** Compare stored data with tables derived from an elaborated schema model.
