@@ -1,5 +1,3 @@
-//! Kuramoto ODE analsysis of models.
-
 use std::collections::HashMap;
 
 use indexmap::IndexMap;
@@ -10,10 +8,10 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "serde-wasm")]
 use tsify::Tsify;
 
-use super::{ODEAnalysis, ODEProblem};
 use crate::dbl::model::{DiscreteDblModel, FpDblModel};
 use crate::one::{FgCategory, QualifiedPath};
 use crate::simulate::ode::{KuramotoOrder, KuramotoSystem};
+use crate::stdlib::analyses::ode::{ODEAnalysis, ODEProblem};
 use crate::zero::QualifiedName;
 
 /// Data defining a Kuramoto ODE problem for a model.
