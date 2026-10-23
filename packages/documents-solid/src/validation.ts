@@ -20,13 +20,13 @@ function createValidationAccessor<T>(
     return validation;
 }
 
-export function createNotebookValidation<S extends Shape>(
+export function createNotebookValidationView<S extends Shape>(
     notebook: Notebook<S>,
 ): Accessor<ModelValidation<S> | undefined> {
     return createValidationAccessor((callback) => notebook.onValidate(callback));
 }
 
-export function createInstanceValidation<H, S extends Shape, V>(
+export function createInstanceValidationView<H, S extends Shape, V>(
     instance: Instance<S, H, V>,
 ): Accessor<InstanceValidation<S> | undefined> {
     return createValidationAccessor((callback) => instance.onValidate(callback));

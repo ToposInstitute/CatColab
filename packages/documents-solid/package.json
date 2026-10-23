@@ -1,0 +1,35 @@
+{
+    "name": "catcolab-documents-solid",
+    "version": "0.1.0",
+    "private": true,
+    "license": "MIT",
+    "type": "module",
+    "exports": {
+        ".": "./src/index.ts"
+    },
+    "scripts": {
+        "format": "oxfmt .",
+        "lint": "oxlint --fix && oxfmt .",
+        "check": "tsc && pnpm run lint",
+        "ci": "tsc && oxlint --deny-warnings && oxfmt --check .",
+        "test": "vitest run"
+    },
+    "dependencies": {
+        "catcolab-documents": "link:../documents"
+    },
+    "devDependencies": {
+        "@catcolab-dev-tools/vite-plugin-monorepo-dedupe": "link:../../tools/vite-plugin-monorepo-dedupe",
+        "@types/node": "^24.0.0",
+        "catcolab-document-methods": "link:../document-methods",
+        "catcolab-logics": "link:../logics",
+        "happy-dom": "^20.0.0",
+        "solid-js": "^1.9.15",
+        "typescript": "^6.0.3",
+        "vite": "^7.2.2",
+        "vite-plugin-wasm": "^3.5.0",
+        "vitest": "4.1.10"
+    },
+    "peerDependencies": {
+        "solid-js": "^1.9.15"
+    }
+}

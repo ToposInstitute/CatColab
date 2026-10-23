@@ -1,3 +1,4 @@
+import { createDocumentDataView } from "catcolab-documents-solid";
 import { getAuth } from "firebase/auth";
 import Plus from "lucide-solid/icons/plus";
 import X from "lucide-solid/icons/x";
@@ -83,7 +84,7 @@ export function LLMConversationPane(props: {
         const deleted = await actions.showDeleteDialog({
             refId: conversation.handle.ref.id,
             name: conversation.title,
-            typeName: documentTypeLabel(conversation.document.type),
+            typeName: documentTypeLabel(conversation.data().type),
         });
         if (deleted && props.selectedRefId === conversation.handle.ref.id) {
             const nextConversation = conversations()?.find(
@@ -104,8 +105,11 @@ export function LLMConversationPane(props: {
         );
     };
 
-    const iconLettersOf = (document: Document): [string, string] | undefined => {
-        if (document.type !== "model" || !theories) {
+    const iconLettersOf = (document: {
+        type: string;
+        theory?: string;
+    }): [string, string] | undefined => {
+        if (document.type !== "model" || !document.theory || !theories) {
             return undefined;
         }
         try {
@@ -142,55 +146,59 @@ export function LLMConversationPane(props: {
                     fallback={<div class={styles.placeholder}>No LLM conversations yet</div>}
                 >
                     <For each={conversations()}>
-                        {({ conversation, attachment }) => (
-                            <div
-                                class={styles.row}
-                                classList={{
-                                    [styles.active]:
-                                        conversation.handle.ref.id === props.selectedRefId,
-                                }}
-                                onMouseDown={() => props.onSelect(conversation.handle.ref.id)}
-                            >
-                                <DocumentTypeIcon documentType="llmconversation" />
+                        {({ conversation, attachment }) => {
+                            const conversationData = createDocumentDataView(() => conversation);
+                            const attachmentData = createDocumentDataView(() => attachment);
+                            return (
                                 <div
-                                    class={styles.rowName}
-                                    onFocusIn={() => props.onSelect(conversation.handle.ref.id)}
+                                    class={styles.row}
+                                    classList={{
+                                        [styles.active]:
+                                            conversation.handle.ref.id === props.selectedRefId,
+                                    }}
+                                    onMouseDown={() => props.onSelect(conversation.handle.ref.id)}
                                 >
-                                    <InlineInput
-                                        text={conversation.title}
-                                        setText={(title) => conversation.update({ title })}
-                                        placeholder="Untitled"
-                                    />
-                                </div>
-                                <div
-                                    class={styles.rowAttachment}
-                                    title={`On ${documentTypeLabel(attachment.document.type)} "${attachment.title || "Untitled"}"`}
-                                >
-                                    <DocumentTypeIcon
-                                        documentType={attachment.document.type}
-                                        letters={iconLettersOf(attachment.document)}
-                                    />
-                                    <span>{attachment.title || "Untitled"}</span>
-                                </div>
-                                <Show when={canDeleteLLMConversation(conversation)}>
+                                    <DocumentTypeIcon documentType="llmconversation" />
                                     <div
-                                        class={styles.rowDelete}
-                                        onMouseDown={(event) => event.stopPropagation()}
+                                        class={styles.rowName}
+                                        onFocusIn={() => props.onSelect(conversation.handle.ref.id)}
                                     >
-                                        <IconButton
-                                            variant="danger"
-                                            tooltip="Delete LLM conversation"
-                                            onClick={(event) => {
-                                                event.stopPropagation();
-                                                void onDeleteLLMConversation(conversation);
-                                            }}
-                                        >
-                                            <X size={16} />
-                                        </IconButton>
+                                        <InlineInput
+                                            text={conversationData().name}
+                                            setText={(title) => conversation.update({ title })}
+                                            placeholder="Untitled"
+                                        />
                                     </div>
-                                </Show>
-                            </div>
-                        )}
+                                    <div
+                                        class={styles.rowAttachment}
+                                        title={`On ${documentTypeLabel(attachmentData().type)} "${attachmentData().name || "Untitled"}"`}
+                                    >
+                                        <DocumentTypeIcon
+                                            documentType={attachmentData().type}
+                                            letters={iconLettersOf(attachmentData())}
+                                        />
+                                        <span>{attachmentData().name || "Untitled"}</span>
+                                    </div>
+                                    <Show when={canDeleteLLMConversation(conversation)}>
+                                        <div
+                                            class={styles.rowDelete}
+                                            onMouseDown={(event) => event.stopPropagation()}
+                                        >
+                                            <IconButton
+                                                variant="danger"
+                                                tooltip="Delete LLM conversation"
+                                                onClick={(event) => {
+                                                    event.stopPropagation();
+                                                    void onDeleteLLMConversation(conversation);
+                                                }}
+                                            >
+                                                <X size={16} />
+                                            </IconButton>
+                                        </div>
+                                    </Show>
+                                </div>
+                            );
+                        }}
                     </For>
                 </Show>
             </div>

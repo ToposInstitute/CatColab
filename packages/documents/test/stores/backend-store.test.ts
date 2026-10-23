@@ -5,7 +5,7 @@
 // `createHandle` registers new documents with the backend, and `getHandle`
 // resolves `DocumentRef`s back through it, so instantiations across notebooks
 // validate.
-import { getBackend, getObjectId } from "@automerge/automerge";
+
 import type { DocHandle, DocumentId } from "@automerge/automerge-repo";
 import { SimpleOlog, Type } from "catcolab-logics/simple-olog";
 import { makeDocumentProjection } from "solid-automerge";
@@ -20,6 +20,7 @@ import {
     Instantiation,
 } from "catcolab-documents";
 import { FakeBackend } from "../helpers/fake_backend";
+import { getDocumentSnapshot } from "../helpers/snapshot";
 
 const backend = new FakeBackend();
 const repo = backend.repo;
@@ -56,19 +57,12 @@ const backendStore: DocumentStore<StoreHandle> = {
         handleByRefId.set(refId, handle);
         return handle;
     },
-    getDocumentView: (handle) => handle.docView,
+    getDocumentSnapshot: (handle) => getDocumentSnapshot(handle.docHandle.doc()),
     changeDocument: (handle, fn) => handle.docHandle.change(fn),
     subscribe: (handle, callback) => {
-        handle.docHandle.on("change", callback);
-        return () => handle.docHandle.off("change", callback);
-    },
-    copyValue: (handle, value) => {
-        const doc = handle.docHandle.doc();
-        const objId = getObjectId(value);
-        if (objId === null) {
-            throw new Error("value is not part of the document");
-        }
-        return getBackend(doc).materialize(objId) as typeof value;
+        const onChange = () => callback(handle);
+        handle.docHandle.on("change", onChange);
+        return () => handle.docHandle.off("change", onChange);
     },
     getDocumentRef: (handle) => {
         const refId = refByDocId.get(handle.docHandle.documentId);

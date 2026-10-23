@@ -5,7 +5,7 @@ import { createEffect, createRoot } from "solid-js";
 import { describe, expect, test } from "vitest";
 
 import { createBinder, createInMemoryStore } from "catcolab-documents";
-import { createInstanceValidation, createNotebookValidation } from "./validation";
+import { createInstanceValidationView, createNotebookValidationView } from "../src";
 
 describe("Solid validation accessors", { timeout: 20_000 }, () => {
     test("tracks notebook validation and releases the subscription", async () => {
@@ -15,11 +15,11 @@ describe("Solid validation accessors", { timeout: 20_000 }, () => {
         const target = notebook.add(Type, { label: "B" });
         notebook.add(Aspect, { label: "has", from: source, to: target });
 
-        expect(() => createNotebookValidation(notebook)).toThrow("Solid owner");
+        expect(() => createNotebookValidationView(notebook)).toThrow("Solid owner");
         let labels: string[] = [];
-        let validation!: ReturnType<typeof createNotebookValidation<typeof SimpleOlog>>;
+        let validation!: ReturnType<typeof createNotebookValidationView<typeof SimpleOlog>>;
         const dispose = createRoot((dispose) => {
-            validation = createNotebookValidation(notebook);
+            validation = createNotebookValidationView(notebook);
             createEffect(() => {
                 labels =
                     validation()
@@ -53,14 +53,14 @@ describe("Solid validation accessors", { timeout: 20_000 }, () => {
         }
 
         let validation!: ReturnType<
-            typeof createInstanceValidation<
+            typeof createInstanceValidationView<
                 typeof result.content.handle,
                 typeof SimpleSchema,
                 unknown
             >
         >;
         const dispose = createRoot((dispose) => {
-            validation = createInstanceValidation(result.content);
+            validation = createInstanceValidationView(result.content);
             return dispose;
         });
         await expect.poll(() => validation(), { timeout: 20_000 }).toBeDefined();

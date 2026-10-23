@@ -265,7 +265,7 @@ describe("LLM conversation turns", { timeout: 30_000 }, () => {
                 assert(validationError instanceof Error);
                 assert.match(validationError.message, /document_Company_schema: .*"message"/s);
 
-                invalid.delete();
+                schema.delete(invalid);
                 await onSuccessHook();
                 return response("Repaired.");
             },

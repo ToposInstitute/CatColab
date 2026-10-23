@@ -7,19 +7,24 @@ import type { Document } from "catcolab-document-types";
 import type { DocumentRef, DocumentStore, HandlesByLinkType } from "./document-store";
 import { createInMemoryStore } from "./document-store";
 import type { DocumentChange } from "./document-store";
-import { instanceFromStore, type Instance } from "./instance/instance";
+import { parseInstanceData } from "./instance/data";
+import { instanceFromStore, type Instance } from "./instance/document";
 import { type LLMConversation, llmConversationFromStore } from "./llm-conversation";
+import { parseNotebookData } from "./model/data";
 import type { ModelDocument } from "./model/document";
-import { modelNotebookFromStore, type Notebook } from "./model/notebook";
+import { modelNotebookFromStore, type Notebook } from "./model/document";
 import type { Result } from "./result";
 import type { Shape } from "./shape";
 import type { SupportedDocument } from "./supported-document";
 import type { Commit, Transaction } from "./transaction";
+import { assertExhaustive } from "./util/assert_exhaustive";
+import type { DeepReadonly } from "./util/deep-readonly";
 
 export interface Binder<Handle, Version> {
     getHandle(ref: DocumentRef): Promise<Result<Handle>>;
     getDocumentRef(handle: Handle): DocumentRef;
-    getDocumentView(handle: Handle): Readonly<Document>;
+    //TODO: We shouldn't be exposing this but it is needed for resolving linked documents in frontend LLM execution scopes.
+    getDocumentSnapshot(handle: Handle): DeepReadonly<Document>;
     listUsedBy(handle: Handle): Promise<HandlesByLinkType<Handle>>;
     listDependsOn(handle: Handle): Promise<HandlesByLinkType<Handle>>;
 
@@ -83,7 +88,7 @@ function binderFromStore<Handle, Version>(
     return {
         getHandle: (ref) => store.getHandle(ref),
         getDocumentRef: (handle) => store.getDocumentRef(handle),
-        getDocumentView: (handle) => store.getDocumentView(handle),
+        getDocumentSnapshot: (handle) => store.getDocumentSnapshot(handle),
         listUsedBy: (handle) => store.listUsedBy(handle),
         listDependsOn: (handle) => store.listDependsOn(handle),
         async createNotebook<S extends Shape & { readonly theory: string }>(
@@ -108,18 +113,11 @@ function binderFromStore<Handle, Version>(
                 return result;
             }
 
-            const document = store.getDocumentView(result.content);
-            if (document.type !== "model") {
-                return {
-                    tag: "Err",
-                    content: [
-                        {
-                            message: `Cannot load document of type "${document.type}" as a notebook.`,
-                            path: ["type"],
-                        },
-                    ],
-                };
+            const parsed = parseNotebookData(store.getDocumentSnapshot(result.content));
+            if (parsed.tag === "Err") {
+                return parsed;
             }
+            const document = parsed.content.value;
             if (document.theory !== shape.theory) {
                 return {
                     tag: "Err",
@@ -195,7 +193,7 @@ function binderFromStore<Handle, Version>(
             if (result.tag === "Err") {
                 return result;
             }
-            const document = store.getDocumentView(result.content);
+            const document = store.getDocumentSnapshot(result.content);
             if (document.type !== "llmconversation") {
                 return {
                     tag: "Err",
@@ -248,31 +246,24 @@ function binderFromStore<Handle, Version>(
                 return result;
             }
 
-            const document = store.getDocumentView(result.content);
-            if (document.type !== "instance") {
-                return {
-                    tag: "Err",
-                    content: [
-                        {
-                            message: `Cannot load document of type "${document.type}" as an instance.`,
-                            path: ["type"],
-                        },
-                    ],
-                };
+            const parseResult = parseInstanceData(store.getDocumentSnapshot(result.content));
+            if (parseResult.tag === "Err") {
+                return { tag: "Err" as const, content: parseResult.content };
             }
+            const parsedDocument = parseResult.content.value;
 
             const schemaRef = store.getDocumentRef(schema.handle);
             if (
-                document.instanceOf._id !== schemaRef.id ||
-                document.instanceOf._version !== schemaRef.version ||
-                document.instanceOf._server !== (schemaRef.server ?? "")
+                parsedDocument.instanceOf._id !== schemaRef.id ||
+                parsedDocument.instanceOf._version !== schemaRef.version ||
+                parsedDocument.instanceOf._server !== (schemaRef.server ?? "")
             ) {
                 return {
                     tag: "Err",
                     content: [
                         {
                             message:
-                                `Cannot load instance of schema "${document.instanceOf._id}" ` +
+                                `Cannot load instance of schema "${parsedDocument.instanceOf._id}" ` +
                                 `using schema "${schemaRef.id}".`,
                             path: ["instanceOf"],
                         },
@@ -310,6 +301,14 @@ function binderFromStore<Handle, Version>(
 
             const drafts = new Map<Handle, SupportedDocument<Shape, Handle, Version>>();
 
+            /** Discard a staged draft: automatically release the bound draft
+             * document and stop tracking the draft in the store. */
+            const discardStagedDraft = (draftHandle: Handle): void => {
+                drafts.get(draftHandle)?.dispose();
+                drafts.delete(draftHandle);
+                store.discardDraft(draftHandle);
+            };
+
             /** Construct the draft counterpart of a staged document, or
              * undefined when it cannot be drafted yet because it binds to the
              * draft of another staged document that has not been drafted. */
@@ -317,7 +316,8 @@ function binderFromStore<Handle, Version>(
                 doc: SupportedDocument<Shape, Handle, Version>,
             ): Promise<SupportedDocument<Shape, Handle, Version> | undefined> {
                 const draftHandle = draftHandleBySource.get(doc.handle)!;
-                switch (doc.document.type) {
+                const document = doc.data();
+                switch (document.type) {
                     case "model": {
                         return modelNotebookFromStore(
                             (doc as Notebook<Shape, ModelDocument, Handle, Version>).shape,
@@ -329,7 +329,7 @@ function binderFromStore<Handle, Version>(
                         //  bind it to the schema's own draft when the schema is
                         // also staged in the transaction, and otherwise to the
                         // real schema resolved through the store.
-                        const instanceOf = doc.document.instanceOf;
+                        const instanceOf = document.instanceOf;
                         let schemaHandle = draftHandleBySourceRefId.get(instanceOf._id);
                         if (schemaHandle === undefined) {
                             const result = await store.getHandle({
@@ -345,7 +345,9 @@ function binderFromStore<Handle, Version>(
                             }
                             schemaHandle = result.content;
                         }
-                        if (store.getDocumentView(schemaHandle).type !== "model") {
+                        if (
+                            parseNotebookData(store.getDocumentSnapshot(schemaHandle)).tag === "Err"
+                        ) {
                             throw new Error(
                                 `The schema of instance "${doc.title}" is not a model document.`,
                             );
@@ -368,7 +370,9 @@ function binderFromStore<Handle, Version>(
                             >
                         ).attachment;
                         if (draftHandleBySource.has(attachment.handle)) {
-                            const attachmentDraft = drafts.get(attachment.handle);
+                            const attachmentDraft = drafts.get(
+                                draftHandleBySource.get(attachment.handle)!,
+                            );
                             if (attachmentDraft === undefined) {
                                 return undefined;
                             }
@@ -376,6 +380,8 @@ function binderFromStore<Handle, Version>(
                         }
                         return llmConversationFromStore(store, draftHandle, attachment);
                     }
+                    default:
+                        return assertExhaustive(document["type"]);
                 }
             }
 
@@ -383,7 +389,23 @@ function binderFromStore<Handle, Version>(
             const pending = [...sources];
             try {
                 while (pending.length > 0) {
-                    const drafted = await Promise.all(pending.map((doc) => draftDoc(doc)));
+                    // Wait for all constructions, even if one fails, so every
+                    // instance owner can be released by the failure cleanup.
+                    const results = await Promise.allSettled(pending.map((doc) => draftDoc(doc)));
+                    for (const [index, result] of results.entries()) {
+                        if (result.status === "fulfilled" && result.value !== undefined) {
+                            drafts.set(
+                                draftHandleBySource.get(pending[index]!.handle)!,
+                                result.value,
+                            );
+                        }
+                    }
+                    const drafted = results.map((result) => {
+                        if (result.status === "rejected") {
+                            throw result.reason;
+                        }
+                        return result.value;
+                    });
                     const remaining = pending.filter((_, index) => drafted[index] === undefined);
                     if (remaining.length === pending.length) {
                         throw new Error(
@@ -391,25 +413,20 @@ function binderFromStore<Handle, Version>(
                                 "so no draft order exists.",
                         );
                     }
-                    for (const [index, doc] of pending.entries()) {
-                        const draft = drafted[index];
-                        if (draft !== undefined) {
-                            drafts.set(doc.handle, draft);
-                        }
-                    }
                     pending.splice(0, pending.length, ...remaining);
                 }
             } catch (error) {
-                // Constructing the drafts failed: discard the staged drafts so
-                // that they do not linger in the store.
                 for (const draftHandle of draftHandleBySource.values()) {
-                    store.discardDraft(draftHandle);
+                    discardStagedDraft(draftHandle);
                 }
                 throw error;
             }
 
             const draftDocs = Object.fromEntries(
-                Object.entries(docs).map(([key, doc]) => [key, drafts.get(doc.handle)]),
+                Object.entries(docs).map(([key, doc]) => [
+                    key,
+                    drafts.get(draftHandleBySource.get(doc.handle)!),
+                ]),
             ) as Docs;
 
             const staged = sources.map((doc) => ({
@@ -424,6 +441,9 @@ function binderFromStore<Handle, Version>(
                         throw new Error(`The transaction has already been ${state}.`);
                     }
                     state = "committed";
+                    for (const draft of drafts.values()) {
+                        draft.dispose();
+                    }
 
                     const documents = new Map<Handle, DocumentChange<Version>>();
                     for (const { sourceHandle, draftHandle } of staged) {
@@ -437,7 +457,7 @@ function binderFromStore<Handle, Version>(
                     }
                     state = "aborted";
                     for (const { draftHandle } of staged) {
-                        store.discardDraft(draftHandle);
+                        discardStagedDraft(draftHandle);
                     }
                 },
             };

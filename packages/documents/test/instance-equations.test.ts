@@ -28,7 +28,7 @@ function equationViolations(issues: ReadonlyArray<TableIssue>): EquationViolatio
 }
 
 function equationDeclId<S extends Shape>(notebook: Notebook<S, ModelDocument>, cellId: string) {
-    const cell = notebook.document.notebook.cellContents[cellId];
+    const cell = notebook.dump().notebook.cellContents[cellId];
     if (cell?.tag !== "formal" || cell.content.tag !== "equation") {
         throw new Error("Expected an equation cell.");
     }

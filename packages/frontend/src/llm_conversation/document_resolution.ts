@@ -1,5 +1,6 @@
 import type { Binder, Result, Shape, SupportedDocument } from "catcolab-documents";
 import { notebookShapes, shapeForTheory } from "../model/shapes";
+import { assertExhaustive } from "../util/assert_exhaustive";
 
 /** A document resolved from a handle, together with the ref id of the model
  * notebook at the root of its dependency chain.
@@ -16,10 +17,10 @@ export async function resolveSupportedDocument<Handle, Version>(
     binder: Binder<Handle, Version>,
     handle: Handle,
 ): Promise<ResolvedSupportedDocument<Handle, Version> | undefined> {
-    const view = binder.getDocumentView(handle);
-    switch (view.type) {
+    const snapshot = binder.getDocumentSnapshot(handle);
+    switch (snapshot.type) {
         case "model": {
-            const shape = shapeForTheory(notebookShapes, view.theory);
+            const shape = shapeForTheory(notebookShapes, snapshot.theory);
             return shape === undefined
                 ? undefined
                 : {
@@ -30,12 +31,12 @@ export async function resolveSupportedDocument<Handle, Version>(
                   };
         }
         case "instance": {
-            const schemaHandle = await handleForRef(binder, view.instanceOf);
-            const schemaView = binder.getDocumentView(schemaHandle);
-            if (schemaView.type !== "model") {
+            const schemaHandle = await handleForRef(binder, snapshot.instanceOf);
+            const schema = binder.getDocumentSnapshot(schemaHandle);
+            if (schema.type !== "model") {
                 return undefined;
             }
-            const schemaShape = shapeForTheory(notebookShapes, schemaView.theory);
+            const schemaShape = shapeForTheory(notebookShapes, schema.theory);
             return schemaShape === undefined
                 ? undefined
                 : {
@@ -56,7 +57,7 @@ export async function resolveSupportedDocument<Handle, Version>(
         case "llmconversation": {
             const inner = await resolveSupportedDocument(
                 binder,
-                await handleForRef(binder, view.llmConversationOf),
+                await handleForRef(binder, snapshot.llmConversationOf),
             );
             return inner === undefined
                 ? undefined
@@ -73,6 +74,8 @@ export async function resolveSupportedDocument<Handle, Version>(
         case "diagram":
         case "analysis":
             return undefined;
+        default:
+            return assertExhaustive(snapshot["type"]);
     }
 }
 

@@ -23,8 +23,8 @@ describe.skip("migrating between logics", () => {
         const schema = migration.content;
 
         // The original document was rewritten in place, not copied.
-        expect(schema.document === olog.document).toBe(true);
-        expect(schema.document.theory).toBe("simple-schema");
+        expect(schema.data() === olog.data()).toBe(true);
+        expect(schema.data().theory).toBe("simple-schema");
         expect(
             schema
                 .cellsOf(Entity)
