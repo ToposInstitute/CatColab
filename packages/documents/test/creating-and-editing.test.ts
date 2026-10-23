@@ -33,7 +33,7 @@ describe("creating and editing notebooks", () => {
         const notebook = await binder.createNotebook(SimpleOlog, { title: "An Olog" });
 
         expect(notebook.title).toBe("An Olog");
-        expect(notebook.document.theory).toBe("simple-olog");
+        expect(notebook.data().theory).toBe("simple-olog");
         expect(notebook.cells().length).toBe(0);
     });
 
@@ -68,9 +68,9 @@ describe("creating and editing notebooks", () => {
             to: attrType,
         });
 
-        expect(attr.from?.type).toBe(Entity);
+        expect(attr.from?.type).toEqual(Entity);
         expect(attr.from?.id).toBe(entity.id);
-        expect(attr.to?.type).toBe(AttrType);
+        expect(attr.to?.type).toEqual(AttrType);
         expect(attr.to?.id).toBe(attrType.id);
     });
 
@@ -101,26 +101,31 @@ describe("creating and editing notebooks", () => {
 
         notebook.update({ title: "A simple Olog example" });
 
-        intro.update({
+        notebook.update(intro, {
             content: "We define a simple olog with two objects and one arrow.",
         });
 
-        source.update({
+        notebook.update(source, {
             label: "Source",
         });
 
-        arrow.update({
+        notebook.update(arrow, {
             label: "has as",
             from: source,
             to: target,
         });
 
+        const [intro2, source2, , arrow2] = notebook.cells();
         expect(notebook.title).toBe("A simple Olog example");
-        expect(intro.content).toBe("We define a simple olog with two objects and one arrow.");
-        expect(source.label).toBe("Source");
-        expect(arrow.label).toBe("has as");
-        expect(arrow.from?.id).toBe(source.id);
-        expect(arrow.to?.id).toBe(target.id);
+        expect(intro2).toMatchObject({
+            content: "We define a simple olog with two objects and one arrow.",
+        });
+        expect(source2).toMatchObject({ label: "Source" });
+        expect(arrow2).toMatchObject({
+            label: "has as",
+            from: { id: source.id },
+            to: { id: target.id },
+        });
     });
 
     test("partial updates leave the other fields intact", async () => {
@@ -131,12 +136,14 @@ describe("creating and editing notebooks", () => {
         const target = notebook.add(Type, { label: "B" });
         const arrow = notebook.add(Aspect, { label: "has", from: source, to: target });
 
-        arrow.update({
+        notebook.update(arrow, {
             label: "has as example",
         });
 
-        expect(arrow.label).toBe("has as example");
-        expect(arrow.from?.id).toBe(source.id);
-        expect(arrow.to?.id).toBe(target.id);
+        expect(notebook.cells()[2]).toMatchObject({
+            label: "has as example",
+            from: { id: source.id },
+            to: { id: target.id },
+        });
     });
 });

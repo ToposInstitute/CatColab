@@ -73,7 +73,7 @@ describe("the simple-olog logic (advanced)", { timeout: 10000 }, () => {
         if (migration.tag !== "Ok") {
             return;
         }
-        expect(migration.content.document.theory).toBe("simple-schema");
+        expect(migration.content.data().theory).toBe("simple-schema");
         expect((await migration.content.validate()).issues).toEqual([]);
     });
 });

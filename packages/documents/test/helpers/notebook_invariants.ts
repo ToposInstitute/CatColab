@@ -3,14 +3,13 @@ import { expect } from "vitest";
 import type { Document } from "catcolab-document-types";
 
 export type NotebookWithDocument = {
-    readonly document: Document;
+    dump(): Document;
     cells(): readonly { id: string }[];
-    dump(): unknown;
 };
 
 /** Assert that the persisted notebook index and the public cell view agree. */
 export function assertNotebookStructureIsConsistent(notebook: NotebookWithDocument): void {
-    const document = notebook.document;
+    const document = notebook.dump();
     if (document.type !== "model") {
         throw new Error(`Expected a model document, got ${document.type}.`);
     }

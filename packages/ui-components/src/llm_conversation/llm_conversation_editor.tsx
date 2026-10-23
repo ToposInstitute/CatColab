@@ -21,6 +21,7 @@ import {
 } from "solid-js";
 
 import type { InlineFile, LLMInteraction } from "catcolab-document-types";
+import type { DeepReadonly } from "catcolab-documents";
 import { Button } from "../button";
 import { CodeView } from "../code_view";
 import { IconButton } from "../icon_button";
@@ -39,7 +40,7 @@ export type LLMConversationInput = {
 };
 
 export type LLMConversationEditorProps = {
-    interactions: readonly LLMInteraction[];
+    interactions: DeepReadonly<LLMInteraction[]>;
     streamingContent?: string;
     status: string;
     busy: boolean;
@@ -234,7 +235,7 @@ function autoscroll(content: HTMLElement, sentinel: HTMLElement) {
 
 /** Display one interaction in an LLM conversation. */
 export const LLMInteractionView = (props: {
-    interaction: LLMInteraction;
+    interaction: DeepReadonly<LLMInteraction>;
     onResolveFeedback: LLMConversationEditorProps["onResolveFeedback"];
 }) => (
     <Switch>
@@ -255,7 +256,7 @@ export const LLMInteractionView = (props: {
     </Switch>
 );
 
-const UserMessage = (props: { content: string; files?: readonly InlineFile[] }) => (
+const UserMessage = (props: { content: string; files?: DeepReadonly<InlineFile[]> }) => (
     <div class={styles.userMessage}>
         <MarkdownMessage content={props.content} />
         <Show when={(props.files?.length ?? 0) > 0}>
@@ -296,7 +297,9 @@ const LLMMessage = (props: { content: string }) => {
     );
 };
 
-const CodeExecution = (props: { execution: LLMInteraction & { tag: "llm-code-execution" } }) => {
+const CodeExecution = (props: {
+    execution: DeepReadonly<LLMInteraction & { tag: "llm-code-execution" }>;
+}) => {
     const [isExpanded, setIsExpanded] = createSignal(false);
     const succeeded = () => props.execution.result.tag === "Ok";
 
@@ -371,7 +374,7 @@ const CollapseButton = (props: {
 );
 
 const FeedbackRequest = (props: {
-    request: LLMInteraction & { tag: "user-feedback-request" };
+    request: DeepReadonly<LLMInteraction & { tag: "user-feedback-request" }>;
     onResolveFeedback: LLMConversationEditorProps["onResolveFeedback"];
 }) => (
     <div>

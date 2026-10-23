@@ -15,7 +15,7 @@ describe("the simple-schema logic", () => {
         const binder = createBinder();
         const notebook = await binder.createNotebook(SimpleSchema, { title: "Example schema" });
 
-        expect(notebook.document.theory).toBe("simple-schema");
+        expect(notebook.data().theory).toBe("simple-schema");
         expect(Entity.obType).toEqual({ tag: "Basic", content: "Entity" });
         expect(AttrType.obType).toEqual({ tag: "Basic", content: "AttrType" });
 
@@ -100,7 +100,7 @@ describe("the simple-schema logic", () => {
         if (migration.tag !== "Ok") {
             return;
         }
-        expect(migration.content.document.theory).toBe("simple-olog");
+        expect(migration.content.data().theory).toBe("simple-olog");
         expect((await migration.content.validate()).issues).toEqual([]);
     });
 });
