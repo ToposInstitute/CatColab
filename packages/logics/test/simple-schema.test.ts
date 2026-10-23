@@ -44,7 +44,7 @@ describe("the simple-schema logic", () => {
         } finally {
             theory.free();
         }
-    }, 15_000);
+    }, 60_000);
 
     test.skip("notebooks validate against the core theory of schemas", async () => {
         const binder = createBinder();

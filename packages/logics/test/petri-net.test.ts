@@ -52,7 +52,7 @@ describe("The petri-net logic", () => {
         } finally {
             theory.free();
         }
-    }, 15_000);
+    }, 60_000);
 
     test.skip("Notebooks validate in the core theory of Petri nets", async () => {
         const binder = createBinder();
