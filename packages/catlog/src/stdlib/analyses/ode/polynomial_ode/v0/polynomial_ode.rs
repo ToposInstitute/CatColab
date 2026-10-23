@@ -27,7 +27,7 @@ use crate::stdlib::analyses::ode::{ODEAnalysis, Parameter};
 )]
 pub struct PolynomialODEProblemData {
     /// Map from morphism IDs to coefficients (nonnegative reals).
-    coefficients: HashMap<QualifiedName, f32>,
+    pub coefficients: HashMap<QualifiedName, f32>,
 
     /// Map from object IDs to initial values (nonnegative reals).
     #[cfg_attr(feature = "serde", serde(rename = "initialValues"))]
