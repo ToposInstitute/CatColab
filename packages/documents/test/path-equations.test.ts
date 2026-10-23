@@ -2,7 +2,14 @@ import { Aspect, SimpleOlog, Type } from "catcolab-logics/simple-olog";
 import { Entity, Mapping, SimpleSchema } from "catcolab-logics/simple-schema";
 import { describe, expect, test } from "vitest";
 
-import { createBinder, defineShape, type EquationSide, PathEquation } from "catcolab-documents";
+import {
+    createBinder,
+    defineShape,
+    type EquationCellData,
+    type EquationSideData,
+    type Notebook,
+    PathEquation,
+} from "catcolab-documents";
 
 const WithoutEquations = defineShape({
     theory: "simple-olog-without-equations",
@@ -11,7 +18,15 @@ const WithoutEquations = defineShape({
     morphisms: [Aspect],
 });
 
-function compositeLabels(side: EquationSide<typeof SimpleOlog>): Array<string | undefined> {
+function firstEquation(notebook: Notebook): EquationCellData {
+    const cell = notebook.cellsOf(PathEquation)[0];
+    if (cell?.kind !== "path-equation") {
+        throw new Error("Expected an equation cell.");
+    }
+    return cell;
+}
+
+function compositeLabels(side: EquationSideData): Array<string | undefined> {
     if (!Array.isArray(side)) {
         throw new Error("Expected a composite of morphisms.");
     }
@@ -72,9 +87,10 @@ describe("path equations", { timeout: 30000 }, () => {
         const draft = await notebook.validate();
         expect(draft.issues[0]?.message).toContain("missing a side");
 
-        equation.update({ lhs: [f, f], rhs: [g] });
-        expect(compositeLabels(equation.lhs)).toEqual(["f", "f"]);
-        expect(compositeLabels(equation.rhs)).toEqual(["g"]);
+        notebook.update(equation, { lhs: [f, f], rhs: [g] });
+        const updated = firstEquation(notebook);
+        expect(compositeLabels(updated.lhs)).toEqual(["f", "f"]);
+        expect(compositeLabels(updated.rhs)).toEqual(["g"]);
 
         expect((await notebook.validate()).issues).toEqual([]);
     });
@@ -88,8 +104,8 @@ describe("path equations", { timeout: 30000 }, () => {
         const g = notebook.add(Aspect, { label: "g", from: a, to: a });
 
         const equation = notebook.add(PathEquation, { label: "eq", lhs: [f], rhs: [g] });
-        equation.update({ lhs: [] });
-        expect(equation.lhs).toEqual([]);
+        notebook.update(equation, { lhs: [] });
+        expect(firstEquation(notebook).lhs).toEqual([]);
 
         const result = await notebook.validate();
         expect(result.issues.length).toBeGreaterThan(0);
@@ -123,11 +139,12 @@ describe("path equations", { timeout: 30000 }, () => {
         const h = notebook.add(Aspect, { label: "h", from: a, to: a });
 
         const equation = notebook.add(PathEquation, { label: "eq", lhs: [h], rhs: [f] });
-        h.delete();
-        expect(compositeLabels(equation.lhs)).toEqual([undefined]);
+        const current = () => firstEquation(notebook);
+        notebook.delete(h);
+        expect(compositeLabels(current().lhs)).toEqual([undefined]);
 
-        equation.update({ lhs: [null, f] });
-        expect(compositeLabels(equation.lhs)).toEqual(["f"]);
+        notebook.update(equation, { lhs: [null, f] });
+        expect(compositeLabels(current().lhs)).toEqual(["f"]);
     });
 
     test("cells enumerate equation cells; shapes without support reject them", async () => {
@@ -183,7 +200,7 @@ describe("path equations", { timeout: 30000 }, () => {
         if (!judgment || judgment.kind !== "path-equation") {
             throw new Error("Expected an equation judgment.");
         }
-        const cell = notebook.document.notebook.cellContents[equation.id];
+        const cell = notebook.dump().notebook.cellContents[equation.id];
         if (!cell || cell.tag !== "formal" || cell.content.tag !== "equation") {
             throw new Error("Expected an equation cell.");
         }

@@ -1,3 +1,4 @@
+import { createDocumentDataView } from "catcolab-documents-solid";
 import { createMemo } from "solid-js";
 
 import {
@@ -12,8 +13,9 @@ export function LLMConversationEditor(props: { conversation: ApiLLMConversation 
     const inferenceKey = useInferenceKey();
     const conversations = useLLMConversations();
     const controller = createMemo(() => conversations.get(props.conversation));
+    const data = createDocumentDataView(() => props.conversation);
     const interactions = createMemo(() => [
-        ...props.conversation.interactions(),
+        ...data().interactions,
         ...controller().state.liveInteractions,
     ]);
     const submit = async (input: LLMConversationInput): Promise<boolean> => {

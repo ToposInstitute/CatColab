@@ -1,7 +1,6 @@
 import { Attr, AttrType, Entity, Mapping, SimpleSchema } from "catcolab-logics/simple-schema";
 import { describe, expect, test } from "vitest";
 
-import type { Document } from "catcolab-document-types";
 import {
     atomicTypeOfAttributeType,
     createBinder,
@@ -66,13 +65,13 @@ describe("instance document creation", () => {
 
         expect(instance.title).toBe("Company instance");
         expect(instance.shape).toBe(SimpleSchema);
-        expect(instance.document.type).toBe("instance");
-        expect(instance.document.tables).toEqual({});
-        expect(instance.document.instanceOf._id).toBe(binder.getDocumentRef(schema.handle).id);
-        expect(instance.document.instanceOf.type).toBe("instance-of");
+        expect(instance.data().type).toBe("instance");
+        expect(instance.data().tables).toEqual([]);
+        expect(instance.data().instanceOf._id).toBe(binder.getDocumentRef(schema.handle).id);
+        expect(instance.data().instanceOf.type).toBe("instance-of");
 
         const dumped = instance.dump();
-        dumped.name = "Detached";
+        Object.assign(dumped, { name: "Detached" });
         expect(instance.title).toBe("Company instance");
 
         instance.update({ title: "Renamed" });
@@ -109,8 +108,8 @@ describe("instance document creation", () => {
 
             expect(predatorPrey.title).toBe("Predator-prey");
             expect(predatorPrey.shape).toBe(SimpleSchema);
-            expect(predatorPrey.document.tables).toEqual({});
-            expect(predatorPrey.document.instanceOf._id).toBe(
+            expect(predatorPrey.data().tables).toEqual([]);
+            expect(predatorPrey.data().instanceOf._id).toBe(
                 binder.getDocumentRef(causalLoop.handle).id,
             );
         },
@@ -331,11 +330,15 @@ describe("tabular instances", () => {
         );
         const bob = expectOk(await instance.addRow(personTable, { name: "Bob", employer: acme }));
 
-        expect(personTable.rows.map((row) => row.id)).toEqual([alice.id, bob.id]);
+        expect(personTable.rows).toEqual([]); // The original validation is a snapshot.
+        const currentPersonTable = (await instance.validate()).tables.find(
+            (table) => table.id === personTable.id,
+        )!;
+        expect(currentPersonTable.rows.map((row) => row.id)).toEqual([alice.id, bob.id]);
         expect(alice.index).toBe(0);
         expect(alice.fields.map((field) => field.tag)).toEqual(["RowRef", "String"]);
 
-        const nameResult = validation.get([
+        const nameResult = (await instance.validate()).get([
             personTable.id,
             "rows",
             alice.id,
@@ -355,8 +358,17 @@ describe("tabular instances", () => {
 
         expectOk(await instance.set(bob, nameHeader, "Robert"));
         expect(bob.fields.find((field) => field.tag === "String")).toMatchObject({
-            content: { value: "Robert" },
+            content: { value: "Bob" },
         });
+        expect(
+            (await instance.validate()).get([
+                personTable.id,
+                "rows",
+                bob.id,
+                "fields",
+                nameHeader.id,
+            ]),
+        ).toMatchObject({ tag: "Ok", content: { content: { value: "Robert" } } });
 
         let changes = 0;
         const unsubscribe = instance.onChange(() => {
@@ -438,7 +450,7 @@ describe("tabular instances", () => {
             );
             const bob = expectOk(await instance.addRow(personTable, { name: "Bob" }));
 
-            store.changeDocument(instance.document as Document, (document) => {
+            store.changeDocument(instance.handle, (document) => {
                 const stored = document as unknown as StoredInstanceForTest;
                 const table = stored.tables[personTable.id];
                 if (table === undefined) {
@@ -490,7 +502,7 @@ describe("tabular instances", () => {
         expect(validation.tables.map((table) => table.label)).toEqual(["Person"]);
 
         instance.deleteRow(personTable.id, row.id);
-        expect(instance.document.tables[personTable.id]?.rows[row.id]).toBeUndefined();
+        expect(instance.dump().tables[personTable.id]?.rows[row.id]).toBeUndefined();
     });
 
     test("rows can be added and edited while the schema is partially valid", async () => {
@@ -515,7 +527,7 @@ describe("tabular instances", () => {
         const alice = expectOk(await instance.addRow(personTable, { name: "Alice" }));
         expectOk(await instance.set(alice, nameHeader, "Alicia"));
         expect(
-            instance.document.tables[personTable.id]?.rows[alice.id]?.fields[nameHeader.id],
+            instance.dump().tables[personTable.id]?.rows[alice.id]?.fields[nameHeader.id],
         ).toEqual({
             String: "Alicia",
         });
@@ -588,7 +600,7 @@ describe("tabular instances", () => {
             }
             const alice = expectOk(await instance.addRow(personTable, { name: "Alice" }));
 
-            store.changeDocument(instance.document as Document, (document) => {
+            store.changeDocument(instance.handle, (document) => {
                 const stored = document as unknown as StoredInstanceForTest;
                 const row = stored.tables[personTable.id]?.rows[alice.id];
                 if (row === undefined) {
@@ -644,7 +656,7 @@ describe("tabular instances", () => {
                 await binder.createInstance(schema, { title: "Company instance" }),
             );
 
-            store.changeDocument(instance.document as Document, (document) => {
+            store.changeDocument(instance.handle, (document) => {
                 const stored = document as unknown as StoredInstanceForTest;
                 stored.tables["ghost-table"] = {
                     rows: { "ghost-row": { fields: { mystery: { Int: 3 } } } },
@@ -693,7 +705,7 @@ describe("deleting orphaned instance data", () => {
             await binder.createInstance(schema, { title: "Company instance" }),
         );
 
-        store.changeDocument(instance.document as Document, (document) => {
+        store.changeDocument(instance.handle, (document) => {
             const stored = document as unknown as StoredInstanceForTest;
             stored.tables["ghost-table"] = {
                 rows: { "ghost-row": { fields: { mystery: { Int: 3 } } } },
@@ -709,7 +721,7 @@ describe("deleting orphaned instance data", () => {
         const validation = await instance.validate();
         expect(validation.issues).toEqual([]);
         expect(validation.tables.map((table) => table.label)).toEqual(["Person"]);
-        expect(instance.document.tables["ghost-table"]).toBeUndefined();
+        expect(instance.dump().tables["ghost-table"]).toBeUndefined();
     });
 
     test("deleteOrphanedTable refuses schema tables and unknown ids", async () => {
@@ -730,7 +742,7 @@ describe("deleting orphaned instance data", () => {
         expect(schemaIssues[0]?.message).toBe(
             `Table \`${personTable.id}\` exists in the schema and is not orphaned`,
         );
-        expect(instance.document.tables[personTable.id]).toBeDefined();
+        expect(instance.dump().tables[personTable.id]).toBeDefined();
 
         const unknownIssues = expectErr(await instance.deleteOrphanedTable("no-such-table"));
         expect(unknownIssues[0]?.message).toBe("Table `no-such-table` does not exist");
@@ -755,7 +767,7 @@ describe("deleting orphaned instance data", () => {
         const alice = expectOk(await instance.addRow(personTable, { name: "Alice" }));
         const bob = expectOk(await instance.addRow(personTable, { name: "Bob" }));
 
-        store.changeDocument(instance.document as Document, (document) => {
+        store.changeDocument(instance.handle, (document) => {
             const stored = document as unknown as StoredInstanceForTest;
             const rows = stored.tables[personTable.id]?.rows;
             if (rows === undefined) {
@@ -775,7 +787,7 @@ describe("deleting orphaned instance data", () => {
         expect(revalidation.issues).toEqual([]);
         const table = revalidation.tables.find((table) => table.id === personTable.id);
         expect(table?.headers.map((header) => header.id)).toEqual([nameHeader.id]);
-        const storedRows = instance.document.tables[personTable.id]?.rows;
+        const storedRows = instance.dump().tables[personTable.id]?.rows;
         expect(storedRows?.[alice.id]?.fields).toEqual({ [nameHeader.id]: { String: "Alice" } });
         expect(storedRows?.[bob.id]?.fields).toEqual({ [nameHeader.id]: { String: "Bob" } });
     });
@@ -798,7 +810,7 @@ describe("deleting orphaned instance data", () => {
         }
         const alice = expectOk(await instance.addRow(personTable, { name: "Alice" }));
 
-        store.changeDocument(instance.document as Document, (document) => {
+        store.changeDocument(instance.handle, (document) => {
             const stored = document as unknown as StoredInstanceForTest;
             stored.tables["ghost-table"] = {
                 rows: { "ghost-row": { fields: { mystery: { Int: 3 } } } },
@@ -812,7 +824,7 @@ describe("deleting orphaned instance data", () => {
         expect(headerIssues[0]?.message).toBe(
             `Field \`${nameHeader.id}\` in table \`Person\` exists in the schema and is not orphaned`,
         );
-        expect(instance.document.tables[personTable.id]?.rows[alice.id]?.fields).toEqual({
+        expect(instance.dump().tables[personTable.id]?.rows[alice.id]?.fields).toEqual({
             [nameHeader.id]: { String: "Alice" },
         });
 
@@ -820,7 +832,7 @@ describe("deleting orphaned instance data", () => {
             await instance.deleteOrphanedColumn("ghost-table", "mystery"),
         );
         expect(tableIssues[0]?.message).toBe("Table `ghost-table` does not exist in the schema");
-        expect(instance.document.tables["ghost-table"]?.rows["ghost-row"]?.fields).toEqual({
+        expect(instance.dump().tables["ghost-table"]?.rows["ghost-row"]?.fields).toEqual({
             mystery: { Int: 3 },
         });
     });

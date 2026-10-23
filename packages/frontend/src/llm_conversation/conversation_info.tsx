@@ -1,11 +1,12 @@
 import { A } from "@solidjs/router";
+import { createDocumentDataView } from "catcolab-documents-solid";
 
 import type { LiveLLMConversationDoc } from "./live_doc_compatibility";
 
 /** Attached document link shown in an LLM conversation document head. */
 export function LLMConversationInfo(props: { liveConversation: LiveLLMConversationDoc }) {
     const attachedRefId = () => props.liveConversation.liveDoc.doc.llmConversationOf._id;
-    const attachedDoc = () => props.liveConversation.attachment.document;
+    const attachedDoc = createDocumentDataView(() => props.liveConversation.attachment);
 
     return (
         <>

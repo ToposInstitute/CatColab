@@ -193,15 +193,15 @@ describe("transactions", () => {
             }
 
             const row = expectOk(await draftDocs.instance.addRow(personTable));
-            expect(instance.document.tables[personTable.id]?.rows[row.id]).toBeUndefined();
+            expect(instance.dump().tables[personTable.id]?.rows[row.id]).toBeUndefined();
 
             const commit = tx.commit();
-            expect(instance.document.tables[personTable.id]?.rowOrder).toEqual([row.id]);
+            expect(instance.dump().tables[personTable.id]?.rowOrder).toEqual([row.id]);
 
             instance.revert(commit);
             // Reverting restores the exact pre-commit state, where the table
             // did not exist yet at all.
-            expect(instance.document.tables[personTable.id]).toBeUndefined();
+            expect(instance.dump().tables[personTable.id]).toBeUndefined();
         },
     );
 });

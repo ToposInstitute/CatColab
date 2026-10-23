@@ -12,8 +12,16 @@
         "test/creating-and-editing.test-d.ts",
         "test/definitions.test.ts",
         "test/instances.test.ts",
+        "test/merge-order.test.ts",
+        "test/snapshot-store.test.ts",
+        "test/validation-snapshots.test.ts",
         "test/llm-conversation.test.ts",
         "test/path-equations.test.ts",
-        "test/binder.test-d.ts"
+        "test/notebook-data.test.ts",
+        "test/notebook-update.test.ts",
+        "test/binder.test-d.ts",
+        "test/structurally-valid.test-d.ts",
+        "test/instance-data.test.ts",
+        "test/parse-structure.test.ts"
     ]
 }

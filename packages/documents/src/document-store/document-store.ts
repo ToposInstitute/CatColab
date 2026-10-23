@@ -1,5 +1,6 @@
 import type { Document, Link, LinkType } from "catcolab-document-types";
 import type { Result } from "../result";
+import type { DeepReadonly } from "../util/deep-readonly";
 
 export interface DocumentRef {
     id: string;
@@ -58,17 +59,15 @@ export interface DocumentStore<Handle, Version = unknown> {
     getHandle(ref: DocumentRef): Promise<Result<Handle>>;
     // Apply modifications to a handle.
     changeDocument(handle: Handle, fn: (doc: Document) => void): void;
-    // Subscribe change callbacks to our store for `onChange`. Returns a
-    // function to unsubscribe.
-    subscribe(handle: Handle, callback: () => void): () => void;
-    // Copy values (with any proxies removed)
-    copyValue<T>(handle: Handle, value: T): T;
+    //  Subscribe a callback to document changes. Although onChange has an
+    //  initial delivery this is handled by catcolab-documents, this subscribe
+    //  does not need to deliver that. Callbacks receive the changed handle;
+    //  read its current state through getDocumentSnapshot.
+    subscribe(handle: Handle, callback: (handle: Handle) => void): () => void;
     // Get the reference for a handle
     getDocumentRef(handle: Handle): DocumentRef;
-    // Get a document view from a handle
-    getDocumentView(handle: Handle): Readonly<Document>;
-    // An unproxied snapshot, if the store can obtain one more directly than copyValue.
-    getDocumentSnapshot?(handle: Handle): Readonly<Document>;
+    // Return an immutable snapshot of the document's current state.
+    getDocumentSnapshot(handle: Handle): DeepReadonly<Document>;
     // List the documents that depend on the document at `handle`, indexed by
     // the type of the link through which each depends on it.
     listUsedBy(handle: Handle): Promise<HandlesByLinkType<Handle>>;
@@ -89,9 +88,6 @@ export interface DocumentStore<Handle, Version = unknown> {
 export function getDocumentSnapshot<Handle>(
     store: DocumentStore<Handle>,
     handle: Handle,
-): Readonly<Document> {
-    return (
-        store.getDocumentSnapshot?.(handle) ??
-        store.copyValue(handle, store.getDocumentView(handle))
-    );
+): DeepReadonly<Document> {
+    return store.getDocumentSnapshot(handle);
 }

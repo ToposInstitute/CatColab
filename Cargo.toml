@@ -10,6 +10,7 @@ exclude = [
   "packages/algjulia-interop",
   "packages/document-methods",
   "packages/documents",
+  "packages/documents-solid",
   "packages/frontend",
   "packages/gaios",
   "packages/logics",

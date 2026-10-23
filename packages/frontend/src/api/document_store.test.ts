@@ -1,12 +1,12 @@
 // @vitest-environment happy-dom
 // The happy-dom environment makes solid-js resolve to its reactive client
 // build, which the reactive projection tests depend on.
-import { getObjectId, spans, splice, splitBlock } from "@automerge/automerge";
+import { spans, splice, splitBlock } from "@automerge/automerge";
 import { Repo } from "@automerge/automerge-repo";
 import type { UserState } from "catcolab-api/src/user_state";
+import { createDocumentDataView, createInstanceValidationView } from "catcolab-documents-solid";
 import { SimpleOlog, Type } from "catcolab-logics/simple-olog";
 import { createRenderEffect, createRoot } from "solid-js";
-import { unwrap } from "solid-js/store";
 import { parse as uuidParse } from "uuid";
 import { describe, expect, test } from "vitest";
 
@@ -72,6 +72,7 @@ function createFixture() {
     const store = createApiDocumentStore(api, userState);
 
     return {
+        repo,
         binder: createBinder(store),
         instanceAutomergeHandle,
         instanceLiveDoc,
@@ -127,7 +128,54 @@ describe("API document store", () => {
         expect(Object.keys(storedTable?.rows ?? {})).toHaveLength(1);
     });
 
-    test("document views apply map key deletions", async () => {
+    test("instance views refresh after committing an unchanged schema draft", async () => {
+        const { binder, schema, store, schemaAutomergeHandle } = await createFixtureWithSchema();
+        schema.add(Type, { label: "Person" });
+        const result = await binder.loadInstanceFromRef(schema, {
+            id: instanceRef,
+            version: null,
+            server,
+        });
+        if (result.tag !== "Ok") {
+            throw new Error("expected instance to load");
+        }
+        const instance = result.content;
+        const table = (await instance.validate()).tables[0];
+        if (!table) {
+            throw new Error("expected entity table");
+        }
+        const row = await instance.addRow(table);
+        if (row.tag !== "Ok") {
+            throw new Error("expected row to be added");
+        }
+        const { validation, dispose } = createRoot((dispose) => ({
+            validation: createInstanceValidationView(instance),
+            dispose,
+        }));
+        try {
+            await expect.poll(() => validation()?.tables[0]?.rows.length).toBe(1);
+            const before = store.getDocumentSnapshot(schema.handle);
+            const rootBefore = schemaAutomergeHandle.doc();
+            const schemaDraft = store.createDraft(schema.handle);
+            const instanceDraft = store.createDraft(instance.handle);
+            store.changeDocument(instanceDraft, (document) => {
+                const stored = document as InstanceDocument;
+                delete stored.tables[table.id]!.rows[row.content.id];
+                stored.tables[table.id]!.rowOrder = [];
+            });
+
+            // LLM transactions merge the schema even when only instance rows changed.
+            store.commitDraft(schema.handle, schemaDraft);
+            expect(schemaAutomergeHandle.doc()).not.toBe(rootBefore);
+            expect(store.getDocumentSnapshot(schema.handle)).toBe(before);
+            store.commitDraft(instance.handle, instanceDraft);
+            await expect.poll(() => validation()?.tables[0]?.rows.length).toBe(0);
+        } finally {
+            dispose();
+        }
+    });
+
+    test("document snapshots apply map key deletions", async () => {
         const { binder, schema, store } = await createFixtureWithSchema();
         schema.add(Type, { label: "Person" });
 
@@ -148,12 +196,14 @@ describe("API document store", () => {
             throw new Error("expected row to be added");
         }
 
-        const view = store.getDocumentView(instance.content.handle) as InstanceDocument;
-        expect(Object.keys(view.tables[table.id]?.rows ?? {})).toEqual([added.content.id]);
+        const before = store.getDocumentSnapshot(instance.content.handle) as InstanceDocument;
+        expect(Object.keys(before.tables[table.id]?.rows ?? {})).toEqual([added.content.id]);
 
         instance.content.deleteRow(table.id, added.content.id);
-        expect(view.tables[table.id]?.rows).toEqual({});
-        expect(view.tables[table.id]?.rowOrder).toEqual([]);
+        const after = store.getDocumentSnapshot(instance.content.handle) as InstanceDocument;
+        expect(after.tables[table.id]?.rows).toEqual({});
+        expect(after.tables[table.id]?.rowOrder).toEqual([]);
+        expect(Object.keys(before.tables[table.id]?.rows ?? {})).toEqual([added.content.id]);
     });
 
     test("rejects a document with the wrong type", async () => {
@@ -198,22 +248,26 @@ describe("API document store", () => {
 
         const names: string[] = [];
         const dispose = createRoot((dispose) => {
+            const data = createDocumentDataView(() => schema);
             createRenderEffect(() => {
-                names.push(store.getDocumentView(handle.content).name);
+                names.push(data().name);
             });
             return dispose;
         });
 
-        store.changeDocument(handle.content, (doc) => {
-            doc.name = "Renamed";
-        });
-        dispose();
+        try {
+            store.changeDocument(handle.content, (doc) => {
+                doc.name = "Renamed";
+            });
+        } finally {
+            dispose();
+        }
 
         expect(names).toEqual(["", "Renamed"]);
         expect(schema.title).toBe("Renamed");
     });
 
-    test("document views tolerate rich text block markers", async () => {
+    test("document snapshots tolerate rich text block markers", async () => {
         const { schemaAutomergeHandle, store } = createFixture();
 
         // The ProseMirror integration stores paragraphs as block markers
@@ -232,7 +286,7 @@ describe("API document store", () => {
         if (local.tag === "Err") {
             throw new Error("expected local ref to resolve");
         }
-        const view = store.getDocumentView(local.content) as ModelDocument;
+        const view = store.getDocumentSnapshot(local.content) as ModelDocument;
         expect(view.notebook.cellContents[cell.id]?.content).toContain("Hello");
 
         schemaAutomergeHandle.change((doc) => {
@@ -240,7 +294,9 @@ describe("API document store", () => {
             splitBlock(doc, path, 6, { type: "paragraph", parents: [], attrs: {} });
             splice(doc, path, 7, 0, "World");
         });
-        expect(view.notebook.cellContents[cell.id]?.content).toContain("World");
+        const updated = store.getDocumentSnapshot(local.content) as ModelDocument;
+        expect(updated.notebook.cellContents[cell.id]?.content).toContain("World");
+        expect(view.notebook.cellContents[cell.id]?.content).not.toContain("World");
     });
 
     test("resolves local refs to canonical cached handles", async () => {
@@ -310,72 +366,79 @@ describe("API document store", () => {
         });
     });
 
-    test("copyValue detaches Solid projection values", async () => {
-        const { store } = createFixture();
+    test("snapshots are stable, detached, and refresh without subscribers", async () => {
+        const { schema, store } = await createFixtureWithSchema();
+        const before = store.getDocumentSnapshot(schema.handle);
+        expect(store.getDocumentSnapshot(schema.handle)).toBe(before);
+        expect(() => structuredClone(before)).not.toThrow();
+        schema.update({ title: "Changed" });
+        const after = store.getDocumentSnapshot(schema.handle);
+        expect(after).not.toBe(before);
+        expect(after).toMatchObject({ name: "Changed" });
+        expect(before).toMatchObject({ name: "" });
+        expect(store.getDocumentSnapshot(schema.handle)).toBe(after);
+    });
 
-        const local = await store.getHandle({ id: schemaRef, version: null });
-        expect(local.tag).toBe("Ok");
-        if (local.tag === "Err") {
-            throw new Error("expected local ref to resolve");
-        }
-        const handle = local.content;
-
-        const view = store.getDocumentView(handle) as ModelDocument;
-        const copy = store.copyValue(handle, view);
-
-        // A genuine deep copy: neither the store proxy nor its raw target.
-        expect(copy).not.toBe(view);
-        expect(copy).not.toBe(unwrap(view));
-        expect(copy).toEqual(unwrap(view));
-        expect(copy.notebook).not.toBe(unwrap(view).notebook);
-
-        // Mutating the copy leaves the document untouched.
-        copy.name = "mutated copy";
-        expect(store.getDocumentView(handle).name).toBe("");
-
-        // Mutating the document leaves the copy stale.
-        store.changeDocument(handle, (doc) => {
-            doc.name = "changed";
+    test("subscriptions deliver handles without initial delivery", async () => {
+        const { schema, store } = await createFixtureWithSchema();
+        const received: object[] = [];
+        const stop = store.subscribe(schema.handle, (handle) => {
+            expect(handle).toBe(schema.handle);
+            received.push(store.getDocumentSnapshot(handle));
         });
-        expect(copy.name).toBe("mutated copy");
+        expect(received).toEqual([]);
+        schema.update({ title: "Changed" });
+        expect(received).toEqual([store.getDocumentSnapshot(schema.handle)]);
+        stop();
+        stop();
+        schema.update({ title: "Unobserved" });
+        expect(received).toHaveLength(1);
     });
 
-    test("copyValue detaches Automerge proxy values", async () => {
-        const { schemaAutomergeHandle, store } = createFixture();
-
-        const local = await store.getHandle({ id: schemaRef, version: null });
-        expect(local.tag).toBe("Ok");
-        if (local.tag === "Err") {
-            throw new Error("expected local ref to resolve");
-        }
-        const handle = local.content;
-
-        const notebook = (schemaAutomergeHandle.doc() as ModelDocument).notebook;
-        expect(getObjectId(notebook)).not.toBeNull();
-
-        const copy = store.copyValue(handle, notebook);
-        expect(copy).not.toBe(notebook);
-        expect(copy).toEqual(notebook);
-
-        // Mutating the copy succeeds (an Automerge proxy would throw outside a
-        // change context) and does not touch the document.
-        copy.cellOrder.push("bogus-cell");
-        expect((schemaAutomergeHandle.doc() as ModelDocument).notebook.cellOrder).toHaveLength(0);
+    test("edits during notifications preserve saved snapshots while reads reflect current state", async () => {
+        const { schema, store } = await createFixtureWithSchema();
+        const received: object[] = [];
+        let outerSnapshot: object | undefined;
+        const stopFirst = store.subscribe(schema.handle, (handle) => {
+            const snapshot = store.getDocumentSnapshot(handle);
+            if (snapshot.name === "Outer") {
+                outerSnapshot = snapshot;
+                schema.update({ title: "Inner" });
+            }
+        });
+        const stopSecond = store.subscribe(schema.handle, (handle) =>
+            received.push(store.getDocumentSnapshot(handle)),
+        );
+        schema.update({ title: "Outer" });
+        // Automerge defers the listener's edit until the current change is delivered.
+        expect(received).toMatchObject([{ name: "Outer" }, { name: "Inner" }]);
+        expect(outerSnapshot).toMatchObject({ name: "Outer" });
+        expect(store.getDocumentSnapshot(schema.handle)).toBe(received[1]);
+        stopFirst();
+        stopSecond();
     });
 
-    test("copyValue passes primitives through", async () => {
-        const { store } = createFixture();
-
-        const local = await store.getHandle({ id: schemaRef, version: null });
-        expect(local.tag).toBe("Ok");
-        if (local.tag === "Err") {
-            throw new Error("expected local ref to resolve");
-        }
-        const handle = local.content;
-
-        expect(store.copyValue(handle, 42)).toBe(42);
-        expect(store.copyValue(handle, "x")).toBe("x");
-        expect(store.copyValue(handle, null)).toBeNull();
+    test("drafts, commits, undo, and remote merges select fresh snapshots", async () => {
+        const { schema, store, schemaAutomergeHandle, repo } = await createFixtureWithSchema();
+        const before = store.getDocumentSnapshot(schema.handle);
+        const draft = store.createDraft(schema.handle);
+        store.changeDocument(draft, (doc) => {
+            doc.name = "Draft";
+        });
+        const draftSnapshot = store.getDocumentSnapshot(draft);
+        expect(store.getDocumentSnapshot(schema.handle)).toBe(before);
+        const change = store.commitDraft(schema.handle, draft);
+        expect(store.getDocumentSnapshot(schema.handle)).toMatchObject({ name: "Draft" });
+        store.revertCommit(schema.handle, change);
+        expect(store.getDocumentSnapshot(schema.handle)).toMatchObject({ name: "" });
+        expect(draftSnapshot).toMatchObject({ name: "Draft" });
+        expect(before).toMatchObject({ name: "" });
+        const remote = repo.clone(schemaAutomergeHandle);
+        remote.change((doc) => {
+            doc.name = "Remote";
+        });
+        schemaAutomergeHandle.merge(remote);
+        expect(store.getDocumentSnapshot(schema.handle)).toMatchObject({ name: "Remote" });
     });
 
     test("notebook dump returns a detached plain document", async () => {
@@ -390,8 +453,8 @@ describe("API document store", () => {
         const handle = local.content;
 
         const dumped = schema.dump();
-        expect(dumped).not.toBe(store.getDocumentView(handle));
-        expect(dumped).toEqual(unwrap(store.getDocumentView(handle)));
+        expect(dumped).not.toBe(store.getDocumentSnapshot(handle));
+        expect(dumped).toEqual(store.getDocumentSnapshot(handle));
 
         // Mutating the dump does not write back to the notebook.
         dumped.name = "mutated dump";

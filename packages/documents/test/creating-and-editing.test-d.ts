@@ -7,6 +7,7 @@ import {
     defineMorphism,
     defineObject,
     defineShape,
+    RichText,
     type Notebook,
 } from "catcolab-documents";
 
@@ -40,7 +41,7 @@ describe("creating and editing notebooks (type level)", () => {
         const arrow = notebook.add(Aspect, { label: "has", from: source, to: target });
 
         // @ts-expect-error Arrays are not valid endpoints in a simple olog.
-        arrow.update({ from: [source] });
+        notebook.update(arrow, { from: [source] });
 
         // @ts-expect-error Arrays are not valid endpoints in a simple olog.
         notebook.add(Aspect, { label: "bad", from: [source, target], to: target });
@@ -62,13 +63,37 @@ describe("creating and editing notebooks (type level)", () => {
             to: attrType,
         });
 
-        attr.update({ from: entity, to: attrType });
+        notebook.update(attr, { from: entity, to: attrType });
 
         // @ts-expect-error Attribute domains must be entities.
-        attr.update({ from: attrType });
+        notebook.update(attr, { from: attrType });
         // @ts-expect-error Attribute codomains must be attribute types.
-        attr.update({ to: entity });
+        notebook.update(attr, { to: entity });
         // @ts-expect-error Attribute endpoints cannot be reversed.
         notebook.add(Attr, { label: "bad", from: attrType, to: entity });
+    });
+});
+
+describe("notebook.update endpoint typing", () => {
+    test("rejects endpoints of the wrong type", async () => {
+        const binder = createBinder();
+        const notebook = await binder.createNotebook(SimpleSchema, { title: "A schema" });
+
+        const entity = notebook.add(Entity, { label: "Person" });
+        const attrType = notebook.add(AttrType, { label: "String" });
+        const attr = notebook.add(Attr, { label: "name", from: entity, to: attrType });
+        const attrData = notebook.data().cells.find((cell) => cell.id === attr.id);
+        if (attrData?.kind !== "morphism") {
+            throw new Error("expected morphism data");
+        }
+
+        notebook.update(attr, { from: entity, to: attrType });
+        notebook.update(attrData, { label: "name" });
+        // @ts-expect-error Attribute domains must be entities.
+        notebook.update(attr, { from: attrType });
+        // @ts-expect-error Object cells have no endpoints.
+        notebook.update(entity, { from: entity });
+        // @ts-expect-error Rich text cells have no label.
+        notebook.update(notebook.add(RichText, { content: "x" }), { label: "x" });
     });
 });

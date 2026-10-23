@@ -2,6 +2,7 @@ import { LLMConversation } from "catcolab-document-methods";
 import type { InlineFile, LLMInteraction } from "catcolab-document-types";
 import type {
     Binder,
+    DeepReadonly,
     LLMConversation as LLMConversationAPI,
     Shape,
     SupportedDocument,
@@ -34,7 +35,7 @@ export type LLMConversationUserInput = {
 };
 
 /** Project a persisted inline file into attachment policy metadata. */
-export function inlineFileMetadata(file: InlineFile): ConversationAttachmentMetadata {
+export function inlineFileMetadata(file: DeepReadonly<InlineFile>): ConversationAttachmentMetadata {
     return {
         filename: file.filename,
         mediaType: file.mediaType,
@@ -44,7 +45,7 @@ export function inlineFileMetadata(file: InlineFile): ConversationAttachmentMeta
 
 /** Project all persisted conversation attachments into attachment policy metadata. */
 export function conversationAttachmentMetadata(
-    interactions: readonly LLMInteraction[],
+    interactions: DeepReadonly<LLMInteraction[]>,
 ): ConversationAttachmentMetadata[] {
     const result: ConversationAttachmentMetadata[] = [];
     for (const interaction of interactions) {
@@ -141,7 +142,7 @@ async function generateLLMConversationResponse<
             context.transcript,
             { ...executionScope.bindings, files: context.files },
             onEvent,
-            conversation.document.llmModel,
+            conversation.data().llmModel,
             executionScope.systemPromptSuffix,
             async () => {
                 const problems = await executionScope.validate();
@@ -277,7 +278,7 @@ function generatedChatMessageDeltaToLLMInteractions(
 }
 
 function validateUserInput(
-    interactions: readonly LLMInteraction[],
+    interactions: DeepReadonly<LLMInteraction[]>,
     input: LLMConversationUserInput,
 ): JsResult<void, string> {
     if (!input.content.trim() && input.files.length === 0) {

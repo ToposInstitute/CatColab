@@ -126,6 +126,10 @@ jobs:
         run: |
           nix develop --command pnpm --filter catcolab-documents test
 
+      - name: Typescript documents Solid package tests
+        run: |
+          nix develop --command pnpm --filter catcolab-documents-solid test
+
       - name: Typescript logic package tests
         run: |
           nix develop --command pnpm --filter catcolab-logics test

@@ -1,4 +1,3 @@
-import type { Document } from "catcolab-document-types";
 import type { InstanceValidation, Issue, ModelValidation } from "catcolab-documents";
 
 type DocumentValidation = ModelValidation | InstanceValidation;
@@ -8,7 +7,6 @@ type DocumentValidation = ModelValidation | InstanceValidation;
  * Conversation drafts have nothing to validate, so they omit `validate`.
  */
 export type DocumentDraft = {
-    readonly document: Readonly<Document>;
     readonly title: string;
     validate?(): Promise<DocumentValidation>;
 };

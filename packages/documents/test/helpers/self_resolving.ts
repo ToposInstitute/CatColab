@@ -8,7 +8,7 @@ import type { DocumentStore } from "catcolab-documents";
  * since `validate` resolves a notebook's own model by taking a reference to its
  * handle. Each handle is assigned a stable id and registered so the shared
  * recursive elaborator can fetch it back (via `getHandle`, then view its
- * document with the store's own `getDocumentView`) and elaborate it against the
+ * document with the store's own `getDocumentSnapshot`) and elaborate it against the
  * host notebook's core theory (supplied by `validate`).
  *
  * Used by the test fixtures' stores so a no-instantiation notebook validates

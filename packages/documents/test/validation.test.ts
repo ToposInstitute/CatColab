@@ -92,7 +92,7 @@ describe("onValidate", { timeout: 20000 }, () => {
         if (!source) {
             throw new Error("Expected a source object");
         }
-        source.delete();
+        notebook.delete(source);
 
         while (results.length === initialCount) {
             await new Promise((resolve) => setTimeout(resolve));

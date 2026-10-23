@@ -9,7 +9,7 @@ describe("the simple-olog logic", () => {
         const binder = createBinder();
         const notebook = await binder.createNotebook(SimpleOlog, { title: "An Olog" });
 
-        expect(notebook.document.theory).toBe("simple-olog");
+        expect(notebook.data().theory).toBe("simple-olog");
 
         const a = notebook.add(Type, { label: "A" });
         const b = notebook.add(Type, { label: "B" });

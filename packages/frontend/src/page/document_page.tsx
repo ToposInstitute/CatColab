@@ -143,7 +143,7 @@ export default function DocumentPage() {
 
         const conversationRefId = primary.docRef.refId;
         const attachmentRefId = primary.liveDoc.liveDoc.doc.llmConversationOf._id;
-        const attachmentType = primary.liveDoc.attachment.document.type;
+        const attachmentType = primary.liveDoc.attachment.data().type;
         const query = new URLSearchParams(location.search);
         query.set("llmconversation", conversationRefId);
         navigate(`/${attachmentType}/${attachmentRefId}?${query}`, { replace: true });
