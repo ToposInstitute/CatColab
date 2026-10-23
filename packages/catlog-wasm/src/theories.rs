@@ -8,6 +8,7 @@ use wasm_bindgen::prelude::*;
 
 use catlog::dbl::theory::{self as theory, NonUnital, Unital};
 use catlog::one::Path;
+use catlog::stdlib::analyses::ode::ODESemanticsAnalysis;
 use catlog::stdlib::{analyses, models, theories, theory_morphisms};
 use catlog::zero::name;
 
@@ -149,16 +150,13 @@ impl ThSignedCategory {
         &self,
         model: &DblModel,
         data: analyses::ode::LotkaVolterraProblemData,
-    ) -> Result<ODEResult, String> {
-        Ok(ODEResult(
-            analyses::ode::SignedCoefficientBuilder::new(name("Object"))
-                .add_positive(Path::Id(name("Object")))
-                .add_negative(name("Negative").into())
-                .lotka_volterra_analysis(model.discrete()?, data)
-                .solve_with_defaults()
-                .map_err(|err| format!("{err:?}"))
-                .into(),
-        ))
+    ) -> Result<ODEResultWithEquations, String> {
+        let system =
+            analyses::ode::LotkaVolterraAnalysis::default().build_system(model.discrete()?);
+        ode_semantics_simulation::<
+            analyses::ode::LotkaVolterraSemantics,
+            analyses::ode::LotkaVolterraProblemData,
+        >(model, data, system)
     }
 
     /// Simulate the linear ODE system derived from a model.
@@ -167,16 +165,12 @@ impl ThSignedCategory {
         &self,
         model: &DblModel,
         data: analyses::ode::LinearODEProblemData,
-    ) -> Result<ODEResult, String> {
-        Ok(ODEResult(
-            analyses::ode::SignedCoefficientBuilder::new(name("Object"))
-                .add_positive(Path::Id(name("Object")))
-                .add_negative(name("Negative").into())
-                .linear_ode_analysis(model.discrete()?, data)
-                .solve_with_defaults()
-                .map_err(|err| format!("{err:?}"))
-                .into(),
-        ))
+    ) -> Result<ODEResultWithEquations, String> {
+        let system = analyses::ode::LinearODEAnalysis::default().build_system(model.discrete()?);
+        ode_semantics_simulation::<
+            analyses::ode::LinearODESemantics,
+            analyses::ode::LinearODEProblemData,
+        >(model, data, system)
     }
 }
 
