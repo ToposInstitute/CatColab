@@ -19,11 +19,11 @@ Elaborating on these keywords, CatColab aims to be:
 - **Conceptual**: Each domain-specific logic in the system is well adapted to
   the concepts used by practitioners in that domain.
 - **Modeling**: Constructing a model is a collaborative, ongoing process that
-  does not required participants to have specialized technical expertise.
+  does not require participants to have specialized technical expertise.
 
 ## Versions
 
-There are two versions of CatColab available to use:
+Two versions of CatColab are available to use:
 
 - The **production version**: [catcolab.org](https://catcolab.org). This tracks
   the latest [release](https://github.com/ToposInstitute/CatColab/releases), so
@@ -42,6 +42,24 @@ A version history is maintained in the [`CHANGELOG`](CHANGELOG.md).
 | Software developer | [next.catcolab.org/dev](https://next.catcolab.org/dev) |
 | Mathematician | [next.catcolab.org/math](https://next.catcolab.org/math) |
 | Researcher/developer | [next.catcolab.org/rfc](https://next.catcolab.org/rfc) |
+
+## Citation
+
+To cite CatColab, you can use the following `biblatex` entry:
+
+```bibtex
+@software{catcolab,
+  title={{CatColab}: A collaborative environment for formal, interoperable, conceptual modeling},
+  author={{The CatColab development team}},
+  url={https://catcolab.org},
+  note={Open source at \url{https://github.com/ToposInstitute/CatColab}},
+  date={2026}
+}
+```
+
+There is not yet a canonical publication for CatColab itself. For the research
+that CatColab is based on, a partial bibliography can be found in the [math
+docs](https://next.catcolab.org/math/bib-0001.xml).
 
 ## License
 
