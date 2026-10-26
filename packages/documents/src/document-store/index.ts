@@ -5,4 +5,4 @@ export type {
     HandlesByLinkType,
 } from "./document-store";
 export { documentLinks, emptyHandlesByLinkType, getDocumentSnapshot } from "./document-store";
-export { createInMemoryStore } from "./in-memory";
+export { createDocumentSnapshot, createInMemoryStore } from "./in-memory";

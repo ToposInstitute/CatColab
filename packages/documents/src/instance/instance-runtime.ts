@@ -1,17 +1,18 @@
-import type { InstanceDocument } from "catcolab-document-methods";
 import type { DocumentStore } from "../document-store";
 import type { ModelDocument } from "../model/document";
+import type { Notebook } from "../model/document";
 import type { ElaboratedModel, ModelValidation } from "../model/elaborated-model";
-import type { Notebook } from "../model/notebook";
 import type { Result } from "../result";
 import type { InstanceCapableShape, Shape } from "../shape";
+import { parseInstanceData } from "./data";
+import type { InstanceValidation } from "./document";
 import { validatePathEquations } from "./equation-validation";
-import type { InstanceValidation } from "./instance";
 import {
     addInstanceRowsToStore,
     deleteOrphanedFieldFromStore,
     deleteOrphanedTableFromStore,
     instanceTablesFromModel,
+    indexInstanceTables,
     readInstancePath,
     tablesWithOrphanedData,
     updateInstanceFieldByIdInStore,
@@ -180,23 +181,39 @@ export function createInstanceValidator<Handle, S extends Shape, Version>(
     handle: Handle,
 ): (schemaValidation: ModelValidation<S>) => InstanceValidation<S> {
     return (schemaValidation) => {
+        const parsed = parseInstanceData(store.getDocumentSnapshot(handle));
+        const data = parsed.tag === "Err" ? undefined : parsed.content.value;
+        const storedTables = indexInstanceTables(data?.tables ?? []);
+        const structuralIssues =
+            parsed.tag === "Err"
+                ? parsed.content.map((issue) => ({
+                      message: `Cannot parse instance document (${issue.path.map(String).join(".")}): ${issue.message}`,
+                      path: [],
+                  }))
+                : parsed.content.issues.map((issue) => ({
+                      message: issue.message,
+                      path: issue.path.slice(1),
+                  }));
         const schemaTables = instanceTablesFromModel(
             instanceCapableShape(schema),
-            store,
-            handle,
+            storedTables,
             schemaValidation.model,
         );
-        const document = store.getDocumentView(handle) as Readonly<InstanceDocument>;
-        const tables = tablesWithOrphanedData(store, handle, schemaTables);
+        const tables = tablesWithOrphanedData(storedTables, schemaTables);
         const issues = [
-            ...validateInstanceTables(document, schemaTables),
+            ...structuralIssues.map((issue) => ({
+                message: issue.message,
+                path: issue.path,
+                issueType: "MalformedDocument" as const,
+            })),
+            ...(data === undefined ? [] : validateInstanceTables(data, schemaTables)),
             ...validatePathEquations(tables, schemaValidation.model),
         ];
         return {
             modelValidation: schemaValidation,
             tables,
             issues,
-            get: (path) => readInstancePath(store, handle, tables, path),
+            get: (path) => readInstancePath(storedTables, tables, path),
         };
     };
 }

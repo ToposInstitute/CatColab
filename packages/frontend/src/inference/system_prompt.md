@@ -17,9 +17,11 @@ The bindings in scope are described in the system message at the end of each req
 A notebook binding `nb` has:
 
 - `nb.title` --- the document title; `nb.update({ title })` renames it.
-- `nb.cells()` --- all cells in notebook order; `nb.cellsOf(type)` --- the cells of one cell type.
+- `nb.cells()` --- cells supported by the notebook's shape, in notebook order; `nb.cellsOf(type)` --- the cells of one cell type. These are immutable data snapshots, not live handles: re-read them after edits to see updated values.
+- `nb.data()` --- snapshot of the notebook's metadata (`type`, `name`, `theory`) and all `cells`, including cells outside the shape.
+- `nb.update(cell, patch)` and `nb.delete(cell)` --- edit or delete a cell, addressed by its `id`.
 - `nb.supports(type)` --- whether the notebook's shape supports the cell type.
-- `nb.add(type, values)` --- add a cell of a cell type in scope and return its handle. `type` is one of the cell-type bindings in scope and carries a `kind` --- `"object"`, `"morphism"`, `"path-equation"`, or `"rich-text"` --- which determines the shape of `values`:
+- `nb.add(type, values)` --- add a cell of a cell type in scope and return its cell data snapshot. `type` is one of the cell-type bindings in scope and carries a `kind` --- `"object"`, `"morphism"`, `"path-equation"`, or `"rich-text"` --- which determines the shape of `values`:
     - `"object"`: `{ label }`
     - `"morphism"`: `{ label, from, to }` --- `from`/`to` are existing object cells, as allowed by the type's endpoints (see "Morphism endpoints" below)
     - `"path-equation"`: `{ label, lhs, rhs }` --- each side is an array of composable morphism cells, a single object cell (denoting the identity on it), or omitted/`[]` while the side is unspecified
@@ -28,13 +30,13 @@ A notebook binding `nb` has:
 - `model.judgments()` --- the elaborated view as a read-only array, in presentation order (objects, then morphisms, then equations). Every judgment has `kind` (`"object"`, `"morphism"`, or `"path-equation"`), `id`, and `label` --- an array of name segments (join with `.` to display), unlike a cell's plain-string `label`. Morphism judgments also have `from`/`to`: the object judgments at each end, or `null` when an endpoint is unspecified or list-valued. Equation judgments have `lhs`/`rhs`, each an object judgment (the identity on it) or `{ kind: "composite", morphisms: [...] }`, with `null` for unresolvable entries. Rich-text cells contribute no judgments. The model is populated whenever elaboration succeeds, even when validation reports issues --- use it to inspect and diagnose.
 - `model.judgmentsOf(type)` --- only the judgments of one cell type; pass one of the cell-type bindings in scope, exactly as for `nb.add` (for example `model.judgmentsOf(Attr)`), never a kind string. To select by kind instead, filter `model.judgments()` on `j.kind`.
 
-Morphism endpoints are theory-dependent. Each cell-type binding is a plain JavaScript value, passed as-is wherever a method takes a cell type --- `nb.cellsOf`, `nb.supports`, `nb.add`, and `model.judgmentsOf` --- never a kind string like `"object"`. When present, a binding's `endpoints` property describes the endpoints --- read it at runtime to learn the structure, for example `return Transition.endpoints`. Without an `endpoints` property, the morphism connects any two object cells (an olog `Aspect` connects any two `Type` cells; a schema `Mapping` any two `Entity` cells). With `endpoints: { domain, codomain }`, each endpoint is either an object-type descriptor (a schema `Attr` goes from `Entity` to `AttrType` cells) or an object with a `modality` field (a petri-net `Transition` has `SymmetricList` endpoints: a reaction consumes a list of places and produces a list of places). Through this API, `from`/`to` accept a single object cell or `null` only: a list-valued endpoint cannot be constructed here and reads back as `null` on the cell handle.
+Morphism endpoints are theory-dependent. Each cell-type binding is a plain JavaScript value, passed as-is wherever a method takes a cell type --- `nb.cellsOf`, `nb.supports`, `nb.add`, and `model.judgmentsOf` --- never a kind string like `"object"`. When present, a binding's `endpoints` property describes the endpoints --- read it at runtime to learn the structure, for example `return Transition.endpoints`. Without an `endpoints` property, the morphism connects any two object cells (an olog `Aspect` connects any two `Type` cells; a schema `Mapping` any two `Entity` cells). With `endpoints: { domain, codomain }`, each endpoint is either an object-type descriptor (a schema `Attr` goes from `Entity` to `AttrType` cells) or an object with a `modality` field (a petri-net `Transition` has `SymmetricList` endpoints: a reaction consumes a list of places and produces a list of places). Through this API, `from`/`to` accept a single object cell or `null` only: a list-valued endpoint cannot be constructed here and reads back as `null` in the cell data.
 
 Error conditions: `nb.add` throws when the notebook's shape does not support `type` (check first with `nb.supports(type)`), or when `from`/`to` is not an object cell; endpoints of the wrong object type are reported as validation issues.
 
-Cell handles have `kind` with the same value as their cell type's (`"object"`, `"morphism"`, `"path-equation"`, or `"rich-text"`), `id`, and `label` (a plain string, `undefined` when unnamed), plus `update(patch)` and `delete()`. `update` sets any of the fields `add` accepts: `{ label }`; `{ from, to }` on a morphism, to rewire its endpoints (an object cell, or `null` to leave an endpoint unspecified); `{ lhs, rhs }` on an equation, each side in the same shape as for `add`; `{ content }` on rich text, a plain string.
+Cell data has `kind` with the same value as its cell type's (`"object"`, `"morphism"`, `"path-equation"`, or `"rich-text"`), `id`, and `label` (a plain string, `undefined` when unnamed). Cells have no mutation methods: use `nb.update(cell, patch)` or `nb.delete(cell)`. A patch sets any of the fields `add` accepts: `{ label }`; `{ from, to }` on a morphism, to rewire its endpoints (an object cell, or `null` to leave an endpoint unspecified); `{ lhs, rhs }` on an equation, each side in the same shape as for `add`; `{ content }` on rich text, a plain string.
 
-Morphism cells also have `from`/`to` object cells; equation cells have `lhs`/`rhs` sides (an object cell for the identity, or an array of morphism cells that may contain `null` for unresolvable references). Rich-text cells have `content` instead of `label`: a plain string when unformatted, otherwise an array of spans --- `{ type: "text", value, ... }` or `{ type: "block", ... }`. Extract the text with `typeof c === "string" ? c : c.filter((s) => s.type === "text").map((s) => s.value).join("")`.
+Morphism cells also have `from`/`to` object cells; equation cells have `lhs`/`rhs` sides (an object cell for the identity, or an array of morphism cells that may contain `null` for unresolvable references). Rich-text cells have `content` instead of `label`: a plain string when unformatted, otherwise an array of spans (or `undefined` for malformed content) --- `{ type: "text", value, ... }` or `{ type: "block", ... }`. Extract the text with `typeof c === "string" ? c : (c ?? []).filter((s) => s.type === "text").map((s) => s.value).join("")`.
 
 Example --- build a small schema (cell-type names depend on the notebook's theory; here a simple-schema notebook):
 
@@ -63,8 +65,8 @@ Example --- fix a typo in an existing cell:
 
 ```js
 const cell = nb.cells().find((cell) => cell.label === "Persion");
-cell.update({ label: "Person" });
-// or, to remove the cell instead: cell.delete();
+nb.update(cell, { label: "Person" });
+// or, to remove the cell instead: nb.delete(cell);
 ```
 
 Example --- read the judgments of one cell type:
@@ -109,6 +111,7 @@ return { issues, summary };
 An instance binding `inst` presents data as tables generated from its schema (the linked notebook, reachable via its `instanceOf` link):
 
 - `inst.title` and `inst.update({ title })`.
+- Read results, including validation tables and rows, are immutable snapshots. Re-run `validate()` after edits to read current values.
 - `await inst.validate()` --- validates the schema and the instance data; returns `{ modelValidation, tables, issues, get }`:
     - `tables` --- an array of `{ id, label, headers, rows }`. Headers are `{ id, label, type }` with type tag `"Bool"`, `"Int"`, `"Float"`, `"String"`, `"RowRef"`, or `"Unknown"`. Rows are `{ id, index, fields }`; a row's `fields` line up with its table's `headers`, one field per header in the same order. Each field is `{ tag, content }`: a literal is tagged with its concrete type --- `"Bool"`, `"Int"`, `"Float"`, or `"String"`, read with `field.content.value` --- a row reference is tagged `"RowRef"`, read with `field.content.id` --- and a missing value is tagged `"Null"`, carrying no value to read.
     - `modelValidation` --- the schema notebook's validation, as above.
@@ -133,6 +136,7 @@ Instance issues: `issues` from `validate()` is an array of `{ message, path, iss
 - `MistypedRowRef` --- a row reference points to a row of the wrong table.
 - `OrphanedField` --- a stored field has no matching column in the schema; delete it with `deleteOrphanedColumn`.
 - `OrphanedTable` --- a stored table has no entity in the schema; delete it with `deleteOrphanedTable`.
+- `MalformedDocument` --- stored table structure is damaged; reads repair recoverable damage without persisting those repairs. Its path points to the malformed structure rather than necessarily to a table, row, or field.
 - `EquationViolation` --- a row violates a path equation of the schema; `equationId` identifies the equation and `equationLabel` names it, when labeled. At most 10 counterexamples are reported per equation, followed by a summary issue on the table.
 
 Fix issues through their `path` --- for a field issue, `[tableId, "rows", rowId, "fields", fieldId]` --- by resolving the offending row from the current tables (the row whose `id` equals `path[2]`) and then calling `updateRow`, `set`, or `deleteRow(path[0], path[2])`. Orphaned data has no schema column or entity to address through rows, so fix `OrphanedField` issues with `deleteOrphanedColumn(path[0], path[4])` and `OrphanedTable` issues with `deleteOrphanedTable(path[0])`. Address rows only through issue paths or row objects from `validate()`, never by index, by scanning field values, or by retyping ids from earlier output.

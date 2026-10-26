@@ -6,16 +6,18 @@ import type { FeedbackResolution, LLMInteraction, Uuid } from "catcolab-document
 import type { DocumentStore } from "./document-store";
 import type { Shape } from "./shape";
 import type { SupportedDocument } from "./supported-document";
+import type { DeepReadonly } from "./util/deep-readonly";
+import { createSubscriptionScope } from "./util/subscription-scope";
 
 export type { LLMConversationDocument } from "catcolab-document-methods";
 
 export interface LLMConversation<A, H> {
     readonly handle: H;
     readonly attachment: A;
-    readonly document: Readonly<LLMConversationDocument>;
+    data(): DeepReadonly<LLMConversationDocument>;
     readonly title: string;
 
-    interactions(): readonly LLMInteraction[];
+    interactions(): DeepReadonly<LLMInteraction[]>;
     appendInteraction(interaction: LLMInteraction): void;
     appendInteractions(interactions: readonly LLMInteraction[]): void;
     rejectPendingFeedbackRequests(): void;
@@ -27,6 +29,7 @@ export interface LLMConversation<A, H> {
     update(patch: Partial<{ title: string }>): void;
     dump(): LLMConversationDocument;
     onChange(callback: () => void): () => void;
+    dispose(): void;
 }
 
 export function llmConversationFromStore<
@@ -38,8 +41,10 @@ export function llmConversationFromStore<
     handle: Handle,
     attachment: Attachment,
 ): LLMConversation<Attachment, Handle> {
-    function currentDocument(): Readonly<LLMConversationDocument> {
-        return store.getDocumentView(handle) as Readonly<LLMConversationDocument>;
+    const scope = createSubscriptionScope();
+
+    function data(): DeepReadonly<LLMConversationDocument> {
+        return store.getDocumentSnapshot(handle) as DeepReadonly<LLMConversationDocument>;
     }
 
     function appendInteractions(interactions: readonly LLMInteraction[]): void {
@@ -59,14 +64,12 @@ export function llmConversationFromStore<
     return {
         handle,
         attachment,
-        get document(): Readonly<LLMConversationDocument> {
-            return currentDocument();
-        },
+        data,
         get title(): string {
-            return currentDocument().name;
+            return data().name;
         },
-        interactions(): readonly LLMInteraction[] {
-            return currentDocument().interactions;
+        interactions(): DeepReadonly<LLMInteraction[]> {
+            return data().interactions;
         },
         appendInteraction(interaction: LLMInteraction): void {
             appendInteractions([interaction]);
@@ -101,10 +104,11 @@ export function llmConversationFromStore<
             }
         },
         dump(): LLMConversationDocument {
-            return store.copyValue(handle, currentDocument());
+            return structuredClone(store.getDocumentSnapshot(handle)) as LLMConversationDocument;
         },
+        dispose: scope.dispose,
         onChange(callback: () => void): () => void {
-            return store.subscribe(handle, callback);
+            return scope.track(store.subscribe(handle, callback));
         },
     };
 }

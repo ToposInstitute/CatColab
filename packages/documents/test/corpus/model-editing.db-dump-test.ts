@@ -8,6 +8,8 @@ import { describe, expect, test } from "vitest";
 import { migrateDocument, type Document } from "catcolab-document-types";
 import {
     createBinder,
+    getDocumentSnapshot,
+    type DeepReadonly,
     type DocumentStore,
     type Notebook,
     RichText,
@@ -86,13 +88,24 @@ type Corpus = {
 
 type FixtureHandle = {
     readonly refId: string;
-    readonly listeners: Set<() => void>;
+    readonly listeners: Set<(handle: FixtureHandle) => void>;
     document: Document;
 };
 
+const snapshots = new WeakMap<FixtureHandle, DeepReadonly<Document>>();
+function getDocumentSnapshot(handle: FixtureHandle): DeepReadonly<Document> {
+    let snapshot = snapshots.get(handle);
+    if (snapshot === undefined) {
+        snapshot = getDocumentSnapshot(handle.document);
+        snapshots.set(handle, snapshot);
+    }
+    return snapshot;
+}
 function notify(handle: FixtureHandle): void {
+    const snapshot = getDocumentSnapshot(handle.document);
+    snapshots.set(handle, snapshot);
     for (const listener of handle.listeners) {
-        listener();
+        listener(handle);
     }
 }
 
@@ -339,7 +352,7 @@ function createFixtureStore(
         }
         const handle = {
             refId,
-            listeners: new Set<() => void>(),
+            listeners: new Set<(handle: FixtureHandle) => void>(),
             document: structuredClone(fixture.document),
         };
         handles.set(refId, handle);
@@ -352,13 +365,13 @@ function createFixtureStore(
                 const refId = `fixture-created-${createdCount++}`;
                 const handle = {
                     refId,
-                    listeners: new Set<() => void>(),
+                    listeners: new Set<(handle: FixtureHandle) => void>(),
                     document: structuredClone(document as Document),
                 };
                 handles.set(refId, handle);
                 return handle;
             },
-            getDocumentView: (handle) => handle.document,
+            getDocumentSnapshot,
             changeDocument: (handle, change) => {
                 change(handle.document);
                 notify(handle);
@@ -367,7 +380,7 @@ function createFixtureStore(
                 const refId = `fixture-draft-${createdCount++}`;
                 const draft = {
                     refId,
-                    listeners: new Set<() => void>(),
+                    listeners: new Set<(handle: FixtureHandle) => void>(),
                     document: structuredClone(handle.document),
                 };
                 handles.set(refId, draft);
@@ -385,7 +398,6 @@ function createFixtureStore(
                     handle.listeners.delete(callback);
                 };
             },
-            copyValue: (_handle, value) => structuredClone(value),
             getDocumentRef: (handle) => ({ id: handle.refId, server, version: null }),
             getHandle: async (ref) => {
                 if ((ref.server && ref.server !== server) || ref.version !== null) {

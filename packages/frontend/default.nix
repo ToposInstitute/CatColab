@@ -40,6 +40,7 @@ let
     "packages/ui-components" = ../ui-components/pnpm-lock.yaml;
     "packages/document-methods" = ../document-methods/pnpm-lock.yaml;
     "packages/documents" = ../documents/pnpm-lock.yaml;
+    "packages/documents-solid" = ../documents-solid/pnpm-lock.yaml;
     "packages/logics" = ../logics/pnpm-lock.yaml;
     "packages/backend/pkg" = ../backend/pkg/pnpm-lock.yaml;
     "tools/vite-plugin-monorepo-dedupe" = ../../tools/vite-plugin-monorepo-dedupe/pnpm-lock.yaml;
@@ -82,6 +83,7 @@ let
         ../../tools/oxlint-plugin-catcolab
         ../../packages/document-methods
         ../../packages/documents
+        ../../packages/documents-solid
         ../../packages/logics
         ../../packages/backend/pkg
       ];
@@ -215,6 +217,7 @@ let
         cp -r tools/oxlint-plugin-catcolab $out/tools/
         cp -r packages/document-methods $out/packages/
         cp -r packages/documents $out/packages/
+        cp -r packages/documents-solid $out/packages/
         cp -r packages/logics $out/packages/
         mkdir -p $out/packages/document-types
         cp -r packages/document-types/pkg $out/packages/document-types/

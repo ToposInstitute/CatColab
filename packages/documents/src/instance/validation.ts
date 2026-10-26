@@ -1,8 +1,8 @@
 /* This code is expected to be replaced by catlog implementations in the future once a commitment to the mathematical account of instances has been made. */
 
-import type { InstanceDocument } from "catcolab-document-methods";
 import type * as DocumentTypes from "catcolab-document-types";
 import type { QualifiedLabel } from "catlog-wasm";
+import type { InstanceData } from "./data";
 import type { FieldPath, TableFieldIssue, TableIssue } from "./errors";
 import type { InstanceTable, LiteralType, TableHeader } from "./tables";
 
@@ -28,14 +28,14 @@ export function atomicTypeOfAttributeType(label: QualifiedLabel): LiteralType {
 Stored tables without a schema entity report a single `OrphanedTable` issue;
 their rows are not validated further. */
 export function validateInstanceTables(
-    document: Readonly<InstanceDocument>,
+    data: InstanceData,
     tables: ReadonlyArray<InstanceTable>,
 ): TableIssue[] {
     const tableById = new Map(tables.map((table) => [table.id, table]));
     const rowTables = new Map<string, Set<string>>();
 
-    for (const [tableId, table] of Object.entries(document.tables)) {
-        for (const rowId of Object.keys(table.rows)) {
+    for (const { id: tableId, rows } of data.tables) {
+        for (const { id: rowId } of rows) {
             const tables = rowTables.get(rowId) ?? new Set<string>();
             tables.add(tableId);
             rowTables.set(rowId, tables);
@@ -43,7 +43,7 @@ export function validateInstanceTables(
     }
 
     const issues: TableIssue[] = [];
-    for (const [tableId, storedTable] of Object.entries(document.tables)) {
+    for (const { id: tableId, rows } of data.tables) {
         const table = tableById.get(tableId);
         if (table === undefined) {
             issues.push({
@@ -54,7 +54,8 @@ export function validateInstanceTables(
             continue;
         }
         const headerById = new Map(table.headers.map((header) => [header.id, header]));
-        for (const [rowId, row] of Object.entries(storedTable.rows)) {
+        for (const row of rows) {
+            const rowId = row.id;
             for (const header of table.headers) {
                 if (header.type.tag === "Unknown") {
                     continue;

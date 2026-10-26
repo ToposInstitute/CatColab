@@ -2,11 +2,13 @@ import type { InstanceDocument } from "catcolab-document-methods";
 import type { Document } from "catcolab-document-types";
 import type { DocumentStore } from "../document-store";
 import type { ModelDocument } from "../model/document";
+import type { Notebook } from "../model/document";
 import type { ModelValidation } from "../model/elaborated-model";
-import type { Notebook } from "../model/notebook";
 import type { Result } from "../result";
 import type { Shape } from "../shape";
 import type { Commit } from "../transaction";
+import { createSubscriptionScope } from "../util/subscription-scope";
+import { getInstanceData, type InstanceData } from "./data";
 import type { TableIssue } from "./errors";
 import {
     createAddRowsMethod,
@@ -26,7 +28,7 @@ export type { InstanceDocument } from "catcolab-document-methods";
 export interface Instance<S extends Shape = Shape, H = unknown, V = unknown> {
     readonly handle: H;
     readonly shape: S;
-    readonly document: Readonly<InstanceDocument>;
+    data(): InstanceData;
     readonly title: string;
 
     update(patch: Partial<{ title: string }>): void;
@@ -76,6 +78,10 @@ export interface Instance<S extends Shape = Shape, H = unknown, V = unknown> {
     /** Revalidate initially and whenever either the instance or its schema changes. */
     onValidate(callback: (validation: InstanceValidation<S>) => void): () => void;
 
+    /** Release this owner's change/validation subscriptions.
+    Call when the instance is no longer used. Idempotent. */
+    dispose(): void;
+
     /** Undo the changes this instance's document received in a commit. */
     revert(commit: Commit<H, V>): void;
 }
@@ -101,8 +107,14 @@ export function instanceFromStore<Handle, S extends Shape, Version>(
     store: DocumentStore<Handle, Version>,
     handle: Handle,
 ): Instance<S, Handle, Version> {
-    function currentDocument(): Readonly<InstanceDocument> {
-        return store.getDocumentView(handle) as Readonly<InstanceDocument>;
+    const scope = createSubscriptionScope();
+
+    function currentData(): InstanceData {
+        const result = getInstanceData(store, handle);
+        if (result.tag === "Err") {
+            throw new Error(result.content.map((issue) => issue.message).join("\n"));
+        }
+        return result.content.value;
     }
 
     const addRows = createAddRowsMethod(schema, store, handle);
@@ -138,11 +150,9 @@ export function instanceFromStore<Handle, S extends Shape, Version>(
     const instance: Instance<S, Handle, Version> = {
         handle,
         shape: schema.shape,
-        get document(): Readonly<InstanceDocument> {
-            return currentDocument();
-        },
+        data: currentData,
         get title(): string {
-            return currentDocument().name;
+            return currentData().name;
         },
         update(patch: Partial<{ title: string }>): void {
             if (patch.title !== undefined) {
@@ -152,7 +162,7 @@ export function instanceFromStore<Handle, S extends Shape, Version>(
             }
         },
         dump(): InstanceDocument {
-            return store.copyValue(handle, currentDocument());
+            return structuredClone(store.getDocumentSnapshot(handle)) as InstanceDocument;
         },
         addRow,
         addRows,
@@ -173,10 +183,10 @@ export function instanceFromStore<Handle, S extends Shape, Version>(
         onChange(callback: () => void): () => void {
             const unsubscribeInstance: () => void = store.subscribe(handle, callback);
             const unsubscribeSchema: () => void = schema.onChange(callback);
-            return (): void => {
+            return scope.track((): void => {
                 unsubscribeInstance();
                 unsubscribeSchema();
-            };
+            });
         },
         onValidate(callback: (validation: InstanceValidation<S>) => void): () => void {
             let active: boolean = true;
@@ -198,12 +208,13 @@ export function instanceFromStore<Handle, S extends Shape, Version>(
                 notify(validateInstance(modelValidation));
             });
 
-            return (): void => {
+            return scope.track((): void => {
                 active = false;
                 unsubscribeInstance();
                 unsubscribeSchema();
-            };
+            });
         },
+        dispose: scope.dispose,
         revert(commit: Commit<Handle, Version>): void {
             const change = commit.documents.get(handle);
             if (change === undefined) {
