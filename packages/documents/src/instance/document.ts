@@ -3,24 +3,22 @@ import type { Document } from "catcolab-document-types";
 import type { DocumentStore } from "../document-store";
 import type { ModelDocument } from "../model/document";
 import type { Notebook } from "../model/document";
-import type { ModelValidation } from "../model/elaborated-model";
+import type { ElaboratedModel, ModelValidation } from "../model/elaborated-model";
 import type { Result } from "../result";
-import type { Shape } from "../shape";
+import { assertInstanceCapableShape, type Shape } from "../shape";
 import type { Commit } from "../transaction";
 import { createSubscriptionScope } from "../util/subscription-scope";
 import { getInstanceData, type InstanceData } from "./data";
 import type { TableIssue } from "./errors";
 import {
-    createAddRowsMethod,
-    createAddRowMethod,
-    createDeleteOrphanedColumnMethod,
-    createDeleteOrphanedTableMethod,
-    createInstanceValidator,
-    createSetMethod,
-    createUpdateRowsMethod,
-    createUpdateRowMethod,
-} from "./instance-runtime";
+    addInstanceRowsToStore,
+    deleteOrphanedFieldFromStore,
+    deleteOrphanedTableFromStore,
+    updateInstanceFieldByIdInStore,
+    updateInstanceFieldsByLabelInStore,
+} from "./table-methods";
 import type { FieldValue, InstancePath, InstanceTable, LiteralValue, TableRow } from "./tables";
+import { createInstanceValidator } from "./validation";
 
 export type { InstanceDocument } from "catcolab-document-methods";
 
@@ -107,6 +105,9 @@ export function instanceFromStore<Handle, S extends Shape, Version>(
     store: DocumentStore<Handle, Version>,
     handle: Handle,
 ): Instance<S, Handle, Version> {
+    const shape = schema.shape;
+    assertInstanceCapableShape(shape);
+
     const scope = createSubscriptionScope();
 
     function currentData(): InstanceData {
@@ -117,17 +118,15 @@ export function instanceFromStore<Handle, S extends Shape, Version>(
         return result.content.value;
     }
 
-    const addRows = createAddRowsMethod(schema, store, handle);
-    const addRow = createAddRowMethod(addRows);
-    const updateRows = createUpdateRowsMethod(schema, store, handle);
-    const updateRow = createUpdateRowMethod(updateRows);
-    const set = createSetMethod(schema, store, handle);
-    const deleteOrphanedTable = createDeleteOrphanedTableMethod(schema, store, handle);
-    const deleteOrphanedColumn = createDeleteOrphanedColumnMethod(schema, store, handle);
-    const validateInstance = createInstanceValidator(schema, store, handle);
+    const validator = createInstanceValidator(schema, store, handle);
 
-    async function validateCurrentDocument(): Promise<InstanceValidation<S>> {
-        return validateInstance(await schema.validate());
+    /** Operate against whatever judgments elaborate, even for a partially
+    valid schema. Operations report addressing failures as Results; thrown
+    exceptions still propagate. */
+    async function withElaboratedSchema<T>(
+        operation: (model: ElaboratedModel<S>) => Result<T>,
+    ): Promise<Result<T>> {
+        return operation((await schema.validate()).model);
     }
 
     function deleteStoredRows(rows: ReadonlyArray<{ tableId: string; rowId: string }>): void {
@@ -164,22 +163,57 @@ export function instanceFromStore<Handle, S extends Shape, Version>(
         dump(): InstanceDocument {
             return structuredClone(store.getDocumentSnapshot(handle)) as InstanceDocument;
         },
-        addRow,
-        addRows,
-        updateRow,
-        updateRows,
-        set,
+        async addRow(table, values = {}) {
+            const result = await instance.addRows([{ table, values: [values] }]);
+            if (result.tag === "Err") {
+                return result;
+            }
+            const row = result.content[0];
+            return row === undefined
+                ? { tag: "Err", content: [{ message: "Adding one row did not return a row" }] }
+                : { tag: "Ok", content: row };
+        },
+        addRows(additions) {
+            return withElaboratedSchema((model) =>
+                addInstanceRowsToStore(
+                    shape,
+                    store,
+                    handle,
+                    model,
+                    additions.map(({ table, values }) => ({ table, values: values ?? [{}] })),
+                ),
+            );
+        },
+        updateRow(row, values) {
+            return instance.updateRows([{ row, values: [values] }]);
+        },
+        updateRows(updates) {
+            return withElaboratedSchema((model) =>
+                updateInstanceFieldsByLabelInStore(shape, store, handle, model, updates),
+            );
+        },
+        set(row, morphism, value) {
+            return withElaboratedSchema((model) =>
+                updateInstanceFieldByIdInStore(shape, store, handle, model, row, morphism, value),
+            );
+        },
         deleteRow(tableId: string, rowId: string): void {
             deleteStoredRows([{ tableId, rowId }]);
         },
         deleteRows(rows: ReadonlyArray<{ tableId: string; rowId: string }>): void {
             deleteStoredRows(rows);
         },
-        deleteOrphanedTable,
-        deleteOrphanedColumn,
-        validate(): Promise<InstanceValidation<S>> {
-            return validateCurrentDocument();
+        deleteOrphanedTable(tableId) {
+            return withElaboratedSchema((model) =>
+                deleteOrphanedTableFromStore(shape, store, handle, model, tableId),
+            );
         },
+        deleteOrphanedColumn(tableId, fieldId) {
+            return withElaboratedSchema((model) =>
+                deleteOrphanedFieldFromStore(shape, store, handle, model, tableId, fieldId),
+            );
+        },
+        validate: validator.validate,
         onChange(callback: () => void): () => void {
             const unsubscribeInstance: () => void = store.subscribe(handle, callback);
             const unsubscribeSchema: () => void = schema.onChange(callback);
@@ -188,32 +222,7 @@ export function instanceFromStore<Handle, S extends Shape, Version>(
                 unsubscribeSchema();
             });
         },
-        onValidate(callback: (validation: InstanceValidation<S>) => void): () => void {
-            let active: boolean = true;
-            let latestModelValidation: ModelValidation<S> | undefined;
-
-            function notify(validation: InstanceValidation<S>): void {
-                if (active) {
-                    callback(validation);
-                }
-            }
-
-            const unsubscribeInstance: () => void = store.subscribe(handle, (): void => {
-                if (latestModelValidation !== undefined) {
-                    notify(validateInstance(latestModelValidation));
-                }
-            });
-            const unsubscribeSchema: () => void = schema.onValidate((modelValidation): void => {
-                latestModelValidation = modelValidation;
-                notify(validateInstance(modelValidation));
-            });
-
-            return scope.track((): void => {
-                active = false;
-                unsubscribeInstance();
-                unsubscribeSchema();
-            });
-        },
+        onValidate: (callback) => scope.track(validator.onValidate(callback)),
         dispose: scope.dispose,
         revert(commit: Commit<Handle, Version>): void {
             const change = commit.documents.get(handle);
