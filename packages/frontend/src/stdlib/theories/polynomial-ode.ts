@@ -33,6 +33,11 @@ export default function createPolynomialODETheory(theoryMeta: TheoryMeta): Theor
             },
         ],
         modelAnalyses: [
+            analyses.polynomialODEEquations({
+                getEquations(model) {
+                    return thPolynomialODE.polynomialODEEquations(model);
+                },
+            }),
             analyses.polynomialODESimulation({
                 signedContributions: false,
                 simulate(model, data) {
