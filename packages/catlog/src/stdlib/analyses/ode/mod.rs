@@ -81,7 +81,5 @@ pub use polynomial_ode::*;
 
 // Helper crates
 pub mod ode_semantics;
-pub mod signed_coefficients;
 
 pub use ode_semantics::*;
-pub use signed_coefficients::*;
