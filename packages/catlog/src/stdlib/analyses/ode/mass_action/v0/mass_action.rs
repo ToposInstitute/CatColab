@@ -1,10 +1,3 @@
-//! Mass-action ODE analysis of models.
-//!
-//! Such ODEs are based on the *law of mass action* familiar from chemistry and
-//! mathematical epidemiology. Here, however, we also consider a generalised version
-//! where we do not require that mass be preserved. This allows the construction
-//! of systems of arbitrary polynomial (first-order) ODEs.
-
 use std::{collections::HashMap, fmt};
 
 use indexmap::IndexMap;
@@ -16,13 +9,13 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "serde-wasm")]
 use tsify::Tsify;
 
-use super::{ODEAnalysis, Parameter};
 use crate::dbl::{
     model::{DiscreteTabModel, FpDblModel, ModalDblModel, TabEdge},
     theory::{ModalMorType, ModalObType, TabMorType, TabObType, Unital},
 };
 use crate::one::FgCategory;
 use crate::simulate::ode::{NumericalPolynomialSystem, ODEProblem, PolynomialSystem};
+use crate::stdlib::analyses::ode::{ODEAnalysis, Parameter};
 use crate::stdlib::analyses::petri::transition_interface;
 use crate::zero::{QualifiedName, alg::Polynomial, name, rig::Monomial};
 
@@ -473,7 +466,8 @@ mod tests {
 
     use super::*;
     use crate::simulate::ode::LatexEquation;
-    use crate::stdlib::{analyses, models::*, theories::*};
+    use crate::stdlib::analyses::ode::mass_action;
+    use crate::stdlib::{models::*, theories::*};
 
     // Tests for stock-flow diagrams. These all use the backward_link() model,
     // which has a single flow x==f==>y and a single link y->f.
@@ -483,7 +477,7 @@ mod tests {
         let th = Rc::new(th_category_links());
         let model = backward_link(th);
         let sys = StockFlowMassActionAnalysis::default()
-            .build_system(&model, analyses::ode::MassConservationType::Balanced);
+            .build_system(&model, mass_action::MassConservationType::Balanced);
         let expected = expect!([r#"
             dx = -f x y
             dy = f x y
@@ -497,8 +491,8 @@ mod tests {
         let model = backward_link(th);
         let sys = StockFlowMassActionAnalysis::default().build_system(
             &model,
-            analyses::ode::MassConservationType::Unbalanced(
-                analyses::ode::RateGranularity::PerTransition,
+            mass_action::MassConservationType::Unbalanced(
+                mass_action::RateGranularity::PerTransition,
             ),
         );
         let expected = expect!([r#"
@@ -516,7 +510,7 @@ mod tests {
         let th = Rc::new(th_category_signed_links());
         let model = negative_backward_link(th);
         let sys = StockFlowMassActionAnalysis::default()
-            .build_system(&model, analyses::ode::MassConservationType::Balanced);
+            .build_system(&model, mass_action::MassConservationType::Balanced);
         let expected = expect!([r#"
             dx = -f x y^{-1}
             dy = f x y^{-1}
@@ -530,8 +524,8 @@ mod tests {
         let model = negative_backward_link(th);
         let sys = StockFlowMassActionAnalysis::default().build_system(
             &model,
-            analyses::ode::MassConservationType::Unbalanced(
-                analyses::ode::RateGranularity::PerTransition,
+            mass_action::MassConservationType::Unbalanced(
+                mass_action::RateGranularity::PerTransition,
             ),
         );
         let expected = expect!([r#"
@@ -549,7 +543,7 @@ mod tests {
         let th = Rc::new(th_sym_monoidal_category());
         let model = catalyzed_reaction(th);
         let sys = PetriNetMassActionAnalysis::default()
-            .build_system(&model, analyses::ode::MassConservationType::Balanced);
+            .build_system(&model, mass_action::MassConservationType::Balanced);
         let expected = expect!([r#"
             dx = -f c x
             dy = f c x
@@ -564,8 +558,8 @@ mod tests {
         let model = catalyzed_reaction(th);
         let sys = PetriNetMassActionAnalysis::default().build_system(
             &model,
-            analyses::ode::MassConservationType::Unbalanced(
-                analyses::ode::RateGranularity::PerTransition,
+            mass_action::MassConservationType::Unbalanced(
+                mass_action::RateGranularity::PerTransition,
             ),
         );
         let expected = expect!([r#"
@@ -582,9 +576,7 @@ mod tests {
         let model = catalyzed_reaction(th);
         let sys = PetriNetMassActionAnalysis::default().build_system(
             &model,
-            analyses::ode::MassConservationType::Unbalanced(
-                analyses::ode::RateGranularity::PerPlace,
-            ),
+            mass_action::MassConservationType::Unbalanced(mass_action::RateGranularity::PerPlace),
         );
         let expected = expect!([r#"
             dx = -(x->[f]) c x
@@ -602,8 +594,8 @@ mod tests {
         let model = backward_link(th);
         let sys = StockFlowMassActionAnalysis::default().build_system(
             &model,
-            analyses::ode::MassConservationType::Unbalanced(
-                analyses::ode::RateGranularity::PerTransition,
+            mass_action::MassConservationType::Unbalanced(
+                mass_action::RateGranularity::PerTransition,
             ),
         );
         let expected = vec![
