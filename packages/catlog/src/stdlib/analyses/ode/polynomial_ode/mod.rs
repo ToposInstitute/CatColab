@@ -14,10 +14,9 @@ pub fn current_version() -> String {
 }
 
 /// The current version of polynomial ODE.
-pub mod current {
-    // This should always track the latest version, and is the only version that is exported.
-    pub use crate::stdlib::analyses::ode::polynomial_ode::v0::polynomial_ode::*;
-}
+///
+/// This should always track the latest version, and is the only version that is exported.
+pub use crate::stdlib::analyses::ode::polynomial_ode::v0::polynomial_ode::*;
 
 /// Versioned polynomial ODE problem data.
 pub enum VersionedPolynomialODEProblemData {
@@ -46,7 +45,7 @@ impl<'de> Deserialize<'de> for VersionedPolynomialODEProblemData {
 
 impl VersionedPolynomialODEProblemData {
     /// Update any versioned polynomial ODE problem data to the current version.
-    pub fn to_current(self) -> current::PolynomialODEProblemData {
+    pub fn to_current(self) -> PolynomialODEProblemData {
         match self {
             VersionedPolynomialODEProblemData::V0(v0) => v0,
         }

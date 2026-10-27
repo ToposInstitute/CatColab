@@ -17,10 +17,9 @@ pub fn current_version() -> String {
 }
 
 /// The current version of Lotka-Volterra.
-pub mod current {
-    // This should always track the latest version, and is the only version that is exported.
-    pub use crate::stdlib::analyses::ode::lotka_volterra::v0::lotka_volterra::*;
-}
+///
+/// This should always track the latest version, and is the only version that is exported.
+pub use crate::stdlib::analyses::ode::lotka_volterra::v0::lotka_volterra::*;
 
 /// Versioned LotkaVolterra problem data.
 pub enum VersionedLotkaVolterraProblemData {
@@ -49,7 +48,7 @@ impl<'de> Deserialize<'de> for VersionedLotkaVolterraProblemData {
 
 impl VersionedLotkaVolterraProblemData {
     /// Update any versioned LotkaVolterra problem data to the current version.
-    pub fn to_current(self) -> current::LotkaVolterraProblemData {
+    pub fn to_current(self) -> LotkaVolterraProblemData {
         match self {
             VersionedLotkaVolterraProblemData::V0(v0) => v0,
         }

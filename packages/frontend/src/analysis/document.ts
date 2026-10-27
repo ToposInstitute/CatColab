@@ -204,9 +204,7 @@ function migrateAnalysis(liveAnalysis: LiveAnalysisDoc) {
                     Nb.mutateCellContentById(doc.notebook, cell.id, (cellContent) => {
                         // // @ts-expect-error The types of analysis content are too vague: Record<string, unknown>
                         cellContent.version = versionNumberKuramoto();
-                        cellContent.content = latestVersionKuramotoProblemData(
-                            cellContent.content,
-                        );
+                        cellContent.content = latestVersionKuramotoProblemData(cellContent.content);
                     });
                 });
                 break;
@@ -290,15 +288,16 @@ function migrateAnalysis(liveAnalysis: LiveAnalysisDoc) {
                 break;
         }
     }
+}
 
-    /** Gets the theory associated with a live analysis. */
-    export function theoryForLiveAnalysis(liveAnalysis: LiveAnalysisDoc) {
-        switch (liveAnalysis.analysisType) {
-            case "model":
-                return liveAnalysis.liveModel.theory();
-            case "diagram":
-                return liveAnalysis.liveDiagram.liveModel.theory();
-            default:
-                assertExhaustive(liveAnalysis);
-        }
+/** Gets the theory associated with a live analysis. */
+export function theoryForLiveAnalysis(liveAnalysis: LiveAnalysisDoc) {
+    switch (liveAnalysis.analysisType) {
+        case "model":
+            return liveAnalysis.liveModel.theory();
+        case "diagram":
+            return liveAnalysis.liveDiagram.liveModel.theory();
+        default:
+            assertExhaustive(liveAnalysis);
     }
+}

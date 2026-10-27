@@ -17,10 +17,9 @@ pub fn current_version() -> String {
 }
 
 /// The current version of linear ODE.
-pub mod current {
-    // This should always track the latest version, and is the only version that is exported.
-    pub use crate::stdlib::analyses::ode::linear_ode::v0::linear_ode::*;
-}
+///
+/// This should always track the latest version, and is the only version that is exported.
+pub use crate::stdlib::analyses::ode::linear_ode::v0::linear_ode::*;
 
 /// Versioned linear ODE problem data.
 pub enum VersionedLinearODEProblemData {
@@ -49,7 +48,7 @@ impl<'de> Deserialize<'de> for VersionedLinearODEProblemData {
 
 impl VersionedLinearODEProblemData {
     /// Update any versioned linear ODE problem data to the current version.
-    pub fn to_current(self) -> current::LinearODEProblemData {
+    pub fn to_current(self) -> LinearODEProblemData {
         match self {
             VersionedLinearODEProblemData::V0(v0) => v0,
         }

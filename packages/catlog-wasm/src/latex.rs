@@ -57,7 +57,7 @@ pub(crate) fn latex_mor_names(model: &DblModel) -> impl Fn(&QualifiedName) -> St
 /// falls back to the domain→codomain format (e.g., `X \to Y`).
 pub(crate) fn latex_mor_names_mass_action(
     model: &DblModel,
-) -> impl Fn(&ode::FlowParameter) -> String {
+) -> impl Fn(&ode::mass_action::FlowParameter) -> String {
     // Returns a LaTeX fragment for a transition, suitable for use as a subscript.
     // Named morphisms produce `\text{name}`, unnamed ones produce
     // `\text{dom} \to \text{cod}` so that `\to` is in math mode.
@@ -72,31 +72,45 @@ pub(crate) fn latex_mor_names_mass_action(
         }
     };
 
-    move |id: &ode::FlowParameter| match id {
-        ode::FlowParameter::Balanced { transition } => {
+    move |id: &ode::mass_action::FlowParameter| match id {
+        ode::mass_action::FlowParameter::Balanced { transition } => {
             let sub = transition_subscript(transition);
             format!("r_{{{sub}}}")
         }
-        ode::FlowParameter::Unbalanced { direction, parameter } => match (direction, parameter) {
-            (ode::Direction::IncomingFlow, ode::RateParameter::PerTransition { transition }) => {
-                let sub = transition_subscript(transition);
-                format!("\\rho_{{{sub}}}")
+        ode::mass_action::FlowParameter::Unbalanced { direction, parameter } => {
+            match (direction, parameter) {
+                (
+                    ode::mass_action::Direction::IncomingFlow,
+                    ode::mass_action::RateParameter::PerTransition { transition },
+                ) => {
+                    let sub = transition_subscript(transition);
+                    format!("\\rho_{{{sub}}}")
+                }
+                (
+                    ode::mass_action::Direction::OutgoingFlow,
+                    ode::mass_action::RateParameter::PerTransition { transition },
+                ) => {
+                    let sub = transition_subscript(transition);
+                    format!("\\kappa_{{{sub}}}")
+                }
+                (
+                    ode::mass_action::Direction::IncomingFlow,
+                    ode::mass_action::RateParameter::PerPlace { transition, place },
+                ) => {
+                    let sub = transition_subscript(transition);
+                    let output_place_label = model.ob_namespace.label_string(place);
+                    format!("\\rho_{{{sub}}}^{{\\text{{{output_place_label}}}}}")
+                }
+                (
+                    ode::mass_action::Direction::OutgoingFlow,
+                    ode::mass_action::RateParameter::PerPlace { transition, place },
+                ) => {
+                    let sub = transition_subscript(transition);
+                    let input_place_label = model.ob_namespace.label_string(place);
+                    format!("\\kappa_{{{sub}}}^{{\\text{{{input_place_label}}}}}")
+                }
             }
-            (ode::Direction::OutgoingFlow, ode::RateParameter::PerTransition { transition }) => {
-                let sub = transition_subscript(transition);
-                format!("\\kappa_{{{sub}}}")
-            }
-            (ode::Direction::IncomingFlow, ode::RateParameter::PerPlace { transition, place }) => {
-                let sub = transition_subscript(transition);
-                let output_place_label = model.ob_namespace.label_string(place);
-                format!("\\rho_{{{sub}}}^{{\\text{{{output_place_label}}}}}")
-            }
-            (ode::Direction::OutgoingFlow, ode::RateParameter::PerPlace { transition, place }) => {
-                let sub = transition_subscript(transition);
-                let input_place_label = model.ob_namespace.label_string(place);
-                format!("\\kappa_{{{sub}}}^{{\\text{{{input_place_label}}}}}")
-            }
-        },
+        }
     }
 }
 
@@ -117,10 +131,12 @@ mod tests {
     fn unbalanced_mass_action_latex_equations() {
         let model = backward_link("xxx", "yyy", "fff");
         let tab_model = model.discrete_tab().unwrap();
-        let analysis = ode::StockFlowMassActionAnalysis::default();
+        let analysis = ode::mass_action::StockFlowMassActionAnalysis::default();
         let sys = analysis.build_system(
             tab_model,
-            ode::MassConservationType::Unbalanced(ode::RateGranularity::PerTransition),
+            ode::mass_action::MassConservationType::Unbalanced(
+                ode::mass_action::RateGranularity::PerTransition,
+            ),
         );
         let equations = sys
             .map_variables(latex_ob_names(&model))
@@ -144,10 +160,12 @@ mod tests {
     fn unnamed_mor_uses_dom_cod_in_equations() {
         let model = backward_link("xxx", "yyy", "");
         let tab_model = model.discrete_tab().unwrap();
-        let analysis = ode::StockFlowMassActionAnalysis::default();
+        let analysis = ode::mass_action::StockFlowMassActionAnalysis::default();
         let sys = analysis.build_system(
             tab_model,
-            ode::MassConservationType::Unbalanced(ode::RateGranularity::PerTransition),
+            ode::mass_action::MassConservationType::Unbalanced(
+                ode::mass_action::RateGranularity::PerTransition,
+            ),
         );
         let equations = sys
             .map_variables(latex_ob_names(&model))

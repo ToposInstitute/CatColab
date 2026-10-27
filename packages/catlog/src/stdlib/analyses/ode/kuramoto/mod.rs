@@ -14,10 +14,9 @@ pub fn current_version() -> String {
 }
 
 /// The current version of Kuramoto.
-pub mod current {
-    // This should always track the latest version, and is the only version that is exported.
-    pub use crate::stdlib::analyses::ode::kuramoto::v0::kuramoto::*;
-}
+///
+/// This should always track the latest version, and is the only version that is exported.
+pub use crate::stdlib::analyses::ode::kuramoto::v0::kuramoto::*;
 
 /// Versioned Kuramoto problem data.
 pub enum VersionedKuramotoProblemData {
@@ -46,7 +45,7 @@ impl<'de> Deserialize<'de> for VersionedKuramotoProblemData {
 
 impl VersionedKuramotoProblemData {
     /// Update any versioned Kuramoto problem data to the current version.
-    pub fn to_current(self) -> current::KuramotoProblemData {
+    pub fn to_current(self) -> KuramotoProblemData {
         match self {
             VersionedKuramotoProblemData::V0(v0) => v0,
         }
