@@ -69,16 +69,16 @@ impl<Sys> ODEAnalysis<Sys> {
     }
 }
 
+// Analyses
 pub mod kuramoto;
 pub mod linear_ode;
 pub mod lotka_volterra;
 pub mod mass_action;
+// `polynomial_ode` is a "top-level" analysis, in that the other ODE analyses make
+// extensive use of it.
 pub mod polynomial_ode;
-pub mod signed_coefficients;
-
-pub use kuramoto::*;
-pub use linear_ode::*;
-pub use lotka_volterra::*;
-pub use mass_action::*;
 pub use polynomial_ode::*;
+
+// Helper crates
+pub mod signed_coefficients;
 pub use signed_coefficients::*;
