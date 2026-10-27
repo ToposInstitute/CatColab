@@ -19,10 +19,9 @@ pub fn current_version() -> String {
 }
 
 /// The current version of mass-action.
-pub mod current {
-    // This should always track the latest version, and is the only version that is exported.
-    pub use crate::stdlib::analyses::ode::mass_action::v0::*;
-}
+///
+/// This should always track the latest version, and is the only version that is exported.
+pub use crate::stdlib::analyses::ode::mass_action::v0::*;
 
 /// Versioned mass-action problem data.
 pub enum VersionedMassActionProblemData {
@@ -51,7 +50,7 @@ impl<'de> Deserialize<'de> for VersionedMassActionProblemData {
 
 impl VersionedMassActionProblemData {
     /// Update any versioned mass-action problem data to the current version.
-    pub fn to_current(self) -> current::MassActionProblemData {
+    pub fn to_current(self) -> MassActionProblemData {
         match self {
             VersionedMassActionProblemData::V0(v0) => v0,
         }

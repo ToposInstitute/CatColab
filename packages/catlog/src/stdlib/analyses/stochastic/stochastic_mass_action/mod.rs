@@ -16,10 +16,9 @@ pub fn current_version() -> String {
 }
 
 /// The current version of stochastic mass-action.
-pub mod current {
-    // This should always track the latest version, and is the only version that is exported.
-    pub use crate::stdlib::analyses::stochastic::stochastic_mass_action::v0::stochastic_mass_action::*;
-}
+///
+/// This should always track the latest version, and is the only version that is exported.
+pub use crate::stdlib::analyses::stochastic::stochastic_mass_action::v0::stochastic_mass_action::*;
 
 /// Versioned stochastic mass-action problem data.
 pub enum VersionedStochasticMassActionProblemData {
@@ -48,7 +47,7 @@ impl<'de> Deserialize<'de> for VersionedStochasticMassActionProblemData {
 
 impl VersionedStochasticMassActionProblemData {
     /// Update any versioned stochastic mass-action problem data to the current version.
-    pub fn to_current(self) -> current::StochasticMassActionProblemData {
+    pub fn to_current(self) -> StochasticMassActionProblemData {
         match self {
             VersionedStochasticMassActionProblemData::V0(v0) => v0,
         }

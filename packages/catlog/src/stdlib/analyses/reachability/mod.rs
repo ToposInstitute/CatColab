@@ -14,10 +14,9 @@ pub fn current_version() -> String {
 }
 
 /// The current version of reachability.
-pub mod current {
-    // This should always track the latest version, and is the only version that is exported.
-    pub use crate::stdlib::analyses::reachability::v0::reachability::*;
-}
+///
+/// This should always track the latest version, and is the only version that is exported.
+pub use crate::stdlib::analyses::reachability::v0::reachability::*;
 
 /// Versioned reachability problem data.
 pub enum VersionedReachabilityProblemData {
@@ -46,7 +45,7 @@ impl<'de> Deserialize<'de> for VersionedReachabilityProblemData {
 
 impl VersionedReachabilityProblemData {
     /// Update any versioned reachability problem data to the current version.
-    pub fn to_current(self) -> current::ReachabilityProblemData {
+    pub fn to_current(self) -> ReachabilityProblemData {
         match self {
             VersionedReachabilityProblemData::V0(v0) => v0,
         }
