@@ -12,8 +12,10 @@ const meta = {
         status: "Idle",
         busy: false,
         available: true,
+        canRetry: false,
         validateAttachments: () => undefined,
         onSubmit: async () => true,
+        onRetry: () => {},
         onResolveFeedback: () => {},
     },
     decorators: [
@@ -28,10 +30,19 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const Complete: Story = {
+export const Summary: Story = {
     // excluding from autodocs and dev seems to be the way to have this
     // component as the first thing in the docs and only there
     tags: ["!autodocs", "!dev"],
+};
+
+export const Retryable: Story = {
+    args: {
+        interactions: interactions.slice(0, 1),
+        notice: { kind: "error", message: "The inference request failed." },
+        canRetry: true,
+        onRetry: () => {},
+    },
 };
 
 export const Streaming: Story = {
