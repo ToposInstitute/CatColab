@@ -4,7 +4,7 @@ import { createStore } from "solid-js/store";
 import { LLMConversation } from "catcolab-document-methods";
 import { type InlineFile, LLMInteraction } from "catcolab-document-types";
 import type { JsResult } from "catlog-wasm";
-import { useBinder } from "../api";
+import type { ApiBinder } from "../api";
 import { ChatTurnEvent } from "../inference/chat";
 import { InferenceKeyResult } from "../user/inference_key_context";
 import { assertExhaustive } from "../util/assert_exhaustive";
@@ -44,8 +44,8 @@ const newLLMTurnState = (overrides?: Partial<LLMTurnState>) => ({
 
 /** Controller for an LLM conversation, intermediating between UI and harness.
 
-Handles events and exposes ephemeral state during turns of the LLM. Must be
-created within a component with the binder provided as context.
+Handles events and exposes ephemeral state during turns of the LLM. Bound to a
+single conversation and retained by the application, independently of editors.
  */
 export type LLMConversationController = {
     /** Reactive store for ephemeral turn state. */
@@ -62,10 +62,10 @@ export type LLMConversationController = {
 };
 
 export function createLLMConversationController(
-    conversation: Accessor<ApiLLMConversation>,
+    conversation: ApiLLMConversation,
+    binder: ApiBinder,
     inferenceKey: Accessor<InferenceKeyResult | undefined>,
 ): LLMConversationController {
-    const binder = useBinder();
     const [store, setStore] = createStore<LLMTurnState>(newLLMTurnState());
 
     const pushLiveInteraction = (interaction: LLMInteraction) => {
@@ -117,15 +117,23 @@ export function createLLMConversationController(
     const runTurn = async (
         userInput: LLMConversationUserInput,
     ): Promise<LLMConversationTurnResult> => {
+        if (store.isRunning) {
+            return { tag: "Failed", error: "A turn is already running in this conversation." };
+        }
         const key = inferenceKey();
         if (!key) {
             return { tag: "Failed", error: "Inference key is missing. It might still be loading" };
         }
 
+        if (key.tag !== "Ready") {
+            return { tag: "Failed", error: "Inference is unavailable." };
+        }
+
+        runningToolCallId = undefined;
         setStore(newLLMTurnState({ isRunning: true }));
         try {
             const result = await runLLMConversationTurn(
-                conversation(),
+                conversation,
                 binder,
                 key,
                 userInput,
@@ -142,7 +150,7 @@ export function createLLMConversationController(
 
     const validateAttachments = (files: readonly File[]): JsResult<void, string> =>
         validateConversationAttachments([
-            ...conversationAttachmentMetadata(conversation().interactions()),
+            ...conversationAttachmentMetadata(conversation.interactions()),
             ...files.map((file) => ({
                 filename: file.name,
                 mediaType: file.type,
