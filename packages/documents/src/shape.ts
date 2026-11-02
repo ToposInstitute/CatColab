@@ -1,6 +1,7 @@
 import type { Modality, MorType, ObOp, ObType } from "catcolab-document-types";
 import type { DblTheory } from "catlog-wasm";
 import { morphismTypesEqual, objectTypesEqual } from "./model/equality";
+import type { DeepReadonly } from "./util/deep-readonly";
 
 export interface ObjectType<O extends ObType = ObType> {
     readonly kind: "object";
@@ -128,6 +129,20 @@ export type CodomainObjectTypesOf<S extends Shape, M extends MorphismType> = M e
     ? EndpointObjectTypesOf<S, M, E>
     : HomObjectTypesOf<S, M>;
 
+export type ListModality = Extract<Modality, `${string}List`>;
+
+export type MorphismEndpointValue<
+    M extends MorphismType,
+    Side extends keyof MorphismEndpoints,
+    Value,
+> = M extends {
+    readonly endpoints: {
+        readonly [K in Side]: { readonly modality: ListModality };
+    };
+}
+    ? readonly (Value | null)[]
+    : Value;
+
 export function findObjectType<S extends Shape>(
     shape: S,
     obType: ObType,
@@ -139,7 +154,7 @@ export function findObjectType<S extends Shape>(
 
 export function findMorphismType<S extends Shape>(
     shape: S,
-    morType: MorType,
+    morType: DeepReadonly<MorType>,
 ): MorphismTypesOf<S> | undefined {
     return shape.morphisms?.find((type) => morphismTypesEqual(type.morType, morType)) as
         | MorphismTypesOf<S>

@@ -2,13 +2,14 @@ import { Model, Nb, type ModelDocument } from "catcolab-document-methods";
 import type { ModelJudgment } from "catcolab-document-types";
 import type { DocumentStore } from "../document-store";
 import {
-    findMorphismType,
     findObjectType,
     type AnyCellType,
     type CellTypeOf,
     type CodomainObjectTypesOf,
     type DomainObjectTypesOf,
     type EquationType,
+    type MorphismEndpoints,
+    type MorphismEndpointValue,
     type MorphismType,
     type MorphismTypesOf,
     type ObjectType,
@@ -18,7 +19,7 @@ import {
 import type { Commit } from "../transaction";
 import { assertExhaustive } from "../util/assert_exhaustive";
 import { createSubscriptionScope } from "../util/subscription-scope";
-import { obFromObjectCell } from "./cell";
+import { obFromMorphismEndpoint } from "./cell";
 import {
     parseNotebookData,
     getNotebookData,
@@ -33,10 +34,17 @@ import {
 } from "./data";
 import { deleteNotebookCell } from "./delete-cell";
 import type { ModelValidation } from "./elaborated-model";
+import { morphismEndpointsEqual } from "./endpoint";
 import { morphismTypesEqual, objectTypesEqual } from "./equality";
 import { morFromSide } from "./equation-translate";
 import type { NotebookDocument } from "./notebook-document";
-import { updateNotebookCell, type AnyCellPatch, type CellPatchOf, type CellRef } from "./update";
+import {
+    isCellRef,
+    updateNotebookCell,
+    type AnyCellPatch,
+    type CellPatchOf,
+    type CellRef,
+} from "./update";
 import { createNotebookValidator } from "./validation";
 
 export type { ModelDocument } from "catcolab-document-methods";
@@ -51,8 +59,16 @@ type CellValuesOf<S extends Shape, T extends CellTypeOf<S>> = T extends RichText
       : T extends MorphismType
         ? {
               label: string | null;
-              from: ObjectCellData<DomainObjectTypesOf<S, T>> | null;
-              to: ObjectCellData<CodomainObjectTypesOf<S, T>> | null;
+              from: MorphismEndpointValue<
+                  T,
+                  "domain",
+                  ObjectCellData<DomainObjectTypesOf<S, T>>
+              > | null;
+              to: MorphismEndpointValue<
+                  T,
+                  "codomain",
+                  ObjectCellData<CodomainObjectTypesOf<S, T>>
+              > | null;
           }
         : T extends EquationType
           ? { label: string | null; lhs?: EquationSideData; rhs?: EquationSideData }
@@ -79,8 +95,28 @@ function shapeSupportsCell(shape: Shape, type: AnyCellType): boolean {
             return true;
         case "object":
             return findObjectType(shape, type.obType) !== undefined;
-        case "morphism":
-            return findMorphismType(shape, type.morType) !== undefined;
+        case "morphism": {
+            const required = (type as MorphismType & { readonly endpoints?: MorphismEndpoints })
+                .endpoints;
+            return (
+                shape.morphisms?.some((candidate) => {
+                    if (!morphismTypesEqual(candidate.morType, type.morType)) {
+                        return false;
+                    }
+                    if (required === undefined) {
+                        return true;
+                    }
+                    const endpoints = (
+                        candidate as MorphismType & { readonly endpoints?: MorphismEndpoints }
+                    ).endpoints;
+                    return (
+                        endpoints !== undefined &&
+                        morphismEndpointsEqual(endpoints.domain, required.domain) &&
+                        morphismEndpointsEqual(endpoints.codomain, required.codomain)
+                    );
+                }) ?? false
+            );
+        }
         case "path-equation":
             return shape.supportsEquations === true;
         default:
@@ -235,8 +271,10 @@ export function modelNotebookFromStore<Handle, S extends Shape, Version>(
             const judgment = Model.newMorphismDecl(type.morType);
             judgment.name = morphism.label ?? "";
             const data = getNotebookData(store, handle);
-            judgment.dom = obFromObjectCell(data, morphism.from);
-            judgment.cod = obFromObjectCell(data, morphism.to);
+            const endpoints = (type as MorphismType & { readonly endpoints?: MorphismEndpoints })
+                .endpoints;
+            judgment.dom = obFromMorphismEndpoint(data, endpoints?.domain, morphism.from);
+            judgment.cod = obFromMorphismEndpoint(data, endpoints?.codomain, morphism.to);
             return appendCell(Nb.newFormalCell<ModelJudgment>(judgment)) as AddedCellOf<S, T>;
         },
         cells() {
@@ -255,8 +293,8 @@ export function modelNotebookFromStore<Handle, S extends Shape, Version>(
             return getNotebookData(store, handle);
         },
         update(target: Partial<{ title: string }> | CellRef, patch?: AnyCellPatch<S>) {
-            if ("id" in target) {
-                updateNotebookCell(store, handle, target, patch ?? {});
+            if (isCellRef(target)) {
+                updateNotebookCell(store, handle, shape, target, patch ?? {});
                 return;
             }
             if (target.title !== undefined) {

@@ -5,6 +5,7 @@ import type { DocumentStore } from "../document-store";
 import type { ModelDocument } from "../model/document";
 import type { Notebook } from "../model/document";
 import type { ModelValidation } from "../model/elaborated-model";
+import { isSingleObjectEndpoint } from "../model/endpoint";
 import { assertInstanceCapableShape, type Shape } from "../shape";
 import { parseInstanceData, type InstanceData } from "./data";
 import type { InstanceValidation } from "./document";
@@ -14,10 +15,11 @@ import {
     indexInstanceTables,
     readInstancePath,
     tablesWithOrphanedData,
+    findUnsupportedEndpoints,
 } from "./table-methods";
 
 export { atomicTypeOfAttributeType } from "./atomic-types";
-import type { FieldPath, TableFieldIssue, TableIssue } from "./errors";
+import type { FieldPath, TableFieldIssue, TableIssue, UnsupportedEndpointIssue } from "./errors";
 import type { InstanceTable, LiteralType, TableHeader } from "./tables";
 
 /** Current-document validation and change callbacks for an instance. */
@@ -63,6 +65,14 @@ export function createInstanceValidator<Handle, S extends Shape, Version>(
                 path: issue.path,
                 issueType: "MalformedDocument" as const,
             })),
+            ...findUnsupportedEndpoints(schemaValidation.model).map(
+                ({ morphism, side }): UnsupportedEndpointIssue => ({
+                    message: `Morphism \`${morphism.label.join(".")}\` has a ${side} that is not a single object and is ignored`,
+                    path: isSingleObjectEndpoint(morphism.from) ? [morphism.from.id] : [],
+                    issueType: "UnsupportedEndpoint",
+                    morphismId: morphism.id,
+                }),
+            ),
             ...(data === undefined ? [] : validateInstanceTables(data, schemaTables)),
             ...validatePathEquations(tables, schemaValidation.model),
         ];

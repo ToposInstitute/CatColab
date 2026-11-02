@@ -1,4 +1,4 @@
-import { PetriNet } from "catcolab-logics/petri-net";
+import { PetriNet, Transition } from "catcolab-logics/petri-net";
 import { SimpleOlog } from "catcolab-logics/simple-olog";
 import { Attr, AttrType, Entity, Mapping, SimpleSchema } from "catcolab-logics/simple-schema";
 import { describe, expect, test } from "vitest";
@@ -128,7 +128,7 @@ function addListMorphism(notebook: NotebookOfLists): string {
     throw new Error("Did not find any supported List morphism in the notebook.");
 }
 
-describe.skip("generic shapes of notebooks", () => {
+describe("generic shapes of notebooks", () => {
     test("a generic function against a subset shape works with notebooks from either logic", async () => {
         const binder = createBinder();
 
@@ -147,6 +147,10 @@ describe.skip("generic shapes of notebooks", () => {
 
         expect(olog.cellsOf(BasicObj).map((cell) => cell.label)).toEqual(["A", "B"]);
         expect(petriNet.cellsOf(BasicObj).map((cell) => cell.label)).toEqual(["A", "B"]);
+        const places = petriNet.cellsOf(BasicObj);
+        const transition = petriNet.add(Transition, { label: "t", from: places, to: [] });
+        expect(transition.from).toEqual(places);
+        expect(transition.to).toEqual([]);
     });
 
     test("supports narrows what a notebook accepts at runtime", async () => {
@@ -203,6 +207,9 @@ describe.skip("generic shapes of notebooks", () => {
 
         const petriNet = await binder.createNotebook(PetriNet, { title: "example" });
         expect(addListMorphism(petriNet)).toBe("SymmetricListMor");
+        expect(petriNet.cellsOf(Transition)).toMatchObject([
+            { label: "L", from: [{ label: "A" }, { label: "B" }], to: [{ label: "C" }] },
+        ]);
 
         const entityObType = defineObject({ tag: "Basic", content: "Entity" });
         const EntityObjectShape = defineShape({

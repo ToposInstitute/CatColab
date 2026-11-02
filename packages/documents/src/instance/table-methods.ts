@@ -5,9 +5,10 @@ import type * as DocumentTypes from "catcolab-document-types";
 import type { QualifiedLabel } from "catlog-wasm";
 import type { DocumentStore } from "../document-store";
 import { isRecord } from "../document/parse-structure";
-import type { ElaboratedModel, ObjectJudgment } from "../model/elaborated-model";
+import type { ElaboratedModel, MorphismJudgment, ObjectJudgment } from "../model/elaborated-model";
+import { isSingleObjectEndpoint } from "../model/endpoint";
 import type { Issue, Result } from "../result";
-import type { InstanceCapableShape, ObjectType } from "../shape";
+import type { InstanceCapableShape, ObjectType, Shape } from "../shape";
 import type { DeepReadonly } from "../util/deep-readonly";
 import { atomicTypeOfAttributeType } from "./atomic-types";
 import { getInstanceData, type RowData, type TableData } from "./data";
@@ -408,19 +409,23 @@ export function instanceTablesFromModel(
 
     return tableObjects.map((tableObject) => {
         const headers: TableHeader[] = [];
-        for (const morphism of judgments) {
-            if (morphism.kind !== "morphism" || morphism.from?.id !== tableObject.id) {
+        for (const judgment of judgments) {
+            if (
+                judgment.kind !== "morphism" ||
+                !isSingleObjectEndpoint(judgment.from) ||
+                judgment.from.id !== tableObject.id
+            ) {
                 continue;
             }
-            const codomain = morphism.to;
-            if (codomain === null) {
+            const codomain = judgment.to;
+            if (!isSingleObjectEndpoint(codomain)) {
                 continue;
             }
 
             if (tableIds.has(codomain.id)) {
                 headers.push({
-                    id: morphism.id,
-                    label: displayLabel(morphism.label),
+                    id: judgment.id,
+                    label: displayLabel(judgment.label),
                     type: { tag: "RowRef", content: { id: codomain.id } },
                 });
                 continue;
@@ -428,13 +433,38 @@ export function instanceTablesFromModel(
 
             const literalType = atomicTypeOfAttributeType(codomain.label);
             headers.push({
-                id: morphism.id,
-                label: displayLabel(morphism.label),
+                id: judgment.id,
+                label: displayLabel(judgment.label),
                 type: { tag: literalType },
             });
         }
         return makeTable(storedTables, tableObject.id, displayLabel(tableObject.label), headers);
     });
+}
+
+export interface UnsupportedEndpoint {
+    readonly morphism: MorphismJudgment<Shape>;
+    readonly side: "domain" | "codomain";
+}
+
+export function findUnsupportedEndpoints(schemaModel: ElaboratedModel): UnsupportedEndpoint[] {
+    const endpoints: UnsupportedEndpoint[] = [];
+    for (const judgment of schemaModel.judgments()) {
+        if (judgment.kind !== "morphism") {
+            continue;
+        }
+        const { from, to } = judgment;
+        const fromSupported = from === null || isSingleObjectEndpoint(from);
+        const toSupported = to === null || isSingleObjectEndpoint(to);
+        if (fromSupported && toSupported) {
+            continue;
+        }
+        endpoints.push({
+            morphism: judgment,
+            side: fromSupported ? "codomain" : "domain",
+        });
+    }
+    return endpoints;
 }
 
 /** Extend schema-derived tables with any orphaned stored data.

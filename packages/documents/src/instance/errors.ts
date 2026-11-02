@@ -52,9 +52,16 @@ export interface MalformedDocumentIssue extends Issue {
     readonly issueType: "MalformedDocument";
 }
 
+export interface UnsupportedEndpointIssue extends Issue {
+    readonly path: [] | [string];
+    readonly issueType: "UnsupportedEndpoint";
+    readonly morphismId: string;
+}
+
 /** A problem found while validating an instance's tables. */
 export type TableIssue =
     | TableFieldIssue
     | OrphanedTableIssue
     | EquationViolationIssue
-    | MalformedDocumentIssue;
+    | MalformedDocumentIssue
+    | UnsupportedEndpointIssue;

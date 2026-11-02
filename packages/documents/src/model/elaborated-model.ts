@@ -1,5 +1,5 @@
 import type { Mor } from "catcolab-document-types";
-import type { ModelPresentation, MorGenerator, QualifiedLabel } from "catlog-wasm";
+import type { ModelPresentation, QualifiedLabel } from "catlog-wasm";
 import type { Issue } from "../result";
 import {
     findMorphismType,
@@ -13,6 +13,7 @@ import {
     type RichTextType,
     type Shape,
 } from "../shape";
+import { resolveEndpointDataFromOb, type EndpointData } from "./endpoint";
 import { morphismTypesEqual, objectTypesEqual } from "./equality";
 
 /** An object judgment of an elaborated model. Mirrors [`ObjectCell`], minus
@@ -34,8 +35,8 @@ export interface MorphismJudgment<
     readonly id: string;
     readonly type: M;
     readonly label: QualifiedLabel;
-    readonly from: ObjectJudgment<ObjectTypesOf<S>> | null;
-    readonly to: ObjectJudgment<ObjectTypesOf<S>> | null;
+    readonly from: EndpointData<ObjectJudgment<ObjectTypesOf<S>>> | null;
+    readonly to: EndpointData<ObjectJudgment<ObjectTypesOf<S>>> | null;
 }
 
 /** A judgment of an elaborated model.*/
@@ -127,13 +128,14 @@ export function elaboratedModelFromPresentation<S extends Shape>(
             if (type === undefined) {
                 continue;
             }
+            const resolve = (id: string) => objectsById.get(id) ?? null;
             const judgment: MorphismJudgment<S> = {
                 kind: "morphism",
                 id: generator.id,
                 type,
                 label: generator.label ?? [],
-                from: endpointJudgment(objectsById, generator.dom),
-                to: endpointJudgment(objectsById, generator.cod),
+                from: resolveEndpointDataFromOb(generator.dom, resolve),
+                to: resolveEndpointDataFromOb(generator.cod, resolve),
             };
             morphismsById.set(generator.id, judgment);
             morphisms.push(judgment);
@@ -163,16 +165,6 @@ export function elaboratedModelFromPresentation<S extends Shape>(
         // cannot see; the cast makes the overloads on `ElaboratedModel` honest.
         judgmentsOf: judgmentsOf as ElaboratedModel<S>["judgmentsOf"],
     };
-}
-
-function endpointJudgment<S extends Shape>(
-    objectsById: ReadonlyMap<string, ObjectJudgment<ObjectTypesOf<S>>>,
-    endpoint: MorGenerator["dom"],
-): ObjectJudgment<ObjectTypesOf<S>> | null {
-    if (endpoint.tag !== "Basic") {
-        return null;
-    }
-    return objectsById.get(endpoint.content) ?? null;
 }
 
 function judgmentSideFromMor<S extends Shape>(

@@ -9,9 +9,41 @@ import type {
 } from "catlog-wasm";
 import type { DocumentStore } from "../document-store";
 import type { Issue } from "../result";
-import type { Shape } from "../shape";
+import { findMorphismType, type Shape } from "../shape";
 import type { DeepReadonly } from "../util/deep-readonly";
 import { elaboratedModelFromPresentation, type ModelValidation } from "./elaborated-model";
+import { getMorphismEndpoints, validateEndpoint } from "./endpoint";
+
+function endpointShapeIssues(document: DeepReadonly<ModelDocument>, shape: Shape): Issue[] {
+    const issues: Issue[] = [];
+    for (const cellId of document.notebook.cellOrder) {
+        const cell = document.notebook.cellContents[cellId];
+        if (cell?.tag !== "formal" || cell.content.tag !== "morphism") {
+            continue;
+        }
+        const decl = cell.content;
+        const type = findMorphismType(shape, decl.morType);
+        const endpoints = getMorphismEndpoints(type);
+        for (const [property, side] of [
+            ["dom", "domain"],
+            ["cod", "codomain"],
+        ] as const) {
+            const mismatch = validateEndpoint(decl[property], endpoints?.[side]);
+            if (mismatch) {
+                const name = decl.name || decl.id;
+                const message =
+                    mismatch.kind === "single-object"
+                        ? `Morphism \`${name}\` has a ${side} that is not a single object`
+                        : `Morphism \`${name}\` has a ${side} that is not a ${mismatch.endpoint.modality} of \`${mismatch.endpoint.apply.content}\` containing single objects`;
+                issues.push({
+                    message,
+                    path: ["notebook", "cellContents", cellId, "content", property],
+                });
+            }
+        }
+    }
+    return issues;
+}
 
 function formalCellForGenerator(
     notebook: DeepReadonly<Notebook<ModelJudgment>>,
@@ -211,7 +243,12 @@ export function createNotebookValidator<Handle, S extends Shape>(
             }
             const theory = await coreTheory;
             const document = store.getDocumentSnapshot(handle) as DeepReadonly<ModelDocument>;
-            return await validateModelDocument(document, theory, store.getDocumentRef(handle).id);
+            const state = await validateModelDocument(
+                document,
+                theory,
+                store.getDocumentRef(handle).id,
+            );
+            return { ...state, issues: [...endpointShapeIssues(document, shape), ...state.issues] };
         } catch (error) {
             return {
                 issues: [{ message: `Failed to load core theory: ${String(error)}` }],

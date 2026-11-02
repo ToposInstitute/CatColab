@@ -16,6 +16,7 @@ import {
 import { assertExhaustive } from "../util/assert_exhaustive";
 import type { DeepReadonly } from "../util/deep-readonly";
 import type { ModelDocument } from "./document";
+import { resolveEndpointDataFromOb, type EndpointData } from "./endpoint";
 import { parseModelNotebookStructure } from "./parse-structure";
 
 export interface RichTextCellData {
@@ -40,8 +41,8 @@ export interface MorphismCellData<M extends MorphismType = MorphismType> {
     readonly id: string;
     readonly type: M;
     readonly label: string | undefined;
-    readonly from: ObjectCellData | null | undefined;
-    readonly to: ObjectCellData | null | undefined;
+    readonly from: EndpointData<ObjectCellData> | null | undefined;
+    readonly to: EndpointData<ObjectCellData> | null | undefined;
 }
 
 export type EquationSideData = ObjectCellData | ReadonlyArray<MorphismCellData | null>;
@@ -110,10 +111,11 @@ function parseNotebookDataValue(document: DeepReadonly<object>): NotebookParseRe
         return { tag: "Err", content: [{ message: "Expected a model document", path: ["type"] }] };
     }
     const result = parseModelNotebookStructure(document as DeepReadonly<ModelDocument>);
+    const value = buildNotebookData(result.value);
     return {
         tag: "Ok",
         content: {
-            value: buildNotebookData(result.value),
+            value,
             issues: result.issues,
         },
     };
@@ -148,10 +150,6 @@ function buildNotebookData(document: StructurallyValid<ModelDocument>): ModelNot
         }
         return built;
     }
-    // TODO: Non-basic objects (`App`, `List`, `Tabulated`) read as null; the
-    // data model has no representation for them yet. Likewise, references to
-    // cells of instantiated models (`instantiation` judgments) do not
-    // resolve to a local cell and read as null
     const objectFromOb = (ob: DeepReadonly<Ob> | null): ObjectCellData | null => {
         if (ob?.tag !== "Basic") {
             return null;
@@ -160,6 +158,8 @@ function buildNotebookData(document: StructurallyValid<ModelDocument>): ModelNot
         const resolved = cellId === undefined ? undefined : cellOf(cellId);
         return resolved?.kind === "object" ? resolved : null;
     };
+    const resolveObject = (id: string): ObjectCellData | null =>
+        objectFromOb({ tag: "Basic", content: id });
     const morphismFromId = (id: string): MorphismCellData | null => {
         const cellId = cells.get(id);
         const resolved = cellId === undefined ? undefined : cellOf(cellId);
@@ -202,7 +202,7 @@ function buildNotebookData(document: StructurallyValid<ModelDocument>): ModelNot
                     type: { kind: "object", obType: structuredClone(decl.obType) as ObType },
                     label,
                 };
-            case "morphism":
+            case "morphism": {
                 return {
                     kind: "morphism",
                     id,
@@ -212,9 +212,10 @@ function buildNotebookData(document: StructurallyValid<ModelDocument>): ModelNot
                         morType: structuredClone(decl.morType) as MorType,
                     },
                     label,
-                    from: objectFromOb(decl.dom),
-                    to: objectFromOb(decl.cod),
+                    from: resolveEndpointDataFromOb(decl.dom, resolveObject),
+                    to: resolveEndpointDataFromOb(decl.cod, resolveObject),
                 };
+            }
             case "equation":
                 return {
                     kind: "path-equation",
