@@ -13,7 +13,9 @@ import { validateConversationAttachments } from "./conversation_attachment_polic
 import {
     LLMConversationTurnResult,
     LLMConversationUserInput,
+    canRetryLLMConversationResponse,
     conversationAttachmentMetadata,
+    retryLastLLMConversationResponse,
     runLLMConversationTurn,
 } from "./document";
 import type { ApiLLMConversation } from "./live_doc_compatibility";
@@ -30,8 +32,6 @@ export type LLMTurnState = {
 export type LLMTurnNotice = {
     kind: "error" | "note";
     message: string;
-    /** Whether the turn can be retried without resubmitting the user message. */
-    retryable: boolean;
 };
 
 const newLLMTurnState = (overrides?: Partial<LLMTurnState>) => ({
@@ -54,6 +54,12 @@ export type LLMConversationController = {
     /** Run a turn of the LLM conversation. */
     runTurn: (userInput: LLMConversationUserInput) => Promise<LLMConversationTurnResult>;
 
+    /** Retry the response to the latest user message. */
+    retryTurn: () => Promise<LLMConversationTurnResult>;
+
+    /** Whether the latest interaction is a user message awaiting a response. */
+    canRetry: () => boolean;
+
     /** Validate files staged to be attached to the next user message. */
     validateAttachments: (files: readonly File[]) => JsResult<void, string>;
 
@@ -66,10 +72,10 @@ export function createLLMConversationController(
     binder: ApiBinder,
     inferenceKey: Accessor<InferenceKeyResult | undefined>,
 ): LLMConversationController {
-    const [store, setStore] = createStore<LLMTurnState>(newLLMTurnState());
+    const [llmTurnState, setLLMTurnState] = createStore<LLMTurnState>(newLLMTurnState());
 
     const pushLiveInteraction = (interaction: LLMInteraction) => {
-        setStore("liveInteractions", store.liveInteractions.length, interaction);
+        setLLMTurnState("liveInteractions", llmTurnState.liveInteractions.length, interaction);
     };
 
     // Correlates `ToolResult` events with the running entry they complete.
@@ -80,14 +86,14 @@ export function createLLMConversationController(
     const handleTurnEvent = (event: ChatTurnEvent) => {
         switch (event.tag) {
             case "Streaming":
-                setStore("streamingContent", event.snapshot);
+                setLLMTurnState("streamingContent", event.snapshot);
                 break;
             case "RunTool": {
                 // Finalize any narration streamed since the last tool call.
-                const narration = store.streamingContent.trim();
+                const narration = llmTurnState.streamingContent.trim();
                 if (narration.length > 0) {
                     pushLiveInteraction(LLMConversation.newLLMMessage(narration));
-                    setStore("streamingContent", "");
+                    setLLMTurnState("streamingContent", "");
                 }
 
                 const toolCallId = `ephemeral-${ephemeralToolCallCount++}`;
@@ -100,7 +106,7 @@ export function createLLMConversationController(
             case "ToolResult": {
                 const toolCallId = runningToolCallId;
                 runningToolCallId = undefined;
-                setStore(
+                setLLMTurnState(
                     "liveInteractions",
                     (interaction) =>
                         interaction.tag === "llm-code-execution" &&
@@ -114,10 +120,10 @@ export function createLLMConversationController(
         }
     };
 
-    const runTurn = async (
-        userInput: LLMConversationUserInput,
+    const executeTurn = async (
+        run: (key: InferenceKeyResult) => Promise<LLMConversationTurnResult>,
     ): Promise<LLMConversationTurnResult> => {
-        if (store.isRunning) {
+        if (llmTurnState.isRunning) {
             return { tag: "Failed", error: "A turn is already running in this conversation." };
         }
         const key = inferenceKey();
@@ -130,23 +136,30 @@ export function createLLMConversationController(
         }
 
         runningToolCallId = undefined;
-        setStore(newLLMTurnState({ isRunning: true }));
+        setLLMTurnState(newLLMTurnState({ isRunning: true }));
         try {
-            const result = await runLLMConversationTurn(
-                conversation,
-                binder,
-                key,
-                userInput,
-                handleTurnEvent,
-            );
-            setStore("notice", turnResultToNotice(result));
-            setStore("liveInteractions", result.tag === "Retryable" ? result.attempts : []);
+            const result = await run(key);
+            setLLMTurnState("notice", turnResultToNotice(result));
+            setLLMTurnState("liveInteractions", result.tag === "Retryable" ? result.attempts : []);
             return result;
         } finally {
-            setStore("isRunning", false);
-            setStore("streamingContent", "");
+            setLLMTurnState("isRunning", false);
+            setLLMTurnState("streamingContent", "");
         }
     };
+
+    const runTurn = (userInput: LLMConversationUserInput) =>
+        executeTurn((key) =>
+            runLLMConversationTurn(conversation, binder, key, userInput, handleTurnEvent),
+        );
+
+    const retryTurn = () =>
+        executeTurn((key) =>
+            retryLastLLMConversationResponse(conversation, binder, key, handleTurnEvent),
+        );
+
+    const canRetry = () =>
+        !llmTurnState.isRunning && canRetryLLMConversationResponse(conversation.interactions());
 
     const validateAttachments = (files: readonly File[]): JsResult<void, string> =>
         validateConversationAttachments([
@@ -162,18 +175,19 @@ export function createLLMConversationController(
         try {
             return await Promise.all(files.map(readInlineFile));
         } catch (error) {
-            setStore("notice", {
+            setLLMTurnState("notice", {
                 kind: "error",
                 message: errorMessage(error),
-                retryable: false,
             });
             return null;
         }
     };
 
     return {
-        state: store,
+        state: llmTurnState,
         runTurn,
+        retryTurn,
+        canRetry,
         validateAttachments,
         readAttachments,
     };
@@ -200,11 +214,10 @@ function turnResultToNotice(result: LLMConversationTurnResult): LLMTurnNotice | 
         case "Incomplete":
             // The turn stopped without a final response, but the conversation
             // state is coherent.
-            return { kind: "note", message: result.reason, retryable: false };
+            return { kind: "note", message: result.reason };
         case "Failed":
-            return { kind: "error", message: result.error, retryable: false };
         case "Retryable":
-            return { kind: "error", message: result.error, retryable: true };
+            return { kind: "error", message: result.error };
         default:
             assertExhaustive(result);
     }

@@ -99,6 +99,12 @@ export async function runLLMConversationTurn<
     }
 }
 
+export function canRetryLLMConversationResponse(
+    interactions: DeepReadonly<LLMInteraction[]>,
+): boolean {
+    return interactions.at(-1)?.tag === "user-message";
+}
+
 /** Retry the latest persisted user message without adding it again. */
 export async function retryLastLLMConversationResponse<
     Handle,
@@ -114,7 +120,7 @@ export async function retryLastLLMConversationResponse<
         return { tag: "Failed", error: "Inference is unavailable." };
     }
 
-    if (conversation.interactions().at(-1)?.tag !== "user-message") {
+    if (!canRetryLLMConversationResponse(conversation.interactions())) {
         return { tag: "Failed", error: "The latest interaction is not a user message." };
     }
 
