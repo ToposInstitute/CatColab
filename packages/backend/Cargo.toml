@@ -20,7 +20,9 @@ chrono = { version = "0.4.40", features = ["serde"] }
 clap = "4.5.44"
 dotenvy = "0.15.7"
 migrator = { version = "0.1.0", path = "../migrator" }
-firebase-auth = { version = "0.5.1", default-features = false, features = [
+# Pinned to trchopan/firebase-auth PR #43 (reqwest 0.12.28, patched TLS chain)
+# until a release including it is published to crates.io.
+firebase-auth = { git = "https://github.com/ToposInstitute/firebase-auth", rev = "7c527f9b2f80b268bc581c312740cad7b27a2c80", default-features = false, features = [
   "rustls",
 ] }
 futures-util = "0.3"
