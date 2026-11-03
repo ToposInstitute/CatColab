@@ -5,41 +5,48 @@ import {
     LLMConversationEditor as LLMConversationEditorView,
 } from "catcolab-ui-components";
 import { useInferenceKey } from "../user/inference_key_context";
-import { createLLMConversationController } from "./conversation_controller";
+import { useLLMConversations } from "./conversation_provider";
 import type { ApiLLMConversation } from "./live_doc_compatibility";
 
 export function LLMConversationEditor(props: { conversation: ApiLLMConversation }) {
     const inferenceKey = useInferenceKey();
-    const controller = createLLMConversationController(() => props.conversation, inferenceKey);
+    const conversations = useLLMConversations();
+    const controller = createMemo(() => conversations.get(props.conversation));
     const interactions = createMemo(() => [
         ...props.conversation.interactions(),
-        ...controller.state.liveInteractions,
+        ...controller().state.liveInteractions,
     ]);
     const submit = async (input: LLMConversationInput): Promise<boolean> => {
-        const files = await controller.readAttachments(input.files);
-        if (!files) {
+        // Keep the submission attached to the original conversation even if navigation
+        // changes the editor's props while files are being read.
+        const target = controller();
+        if (target.state.isRunning) {
             return false;
         }
-        void controller.runTurn({ content: input.content, files });
+        const files = await target.readAttachments(input.files);
+        if (!files || target.state.isRunning) {
+            return false;
+        }
+        void target.runTurn({ content: input.content, files });
         return true;
     };
 
     return (
         <LLMConversationEditorView
             interactions={interactions()}
-            streamingContent={controller.state.streamingContent}
+            streamingContent={controller().state.streamingContent}
             status={
                 inferenceKey()?.tag !== "Ready"
                     ? "Loading inference key..."
-                    : controller.state.isRunning
+                    : controller().state.isRunning
                       ? "Running..."
                       : "Idle"
             }
-            busy={controller.state.isRunning || inferenceKey()?.tag !== "Ready"}
-            notice={controller.state.notice}
-            available={inferenceKey()?.tag === "Ready" && !controller.state.isRunning}
+            busy={controller().state.isRunning || inferenceKey()?.tag !== "Ready"}
+            notice={controller().state.notice}
+            available={inferenceKey()?.tag === "Ready" && !controller().state.isRunning}
             validateAttachments={(files) => {
-                const result = controller.validateAttachments(files);
+                const result = controller().validateAttachments(files);
                 return result.tag === "Err" ? result.content : undefined;
             }}
             onSubmit={submit}

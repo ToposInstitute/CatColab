@@ -12,6 +12,7 @@ import * as uuid from "uuid";
 import { Button } from "catcolab-ui-components";
 import { Api, ApiContext, BinderProvider, useApi } from "./api";
 import { helpRoutes } from "./help/routes";
+import { LLMConversationProvider } from "./llm_conversation/conversation_provider";
 import { createModelLibraryWithApi, ModelLibraryContext } from "./model";
 import { createModel } from "./model/document";
 import { ErrorBoundaryDialog } from "./page/error_boundary";
@@ -57,6 +58,7 @@ const Root = (props: RouteSectionProps) => {
                     BinderProvider,
                     UserSettingsProvider,
                     InferenceKeyProvider,
+                    LLMConversationProvider,
                 ]}
             >
                 <MetaProvider>
