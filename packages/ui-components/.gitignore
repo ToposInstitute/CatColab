@@ -4,3 +4,5 @@ storybook-static
 *.module.css.d.ts
 bun.lock
 package-lock.json
+.vitest-attachments/
+**/__screenshots__/

@@ -15,6 +15,7 @@ import {
     type TableSpec,
     toInstanceTable,
     setSpecField,
+    setSpecRowLabel,
 } from "./table_editor.fixtures";
 
 async function expectActiveCell(cell: HTMLElement) {
@@ -52,6 +53,10 @@ function ConcurrentTable(props: { initialSpec: TableSpec }) {
                 onSetField={(row, header, value) => {
                     setWrites((n) => n + 1);
                     setSpec((spec) => setSpecField(spec, row, header, value));
+                }}
+                onSetRowLabel={(row, label) => {
+                    setWrites((n) => n + 1);
+                    setSpec((spec) => setSpecRowLabel(spec, row, label));
                 }}
                 onAddRow={() =>
                     setSpec((spec) => ({
@@ -95,7 +100,7 @@ const concurrentSpec: TableSpec = {
         { id: "focus-3", values: { value: "Third" } },
     ],
 };
-test("Tables without columns render placeholder cells and allow adding rows", async () => {
+test("Tables without columns render only labels and row actions and allow adding and deleting rows", async () => {
     const canvas = within(
         mount(() => (
             <EditableTables
@@ -113,10 +118,45 @@ test("Tables without columns render placeholder cells and allow adding rows", as
             />
         )),
     );
-    expect(canvas.getAllByRole("gridcell")).toHaveLength(2);
-    expect(canvas.queryByRole("button", { name: "Delete row" })).not.toBeInTheDocument();
+    expect(canvas.queryByRole("gridcell")).not.toBeInTheDocument();
+    expect(canvas.getByRole("grid")).toHaveAttribute("aria-colcount", "2");
+    expect(canvas.getAllByRole("columnheader")).toHaveLength(2);
+    expect(canvas.getAllByRole("rowheader")).toHaveLength(2);
+    expect(canvas.getAllByRole("button", { name: "Delete row" })).toHaveLength(2);
     await userEvent.click(canvas.getByRole("button", { name: "+ Row" }));
-    expect(canvas.getAllByRole("gridcell")).toHaveLength(3);
+    expect(canvas.getAllByRole("rowheader")).toHaveLength(3);
+    await userEvent.click(canvas.getAllByRole("button", { name: "Delete row" })[2]!);
+    expect(canvas.getAllByRole("rowheader")).toHaveLength(2);
+});
+
+test("Row labels fall back to row numbers when cleared", async () => {
+    const canvas = within(
+        mount(() => (
+            <EditableTables
+                initialSpecs={[
+                    {
+                        id: "labels",
+                        label: "Labels",
+                        columns: [],
+                        rows: [{ id: "first", values: {} }],
+                    },
+                ]}
+            />
+        )),
+    );
+    const row = () => canvas.getAllByRole("rowheader")[0]!;
+    expect(row()).toHaveTextContent("1");
+    expect(row()).toHaveAccessibleName("Row 1 label: 1");
+    await userEvent.dblClick(row());
+    expect(canvas.getByRole("textbox")).toHaveValue("");
+    await userEvent.keyboard("Alice{Enter}");
+    expect(row()).toHaveTextContent("Alice");
+    await userEvent.dblClick(row());
+    expect(canvas.getByRole("textbox")).toHaveValue("Alice");
+    await userEvent.clear(canvas.getByRole("textbox"));
+    await userEvent.keyboard("{Enter}");
+    expect(row()).toHaveTextContent("1");
+    expect(row()).toHaveAccessibleName("Row 1 label: 1");
 });
 
 test("HideTable", async () => {
@@ -168,15 +208,15 @@ test("RowRefHighlightsCurrent", async () => {
     const tables = within(canvasElement).getAllByRole("grid");
     // Bob's team cell, which references the second team.
     const cell = within(tables[1]!).getAllByRole("gridcell")[9]!;
-    expect(cell).toHaveTextContent('Team "Beacon"');
+    expect(cell).toHaveTextContent("2");
 
     await userEvent.dblClick(cell);
     const listbox = await within(document.body).findByRole("listbox");
     const active = listbox.querySelector("li.active");
-    expect(active).toHaveTextContent('Team "Beacon"');
+    expect(active).toHaveTextContent("2");
 
     await userEvent.keyboard("{Enter}");
-    expect(cell).toHaveTextContent('Team "Beacon"');
+    expect(cell).toHaveTextContent("2");
     await expectActiveCell(cell);
 });
 
@@ -247,7 +287,7 @@ test("ValidationIssues", async () => {
     const tables = within(canvasElement).getAllByRole("grid");
     const cells = within(tables[1]!).getAllByRole("gridcell");
 
-    expect(cells[4]).toHaveTextContent('Person "Bob"');
+    expect(cells[4]).toHaveTextContent("2");
     expect(cells[4]).toHaveAttribute("aria-invalid", "true");
     expect(cells[4]).toHaveAttribute("title", expect.stringContaining("must be a row"));
     expect(cells[0]).toHaveAttribute("aria-invalid", "false");
@@ -341,7 +381,7 @@ test("OrphanedTable", async () => {
     expect(
         within(tables[0]!.closest("section")!).queryByRole("button", { name: "+ Row" }),
     ).not.toBeInTheDocument();
-    expect(unknownRef).toHaveTextContent("Unknown table row 1");
+    expect(unknownRef).toHaveTextContent("1");
     // A table-level issue does not imply a field-level issue for references.
     expect(unknownRef).toHaveAttribute("aria-invalid", "false");
 
@@ -820,6 +860,31 @@ test("ScrollIndicators", async () => {
     const table = canvas.getByRole("grid");
     const scrollArea = table.parentElement!;
     const container = canvasElement.firstElementChild as HTMLElement;
+    const indicators = scrollArea.nextElementSibling as HTMLElement;
+    const corner = table.querySelector("th")!;
+    const expectDivider = () => {
+        const divider = getComputedStyle(indicators, "::after");
+        expect(divider.content).toBe('""');
+        expect(divider.width).toBe("1px");
+        expect(divider.top).toBe("0px");
+        expect(divider.bottom).toBe("0px");
+        expect(
+            Math.abs(Number.parseFloat(divider.left) - corner.getBoundingClientRect().width),
+        ).toBeLessThanOrEqual(1);
+    };
+    const expectLeftShadow = () => {
+        const shadow = canvasElement.querySelector<HTMLElement>('[data-scroll-direction="left"]')!;
+        expect(
+            Math.abs(shadow.getBoundingClientRect().top - indicators.getBoundingClientRect().top),
+        ).toBeLessThanOrEqual(1);
+        expect(
+            Math.abs(shadow.getBoundingClientRect().left - corner.getBoundingClientRect().right),
+        ).toBeLessThanOrEqual(2);
+        expect(shadow.getBoundingClientRect().bottom).toBeLessThanOrEqual(
+            indicators.getBoundingClientRect().bottom + 1,
+        );
+        expect(getComputedStyle(shadow).pointerEvents).toBe("none");
+    };
     const hasCue = (direction: string) =>
         canvasElement.querySelector(`[data-scroll-direction="${direction}"]`) !== null;
     await waitFor(async () => {
@@ -827,6 +892,31 @@ test("ScrollIndicators", async () => {
         expect(hasCue("right")).toBe(true);
         expect(hasCue("top")).toBe(false);
         expect(hasCue("left")).toBe(false);
+        expectDivider();
+    });
+    scrollArea.scrollTop = (scrollArea.scrollHeight - scrollArea.clientHeight) / 2;
+    scrollArea.scrollLeft = (scrollArea.scrollWidth - scrollArea.clientWidth) / 2;
+    scrollArea.dispatchEvent(new Event("scroll"));
+    await waitFor(() => {
+        for (const direction of ["top", "bottom", "left", "right"]) {
+            expect(hasCue(direction)).toBe(true);
+        }
+        expectDivider();
+        expectLeftShadow();
+    });
+    const gutterColumn = table.querySelector("col")!;
+    const initialGutterWidth = corner.getBoundingClientRect().width;
+    gutterColumn.style.width = "140px";
+    await waitFor(() => {
+        expect(corner.getBoundingClientRect().width).toBeGreaterThan(initialGutterWidth);
+        expectDivider();
+        expectLeftShadow();
+    });
+    gutterColumn.style.removeProperty("width");
+    await waitFor(() => {
+        expect(corner.getBoundingClientRect().width).toBe(initialGutterWidth);
+        expectDivider();
+        expectLeftShadow();
     });
     scrollArea.scrollTop = scrollArea.scrollHeight;
     scrollArea.scrollLeft = scrollArea.scrollWidth;
@@ -836,12 +926,15 @@ test("ScrollIndicators", async () => {
         expect(hasCue("left")).toBe(true);
         expect(hasCue("bottom")).toBe(false);
         expect(hasCue("right")).toBe(false);
+        expectDivider();
+        expectLeftShadow();
     });
     container.style.width = "600px";
     container.style.setProperty("--table-editor-max-height", "600px");
-    await waitFor(() =>
-        expect(canvasElement.querySelectorAll("[data-scroll-direction]")).toHaveLength(0),
-    );
+    await waitFor(() => {
+        expect(canvasElement.querySelectorAll("[data-scroll-direction]")).toHaveLength(0);
+        expectDivider();
+    });
     // Adding/removing content updates overflow even if viewport width is unchanged.
     container.style.setProperty("--table-editor-max-height", "400px");
     await userEvent.click(canvas.getByRole("button", { name: "+ Row" }));
@@ -1003,6 +1096,10 @@ function StructuralChangesTable() {
                 onSetField={(row, header, value) => {
                     setWrites((n) => n + 1);
                     setSpec((s) => setSpecField(s, row, header, value as LiteralValue));
+                }}
+                onSetRowLabel={(row, label) => {
+                    setWrites((n) => n + 1);
+                    setSpec((spec) => setSpecRowLabel(spec, row, label));
                 }}
                 onAddRow={() =>
                     setTimeout(

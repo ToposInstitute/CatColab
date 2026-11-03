@@ -25,7 +25,10 @@ function ok<T, E>(result: Result<T, E>): T {
 describe("essential snapshot structure", () => {
     test("valid snapshots are unchanged and parsing reuses snapshot identity", () => {
         const snapshot = Instance.newInstanceDocument(link);
-        snapshot.tables["people"] = { rows: { alice: { fields: {} } }, rowOrder: ["alice"] };
+        snapshot.tables["people"] = {
+            rows: { alice: { label: "", fields: {} } },
+            rowOrder: ["alice"],
+        };
         const parsed = parseInstanceStructure(snapshot);
         expect(parsed).toEqual({ value: snapshot, issues: [] });
         expect(parseInstanceStructure(snapshot)).toBe(parsed);
@@ -46,7 +49,7 @@ describe("essential snapshot structure", () => {
         const parsed = parseInstanceStructure(snapshot);
         expect(parsed.value.tables).toEqual({
             people: {
-                rows: { alice: { fields: {} }, bob: { fields: {} } },
+                rows: { alice: { label: "", fields: {} }, bob: { label: "", fields: {} } },
                 rowOrder: ["alice", "bob"],
             },
         });
@@ -59,6 +62,7 @@ describe("essential snapshot structure", () => {
         const data = ok(parseInstanceData(snapshot));
         expect(data.issues).toEqual(parsed.issues);
         expect(data.value.tables[0]?.rows.map((row) => row.id)).toEqual(["alice", "bob"]);
+        expect(data.value.tables[0]?.rows.map((row) => row.label)).toEqual(["", ""]);
         expect(snapshot).toEqual(before);
         const missing = parseInstanceStructure({ ...snapshot, tables: undefined });
         expect(missing.value.tables).toEqual({});
@@ -143,7 +147,7 @@ describe("essential snapshot structure", () => {
                 throw new Error("Expected instance");
             }
             document.tables[table.id] = {
-                rows: { alice: { fields: {} } },
+                rows: { alice: { label: "", fields: {} } },
                 rowOrder: ["missing", "alice", "alice"],
             };
         });

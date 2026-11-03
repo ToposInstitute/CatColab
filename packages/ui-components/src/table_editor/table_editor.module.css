@@ -1,4 +1,5 @@
 .table {
+    isolation: isolate;
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
@@ -39,10 +40,36 @@
     overflow: hidden;
 }
 
+.gutterBackdrop {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 4;
+    pointer-events: none;
+    background: linear-gradient(
+        to bottom,
+        var(--color-gray-50) var(--scroll-header-height),
+        color-mix(in srgb, var(--color-background) 50%, var(--color-gray-25))
+            var(--scroll-header-height)
+    );
+}
+
 .scrollIndicators::before {
     position: absolute;
     inset: 0 0 auto;
     height: 1px;
+    background: var(--color-gray-450);
+    opacity: 0.65;
+    content: "";
+}
+
+.scrollIndicators::after {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: var(--scroll-gutter-width);
+    z-index: 1;
+    width: 1px;
     background: var(--color-gray-450);
     opacity: 0.65;
     content: "";
@@ -80,7 +107,8 @@
 }
 
 .scrollLeft {
-    left: 0;
+    top: 0;
+    left: calc(var(--scroll-gutter-width) + 1px);
     background: linear-gradient(to right, rgb(0 0 0 / 20%), transparent);
 }
 
@@ -112,7 +140,7 @@
 .columnHeader {
     position: sticky;
     top: 0;
-    z-index: 2;
+    z-index: 7;
     height: 28px;
     padding: 0 0.5rem;
     border: 1px solid var(--color-gray-450);
@@ -201,8 +229,32 @@ shadow, it is painted above the cell editor input. */
     outline-offset: -2px;
 }
 
-.rowHeaderColumn {
-    width: 16px;
+.rowLabel {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    font-weight: 500;
+    text-align: left;
+    font-variant-numeric: tabular-nums;
+}
+
+.rowLabel.selected {
+    z-index: 5;
+}
+
+.rowLabel.automaticLabel {
+    color: var(--color-text-secondary);
+    text-align: right;
+}
+
+.columnHeader.rowLabelCorner {
+    left: 0;
+    z-index: 8;
+}
+
+.rowHeader.rowLabel,
+.columnHeader.rowLabelCorner {
+    border-left-width: 0;
 }
 
 .deleteCell {
@@ -238,7 +290,7 @@ shadow, it is painted above the cell editor input. */
 
 .grid tr:has(.deleteCell:hover)::after {
     position: absolute;
-    z-index: 1;
+    z-index: 6;
     inset: 0;
     border: 3px solid #d87878;
     pointer-events: none;
@@ -252,11 +304,12 @@ shadow, it is painted above the cell editor input. */
 .rowHeader {
     padding: 0;
     border: 1px solid var(--color-gray-450);
-    background: var(--color-gray-50);
+    background: color-mix(in srgb, var(--color-background) 50%, var(--color-gray-25));
 }
 
 .rowHeader.invalid {
-    background: var(--color-button-danger-base);
+    background: var(--color-form-invalid-bg);
+    color: var(--color-foreground);
 }
 
 .rowIssues {
@@ -338,6 +391,17 @@ shadow, it is painted above the cell editor input. */
     background: transparent;
     font: inherit;
     outline: none;
+}
+
+.rowLabel:has(.cellInput) .cellText {
+    visibility: hidden;
+}
+
+.rowLabel .cellInput {
+    position: absolute;
+    inset: 0;
+    color: var(--color-foreground);
+    text-align: left;
 }
 
 /* Highlight the whole cell, not just the input, when the content is invalid. */
