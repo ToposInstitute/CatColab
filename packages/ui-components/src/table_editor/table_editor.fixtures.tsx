@@ -21,7 +21,11 @@ type TableSpec = {
         label: string | null;
         type: LiteralType | "Unknown" | { rowRef: string };
     }>;
-    rows: Array<{ id: string; values: Record<string, LiteralValue | { rowId: string }> }>;
+    rows: Array<{
+        id: string;
+        label?: string;
+        values: Record<string, LiteralValue | { rowId: string }>;
+    }>;
 };
 
 function toInstanceTable(spec: TableSpec): InstanceTable {
@@ -35,6 +39,7 @@ function toInstanceTable(spec: TableSpec): InstanceTable {
     }));
     const rows: TableRow[] = spec.rows.map((row, index) => ({
         id: row.id,
+        label: row.label ?? "",
         index,
         fields: spec.columns.map((column) =>
             toFieldValue(spec.id, row.id, column, row.values[column.id] ?? null),
@@ -168,6 +173,9 @@ function EditableTables(props: {
                             onSetField={(row, header, value) =>
                                 setField(table().id, row, header, value)
                             }
+                            onSetRowLabel={(row, label) =>
+                                updateSpec(table().id, (spec) => setSpecRowLabel(spec, row, label))
+                            }
                             onAddRow={() => addRow(table().id)}
                             onDeleteRow={(row) => deleteRow(table().id, row)}
                             onHide={props.hideable ? () => hide(table().id) : undefined}
@@ -261,6 +269,7 @@ function SingleTable(props: { initialSpec: TableSpec; addRowDelay?: number; focu
             onSetField={(row, header, value) =>
                 setSpec((spec) => setSpecField(spec, row, header, value))
             }
+            onSetRowLabel={(row, label) => setSpec((spec) => setSpecRowLabel(spec, row, label))}
             onAddRow={() =>
                 props.addRowDelay === undefined ? addRow() : setTimeout(addRow, props.addRowDelay)
             }
@@ -272,6 +281,15 @@ function SingleTable(props: { initialSpec: TableSpec; addRowDelay?: number; focu
             }
         />
     );
+}
+
+function setSpecRowLabel(spec: TableSpec, row: TableRow, label: string): TableSpec {
+    return {
+        ...spec,
+        rows: spec.rows.map((candidate) =>
+            candidate.id === row.id ? { ...candidate, label: label.trim() } : candidate,
+        ),
+    };
 }
 
 function setSpecField(
@@ -300,4 +318,5 @@ export {
     SingleTable,
     toInstanceTable,
     setSpecField,
+    setSpecRowLabel,
 };

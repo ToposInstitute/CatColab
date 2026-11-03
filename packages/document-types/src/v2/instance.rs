@@ -25,8 +25,16 @@ pub enum FieldValue {
 
 /// A single row of a table.
 #[derive(PartialEq, Debug, Serialize, Deserialize, Tsify)]
-#[tsify(into_wasm_abi, from_wasm_abi, hashmap_as_object)]
+#[tsify(
+    into_wasm_abi,
+    from_wasm_abi,
+    hashmap_as_object,
+    type = "{ label: string; fields: Record<string, FieldValue> }"
+)]
 pub struct TableRow {
+    /// The human-readable label of a table row.
+    #[serde(default)]
+    pub label: String,
     /// The content of the row, given as a map from morphism `QualifiedName` to values.
     pub fields: HashMap<String, FieldValue>,
 }
@@ -57,7 +65,7 @@ mod test {
         fields.insert(col_id.to_string(), FieldValue::Int(42));
 
         let mut rows = HashMap::new();
-        rows.insert(row_id, TableRow { fields });
+        rows.insert(row_id, TableRow { label: String::new(), fields });
 
         let table = Table { rows, row_order: vec![row_id] };
 
@@ -77,6 +85,16 @@ mod test {
     }
 
     #[test]
+    fn missing_row_labels_default_to_empty_strings() {
+        let row: TableRow = serde_json::from_value(serde_json::json!({ "fields": {} })).unwrap();
+        assert_eq!(row.label, "");
+        assert_eq!(
+            serde_json::to_value(row).unwrap(),
+            serde_json::json!({ "label": "", "fields": {} })
+        );
+    }
+
+    #[test]
     fn multi_segment_key_round_trips() {
         let a = Uuid::from_u128(10);
         let b = Uuid::from_u128(11);
@@ -89,7 +107,7 @@ mod test {
         fields.insert(key.clone(), FieldValue::RowRef(row_id));
 
         let mut rows = HashMap::new();
-        rows.insert(row_id, TableRow { fields });
+        rows.insert(row_id, TableRow { label: String::new(), fields });
 
         let table = Table { rows, row_order: vec![row_id] };
 

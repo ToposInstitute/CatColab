@@ -324,11 +324,15 @@ describe("tabular instances", () => {
         const missingIssues = expectErr(validation.get(["missing-table"]));
         expect(missingIssues[0]?.message).toMatch(/does not exist/);
 
-        const acme = expectOk(await instance.addRow(companyTable, { companyName: "Acme" }));
-        const alice = expectOk(
-            await instance.addRow(personTable, { name: "Alice", employer: acme }),
+        const acme = expectOk(
+            await instance.addRow(companyTable, { values: { companyName: "Acme" } }),
         );
-        const bob = expectOk(await instance.addRow(personTable, { name: "Bob", employer: acme }));
+        const alice = expectOk(
+            await instance.addRow(personTable, { values: { name: "Alice", employer: acme } }),
+        );
+        const bob = expectOk(
+            await instance.addRow(personTable, { values: { name: "Bob", employer: acme } }),
+        );
 
         expect(personTable.rows).toEqual([]); // The original validation is a snapshot.
         const currentPersonTable = (await instance.validate()).tables.find(
@@ -406,6 +410,37 @@ describe("tabular instances", () => {
         ]);
         expect(changes).toBe(6);
         unsubscribe();
+
+        expectOk(
+            await instance.updateRow(alice, {
+                label: "  Alice label  ",
+                values: { name: "Alicia" },
+            }),
+        );
+        const readAlice = async () =>
+            expectOk((await instance.validate()).get([personTable.id, "rows", alice.id]));
+        expect(await readAlice()).toMatchObject({
+            label: "Alice label",
+            fields: expect.arrayContaining([
+                expect.objectContaining({
+                    tag: "String",
+                    content: expect.objectContaining({ value: "Alicia" }),
+                }),
+            ]),
+        });
+        expectOk(await instance.updateRow(alice, { values: { name: "Alice" } }));
+        expect(await readAlice()).toMatchObject({ label: "Alice label" });
+        expectOk(await instance.updateRow(alice, { label: "   " }));
+        expect(await readAlice()).toMatchObject({ label: "" });
+        expect(instance.dump().tables[personTable.id]?.rows[alice.id]?.label).toBe("");
+        expectOk(await instance.updateRows([{ row: alice, label: "  Bulk label  " }]));
+        expect(await readAlice()).toMatchObject({ label: "Bulk label" });
+        expectOk(await instance.updateRows([{ row: alice, label: "" }]));
+        expect(await readAlice()).toMatchObject({ label: "" });
+        const labeledRows = expectOk(
+            await instance.addRows([{ table: personTable, label: "  Added label  " }]),
+        );
+        expect(labeledRows[0]).toMatchObject({ label: "Added label" });
     });
 
     test(
@@ -446,9 +481,9 @@ describe("tabular instances", () => {
 
             const acme = expectOk(await instance.addRow(companyTable));
             const alice = expectOk(
-                await instance.addRow(personTable, { employer: acme, name: "Alice" }),
+                await instance.addRow(personTable, { values: { employer: acme, name: "Alice" } }),
             );
-            const bob = expectOk(await instance.addRow(personTable, { name: "Bob" }));
+            const bob = expectOk(await instance.addRow(personTable, { values: { name: "Bob" } }));
 
             store.changeDocument(instance.handle, (document) => {
                 const stored = document as unknown as StoredInstanceForTest;
@@ -479,6 +514,48 @@ describe("tabular instances", () => {
             );
         },
     );
+
+    test("rows can be created with labels separate from field values", async () => {
+        const binder = createBinder();
+        const schema = await binder.createNotebook(SimpleSchema, { title: "Labels" });
+        const person = schema.add(Entity, { label: "Person" });
+        const string = schema.add(AttrType, { label: "String" });
+        schema.add(Attr, { label: "label", from: person, to: string });
+        const instance = expectOk(await binder.createInstance(schema, { title: "Labels" }));
+        const table = (await instance.validate()).tables[0];
+        if (table === undefined) {
+            throw new Error("Person table was not derived");
+        }
+
+        const named = expectOk(
+            await instance.addRow(table, {
+                label: "  Alice  ",
+                values: { label: "Field label" },
+            }),
+        );
+        const blank = expectOk(await instance.addRow(table, { label: "   " }));
+        const omitted = expectOk(await instance.addRow(table));
+        const empty = expectOk(await instance.addRow(table, { label: "" }));
+
+        expect(named.label).toBe("Alice");
+        expect(named.fields).toMatchObject([{ tag: "String", content: { value: "Field label" } }]);
+        expect(blank.label).toBe("");
+        expect(omitted.label).toBe("");
+        expect(empty.label).toBe("");
+        expect([blank.index, omitted.index, empty.index]).toEqual([1, 2, 3]);
+        const rows = instance.dump().tables[table.id]?.rows;
+        expect(rows?.[named.id]?.label).toBe("Alice");
+        expect(Object.values(rows?.[named.id]?.fields ?? {})).toEqual([{ String: "Field label" }]);
+        expect(rows?.[blank.id]?.label).toBe("");
+        expect(rows?.[omitted.id]?.label).toBe("");
+        expect(rows?.[empty.id]?.label).toBe("");
+        expect((await instance.validate()).tables[0]?.rows.map((row) => row.label)).toEqual([
+            "Alice",
+            "",
+            "",
+            "",
+        ]);
+    });
 
     test("rows can be deleted while the schema is invalid", async () => {
         const binder = createBinder();
@@ -524,7 +601,7 @@ describe("tabular instances", () => {
             throw new Error("Person table was not derived");
         }
 
-        const alice = expectOk(await instance.addRow(personTable, { name: "Alice" }));
+        const alice = expectOk(await instance.addRow(personTable, { values: { name: "Alice" } }));
         expectOk(await instance.set(alice, nameHeader, "Alicia"));
         expect(
             instance.dump().tables[personTable.id]?.rows[alice.id]?.fields[nameHeader.id],
@@ -566,7 +643,9 @@ describe("tabular instances", () => {
                 return;
             }
             const acme = expectOk(await instance.addRow(companyTable));
-            const alice = expectOk(await instance.addRow(personTable, { employer: acme }));
+            const alice = expectOk(
+                await instance.addRow(personTable, { values: { employer: acme } }),
+            );
             instance.deleteRow(companyTable.id, acme.id);
 
             const revalidation = await instance.validate();
@@ -598,7 +677,9 @@ describe("tabular instances", () => {
             if (personTable === undefined) {
                 throw new Error("Person table was not derived");
             }
-            const alice = expectOk(await instance.addRow(personTable, { name: "Alice" }));
+            const alice = expectOk(
+                await instance.addRow(personTable, { values: { name: "Alice" } }),
+            );
 
             store.changeDocument(instance.handle, (document) => {
                 const stored = document as unknown as StoredInstanceForTest;
@@ -764,8 +845,8 @@ describe("deleting orphaned instance data", () => {
         if (personTable === undefined || nameHeader === undefined) {
             throw new Error("Person table was not derived");
         }
-        const alice = expectOk(await instance.addRow(personTable, { name: "Alice" }));
-        const bob = expectOk(await instance.addRow(personTable, { name: "Bob" }));
+        const alice = expectOk(await instance.addRow(personTable, { values: { name: "Alice" } }));
+        const bob = expectOk(await instance.addRow(personTable, { values: { name: "Bob" } }));
 
         store.changeDocument(instance.handle, (document) => {
             const stored = document as unknown as StoredInstanceForTest;
@@ -808,7 +889,7 @@ describe("deleting orphaned instance data", () => {
         if (personTable === undefined || nameHeader === undefined) {
             throw new Error("Person table was not derived");
         }
-        const alice = expectOk(await instance.addRow(personTable, { name: "Alice" }));
+        const alice = expectOk(await instance.addRow(personTable, { values: { name: "Alice" } }));
 
         store.changeDocument(instance.handle, (document) => {
             const stored = document as unknown as StoredInstanceForTest;

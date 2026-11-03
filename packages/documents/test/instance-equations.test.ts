@@ -58,7 +58,7 @@ describe("instance validation of path equations", { timeout: 30000 }, () => {
         }
         const b1 = expectOk(await instance.addRow(tableB));
         const b2 = expectOk(await instance.addRow(tableB));
-        const a1 = expectOk(await instance.addRow(tableA, { f: b1, g: b2 }));
+        const a1 = expectOk(await instance.addRow(tableA, { values: { f: b1, g: b2 } }));
 
         const revalidation = await instance.validate();
         const violations = equationViolations(revalidation.issues);
@@ -137,7 +137,7 @@ describe("instance validation of path equations", { timeout: 30000 }, () => {
         }
 
         const alice = expectOk(
-            await instance.addRow(personTable, { first: "Alice", second: "Bob" }),
+            await instance.addRow(personTable, { values: { first: "Alice", second: "Bob" } }),
         );
         const violations = equationViolations((await instance.validate()).issues);
         expect(violations.length).toBe(1);
@@ -166,7 +166,7 @@ describe("instance validation of path equations", { timeout: 30000 }, () => {
             throw new Error("Expected tables for both entities.");
         }
         const b1 = expectOk(await instance.addRow(tableB));
-        expectOk(await instance.addRow(tableA, { f: b1 }));
+        expectOk(await instance.addRow(tableA, { values: { f: b1 } }));
 
         // The missing `g` value is reported, but yields no equation violation.
         const revalidation = await instance.validate();
@@ -194,7 +194,7 @@ describe("instance validation of path equations", { timeout: 30000 }, () => {
         if (personTable === undefined) {
             throw new Error("Expected a table for the entity.");
         }
-        expectOk(await instance.addRow(personTable, { name: "Alice" }));
+        expectOk(await instance.addRow(personTable, { values: { name: "Alice" } }));
         expect(equationViolations((await instance.validate()).issues)).toEqual([]);
     });
 

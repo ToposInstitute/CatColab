@@ -38,6 +38,7 @@ export type TableEditorProps = {
 
     /** Called when the user adds a row. */
     onAddRow: () => void;
+    onSetRowLabel: (row: TableRow, label: string) => void;
 
     /** Called when the user deletes a row. */
     onDeleteRow: (row: TableRow) => void;
@@ -76,6 +77,7 @@ export function TableEditor(props: TableEditorProps) {
                 table={props.table}
                 allTables={props.allTables}
                 onSetField={props.onSetField}
+                onSetRowLabel={props.onSetRowLabel}
                 onAddRow={props.onAddRow}
                 onDeleteRow={props.onDeleteRow}
                 issuesAt={issuesAt}

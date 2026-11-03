@@ -35,6 +35,8 @@ export interface TableHeader {
 export interface TableRow {
     /** The row's id, derived from its key in the stored table. */
     readonly id: string;
+    /** The row's user set label. Empty string if not set. */
+    readonly label: string;
     /** The row's zero-based position in the table. */
     readonly index: number;
     /** The row's decoded fields, in header order. */
