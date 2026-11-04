@@ -180,6 +180,14 @@ export function updateInstanceFieldsByLabelInStore<Handle, Version>(
                     encodeFieldsByLabel(schemaTable, rowValues, issues),
                 );
             }
+            if (label !== undefined) {
+                reResolveRowReferencesByLabel(
+                    instanceDocument,
+                    schemaTables,
+                    schemaTable.id,
+                    instanceDocument.tables[schemaTable.id]!,
+                );
+            }
         }
     });
 
@@ -223,6 +231,42 @@ export function updateInstanceFieldByIdInStore<Handle, Version>(
     });
 
     return issues.length > 0 ? { tag: "Err", content: issues } : { tag: "Ok", content: undefined };
+}
+
+function reResolveRowReferencesByLabel(
+    document: InstanceDocument,
+    schemaTables: ReadonlyArray<InstanceTable>,
+    targetTableId: string,
+    targetTable: InstanceDocument["tables"][string],
+): void {
+    const firstRowIdByLabel = new Map<string, string>();
+    for (const id of targetTable.rowOrder) {
+        const target = targetTable.rows[id];
+        if (target?.label && !firstRowIdByLabel.has(target.label)) {
+            firstRowIdByLabel.set(target.label, id);
+        }
+    }
+    for (const schemaTable of schemaTables) {
+        const source = document.tables[schemaTable.id];
+        if (source === undefined) {
+            continue;
+        }
+        for (const header of schemaTable.headers) {
+            if (header.type.tag !== "RowRef" || header.type.content.id !== targetTableId) {
+                continue;
+            }
+            for (const sourceRow of Object.values(source.rows)) {
+                const value = sourceRow.fields[header.id];
+                if (typeof value !== "object" || !("String" in value)) {
+                    continue;
+                }
+                const targetId = firstRowIdByLabel.get(value.String.trim());
+                if (targetId) {
+                    sourceRow.fields[header.id] = { RowRef: targetId };
+                }
+            }
+        }
+    }
 }
 
 /** Delete a stored table that has no entity in the elaborated schema model.

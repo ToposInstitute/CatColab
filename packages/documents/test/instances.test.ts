@@ -443,6 +443,31 @@ describe("tabular instances", () => {
         expect(labeledRows[0]).toMatchObject({ label: "Added label" });
     });
 
+    test("updating row labels resolves string references to the target table", async () => {
+        const binder = createBinder();
+        const schema = await binder.createNotebook(SimpleSchema, { title: "Schema" });
+        const person = schema.add(Entity, { label: "Person" });
+        const company = schema.add(Entity, { label: "Company" });
+        schema.add(Mapping, { label: "employer", from: person, to: company });
+        const instance = expectOk(await binder.createInstance(schema, { title: "Instance" }));
+        const tables = (await instance.validate()).tables;
+        const personTable = tables.find((table) => table.label === "Person")!;
+        const companyTable = tables.find((table) => table.label === "Company")!;
+        const employer = personTable.headers.find((header) => header.label === "employer")!;
+        const acme = expectOk(await instance.addRow(companyTable));
+        const alice = expectOk(
+            await instance.addRow(personTable, { values: { employer: "  Acme  " } }),
+        );
+
+        expectOk(await instance.updateRow(acme, { label: "  Acme  " }));
+
+        expect(instance.dump().tables[personTable.id]?.rows[alice.id]?.fields[employer.id]).toEqual(
+            {
+                RowRef: acme.id,
+            },
+        );
+    });
+
     test(
         "mistyped row references and literals report their field paths",
         { timeout: 20_000 },
