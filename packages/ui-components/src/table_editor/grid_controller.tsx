@@ -19,7 +19,7 @@ import type {
     TableRow,
 } from "catcolab-documents";
 import { type FocusHandle, useChildFocus } from "../util/focus";
-import { fieldText } from "./display";
+import { codomainOf, fieldEditText, rowDisplayLabel } from "./display";
 import { isEditableCell, isPrintableKey, parseValue } from "./editing";
 import {
     type CellKey,
@@ -245,7 +245,7 @@ function createGridController(props: GridControllerProps) {
                     text ??
                     (cell.header === null
                         ? cell.row.label
-                        : fieldText(
+                        : fieldEditText(
                               fieldAt(cell.row, cell.header),
                               cell.header,
                               props.allTables(),
@@ -290,7 +290,28 @@ function createGridController(props: GridControllerProps) {
         const cell = findCell(key);
         if (cell?.header === null) {
             props.onSetRowLabel(cell.row, state.text);
-        } else if (cell && cell.header.type.tag !== "RowRef") {
+        } else if (cell?.header.type.tag === "RowRef") {
+            if (
+                state.text ===
+                fieldEditText(fieldAt(cell.row, cell.header), cell.header, props.allTables())
+            ) {
+                finishEdit(key, dir);
+                return;
+            }
+            const label = state.text.trim();
+            if (label === "") {
+                props.onSetField(cell.row, cell.header, null);
+            } else {
+                const matches = codomainOf(cell.header, props.allTables())?.rows.filter(
+                    (row) => rowDisplayLabel(row) === label,
+                );
+                props.onSetField(
+                    cell.row,
+                    cell.header,
+                    matches?.length === 1 ? matches[0]! : state.text,
+                );
+            }
+        } else if (cell) {
             const parsed = parseValue(cell.header, state.text);
             props.onSetField(cell.row, cell.header, parsed.ok ? parsed.value : state.text);
         }
@@ -339,7 +360,6 @@ function createGridController(props: GridControllerProps) {
             return false;
         }
         const isBool = cell.header?.type.tag === "Bool";
-        const isRowRef = cell.header?.type.tag === "RowRef";
         if (evt.key === "Enter" || evt.key === "F2") {
             if (isBool) {
                 toggleBool(key);
@@ -351,8 +371,7 @@ function createGridController(props: GridControllerProps) {
         } else if (evt.key === "Delete" || evt.key === "Backspace") {
             clearCell(key);
         } else if (!isBool && isPrintableKey(evt)) {
-            // A row reference is read-only: any key just opens its completions.
-            startEdit(key, isRowRef ? undefined : evt.key);
+            startEdit(key, evt.key);
         } else {
             return false;
         }
