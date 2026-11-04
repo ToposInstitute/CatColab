@@ -4,7 +4,7 @@ import type { FieldValue, InstanceTable, TableHeader, TableRow } from "catcolab-
 import type { FocusHandle } from "../util/focus";
 import { Cell } from "./cell";
 import { CellEditor } from "./cell_editor";
-import { codomainOf, rowDisplayLabel } from "./display";
+import { codomainOf, rowDisplayLabel, tableDisplayName } from "./display";
 import { parseValue } from "./editing";
 import { useGridController } from "./grid_controller";
 import { makeCellKey } from "./navigation";
@@ -53,10 +53,11 @@ export function GridCell(props: {
             labelCounts.set(label, (labelCounts.get(label) ?? 0) + 1);
         }
         return codomain.rows.map((target) => ({
-            name:
+            name: rowDisplayLabel(target),
+            description:
                 labelCounts.get(rowDisplayLabel(target))! > 1
-                    ? `${rowDisplayLabel(target)} (row ${target.index + 1})`
-                    : rowDisplayLabel(target),
+                    ? `${tableDisplayName(codomain)} (row ${target.index + 1})`
+                    : tableDisplayName(codomain),
             selected: target.id === currentId,
             onComplete: () => edit.commitRowRef(key(), target),
         }));
@@ -126,7 +127,6 @@ export function GridCell(props: {
                         props.header.type.tag === "RowRef" || parseValue(props.header, text).ok
                     }
                     completions={completions()}
-                    readOnly={props.header.type.tag === "RowRef"}
                     onCommit={edit.commitEdit}
                     onCancel={edit.cancelEdit}
                 />
