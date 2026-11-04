@@ -21,7 +21,7 @@ import {
 const BasicObj = defineObject({ tag: "Basic", content: "Object" });
 
 const OnlyBasicObj = defineShape({
-    objects: [BasicObj],
+    objects: { BasicObj },
 });
 
 const tensor = { tag: "Basic", content: "tensor" } as const;
@@ -35,8 +35,8 @@ const ListMor = defineMorphism(
 );
 
 const ListShape = defineShape({
-    objects: [BasicObj],
-    morphisms: [ListMor],
+    objects: { BasicObj },
+    morphisms: { ListMor },
 });
 
 const SymmetricListMor = defineMorphism(
@@ -48,8 +48,8 @@ const SymmetricListMor = defineMorphism(
 );
 
 const SymmetricListShape = defineShape({
-    objects: [BasicObj],
-    morphisms: [SymmetricListMor],
+    objects: { BasicObj },
+    morphisms: { SymmetricListMor },
 });
 
 const CocartesianListMor = defineMorphism(
@@ -61,8 +61,8 @@ const CocartesianListMor = defineMorphism(
 );
 
 const CocartesianListShape = defineShape({
-    objects: [BasicObj],
-    morphisms: [CocartesianListMor],
+    objects: { BasicObj },
+    morphisms: { CocartesianListMor },
 });
 
 const CartesianListMor = defineMorphism(
@@ -74,8 +74,8 @@ const CartesianListMor = defineMorphism(
 );
 
 const CartesianListShape = defineShape({
-    objects: [BasicObj],
-    morphisms: [CartesianListMor],
+    objects: { BasicObj },
+    morphisms: { CartesianListMor },
 });
 
 const AdditiveListMor = defineMorphism(
@@ -87,8 +87,8 @@ const AdditiveListMor = defineMorphism(
 );
 
 const AdditiveListShape = defineShape({
-    objects: [BasicObj],
-    morphisms: [AdditiveListMor],
+    objects: { BasicObj },
+    morphisms: { AdditiveListMor },
 });
 
 type NotebookOfLists = Notebook<
@@ -158,7 +158,7 @@ describe("generic shapes of notebooks", () => {
 
         const EntityObj = defineObject({ tag: "Basic", content: "Entity" });
         const OnlyEntityObj = defineShape({
-            objects: [EntityObj],
+            objects: { EntityObj },
         });
 
         // On a union of shapes, `supports` reports what the notebook actually
@@ -183,8 +183,8 @@ describe("generic shapes of notebooks", () => {
         const binder = createBinder();
 
         const EntityShape = defineShape({
-            objects: [Entity],
-            morphisms: [Mapping],
+            objects: { Entity },
+            morphisms: { Mapping },
         });
 
         const schema = await binder.createNotebook(SimpleSchema, { title: "Example" });
@@ -214,8 +214,8 @@ describe("generic shapes of notebooks", () => {
         const entityObType = defineObject({ tag: "Basic", content: "Entity" });
         const EntityObjectShape = defineShape({
             theory: "entity-objects",
-            objects: [entityObType, BasicObj],
-            morphisms: [ListMor],
+            objects: { entityObType, BasicObj },
+            morphisms: { ListMor },
         });
 
         const entityObjects = await binder.createNotebook(EntityObjectShape, {

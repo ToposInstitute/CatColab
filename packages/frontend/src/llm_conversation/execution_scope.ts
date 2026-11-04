@@ -1,8 +1,8 @@
-import { cellTypesForTheory } from "catcolab-logics/cell-types";
-
 import type { LinkType } from "catcolab-document-types";
 import {
+    cellTypeVocabularies,
     type Binder,
+    type CellTypeVocabulary,
     type LLMConversation,
     type Shape,
     type SupportedDocument,
@@ -33,14 +33,7 @@ export async function createLLMConversationExecutionScope<
     conversation: LLMConversation<Attachment, Handle>,
     binder: Binder<Handle, Version>,
 ): Promise<LLMConversationExecutionScope> {
-    const { documents, theories, tx } = await createScopedDocuments(conversation, binder);
-
-    // Every theory in scope brings its cell types with it: both as bindings
-    // for the code the LLM runs and as a description of what the `add` method
-    // of the notebook documents accepts.
-    const vocabularies = theories
-        .map((theory) => cellTypesForTheory(theory))
-        .filter((cellTypes) => cellTypes !== undefined);
+    const { documents, vocabularies, tx } = await createScopedDocuments(conversation, binder);
     const vocabularyDescriptions = vocabularies.map(
         (cellTypes) =>
             `The cell types of the notebook documents, for use with their \`add\` method, are: ${Object.entries(
@@ -85,7 +78,7 @@ async function createScopedDocuments<
     binder: Binder<Handle, Version>,
 ): Promise<{
     documents: ReadonlyArray<ScopedDocument>;
-    theories: ReadonlyArray<string>;
+    vocabularies: readonly CellTypeVocabulary[];
     tx: Transaction<Handle, Version>;
 }> {
     const origin = conversation.attachment;
@@ -201,18 +194,9 @@ async function createScopedDocuments<
         ),
     );
 
-    // Every notebook in scope contributes its theory's cell types.
-    const theoriesWithRepetitions: string[] = [];
-    for (const draft of Object.values(draftDocs)) {
-        if ("shape" in draft && draft.shape.theory !== undefined) {
-            theoriesWithRepetitions.push(draft.shape.theory);
-        }
-    }
-    const theories = [...new Set(theoriesWithRepetitions)];
-
     return {
         documents: [attachedDocument, ...dependencyDocuments, ...dependentDocuments],
-        theories,
+        vocabularies: cellTypeVocabularies(Object.values(draftDocs)),
         tx,
     };
 }

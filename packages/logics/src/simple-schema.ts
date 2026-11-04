@@ -1,10 +1,4 @@
-import {
-    defineMorphism,
-    defineObject,
-    defineShape,
-    PathEquation,
-    RichText,
-} from "catcolab-documents";
+import { defineMorphism, defineObject, defineShape, RichText } from "catcolab-documents";
 
 export const Entity = defineObject({ tag: "Basic", content: "Entity" });
 export const AttrType = defineObject({ tag: "Basic", content: "AttrType" });
@@ -21,20 +15,11 @@ export const SimpleSchema = defineShape({
         const { ThSchema } = await import("catlog-wasm");
         return new ThSchema().theory();
     },
-    objects: [Entity, AttrType],
-    morphisms: [Mapping, Attr],
-    informal: [RichText],
+    objects: { Entity, AttrType },
+    morphisms: { Mapping, Attr },
+    informal: { RichText },
     supportsEquations: true,
     supportsInstances: {
         tableObjects: [Entity],
     },
 });
-
-export const simpleSchemaCellTypes = {
-    Entity,
-    AttrType,
-    Mapping,
-    Attr,
-    RichText,
-    PathEquation,
-};

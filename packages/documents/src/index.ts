@@ -84,6 +84,8 @@ export {
     RichText,
 } from "./shape";
 export type {
+    CellTypeVocabulary,
+    DefinedShape,
     EquationType,
     InstanceCapableShape,
     ListModality,
@@ -93,6 +95,8 @@ export type {
     MorphismType,
     ObjectType,
     Shape,
+    ShapeDefinition,
 } from "./shape";
 export type { Commit, Transaction } from "./transaction";
+export { cellTypeVocabularies } from "./supported-document";
 export type { SupportedDocument } from "./supported-document";

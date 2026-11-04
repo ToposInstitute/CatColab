@@ -11,6 +11,8 @@
         "test/creating-and-editing.test.ts",
         "test/creating-and-editing.test-d.ts",
         "test/definitions.test.ts",
+        "test/cell-type-vocabularies.test.ts",
+        "test/shape-compatibility.test.ts",
         "test/type-errors.test-d.ts",
         "test/instances.test.ts",
         "test/merge-order.test.ts",

@@ -14,8 +14,8 @@ import {
 const WithoutEquations = defineShape({
     theory: "simple-olog-without-equations",
     getCoreTheory: SimpleOlog.getCoreTheory,
-    objects: [Type],
-    morphisms: [Aspect],
+    objects: { Type },
+    morphisms: { Aspect },
 });
 
 function firstEquation(notebook: Notebook): EquationCellData {
