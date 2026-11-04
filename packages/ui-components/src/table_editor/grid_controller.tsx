@@ -271,8 +271,7 @@ function createGridController(props: GridControllerProps) {
 
     /** Commit the text of the open editor, writing to the cell by ID.
 
-    The write is skipped when the row or column has since been removed, or when
-    the text does not parse, in which case the cell keeps its previous value.
+    The write is skipped when the row or column has since been removed.
      */
     const commitEdit = (dir?: MoveDirection) => {
         const state = edit();
@@ -283,9 +282,7 @@ function createGridController(props: GridControllerProps) {
         const cell = findCell(key);
         if (cell) {
             const parsed = parseValue(cell.header, state.text);
-            if (parsed.ok) {
-                props.onSetField(cell.row, cell.header, parsed.value);
-            }
+            props.onSetField(cell.row, cell.header, parsed.ok ? parsed.value : state.text);
         }
         finishEdit(key, dir);
     };
