@@ -1,3 +1,4 @@
+import { PetriNet, Place, Transition } from "catcolab-logics/petri-net";
 import { Aspect, SimpleOlog, Type } from "catcolab-logics/simple-olog";
 import { describe, expect, test } from "vitest";
 
@@ -32,6 +33,22 @@ describe("validate", { timeout: 20000 }, () => {
         const result = await notebook.validate();
         expect(result.model.judgmentsOf(Type).length).toBe(2);
         expect(result.model.judgmentsOf(Aspect).length).toBe(1);
+
+        const binder = createBinder();
+        const petriNet = await binder.createNotebook(PetriNet, { title: "Petri net" });
+        const a = petriNet.add(Place, { label: "A" });
+        const b = petriNet.add(Place, { label: "B" });
+        petriNet.add(Transition, { label: "t", from: [b, a, b], to: [] });
+        const petriResult = await petriNet.validate();
+        expect(petriResult.issues).toEqual([]);
+        const places = petriResult.model.judgmentsOf(Place);
+        const elaboratedA = places.find((place) => place.id === a.generatorId);
+        const elaboratedB = places.find((place) => place.id === b.generatorId);
+        expect(elaboratedA).toBeDefined();
+        expect(elaboratedB).toBeDefined();
+        expect(petriResult.model.judgmentsOf(Transition)).toMatchObject([
+            { from: [elaboratedB, elaboratedA, elaboratedB], to: [] },
+        ]);
     });
 
     test("an invalid notebook still returns its elaborated model", async () => {

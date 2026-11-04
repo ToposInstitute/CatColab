@@ -51,8 +51,8 @@ describe("creating and editing notebooks", () => {
         expect(source.label).toBe("A");
         expect(target.label).toBe("B");
         expect(arrow.label).toBe("has");
-        expect(arrow.from?.id).toBe(source.id);
-        expect(arrow.to?.id).toBe(target.id);
+        expect(arrow.from).toMatchObject({ id: source.id });
+        expect(arrow.to).toMatchObject({ id: target.id });
         expect(notebook.cells().length).toBe(4);
     });
 
@@ -68,10 +68,8 @@ describe("creating and editing notebooks", () => {
             to: attrType,
         });
 
-        expect(attr.from?.type).toEqual(Entity);
-        expect(attr.from?.id).toBe(entity.id);
-        expect(attr.to?.type).toEqual(AttrType);
-        expect(attr.to?.id).toBe(attrType.id);
+        expect(attr.from).toMatchObject({ type: Entity, id: entity.id });
+        expect(attr.to).toMatchObject({ type: AttrType, id: attrType.id });
     });
 
     test("cells can be added with null", async () => {

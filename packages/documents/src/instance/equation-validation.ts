@@ -4,6 +4,7 @@ This code is expected to be replaced by catlog implementations in the future
 once a commitment to the mathematical account of instances has been made. */
 
 import type { ElaboratedModel, EquationJudgmentSide } from "../model/elaborated-model";
+import { isSingleObjectEndpoint } from "../model/endpoint";
 import { PathEquation, type Shape } from "../shape";
 import type { EquationViolationIssue } from "./errors";
 import type { LiteralFieldValue, InstanceTable, TableRow } from "./tables";
@@ -94,8 +95,10 @@ function sideSource<S extends Shape>(side: EquationJudgmentSide<S>): string | nu
     switch (side.kind) {
         case "object":
             return side.id;
-        case "composite":
-            return side.morphisms[0]?.from?.id ?? null;
+        case "composite": {
+            const from = side.morphisms[0]?.from;
+            return isSingleObjectEndpoint(from) ? from.id : null;
+        }
     }
 }
 
@@ -113,7 +116,7 @@ function evaluateSide<S extends Shape>(
             for (const [i, morphism] of side.morphisms.entries()) {
                 if (
                     morphism === null ||
-                    morphism.from === null ||
+                    !isSingleObjectEndpoint(morphism.from) ||
                     current.table.id !== morphism.from.id
                 ) {
                     return undefined; // unresolvable, or not composable

@@ -10,7 +10,7 @@ import { describe, test } from "vitest";
 // mode); nothing here executes.
 import { createBinder } from "catcolab-documents";
 
-describe.skip("type errors", () => {
+describe("type errors", () => {
     test("a mapping's endpoints must be entities, not attribute types", async () => {
         const binder = createBinder();
         const schema = await binder.createNotebook(SimpleSchema, { title: "Example schema" });
@@ -18,11 +18,7 @@ describe.skip("type errors", () => {
         const str = schema.add(AttrType, { label: "String" });
 
         // @ts-expect-error A mapping's endpoints must be entities, not attribute types.
-        schema.add(Mapping, {
-            label: "bad",
-            from: str,
-            to: str,
-        });
+        schema.add(Mapping, { label: "bad", from: str, to: str });
     });
 
     test("endpoint shapes adapt to the underlying logic", async () => {
@@ -40,10 +36,6 @@ describe.skip("type errors", () => {
         });
 
         // @ts-expect-error Petri net transitions require arrays of places.
-        notebook.add(Transition, {
-            label: "bad",
-            from: a,
-            to: [c],
-        });
+        notebook.add(Transition, { label: "bad", from: a, to: [c] });
     });
 });

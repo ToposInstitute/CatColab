@@ -26,6 +26,7 @@ export type {
     MalformedDocumentIssue,
     TableFieldIssue,
     TableIssue,
+    UnsupportedEndpointIssue,
 } from "./instance/errors";
 export { instanceFromStore } from "./instance/document";
 export type { Instance, InstanceDocument, InstanceValidation } from "./instance/document";
@@ -59,6 +60,7 @@ export type {
     ObjectCellData,
     RichTextCellData,
 } from "./model/data";
+export type { EndpointData } from "./model/endpoint";
 export type { ModelDocument } from "./model/document";
 export { modelNotebookFromStore, cellMatchesFilter } from "./model/document";
 export type { AddedCellOf, Notebook } from "./model/document";
@@ -84,7 +86,9 @@ export {
 export type {
     EquationType,
     InstanceCapableShape,
+    ListModality,
     MorphismEndpoint,
+    MorphismEndpointValue,
     MorphismEndpoints,
     MorphismType,
     ObjectType,

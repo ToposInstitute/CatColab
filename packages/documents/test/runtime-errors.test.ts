@@ -29,8 +29,8 @@ function issuesOf(fn: () => unknown): string {
     throw new Error("Expected the call to throw.");
 }
 
-describe.skip("runtime errors", () => {
-    test("invalid shapes throw with a Standard Schema compatible issues array", async () => {
+describe("runtime errors", () => {
+    test.skip("invalid shapes throw with a Standard Schema compatible issues array", async () => {
         const binder = createBinder();
         const notebook = await binder.createNotebook(SimpleOlog, { title: "An Olog" });
 
@@ -61,7 +61,7 @@ describe.skip("runtime errors", () => {
         expect(() => notebook.add(Aspect, { label: null, from: null, to: null })).not.toThrow();
     });
 
-    test("a mapping's endpoints must be entities, not attribute types", async () => {
+    test.skip("a mapping's endpoints must be entities, not attribute types", async () => {
         const binder = createBinder();
         const schema = await binder.createNotebook(SimpleSchema, { title: "Example schema" });
 
@@ -83,8 +83,9 @@ describe.skip("runtime errors", () => {
         const c = notebook.add(Place, { label: "C" });
 
         // Petri net transitions require arrays of places.
-        expect(
-            issuesOf(() => notebook.add(Transition, { label: "bad", from: a, to: [c] } as never)),
-        ).toBe("`from` must be an array or null (was an object cell of type Object)");
+        expect(() => {
+            // @ts-expect-error Petri net transitions require arrays of places.
+            notebook.add(Transition, { label: "bad", from: a, to: [c] });
+        }).toThrow("Expected a list object endpoint.");
     });
 });
