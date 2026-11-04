@@ -3,8 +3,10 @@ import { CausalLoopDelays } from "catcolab-logics/causal-loop-delays";
 import { Empty } from "catcolab-logics/empty";
 import { IndeterminateCausalLoop } from "catcolab-logics/indeterminate-causal-loop";
 import { PetriNet } from "catcolab-logics/petri-net";
+import { PolynomialODE } from "catcolab-logics/polynomial-ode";
 import { PowerSystem } from "catcolab-logics/power-system";
 import { RegNet } from "catcolab-logics/reg-net";
+import { SignedPolynomialODE } from "catcolab-logics/signed-polynomial-ode";
 import { SimpleOlog } from "catcolab-logics/simple-olog";
 import { SimpleSchema } from "catcolab-logics/simple-schema";
 import { UnaryDEC } from "catcolab-logics/unary-dec";
@@ -22,6 +24,8 @@ export const notebookShapes = [
     SimpleOlog,
     SimpleSchema,
     PetriNet,
+    PolynomialODE,
+    SignedPolynomialODE,
     CausalLoop,
     CausalLoopDelays,
     IndeterminateCausalLoop,

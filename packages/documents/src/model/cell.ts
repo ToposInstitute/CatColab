@@ -39,24 +39,21 @@ export function obFromMorphismEndpoint(
     if (value === null) {
         return null;
     }
-    if (endpoint && "apply" in endpoint) {
+    if (endpoint && "modality" in endpoint) {
         assertListModality(endpoint.modality);
         if (!isArray(value)) {
             throw new Error("Expected a list object endpoint.");
         }
-        return {
-            tag: "App",
+        const list: Ob = {
+            tag: "List",
             content: {
-                op: endpoint.apply,
-                ob: {
-                    tag: "List",
-                    content: {
-                        modality: endpoint.modality,
-                        objects: value.map((cell) => obFromObjectCell(data, cell)),
-                    },
-                },
+                modality: endpoint.modality,
+                objects: value.map((cell) => obFromObjectCell(data, cell)),
             },
         };
+        return "apply" in endpoint
+            ? { tag: "App", content: { op: endpoint.apply, ob: list } }
+            : list;
     }
     if (isArray(value)) {
         throw new Error("Expected a scalar object endpoint.");
