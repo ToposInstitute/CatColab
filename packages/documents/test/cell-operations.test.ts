@@ -72,9 +72,9 @@ describe("deleting cells", () => {
         const { notebook, b, names } = await threeObjectNotebook();
 
         expect(names()).toBe("A, B, C");
-        b.delete();
+        notebook.delete(b);
         expect(names()).toBe("A, C");
-        expect(notebook.document.notebook.cellContents[b.id]).toBeUndefined();
+        expect(notebook.dump().notebook.cellContents[b.id]).toBeUndefined();
     });
 
     test("rich-text cells can be deleted in the same way", async () => {
@@ -82,22 +82,23 @@ describe("deleting cells", () => {
 
         const note = notebook.add(RichText, { content: "A note." });
         expect(notebook.cells().length).toBe(4);
-        note.delete();
+        notebook.delete(note);
         expect(notebook.cells().length).toBe(3);
     });
 
-    test("after deletion, reading fields off the stale handle returns undefined", async () => {
-        const { b } = await threeObjectNotebook();
+    test("after deletion, the stale data is unchanged and no longer in the notebook", async () => {
+        const { notebook, b } = await threeObjectNotebook();
 
-        b.delete();
-        expect(b.label).toBeUndefined();
+        notebook.delete(b);
+        expect(b.label).toBe("B");
+        expect(notebook.cells().find((cell) => cell.id === b.id)).toBeUndefined();
     });
 
     test("deleting an already-deleted cell is a silent no-op", async () => {
-        const { b, names } = await threeObjectNotebook();
+        const { notebook, b, names } = await threeObjectNotebook();
 
-        b.delete();
-        b.delete();
+        notebook.delete(b);
+        notebook.delete(b);
         expect(names()).toBe("A, C");
     });
 });

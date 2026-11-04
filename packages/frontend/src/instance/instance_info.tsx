@@ -4,7 +4,7 @@ import type { LiveInstanceDoc } from "./live_doc_compatibility";
 
 /** Parent model link shown in an instance document head. */
 export function InstanceInfo(props: { liveInstance: LiveInstanceDoc }) {
-    const modelRefId = () => props.liveInstance.instance.document.instanceOf._id;
+    const modelRefId = () => props.liveInstance.liveDoc.doc.instanceOf._id;
 
     return (
         <>

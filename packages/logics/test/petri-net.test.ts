@@ -7,7 +7,7 @@ describe("The petri-net logic", () => {
     test("The shape can be used to create a notebook", async () => {
         const binder = createBinder();
         const notebook = await binder.createNotebook(PetriNet, { title: "Petri net" });
-        expect(notebook.document.theory).toBe("petri-net");
+        expect(notebook.data().theory).toBe("petri-net");
     });
 
     test.skip("Places are basic objects and transitions are hom morphisms", async () => {

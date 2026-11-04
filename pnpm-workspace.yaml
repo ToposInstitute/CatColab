@@ -8,6 +8,7 @@ packages:
   - "packages/frontend"
   - "packages/document-methods"
   - "packages/documents"
+  - "packages/documents-solid"
   - "packages/logics"
   - "packages/ui-components"
   - "packages/gaios"

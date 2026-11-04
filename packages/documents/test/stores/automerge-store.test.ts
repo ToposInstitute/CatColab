@@ -3,7 +3,6 @@
 // A simple Automerge store: handles are `DocHandle`s in a `Repo`, changes go
 // through `DocHandle.change`, and copied values are materialized off the
 // Automerge backend.
-import { getBackend, getObjectId } from "@automerge/automerge";
 import { type DocHandle, Repo } from "@automerge/automerge-repo";
 import { SimpleOlog, Type } from "catcolab-logics/simple-olog";
 import { describe, expect, test } from "vitest";
@@ -15,6 +14,7 @@ import {
     documentLinks,
     emptyHandlesByLinkType,
 } from "catcolab-documents";
+import { getDocumentSnapshot } from "../helpers/snapshot";
 
 const repo = new Repo();
 
@@ -27,21 +27,13 @@ const automergeStore: DocumentStore<DocHandle<Document>> = {
         createdHandles.add(handle);
         return handle;
     },
+    getDocumentSnapshot: (handle) => getDocumentSnapshot(handle.doc()),
     changeDocument: (handle, fn) => handle.change(fn),
     subscribe: (handle, callback) => {
-        const onChange = () => callback();
+        const onChange = () => callback(handle);
         handle.on("change", onChange);
         return () => handle.off("change", onChange);
     },
-    copyValue: (handle, value) => {
-        const doc = handle.doc();
-        const objId = getObjectId(value as object);
-        if (objId === null) {
-            throw new Error("value is not part of the document");
-        }
-        return getBackend(doc).materialize(objId) as typeof value;
-    },
-    getDocumentView: (handle) => handle.doc(),
     getDocumentRef: (handle) => ({ id: handle.documentId, version: null, server: "" }),
     listUsedBy: async (handle) => {
         const linked = emptyHandlesByLinkType<DocHandle<Document>>();

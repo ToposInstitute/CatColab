@@ -7,15 +7,16 @@ import type {
     InvalidModelEqn,
     ModelPresentation,
 } from "catlog-wasm";
-import { getDocumentSnapshot, type DocumentStore } from "../document-store";
+import type { DocumentStore } from "../document-store";
 import type { Issue } from "../result";
 import type { Shape } from "../shape";
+import type { DeepReadonly } from "../util/deep-readonly";
 import { elaboratedModelFromPresentation, type ModelValidation } from "./elaborated-model";
 
 function formalCellForGenerator(
-    notebook: Notebook<ModelJudgment>,
+    notebook: DeepReadonly<Notebook<ModelJudgment>>,
     generatorId: string,
-): FormalCell<ModelJudgment> | undefined {
+): DeepReadonly<FormalCell<ModelJudgment>> | undefined {
     for (const cellId of notebook.cellOrder) {
         const cell = notebook.cellContents[cellId];
         if (cell?.tag === "formal" && "id" in cell.content && cell.content.id === generatorId) {
@@ -25,7 +26,10 @@ function formalCellForGenerator(
     return undefined;
 }
 
-function generatorName(notebook: Notebook<ModelJudgment>, generatorId: string): string {
+function generatorName(
+    notebook: DeepReadonly<Notebook<ModelJudgment>>,
+    generatorId: string,
+): string {
     const cell = formalCellForGenerator(notebook, generatorId);
     if (!cell || !cell.content.name) {
         return generatorId;
@@ -34,7 +38,7 @@ function generatorName(notebook: Notebook<ModelJudgment>, generatorId: string): 
 }
 
 function generatorPath(
-    notebook: Notebook<ModelJudgment>,
+    notebook: DeepReadonly<Notebook<ModelJudgment>>,
     generatorId: string,
     property?: string,
 ): PropertyKey[] | undefined {
@@ -65,7 +69,10 @@ function eqnErrorMessage(error: InvalidModelEqn): string {
     }
 }
 
-function invalidModelIssue(notebook: Notebook<ModelJudgment>, error: InvalidDblModel): Issue {
+function invalidModelIssue(
+    notebook: DeepReadonly<Notebook<ModelJudgment>>,
+    error: InvalidDblModel,
+): Issue {
     switch (error.tag) {
         case "Dom":
             return {
@@ -133,7 +140,7 @@ interface ModelValidationState {
 /** Elaborate and validate a model document against its core theory. Total:
 elaboration and validation failures are values. */
 export async function validateModelDocument(
-    document: Readonly<ModelDocument>,
+    document: DeepReadonly<ModelDocument>,
     theory: DblTheory,
     refId: string,
 ): Promise<ModelValidationState> {
@@ -141,7 +148,13 @@ export async function validateModelDocument(
     const instantiatedModels = new DblModelMap();
     let model: DblModel;
     try {
-        model = elaborateModel(document.notebook, instantiatedModels, theory, refId);
+        model = elaborateModel(
+            // The WASM binding deserializes this value without mutating it.
+            document.notebook as Notebook<ModelJudgment>,
+            instantiatedModels,
+            theory,
+            refId,
+        );
     } catch (error) {
         return {
             issues: [{ message: `Failed to elaborate model: ${String(error)}` }],
@@ -197,7 +210,7 @@ export function createNotebookValidator<Handle, S extends Shape>(
                 coreTheory = shape.getCoreTheory();
             }
             const theory = await coreTheory;
-            const document = getDocumentSnapshot(store, handle) as Readonly<ModelDocument>;
+            const document = store.getDocumentSnapshot(handle) as DeepReadonly<ModelDocument>;
             return await validateModelDocument(document, theory, store.getDocumentRef(handle).id);
         } catch (error) {
             return {

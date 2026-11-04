@@ -11,6 +11,21 @@ async function createConversation(binder: Binder<Document, Document>, title: str
 }
 
 describe("LLM conversation documents", () => {
+    test("conversation data is cached and retains earlier interactions after edits", async () => {
+        const binder = createBinder();
+        const conversation = await createConversation(binder, "Original");
+        conversation.appendInteraction(LLMConversationMethods.newUserMessage("Hello.", []));
+        const before = conversation.data();
+        expect(conversation.data()).toBe(before);
+        expect(structuredClone(before)).toEqual(before);
+        conversation.update({ title: "Renamed" });
+        conversation.appendInteraction(LLMConversationMethods.newLLMMessage("Hi."));
+        expect(before.name).toBe("Original");
+        expect(before.interactions).toHaveLength(1);
+        expect(conversation.data().name).toBe("Renamed");
+        expect(conversation.data().interactions).toHaveLength(2);
+    });
+
     test("createLLMConversation links the conversation to its attachment", async () => {
         const binder = createBinder();
         const model = await binder.createNotebook(SimpleOlog, { title: "Attached model" });
@@ -20,11 +35,11 @@ describe("LLM conversation documents", () => {
 
         expect(conversation.title).toBe("A conversation");
         expect(conversation.attachment).toBe(model);
-        expect(conversation.document.type).toBe("llmconversation");
-        expect(conversation.document.llmModel).toBe("test-model");
+        expect(conversation.data().type).toBe("llmconversation");
+        expect(conversation.data().llmModel).toBe("test-model");
 
         const modelRef = binder.getDocumentRef(model.handle);
-        expect(conversation.document.llmConversationOf).toMatchObject({
+        expect(conversation.data().llmConversationOf).toMatchObject({
             _id: modelRef.id,
             _version: modelRef.version,
             type: "llmconversation-of",
@@ -33,7 +48,7 @@ describe("LLM conversation documents", () => {
 
         // The link can be resolved back to the attachment's handle through the store.
         const resolved = await binder.getHandle({
-            id: conversation.document.llmConversationOf._id,
+            id: conversation.data().llmConversationOf._id,
             version: null,
         });
         expect(resolved.tag).toBe("Ok");
@@ -43,7 +58,7 @@ describe("LLM conversation documents", () => {
         expect(resolved.content).toBe(model.handle);
     });
 
-    test("interactions are appended in order and readable from the document view", async () => {
+    test("interactions are appended in order and readable from conversation data", async () => {
         const binder = createBinder();
         const conversation = await createConversation(binder, "A conversation");
 
@@ -56,7 +71,7 @@ describe("LLM conversation documents", () => {
             "user-message",
             "llm-message",
         ]);
-        expect(conversation.document.interactions[0]).toMatchObject({
+        expect(conversation.data().interactions[0]).toMatchObject({
             tag: "user-message",
             content: "Hello.",
         });
@@ -126,10 +141,10 @@ describe("LLM conversation documents", () => {
         conversation.appendInteraction(LLMConversationMethods.newUserMessage("Hello.", []));
 
         const dump = conversation.dump();
-        expect(dump.interactions).toHaveLength(1);
+        expect(dump).toMatchObject({ interactions: [expect.anything()] });
 
         conversation.appendInteraction(LLMConversationMethods.newLLMMessage("Hi there."));
-        expect(dump.interactions).toHaveLength(1);
+        expect(dump).toMatchObject({ interactions: [expect.anything()] });
         expect(conversation.interactions()).toHaveLength(2);
     });
 
@@ -165,7 +180,7 @@ describe("LLM conversation documents", () => {
         }
         const conversation = result.content;
         expect(conversation.title).toBe("A conversation");
-        expect(conversation.document.llmModel).toBe("test-model");
+        expect(conversation.data().llmModel).toBe("test-model");
     });
 
     test("loadLLMConversationFromRef rejects a non-conversation", async () => {

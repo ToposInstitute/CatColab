@@ -2,6 +2,7 @@ import { v7 } from "uuid";
 
 import type { Document } from "catcolab-document-types";
 import type { Result } from "../result";
+import type { DeepReadonly } from "../util/deep-readonly";
 import type {
     DocumentChange,
     DocumentStore,
@@ -10,11 +11,22 @@ import type {
 } from "./document-store";
 import { documentLinks, emptyHandlesByLinkType } from "./document-store";
 
+/** Create a document snapshot. */
+export function createDocumentSnapshot(document: DeepReadonly<Document>): DeepReadonly<Document> {
+    return structuredClone(document);
+}
+
 export function createInMemoryStore(): DocumentStore<Document, Document> {
     const idToDocument = new Map<string, Document>();
     const documentToId = new WeakMap<Document, string>();
-    const documentToCallbacks = new WeakMap<Document, Set<() => void>>();
+    const documentToCallbacks = new WeakMap<Document, Set<(handle: Document) => void>>();
+    const snapshots = new WeakMap<Document, DeepReadonly<Document>>();
     const drafts = new WeakSet<Document>();
+    const pending: Array<{
+        handle: Document;
+        callbacks: Array<(handle: Document) => void>;
+    }> = [];
+    let notifying = false;
 
     function requireDocumentId(handle: Document): string {
         const id = documentToId.get(handle);
@@ -25,9 +37,23 @@ export function createInMemoryStore(): DocumentStore<Document, Document> {
     }
 
     function notify(handle: Document): void {
-        // Make an array to prevent mutation of the callback set during iteration.
-        for (const callback of Array.from(documentToCallbacks.get(handle) ?? [])) {
-            callback();
+        const snapshot = createDocumentSnapshot(handle);
+        snapshots.set(handle, snapshot);
+        pending.push({ handle, callbacks: Array.from(documentToCallbacks.get(handle) ?? []) });
+        if (notifying) {
+            return;
+        }
+        notifying = true;
+        try {
+            while (pending.length > 0) {
+                const event = pending.shift()!;
+                for (const callback of event.callbacks) {
+                    callback(event.handle);
+                }
+            }
+        } finally {
+            notifying = false;
+            pending.length = 0;
         }
     }
 
@@ -50,6 +76,7 @@ export function createInMemoryStore(): DocumentStore<Document, Document> {
             }
             documentToId.delete(draft);
             documentToCallbacks.delete(draft);
+            snapshots.delete(draft);
         }
     }
 
@@ -58,6 +85,7 @@ export function createInMemoryStore(): DocumentStore<Document, Document> {
             const uuid = v7();
             idToDocument.set(uuid, initialDoc);
             documentToCallbacks.set(initialDoc, new Set());
+            snapshots.set(initialDoc, createDocumentSnapshot(initialDoc));
             documentToId.set(initialDoc, uuid);
             return initialDoc;
         },
@@ -102,7 +130,7 @@ export function createInMemoryStore(): DocumentStore<Document, Document> {
             notify(handle);
         },
 
-        subscribe(handle: Document, callback: () => void): () => void {
+        subscribe(handle: Document, callback: (handle: Document) => void): () => void {
             requireDocumentId(handle);
 
             const callbacks = documentToCallbacks.get(handle)!;
@@ -113,18 +141,13 @@ export function createInMemoryStore(): DocumentStore<Document, Document> {
             };
         },
 
-        copyValue<T>(handle: Document, value: T): T {
-            requireDocumentId(handle);
-            return structuredClone(value);
-        },
-
         getDocumentRef(handle: Document): DocumentRef {
             return { id: requireDocumentId(handle), version: null };
         },
 
-        getDocumentView(handle: Document): Readonly<Document> {
+        getDocumentSnapshot(handle: Document): DeepReadonly<Document> {
             requireDocumentId(handle);
-            return handle;
+            return snapshots.get(handle)!;
         },
 
         async listUsedBy(handle: Document): Promise<HandlesByLinkType<Document>> {
@@ -163,6 +186,7 @@ export function createInMemoryStore(): DocumentStore<Document, Document> {
             idToDocument.set(id, draft);
             documentToId.set(draft, id);
             documentToCallbacks.set(draft, new Set());
+            snapshots.set(draft, createDocumentSnapshot(draft));
             drafts.add(draft);
             return draft;
         },

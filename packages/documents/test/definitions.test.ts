@@ -2,7 +2,7 @@ import { Aspect, SimpleOlog, Type } from "catcolab-logics/simple-olog";
 import { Entity as SchemaEntity, SimpleSchema } from "catcolab-logics/simple-schema";
 import { describe, expect, expectTypeOf, test } from "vitest";
 
-import { defineMorphism, defineObject, defineShape } from "catcolab-documents";
+import { defineMorphism, defineObject, defineShape, RichText } from "catcolab-documents";
 
 describe("defining notebook shapes", () => {
     test("object and morphism definitions preserve their types and endpoint metadata", () => {
@@ -59,6 +59,7 @@ describe("defining notebook shapes", () => {
             getCoreTheory: expect.any(Function),
             objects: [Type],
             morphisms: [Aspect],
+            informal: [RichText],
             supportsEquations: true,
             supportsInstances: { tableObjects: [Type] },
         });

@@ -107,9 +107,9 @@ export async function createInstance(
     if (handle.tag === "Err") {
         throw new Error(handle.content.map((issue) => issue.message).join("\n"));
     }
-    const document = binder.getDocumentView(handle.content);
-    if (document.type !== "model") {
-        throw new Error(`Cannot create a data instance of a "${document.type}" document.`);
+    const document = binder.getDocumentSnapshot(handle.content);
+    if (!("theory" in document) || typeof document.theory !== "string") {
+        throw new Error("Cannot create a data instance of a document without a theory.");
     }
     const shape = shapeForTheory(document.theory);
     if (!shape) {
