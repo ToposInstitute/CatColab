@@ -181,6 +181,7 @@ function migrateAnalysis(liveAnalysis: LiveAnalysisDoc) {
         if (!meta) {
             continue;
         }
+
         const initialContent = meta.initialContent() as Record<string, unknown>;
         for (const key in initialContent) {
             if (!(key in cell.content.content)) {
@@ -190,6 +191,101 @@ function migrateAnalysis(liveAnalysis: LiveAnalysisDoc) {
                     });
                 });
             }
+        }
+
+        // FIXME: For now we statically list all analyses that have breaking version changes and
+        //        manually migrate the data. We should change this once we have refactored out
+        //        analyses into their own crate and implemented their frontend components with the
+        //        new API.
+
+        switch (cell.content.id) {
+            case "kuramoto":
+                liveAnalysis.liveDoc.changeDoc((doc) => {
+                    Nb.mutateCellContentById(doc.notebook, cell.id, (cellContent) => {
+                        // // @ts-expect-error The types of analysis content are too vague: Record<string, unknown>
+                        cellContent.version = versionNumberKuramoto();
+                        cellContent.content = latestVersionKuramotoProblemData(cellContent.content);
+                    });
+                });
+                break;
+            case "linear-ode":
+                liveAnalysis.liveDoc.changeDoc((doc) => {
+                    Nb.mutateCellContentById(doc.notebook, cell.id, (cellContent) => {
+                        // // @ts-expect-error The types of analysis content are too vague: Record<string, unknown>
+                        cellContent.version = versionNumberLinearODE();
+                        cellContent.content = latestVersionLinearODEProblemData(
+                            cellContent.content,
+                        );
+                    });
+                });
+                break;
+            case "lotka-volterra":
+                liveAnalysis.liveDoc.changeDoc((doc) => {
+                    Nb.mutateCellContentById(doc.notebook, cell.id, (cellContent) => {
+                        cellContent.version = versionNumberLotkaVolterra();
+                        cellContent.content = latestVersionLotkaVolterraProblemData(
+                            cellContent.content,
+                        );
+                    });
+                });
+                break;
+            case "mass-action":
+                liveAnalysis.liveDoc.changeDoc((doc) => {
+                    Nb.mutateCellContentById(doc.notebook, cell.id, (cellContent) => {
+                        cellContent.version = versionNumberMassAction();
+                        cellContent.content = latestVersionMassActionProblemData(
+                            cellContent.content,
+                        );
+                    });
+                });
+                break;
+            case "mass-action-equations":
+                liveAnalysis.liveDoc.changeDoc((doc) => {
+                    Nb.mutateCellContentById(doc.notebook, cell.id, (cellContent) => {
+                        cellContent.version = versionNumberMassAction();
+                        cellContent.content = latestVersionMassActionEquationsData(
+                            cellContent.content,
+                        );
+                    });
+                });
+                break;
+            case "polynomial-ode":
+                liveAnalysis.liveDoc.changeDoc((doc) => {
+                    Nb.mutateCellContentById(doc.notebook, cell.id, (cellContent) => {
+                        cellContent.version = versionNumberPolynomialODE();
+                        cellContent.content = latestVersionPolynomialODEProblemData(
+                            cellContent.content,
+                        );
+                    });
+                });
+                break;
+            case "reachability":
+                liveAnalysis.liveDoc.changeDoc((doc) => {
+                    Nb.mutateCellContentById(doc.notebook, cell.id, (cellContent) => {
+                        cellContent.version = versionNumberReachability();
+                        cellContent.content = latestVersionReachabilityProblemData(
+                            cellContent.content,
+                        );
+                    });
+                });
+                break;
+            case "sql":
+                liveAnalysis.liveDoc.changeDoc((doc) => {
+                    Nb.mutateCellContentById(doc.notebook, cell.id, (cellContent) => {
+                        cellContent.version = versionNumberSQL();
+                    });
+                });
+                break;
+            case "stochastic-mass-action":
+                liveAnalysis.liveDoc.changeDoc((doc) => {
+                    Nb.mutateCellContentById(doc.notebook, cell.id, (cellContent) => {
+                        cellContent.version = versionNumberStochasticMassAction();
+                        cellContent.content = latestVersionStochasticMassActionProblemData(
+                            cellContent.content,
+                        );
+                    });
+                });
+                break;
         }
     }
 }
