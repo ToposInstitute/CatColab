@@ -34,7 +34,7 @@ function endpointShapeIssues(document: DeepReadonly<ModelDocument>, shape: Shape
                 const message =
                     mismatch.kind === "single-object"
                         ? `Morphism \`${name}\` has a ${side} that is not a single object`
-                        : `Morphism \`${name}\` has a ${side} that is not a ${mismatch.endpoint.modality} of \`${mismatch.endpoint.apply.content}\` containing single objects`;
+                        : `Morphism \`${name}\` has a ${side} that is not a ${mismatch.endpoint.modality} of \`${"apply" in mismatch.endpoint ? mismatch.endpoint.apply.content : mismatch.endpoint.obType.content}\` containing single objects`;
                 issues.push({
                     message,
                     path: ["notebook", "cellContents", cellId, "content", property],

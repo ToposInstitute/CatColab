@@ -32,6 +32,7 @@ export interface Shape {
 
 export type MorphismEndpoint =
     | ObType
+    | { readonly obType: ObType; readonly modality: Modality }
     | {
           readonly apply: ObOp;
           readonly modality: Modality;
@@ -151,7 +152,9 @@ type HomObjectTypesOf<S extends Shape, M extends MorphismType> = M["morType"] ex
 
 type EndpointObjectTypesOf<S extends Shape, M extends MorphismType, E> = E extends ObType
     ? MatchingObjectTypesOf<ObjectTypesOf<S>, E>
-    : HomObjectTypesOf<S, M>;
+    : E extends { readonly obType: infer O }
+      ? MatchingObjectTypesOf<ObjectTypesOf<S>, O>
+      : HomObjectTypesOf<S, M>;
 
 export type DomainObjectTypesOf<S extends Shape, M extends MorphismType> = M extends {
     readonly endpoints: { readonly domain: infer E };
