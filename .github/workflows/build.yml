@@ -9,6 +9,23 @@ on:
     types: [published]
 
 jobs:
+  deploy:
+    needs:
+      - build_dev_docs
+      - build_frontend
+      - build_rust_docs
+      - build_math-docs
+      - build_rfc
+      - build_gaios
+      - build_ui_components
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == 'ToposInstitute/CatColab'
+    permissions:
+      contents: read
+      deployments: write
+      statuses: write
+    uses: ./.github/workflows/deploy.yml
+    secrets: inherit
+
   build_dev_docs:
     name: Build developer docs
     runs-on: ubuntu-latest
