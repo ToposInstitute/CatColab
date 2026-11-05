@@ -35,8 +35,8 @@ export interface MorphismJudgment<
     readonly id: string;
     readonly type: M;
     readonly label: QualifiedLabel;
-    readonly from: EndpointData<ObjectJudgment<ObjectTypesOf<S>>> | null;
-    readonly to: EndpointData<ObjectJudgment<ObjectTypesOf<S>>> | null;
+    readonly from: EndpointData<ObjectJudgment<ObjectTypesOf<S>>> | MorphismJudgment<S> | null;
+    readonly to: EndpointData<ObjectJudgment<ObjectTypesOf<S>>> | MorphismJudgment<S> | null;
 }
 
 /** A judgment of an elaborated model.*/
@@ -123,22 +123,48 @@ export function elaboratedModelFromPresentation<S extends Shape>(
 
         const morphismsById = new Map<string, MorphismJudgment<S>>();
         const morphisms: MorphismJudgment<S, MorphismTypesOf<S>>[] = [];
-        for (const generator of presentation.morGenerators) {
+        const generatorsById = new Map(
+            presentation.morGenerators.map((generator) => [generator.id, generator]),
+        );
+        const inProgressIds = new Set<string>();
+        function resolveMorphism(id: string): MorphismJudgment<S> | null {
+            const existing = morphismsById.get(id);
+            if (existing) {
+                return existing;
+            }
+            const generator = generatorsById.get(id);
+            if (!generator || inProgressIds.has(id)) {
+                return null;
+            }
             const type = findMorphismType(shape, generator.morType);
             if (type === undefined) {
-                continue;
+                return null;
             }
+            inProgressIds.add(id);
             const resolve = (id: string) => objectsById.get(id) ?? null;
             const judgment: MorphismJudgment<S> = {
                 kind: "morphism",
                 id: generator.id,
                 type,
                 label: generator.label ?? [],
-                from: resolveEndpointDataFromOb(generator.dom, resolve),
-                to: resolveEndpointDataFromOb(generator.cod, resolve),
+                from: resolveEndpointDataFromOb<
+                    ObjectJudgment<ObjectTypesOf<S>>,
+                    MorphismJudgment<S>
+                >(generator.dom, resolve, resolveMorphism),
+                to: resolveEndpointDataFromOb<
+                    ObjectJudgment<ObjectTypesOf<S>>,
+                    MorphismJudgment<S>
+                >(generator.cod, resolve, resolveMorphism),
             };
+            inProgressIds.delete(id);
             morphismsById.set(generator.id, judgment);
-            morphisms.push(judgment);
+            return judgment;
+        }
+        for (const generator of presentation.morGenerators) {
+            const judgment = resolveMorphism(generator.id);
+            if (judgment) {
+                morphisms.push(judgment);
+            }
         }
 
         const equations: EquationJudgment<S>[] = [];
