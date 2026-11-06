@@ -226,12 +226,12 @@ function judgmentMatchesFilter<S extends Shape>(
     }
 
     if (judgment.kind === "object") {
-        return (filter.objects ?? []).some((type) =>
+        return Object.values(filter.objects ?? {}).some((type) =>
             objectTypesEqual(judgment.type.obType, type.obType),
         );
     }
     if (judgment.kind === "morphism") {
-        return (filter.morphisms ?? []).some((type) =>
+        return Object.values(filter.morphisms ?? {}).some((type) =>
             morphismTypesEqual(judgment.type.morType, type.morType),
         );
     }

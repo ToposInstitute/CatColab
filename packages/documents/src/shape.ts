@@ -20,13 +20,14 @@ export const PathEquation = { kind: "path-equation" } as const;
 export interface Shape {
     readonly theory?: string;
     readonly getCoreTheory?: () => Promise<DblTheory>;
-    readonly objects?: readonly ObjectType[];
-    readonly morphisms?: readonly MorphismType[];
-    readonly informal?: readonly RichTextType[];
+    readonly objects?: Readonly<Record<string, ObjectType>>;
+    readonly morphisms?: Readonly<Record<string, MorphismType>>;
+    readonly informal?: Readonly<Record<string, RichTextType>>;
     readonly supportsInstances?: {
-        readonly tableObjects: readonly ObjectType[];
+        readonly tableObjects: Readonly<Record<string, ObjectType>>;
     };
     readonly supportsEquations?: boolean;
+    readonly cellTypes?: Readonly<Record<string, AnyCellType>>;
 }
 
 export type MorphismEndpoint =
@@ -57,26 +58,45 @@ export function defineMorphism<const M, const E extends MorphismEndpoints>(
     return endpoints ? { kind: "morphism", morType, endpoints } : { kind: "morphism", morType };
 }
 
-export function defineShape<const S extends Shape>(shape: S): S {
+export function defineShape<const S extends Shape>(
+    shape: S,
+): S & { readonly cellTypes: Readonly<Record<string, AnyCellType>> } {
     if (shape.supportsInstances) {
         if (!shape.theory || !shape.getCoreTheory) {
             throw new Error("An instance-capable shape must define a theory and its core theory");
         }
         if (
-            shape.supportsInstances.tableObjects.some(
-                (tableObject) => !shape.objects?.includes(tableObject),
+            Object.values(shape.supportsInstances.tableObjects).some(
+                (tableObject) => !Object.values(shape.objects ?? {}).includes(tableObject),
             )
         ) {
             throw new Error("Instance table objects must be declared in the shape's objects");
         }
     }
-    return shape;
+
+    const entries: Array<[string, AnyCellType]> = [];
+    for (const category of [shape.objects, shape.morphisms, shape.informal]) {
+        for (const entry of Object.entries(category ?? {})) {
+            entries.push(entry);
+        }
+    }
+    if (shape.supportsEquations) {
+        entries.push(["PathEquation", PathEquation]);
+    }
+    const names = new Set<string>();
+    for (const [name] of entries) {
+        if (names.has(name)) {
+            throw new Error(`Duplicate cell type name: ${name}`);
+        }
+        names.add(name);
+    }
+    return { ...shape, cellTypes: Object.fromEntries(entries) };
 }
 
 /** A shape that declares support for tabular instances of its models. */
 export type InstanceCapableShape = Shape & {
     readonly supportsInstances: {
-        readonly tableObjects: readonly ObjectType[];
+        readonly tableObjects: Readonly<Record<string, ObjectType>>;
     };
 };
 
@@ -89,8 +109,24 @@ export function assertInstanceCapableShape(shape: Shape): asserts shape is Insta
 
 export type RichTextType = typeof RichText;
 export type EquationType = typeof PathEquation;
-export type ObjectTypesOf<S extends Shape> = NonNullable<S["objects"]>[number];
-export type MorphismTypesOf<S extends Shape> = NonNullable<S["morphisms"]>[number];
+
+/** The object types declared by a shape: the value types of its `objects` map.
+ *
+ * This is complicated because TypeScript is a silly language without
+ * existential types and it has special capabilities for proving things for
+ * `number` that don't work for `keyof`, so we have to pre-empt the
+ * heterogeneous list case using some machinery.
+ */
+export type ObjectTypesOf<S extends Shape> =
+    NonNullable<S["objects"]> extends Readonly<Record<string, infer T extends ObjectType>>
+        ? T
+        : never;
+
+/** The morphism types declared by a shape; see [`ObjectTypesOf`]. */
+export type MorphismTypesOf<S extends Shape> =
+    NonNullable<S["morphisms"]> extends Readonly<Record<string, infer T extends MorphismType>>
+        ? T
+        : never;
 export type AnyCellType = RichTextType | ObjectType | MorphismType | EquationType;
 export type CellTypeOf<S extends Shape> =
     | RichTextType
@@ -147,16 +183,16 @@ export function findObjectType<S extends Shape>(
     shape: S,
     obType: ObType,
 ): ObjectTypesOf<S> | undefined {
-    return shape.objects?.find((type) => objectTypesEqual(type.obType, obType)) as
-        | ObjectTypesOf<S>
-        | undefined;
+    return Object.values(shape.objects ?? {}).find((type) =>
+        objectTypesEqual(type.obType, obType),
+    ) as ObjectTypesOf<S> | undefined;
 }
 
 export function findMorphismType<S extends Shape>(
     shape: S,
     morType: DeepReadonly<MorType>,
 ): MorphismTypesOf<S> | undefined {
-    return shape.morphisms?.find((type) => morphismTypesEqual(type.morType, morType)) as
-        | MorphismTypesOf<S>
-        | undefined;
+    return Object.values(shape.morphisms ?? {}).find((type) =>
+        morphismTypesEqual(type.morType, morType),
+    ) as MorphismTypesOf<S> | undefined;
 }

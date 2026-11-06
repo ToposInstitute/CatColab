@@ -39,9 +39,9 @@ const MyAttr = defineMorphism(
 );
 
 const MyShape = defineShape({
-    objects: [MyEntity, MyAttrType],
-    morphisms: [MyAttr],
-    informal: [RichText],
+    objects: { MyEntity, MyAttrType },
+    morphisms: { MyAttr },
+    informal: { RichText },
 });
 
 type MyNotebook = Notebook<typeof MyShape>;

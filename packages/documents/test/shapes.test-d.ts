@@ -20,12 +20,12 @@ import {
 const BasicObj = defineObject({ tag: "Basic", content: "Object" });
 
 const OnlyBasicObj = defineShape({
-    objects: [BasicObj],
+    objects: { BasicObj },
 });
 
 const EntityObj = defineObject({ tag: "Basic", content: "Entity" });
 const OnlyEntityObj = defineShape({
-    objects: [EntityObj],
+    objects: { EntityObj },
 });
 
 const Morphism = defineMorphism({
@@ -33,8 +33,8 @@ const Morphism = defineMorphism({
     content: EntityObj.obType,
 });
 const EntityWithMor = defineShape({
-    objects: [EntityObj],
-    morphisms: [Morphism],
+    objects: { EntityObj },
+    morphisms: { Morphism },
 });
 
 const tensor = { tag: "Basic", content: "tensor" } as const;
@@ -47,8 +47,8 @@ const ListMor = defineMorphism(
     },
 );
 const ListShape = defineShape({
-    objects: [BasicObj],
-    morphisms: [ListMor],
+    objects: { BasicObj },
+    morphisms: { ListMor },
 });
 
 const SymmetricListMor = defineMorphism(
@@ -59,8 +59,8 @@ const SymmetricListMor = defineMorphism(
     },
 );
 const SymmetricListShape = defineShape({
-    objects: [BasicObj],
-    morphisms: [SymmetricListMor],
+    objects: { BasicObj },
+    morphisms: { SymmetricListMor },
 });
 
 const CocartesianListMor = defineMorphism(
@@ -71,8 +71,8 @@ const CocartesianListMor = defineMorphism(
     },
 );
 const CocartesianListShape = defineShape({
-    objects: [BasicObj],
-    morphisms: [CocartesianListMor],
+    objects: { BasicObj },
+    morphisms: { CocartesianListMor },
 });
 
 const CartesianListMor = defineMorphism(
@@ -83,8 +83,8 @@ const CartesianListMor = defineMorphism(
     },
 );
 const CartesianListShape = defineShape({
-    objects: [BasicObj],
-    morphisms: [CartesianListMor],
+    objects: { BasicObj },
+    morphisms: { CartesianListMor },
 });
 
 const AdditiveListMor = defineMorphism(
@@ -95,8 +95,8 @@ const AdditiveListMor = defineMorphism(
     },
 );
 const AdditiveListShape = defineShape({
-    objects: [BasicObj],
-    morphisms: [AdditiveListMor],
+    objects: { BasicObj },
+    morphisms: { AdditiveListMor },
 });
 
 type NotebookOfLists = Notebook<
@@ -213,7 +213,7 @@ describe.skip("generic shapes (type level)", () => {
 
         const JustObjectShape = defineShape({
             theory: "just-objects",
-            objects: [BasicObj],
+            objects: { BasicObj },
         });
 
         const justObjects = await binder.createNotebook(JustObjectShape, { title: "example" });
@@ -223,7 +223,7 @@ describe.skip("generic shapes (type level)", () => {
 
         const JustMorphismShape = defineShape({
             theory: "just-morphisms",
-            morphisms: [ListMor],
+            morphisms: { ListMor },
         });
 
         const justMorphisms = await binder.createNotebook(JustMorphismShape, {
@@ -244,8 +244,8 @@ describe.skip("generic shapes (type level)", () => {
         );
 
         const MultiObjectListShape = defineShape({
-            objects: [BasicObj, EntityObj],
-            morphisms: [ListMor, EntityListMor],
+            objects: { BasicObj, EntityObj },
+            morphisms: { ListMor, EntityListMor },
         });
 
         function badAddListMorphism2(notebook: Notebook<typeof MultiObjectListShape>) {
@@ -272,8 +272,8 @@ describe.skip("generic shapes (type level)", () => {
         );
 
         const EntityObjectListShape = defineShape({
-            objects: [EntityObj],
-            morphisms: [EntityListMor],
+            objects: { EntityObj },
+            morphisms: { EntityListMor },
         });
 
         type NotebookOfListsWithEntity = Notebook<
@@ -296,7 +296,7 @@ describe.skip("generic shapes (type level)", () => {
         }
 
         const BothObjectsShape = defineShape({
-            objects: [BasicObj, EntityObj],
+            objects: { BasicObj, EntityObj },
         });
 
         function goodAddObject2(notebook: NotebookOfListsWithEntity) {

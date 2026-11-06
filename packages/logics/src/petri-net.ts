@@ -16,13 +16,7 @@ export const PetriNet = defineShape({
         const { ThSymMonoidalCategory } = await import("catlog-wasm");
         return new ThSymMonoidalCategory().theory();
     },
-    objects: [Place],
-    morphisms: [Transition],
-    informal: [RichText],
+    objects: { Place },
+    morphisms: { Transition },
+    informal: { RichText },
 });
-
-export const petriNetCellTypes = {
-    Place,
-    Transition,
-    RichText,
-};

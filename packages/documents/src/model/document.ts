@@ -99,7 +99,7 @@ function shapeSupportsCell(shape: Shape, type: AnyCellType): boolean {
             const required = (type as MorphismType & { readonly endpoints?: MorphismEndpoints })
                 .endpoints;
             return (
-                shape.morphisms?.some((candidate) => {
+                Object.values(shape.morphisms ?? {}).some((candidate) => {
                     if (!morphismTypesEqual(candidate.morType, type.morType)) {
                         return false;
                     }
@@ -126,7 +126,7 @@ function shapeSupportsCell(shape: Shape, type: AnyCellType): boolean {
 
 function shapeSupportsShape(shape: Shape, required: Shape): boolean {
     if (required.objects !== undefined) {
-        for (const type of required.objects) {
+        for (const type of Object.values(required.objects)) {
             if (!shapeSupportsCell(shape, type)) {
                 return false;
             }
@@ -134,7 +134,7 @@ function shapeSupportsShape(shape: Shape, required: Shape): boolean {
     }
 
     if (required.morphisms !== undefined) {
-        for (const type of required.morphisms) {
+        for (const type of Object.values(required.morphisms)) {
             if (!shapeSupportsCell(shape, type)) {
                 return false;
             }
@@ -142,7 +142,7 @@ function shapeSupportsShape(shape: Shape, required: Shape): boolean {
     }
 
     if (required.informal !== undefined) {
-        for (const type of required.informal) {
+        for (const type of Object.values(required.informal)) {
             if (!shapeSupportsCell(shape, type)) {
                 return false;
             }

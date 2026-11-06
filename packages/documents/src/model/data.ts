@@ -94,7 +94,7 @@ export function parseNotebookData(snapshot: DeepReadonly<object>): NotebookParse
 export function shapeHasCell(shape: Shape, cell: CellData): boolean {
     switch (cell.kind) {
         case "rich-text":
-            return shape.informal?.some((type) => type.kind === "rich-text") === true;
+            return Object.values(shape.informal ?? {}).some((type) => type.kind === "rich-text");
         case "object":
             return findObjectType(shape, cell.type.obType) !== undefined;
         case "morphism":

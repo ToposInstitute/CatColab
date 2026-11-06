@@ -1,7 +1,6 @@
-import { cellTypesForTheory } from "catcolab-logics/cell-types";
-
 import type { LinkType } from "catcolab-document-types";
 import {
+    type AnyCellType,
     type Binder,
     type LLMConversation,
     type Shape,
@@ -33,32 +32,29 @@ export async function createLLMConversationExecutionScope<
     conversation: LLMConversation<Attachment, Handle>,
     binder: Binder<Handle, Version>,
 ): Promise<LLMConversationExecutionScope> {
-    const { documents, theories, tx } = await createScopedDocuments(conversation, binder);
+    const { documents, vocabularies, tx } = await createScopedDocuments(conversation, binder);
 
-    // Every theory in scope brings its cell types with it: both as bindings
-    // for the code the LLM runs and as a description of what the `add` method
-    // of the notebook documents accepts.
-    const vocabularies = theories
-        .map((theory) => cellTypesForTheory(theory))
-        .filter((cellTypes) => cellTypes !== undefined);
-    const vocabularyDescriptions = vocabularies.map(
-        (cellTypes) =>
-            `The cell types of the notebook documents, for use with their \`add\` method, are: ${Object.entries(
-                cellTypes,
-            )
-                .map(([name, type]) => `\`${name}\` (\`${type.kind}\`)`)
-                .join(", ")}.`,
-    );
+    // Every staged document brings its shape's cell types with it: both as
+    // bindings for the code the LLM runs and as a description of what the
+    // `add` method of the notebook documents accepts.
+    const vocabularyDescription =
+        Object.keys(vocabularies).length === 0
+            ? undefined
+            : `The cell types of the notebook documents, for use with their \`add\` method, are: ${Object.entries(
+                  vocabularies,
+              )
+                  .map(([name, type]) => `\`${name}\` (\`${type.kind}\`)`)
+                  .join(", ")}.`;
 
     const descriptions = documents.map((document) => document.description);
     return {
         bindings: Object.freeze({
             ...Object.fromEntries(documents.map(({ binding, value }) => [binding, value])),
-            ...Object.assign({}, ...vocabularies),
+            ...vocabularies,
         }),
         systemPromptSuffix: [
             `The following documents are in scope:\n${descriptions.join("\n")}`,
-            ...vocabularyDescriptions,
+            ...(vocabularyDescription === undefined ? [] : [vocabularyDescription]),
         ].join("\n\n"),
         async validate() {
             const problems: string[] = [];
@@ -85,7 +81,7 @@ async function createScopedDocuments<
     binder: Binder<Handle, Version>,
 ): Promise<{
     documents: ReadonlyArray<ScopedDocument>;
-    theories: ReadonlyArray<string>;
+    vocabularies: Readonly<Record<string, AnyCellType>>;
     tx: Transaction<Handle, Version>;
 }> {
     const origin = conversation.attachment;
@@ -201,18 +197,31 @@ async function createScopedDocuments<
         ),
     );
 
-    // Every notebook in scope contributes its theory's cell types.
-    const theoriesWithRepetitions: string[] = [];
+    // Every staged document contributes its shape's cell types qualified by the
+    // theory name. We do the same kind of normalisation as elsewhere to
+    // generate valid bindings.
+    const vocabularies: Record<string, AnyCellType> = {};
+    const shapes = new Set<NonNullable<Shape["cellTypes"]>>();
     for (const draft of Object.values(draftDocs)) {
-        if ("shape" in draft && draft.shape.theory !== undefined) {
-            theoriesWithRepetitions.push(draft.shape.theory);
+        if ("shape" in draft && draft.shape.cellTypes !== undefined) {
+            if (shapes.has(draft.shape.cellTypes)) {
+                continue;
+            }
+            shapes.add(draft.shape.cellTypes);
+            const theory =
+                draft.shape.theory
+                    ?.normalize("NFKD")
+                    .replace(/[^A-Za-z0-9_$]+/g, "_")
+                    .replace(/^_+|_+$/g, "") || "unnamed";
+            for (const [name, type] of Object.entries(draft.shape.cellTypes)) {
+                vocabularies[`${theory}_${name}`] = type;
+            }
         }
     }
-    const theories = [...new Set(theoriesWithRepetitions)];
 
     return {
         documents: [attachedDocument, ...dependencyDocuments, ...dependentDocuments],
-        theories,
+        vocabularies,
         tx,
     };
 }
