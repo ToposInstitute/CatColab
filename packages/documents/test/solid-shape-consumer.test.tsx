@@ -33,9 +33,9 @@ type BasicObCell = NotebookCell<typeof basicObject>;
 type SymmetricListCell = NotebookCell<typeof symmetricListMorphism>;
 
 const GenericShape = defineShape({
-    objects: [basicObject],
-    morphisms: [symmetricListMorphism],
-    informal: [RichText],
+    objects: { basicObject },
+    morphisms: { symmetricListMorphism },
+    informal: { RichText },
 });
 
 function ObListEditor(props: { objects: BasicObCell[] }) {

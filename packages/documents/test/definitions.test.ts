@@ -2,7 +2,13 @@ import { Aspect, SimpleOlog, Type } from "catcolab-logics/simple-olog";
 import { Entity as SchemaEntity, SimpleSchema } from "catcolab-logics/simple-schema";
 import { describe, expect, expectTypeOf, test } from "vitest";
 
-import { defineMorphism, defineObject, defineShape, RichText } from "catcolab-documents";
+import {
+    defineMorphism,
+    defineObject,
+    defineShape,
+    PathEquation,
+    RichText,
+} from "catcolab-documents";
 
 describe("defining notebook shapes", () => {
     test("object and morphism definitions preserve their types and endpoint metadata", () => {
@@ -51,28 +57,29 @@ describe("defining notebook shapes", () => {
     });
 
     test("shape definitions preserve complete and partial shape values", () => {
-        const OnlyType = defineShape({ objects: [Type] });
+        const OnlyType = defineShape({ objects: { Type } });
 
-        expect(OnlyType).toEqual({ objects: [Type] });
+        expect(OnlyType).toEqual({ objects: { Type }, cellTypes: { Type } });
         expect(SimpleOlog).toEqual({
             theory: "simple-olog",
             getCoreTheory: expect.any(Function),
-            objects: [Type],
-            morphisms: [Aspect],
-            informal: [RichText],
+            objects: { Type },
+            morphisms: { Aspect },
+            informal: { RichText },
             supportsEquations: true,
-            supportsInstances: { tableObjects: [Type] },
+            supportsInstances: { tableObjects: { Type } },
+            cellTypes: { Type, Aspect, RichText, PathEquation },
         });
         expectTypeOf(SimpleOlog.theory).toEqualTypeOf<"simple-olog">();
     });
 
     test("instance-capable shapes select table objects declared by the shape", () => {
-        expect(SimpleSchema.supportsInstances.tableObjects).toEqual([SchemaEntity]);
+        expect(SimpleSchema.supportsInstances.tableObjects).toEqual({ Entity: SchemaEntity });
 
         expect(() =>
             defineShape({
-                objects: [SchemaEntity],
-                supportsInstances: { tableObjects: [SchemaEntity] },
+                objects: { SchemaEntity },
+                supportsInstances: { tableObjects: { SchemaEntity } },
             }),
         ).toThrowError("An instance-capable shape must define a theory and its core theory");
 
@@ -80,8 +87,8 @@ describe("defining notebook shapes", () => {
             defineShape({
                 theory: "invalid-instance-shape",
                 getCoreTheory: SimpleSchema.getCoreTheory,
-                objects: [Type],
-                supportsInstances: { tableObjects: [SchemaEntity] },
+                objects: { Type },
+                supportsInstances: { tableObjects: { SchemaEntity } },
             }),
         ).toThrowError("Instance table objects must be declared in the shape's objects");
     });

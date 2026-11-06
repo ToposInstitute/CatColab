@@ -33,7 +33,7 @@ describe("the simple-schema logic", () => {
     });
 
     test("declares how schemas are validated and instantiated", async () => {
-        expect(SimpleSchema.supportsInstances.tableObjects).toEqual([Entity]);
+        expect(SimpleSchema.supportsInstances.tableObjects).toEqual({ Entity });
 
         const theory = await SimpleSchema.getCoreTheory();
         try {
