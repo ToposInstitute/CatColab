@@ -213,7 +213,9 @@ test("RowRefHighlightsCurrent", async () => {
     await userEvent.dblClick(cell);
     const listbox = await within(document.body).findByRole("listbox");
     const active = listbox.querySelector("li.active");
-    expect(active).toHaveTextContent("2");
+    expect(active?.querySelector(".completion-name")?.textContent).toBe("2");
+    expect(active?.querySelector(".completion-description")?.textContent).toBe("Team");
+    expect(within(cell).getByRole("textbox")).toHaveValue("2");
 
     await userEvent.keyboard("{Enter}");
     expect(cell).toHaveTextContent("2");
