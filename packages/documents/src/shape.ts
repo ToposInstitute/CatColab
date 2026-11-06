@@ -27,7 +27,27 @@ export interface Shape {
         readonly tableObjects: readonly ObjectType[];
     };
     readonly supportsEquations?: boolean;
+    readonly cellTypes?: CellTypeVocabulary;
 }
+
+export type CellTypeVocabulary = Readonly<Record<string, AnyCellType>>;
+
+export interface ShapeDefinition extends Omit<
+    Shape,
+    "objects" | "morphisms" | "informal" | "cellTypes"
+> {
+    readonly objects?: Readonly<Record<string, ObjectType>>;
+    readonly morphisms?: Readonly<Record<string, MorphismType>>;
+    readonly informal?: Readonly<Record<string, RichTextType>>;
+}
+
+export type DefinedShape<S extends ShapeDefinition> = {
+    readonly [K in keyof S]: K extends "objects" | "morphisms" | "informal"
+        ? readonly NonNullable<S[K]>[keyof NonNullable<S[K]>][]
+        : S[K];
+} & {
+    readonly cellTypes: CellTypeVocabulary;
+};
 
 export type MorphismEndpoint =
     | ObType
@@ -57,7 +77,28 @@ export function defineMorphism<const M, const E extends MorphismEndpoints>(
     return endpoints ? { kind: "morphism", morType, endpoints } : { kind: "morphism", morType };
 }
 
-export function defineShape<const S extends Shape>(shape: S): S {
+export function defineShape<const S extends ShapeDefinition>(definition: S): DefinedShape<S> {
+    const { objects, morphisms, informal, ...metadata } = definition;
+    const entries = [objects, morphisms, informal].flatMap((category) =>
+        category === undefined ? [] : Object.entries(category),
+    );
+    if (definition.supportsEquations) {
+        entries.push(["PathEquation", PathEquation]);
+    }
+    const names = new Set<string>();
+    for (const [name] of entries) {
+        if (names.has(name)) {
+            throw new Error(`Duplicate cell type name: ${name}`);
+        }
+        names.add(name);
+    }
+    const shape = {
+        ...metadata,
+        ...(objects === undefined ? {} : { objects: Object.values(objects) }),
+        ...(morphisms === undefined ? {} : { morphisms: Object.values(morphisms) }),
+        ...(informal === undefined ? {} : { informal: Object.values(informal) }),
+        cellTypes: Object.fromEntries(entries),
+    };
     if (shape.supportsInstances) {
         if (!shape.theory || !shape.getCoreTheory) {
             throw new Error("An instance-capable shape must define a theory and its core theory");
@@ -70,7 +111,7 @@ export function defineShape<const S extends Shape>(shape: S): S {
             throw new Error("Instance table objects must be declared in the shape's objects");
         }
     }
-    return shape;
+    return shape as unknown as DefinedShape<S>;
 }
 
 /** A shape that declares support for tabular instances of its models. */

@@ -1,10 +1,4 @@
-import {
-    defineMorphism,
-    defineObject,
-    defineShape,
-    PathEquation,
-    RichText,
-} from "catcolab-documents";
+import { defineMorphism, defineObject, defineShape, RichText } from "catcolab-documents";
 
 export const Type = defineObject({ tag: "Basic", content: "Object" });
 
@@ -16,17 +10,11 @@ export const SimpleOlog = defineShape({
         const { ThCategory } = await import("catlog-wasm");
         return new ThCategory().theory();
     },
-    objects: [Type],
-    morphisms: [Aspect],
-    informal: [RichText],
+    objects: { Type },
+    morphisms: { Aspect },
+    informal: { RichText },
     supportsEquations: true,
     supportsInstances: {
         tableObjects: [Type],
     },
 });
-
-export const simpleOlogCellTypes = {
-    Type,
-    Aspect,
-    PathEquation,
-};
