@@ -27,10 +27,7 @@ export function GridRows(props: {
             <Index each={props.rows}>
                 {(row) => (
                     // ARIA row indices are one-based, and row 1 is the column header.
-                    <tr
-                        aria-rowindex={row().index + 2}
-                        classList={{ [styles.lastRow]: row().index === props.totalRows - 1 }}
-                    >
+                    <tr aria-rowindex={row().index + 2}>
                         <RowLabelCell
                             row={row()}
                             issues={props.issuesAt([props.tableId, "rows", row().id])}
