@@ -280,7 +280,7 @@ function createGridController(props: GridControllerProps) {
         }
         const key = makeCellKey(state.headerId, state.rowId);
         const cell = findCell(key);
-        if (cell) {
+        if (cell && cell.header.type.tag !== "RowRef") {
             const parsed = parseValue(cell.header, state.text);
             props.onSetField(cell.row, cell.header, parsed.ok ? parsed.value : state.text);
         }
