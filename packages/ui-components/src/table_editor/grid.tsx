@@ -246,7 +246,7 @@ function GridContent(
                                 )}
                             </Index>
                             <th
-                                class={styles.columnHeader}
+                                class={`${styles.columnHeader} ${styles.rowActions}`}
                                 scope="col"
                                 aria-colindex={headers().length + 2}
                                 aria-label="Row actions"
@@ -292,19 +292,30 @@ function GridContent(
                 <Show when={viewport.edges().left}>
                     <div class={styles.scrollLeft} data-scroll-direction="left" />
                 </Show>
-                <Show when={viewport.edges().right}>
-                    <div class={styles.scrollRight} data-scroll-direction="right" />
-                </Show>
             </div>
             <div
                 class={styles.gutterBackdrop}
                 aria-hidden="true"
                 style={{
-                    width: "4px",
+                    width: "2px",
                     height: `${viewport.edges().height}px`,
                     "--scroll-header-height": `${viewport.headerHeight()}px`,
                 }}
             />
+            <div
+                class={`${styles.gutterBackdrop} ${styles.rightGutterBackdrop}`}
+                aria-hidden="true"
+                style={{
+                    left: `${viewport.edges().width - DELETE_COLUMN_WIDTH}px`,
+                    width: `${DELETE_COLUMN_WIDTH}px`,
+                    height: `${viewport.edges().height}px`,
+                    "--scroll-header-height": `${viewport.headerHeight()}px`,
+                }}
+            >
+                <Show when={viewport.edges().right}>
+                    <div class={styles.scrollRight} data-scroll-direction="right" />
+                </Show>
+            </div>
         </>
     );
 }
