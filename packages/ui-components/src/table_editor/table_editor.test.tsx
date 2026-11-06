@@ -865,6 +865,19 @@ test("ScrollIndicators", async () => {
     const indicators = scrollArea.nextElementSibling as HTMLElement;
     const corner = table.querySelector("th")!;
     const expectDivider = () => {
+        const rightBackdrop = scrollArea.parentElement!.lastElementChild!;
+        const rightBorder = getComputedStyle(rightBackdrop, "::after");
+        expect(rightBorder.content).toBe('""');
+        expect(rightBorder.width).toBe("1px");
+        expect(rightBorder.right).toBe("0px");
+        expect(rightBorder.top).toBe("0px");
+        expect(rightBorder.bottom).toBe("0px");
+        expect(
+            Math.abs(
+                rightBackdrop.getBoundingClientRect().right -
+                    (scrollArea.getBoundingClientRect().left + scrollArea.clientWidth),
+            ),
+        ).toBeLessThanOrEqual(1);
         const divider = getComputedStyle(indicators, "::after");
         expect(divider.content).toBe('""');
         expect(divider.width).toBe("1px");
@@ -887,6 +900,40 @@ test("ScrollIndicators", async () => {
         );
         expect(getComputedStyle(shadow).pointerEvents).toBe("none");
     };
+    const expectRightShadow = () => {
+        const shadow = canvasElement.querySelector<HTMLElement>('[data-scroll-direction="right"]')!;
+        const backdrop = shadow.parentElement!;
+        const divider = getComputedStyle(backdrop, "::before");
+        const actions = canvas.getByRole("columnheader", { name: "Row actions" });
+        expect(divider.content).toBe('""');
+        expect(divider.width).toBe("1px");
+        expect(
+            Math.abs(
+                backdrop.getBoundingClientRect().right -
+                    (scrollArea.getBoundingClientRect().left + scrollArea.clientWidth),
+            ),
+        ).toBeLessThanOrEqual(1);
+        expect(
+            Math.abs(backdrop.getBoundingClientRect().left - actions.getBoundingClientRect().left),
+        ).toBeLessThanOrEqual(1);
+        expect(shadow.getBoundingClientRect().right).toBeCloseTo(
+            actions.getBoundingClientRect().left,
+            0,
+        );
+        for (const button of canvas.getAllByRole("button", { name: "Delete row" })) {
+            expect(shadow.getBoundingClientRect().right).toBeLessThanOrEqual(
+                button.getBoundingClientRect().left + 1,
+            );
+        }
+        expect(shadow.getBoundingClientRect().top).toBeCloseTo(
+            actions.getBoundingClientRect().bottom,
+            0,
+        );
+        expect(Number(getComputedStyle(backdrop).zIndex)).toBeGreaterThan(
+            Number(getComputedStyle(actions).zIndex),
+        );
+        expect(getComputedStyle(shadow).pointerEvents).toBe("none");
+    };
     const hasCue = (direction: string) =>
         canvasElement.querySelector(`[data-scroll-direction="${direction}"]`) !== null;
     await waitFor(async () => {
@@ -895,6 +942,7 @@ test("ScrollIndicators", async () => {
         expect(hasCue("top")).toBe(false);
         expect(hasCue("left")).toBe(false);
         expectDivider();
+        expectRightShadow();
     });
     scrollArea.scrollTop = (scrollArea.scrollHeight - scrollArea.clientHeight) / 2;
     scrollArea.scrollLeft = (scrollArea.scrollWidth - scrollArea.clientWidth) / 2;
@@ -905,6 +953,7 @@ test("ScrollIndicators", async () => {
         }
         expectDivider();
         expectLeftShadow();
+        expectRightShadow();
     });
     const gutterColumn = table.querySelector("col")!;
     const initialGutterWidth = corner.getBoundingClientRect().width;

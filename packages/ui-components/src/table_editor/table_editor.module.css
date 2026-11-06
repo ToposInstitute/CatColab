@@ -29,6 +29,7 @@
 .scrollViewport {
     position: relative;
     min-width: 0;
+    clip-path: inset(0);
 }
 
 /* Cues stay at viewport edges without covering the scrollbar or intercepting input. */
@@ -52,6 +53,30 @@
         color-mix(in srgb, var(--color-background) 50%, var(--color-gray-25))
             var(--scroll-header-height)
     );
+}
+
+.rightGutterBackdrop {
+    z-index: 9;
+    background: none;
+}
+
+.rightGutterBackdrop::before,
+.rightGutterBackdrop::after {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: var(--color-gray-450);
+    opacity: 0.65;
+    content: "";
+}
+
+.rightGutterBackdrop::before {
+    left: 0;
+}
+
+.rightGutterBackdrop::after {
+    right: 0;
 }
 
 .scrollIndicators::before {
@@ -113,7 +138,7 @@
 }
 
 .scrollRight {
-    right: 0;
+    right: 100%;
     background: linear-gradient(to left, rgb(0 0 0 / 20%), transparent);
 }
 
@@ -261,13 +286,26 @@ shadow, it is painted above the cell editor input. */
     border-left-width: 0;
 }
 
+.columnHeader.rowActions {
+    right: 0;
+    z-index: 8;
+}
+
 .deleteCell {
-    position: relative;
+    position: sticky;
+    right: 0;
+    z-index: 1;
+    background: var(--color-background);
     height: 28px;
     padding: 0;
     border: 1px solid var(--color-gray-450);
     text-align: center;
     vertical-align: middle;
+}
+
+.columnHeader.rowActions,
+.deleteCell {
+    border-right-width: 0;
 }
 
 .deleteRow {
@@ -292,6 +330,10 @@ shadow, it is painted above the cell editor input. */
     tr:has(.deleteRow:hover)
     > :is(.cell, .rowHeader, .deleteCell):not(.invalid, :has(.cellInput.invalid)) {
     background-color: var(--color-hover-bg);
+}
+
+.grid tbody tr:has(.deleteRow:hover) > .deleteCell {
+    z-index: 5;
 }
 
 .deleteRow:hover {
