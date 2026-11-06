@@ -58,5 +58,15 @@ export function obFromMorphismEndpoint(
     if (isArray(value)) {
         throw new Error("Expected a scalar object endpoint.");
     }
+    if (endpoint && "tag" in endpoint && endpoint.tag === "Tabulator") {
+        const cell = data.cells.find((cell) => cell.id === value.id);
+        if (!cell) {
+            throw new Error(`Cell ${value.id} does not exist.`);
+        }
+        if (cell.kind !== "morphism") {
+            throw new Error(`Cell ${value.id} is not a morphism.`);
+        }
+        return { tag: "Tabulated", content: { tag: "Basic", content: cell.generatorId } };
+    }
     return obFromObjectCell(data, value);
 }

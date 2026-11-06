@@ -32,9 +32,9 @@ export function morphismEndpointsEqual(left: MorphismEndpoint, right: MorphismEn
     return !("modality" in right) && objectTypesEqual(left, right);
 }
 
-export function isSingleObjectEndpoint<Value extends { readonly kind: "object" }>(
+export function isSingleObjectEndpoint<Value extends { readonly kind: string }>(
     value: EndpointData<Value> | null | undefined,
-): value is Value {
+): value is Extract<Value, { readonly kind: "object" }> {
     return isRecord(value) && "kind" in value && value.kind === "object";
 }
 
@@ -64,12 +64,18 @@ function findListEndpointMismatch(
 
 export type EndpointMismatch =
     | { readonly kind: "single-object" }
+    | { readonly kind: "tabulated-morphism" }
     | { readonly kind: "list"; readonly endpoint: ListEndpoint };
 
 export function validateEndpoint(
     ob: DeepReadonly<Ob> | null,
     endpoint: MorphismEndpoint | undefined,
 ): EndpointMismatch | undefined {
+    if (endpoint && "tag" in endpoint && endpoint.tag === "Tabulator") {
+        return ob === null || (ob.tag === "Tabulated" && ob.content.tag === "Basic")
+            ? undefined
+            : { kind: "tabulated-morphism" };
+    }
     const mismatch = findListEndpointMismatch(ob, endpoint);
     if (mismatch) {
         return { kind: "list", endpoint: mismatch };
@@ -83,12 +89,16 @@ export function validateEndpoint(
 export function resolveEndpointDataFromOb<Value>(
     ob: DeepReadonly<Ob> | null,
     resolve: (id: string) => Value | null,
+    resolveMorphism?: (id: string) => Value | null,
 ): EndpointData<Value> | null {
     if (ob === null) {
         return null;
     }
     if (ob.tag === "Basic") {
         return resolve(ob.content);
+    }
+    if (ob.tag === "Tabulated" && ob.content.tag === "Basic") {
+        return resolveMorphism?.(ob.content.content) ?? null;
     }
     const list = ob.tag === "App" ? ob.content.ob : ob;
     if (list?.tag === "List") {
