@@ -23,8 +23,8 @@ const Attr = defineMorphism(
 );
 const SimpleSchema = defineShape({
     theory: "simple-schema",
-    objects: [Entity, AttrType],
-    morphisms: [Attr],
+    objects: { Entity, AttrType },
+    morphisms: { Attr },
 });
 
 describe("creating and editing notebooks", () => {

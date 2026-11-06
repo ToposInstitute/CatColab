@@ -84,6 +84,7 @@ export {
     RichText,
 } from "./shape";
 export type {
+    AnyCellType,
     EquationType,
     InstanceCapableShape,
     ListModality,
