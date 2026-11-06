@@ -57,7 +57,10 @@ describe("validation snapshots", { timeout: 20_000 }, () => {
         schema.add(Entity, { label: "New" });
         store.changeDocument(instance.handle, (doc) => {
             if (doc.type === "instance") {
-                doc.tables[table.id] = { rows: { stray: { fields: {} } }, rowOrder: ["stray"] };
+                doc.tables[table.id] = {
+                    rows: { stray: { label: "", fields: {} } },
+                    rowOrder: ["stray"],
+                };
             }
         });
         // Instance edits publish immediately using the latest available schema.

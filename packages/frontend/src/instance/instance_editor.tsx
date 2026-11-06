@@ -80,6 +80,11 @@ export function InstanceEditor(props: {
                                                 .set(row, header, value)
                                                 .then(logError("set field"))
                                         }
+                                        onSetRowLabel={(row, label) =>
+                                            void props.instance
+                                                .updateRow(row, { label })
+                                                .then(logError("set row label"))
+                                        }
                                         onAddRow={() =>
                                             void props.instance
                                                 .addRow(table())

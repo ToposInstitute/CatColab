@@ -2,7 +2,7 @@ import { Index, Show } from "solid-js";
 
 import type { InstanceTable, TableHeader, TableRow } from "catcolab-documents";
 import { GridCell } from "./grid_cell";
-import { RowIssueTooltip } from "./row_issue_tooltip";
+import { RowLabelCell } from "./row_label_cell";
 import type { IssueLookup } from "./validation";
 
 import styles from "./table_editor.module.css";
@@ -23,7 +23,7 @@ export function GridRows(props: {
 }) {
     return (
         <tbody>
-            <Spacer height={props.topSpacer} columns={Math.max(props.headers.length, 1) + 2} />
+            <Spacer height={props.topSpacer} columns={props.headers.length + 2} />
             <Index each={props.rows}>
                 {(row) => (
                     // ARIA row indices are one-based, and row 1 is the column header.
@@ -31,53 +31,42 @@ export function GridRows(props: {
                         aria-rowindex={row().index + 2}
                         classList={{ [styles.lastRow]: row().index === props.totalRows - 1 }}
                     >
-                        <RowIssueTooltip
+                        <RowLabelCell
+                            row={row()}
                             issues={props.issuesAt([props.tableId, "rows", row().id])}
                         />
-                        <Show
-                            when={props.headers.length > 0}
-                            fallback={
-                                <>
-                                    <td class={styles.cell} role="gridcell" />
-                                    <td class={styles.deleteCell} />
-                                </>
-                            }
-                        >
-                            <Index each={props.headers}>
-                                {(header) => (
-                                    <GridCell
-                                        row={row()}
-                                        header={header()}
-                                        field={
-                                            row().fields[props.headerIndex().get(header().id) ?? -1]
-                                        }
-                                        allTables={props.allTables}
-                                        issuesAt={props.issuesAt}
-                                        deleting={props.deletingColumnId === header().id}
-                                    />
-                                )}
-                            </Index>
-                            <td class={styles.deleteCell}>
-                                <button
-                                    type="button"
-                                    class={styles.deleteRow}
-                                    title="Delete row"
-                                    aria-label="Delete row"
-                                    tabindex={-1}
-                                    // Clicking must not move focus out of the grid: the
-                                    // selection and any open editor are left alone until
-                                    // the row is actually removed.
-                                    onMouseDown={(evt) => evt.preventDefault()}
-                                    onClick={() => props.onDeleteRow(row())}
-                                >
-                                    ×
-                                </button>
-                            </td>
-                        </Show>
+                        <Index each={props.headers}>
+                            {(header) => (
+                                <GridCell
+                                    row={row()}
+                                    header={header()}
+                                    field={row().fields[props.headerIndex().get(header().id) ?? -1]}
+                                    allTables={props.allTables}
+                                    issuesAt={props.issuesAt}
+                                    deleting={props.deletingColumnId === header().id}
+                                />
+                            )}
+                        </Index>
+                        <td class={styles.deleteCell} aria-colindex={props.headers.length + 2}>
+                            <button
+                                type="button"
+                                class={styles.deleteRow}
+                                title="Delete row"
+                                aria-label="Delete row"
+                                tabindex={-1}
+                                // Clicking must not move focus out of the grid: the
+                                // selection and any open editor are left alone until
+                                // the row is actually removed.
+                                onMouseDown={(evt) => evt.preventDefault()}
+                                onClick={() => props.onDeleteRow(row())}
+                            >
+                                ×
+                            </button>
+                        </td>
                     </tr>
                 )}
             </Index>
-            <Spacer height={props.bottomSpacer} columns={Math.max(props.headers.length, 1) + 2} />
+            <Spacer height={props.bottomSpacer} columns={props.headers.length + 2} />
         </tbody>
     );
 }

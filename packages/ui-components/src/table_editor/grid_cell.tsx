@@ -4,7 +4,7 @@ import type { FieldValue, InstanceTable, TableHeader, TableRow } from "catcolab-
 import type { FocusHandle } from "../util/focus";
 import { Cell } from "./cell";
 import { CellEditor } from "./cell_editor";
-import { codomainOf, defaultRowLabel } from "./display";
+import { codomainOf, rowDisplayLabel } from "./display";
 import { parseValue } from "./editing";
 import { useGridController } from "./grid_controller";
 import { makeCellKey } from "./navigation";
@@ -47,8 +47,16 @@ export function GridCell(props: {
             return [];
         }
         const currentId = props.field?.tag === "RowRef" ? props.field.content.id : undefined;
+        const labelCounts = new Map<string, number>();
+        for (const target of codomain.rows) {
+            const label = rowDisplayLabel(target);
+            labelCounts.set(label, (labelCounts.get(label) ?? 0) + 1);
+        }
         return codomain.rows.map((target) => ({
-            name: defaultRowLabel(codomain, target),
+            name:
+                labelCounts.get(rowDisplayLabel(target))! > 1
+                    ? `${rowDisplayLabel(target)} (row ${target.index + 1})`
+                    : rowDisplayLabel(target),
             selected: target.id === currentId,
             onComplete: () => edit.commitRowRef(key(), target),
         }));
@@ -71,6 +79,7 @@ export function GridCell(props: {
             id={edit.cellId(key())}
             class={styles.cell}
             role="gridcell"
+            aria-colindex={(edit.headerIndex().get(props.header.id) ?? 0) + 2}
             aria-selected={selected()}
             aria-invalid={invalid()}
             aria-readonly={props.header.type.tag === "Unknown"}

@@ -71,7 +71,7 @@ describe("Solid validation accessors", { timeout: 20_000 }, () => {
         if (!table) {
             throw new Error("Expected a table");
         }
-        const row = await result.content.addRow(table, { name: "Alice" });
+        const row = await result.content.addRow(table, { values: { name: "Alice" } });
         expect(row.tag).toBe("Ok");
         await expect.poll(() => validation()?.tables[0]?.rows.length).toBe(1);
         schema.add(Attr, { label: "role", from: person, to: string });

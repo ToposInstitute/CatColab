@@ -12,7 +12,7 @@ import {
 import type { InstanceTable, LiteralValue, TableHeader, TableRow } from "catcolab-documents";
 import type { FocusHandle } from "../util/focus";
 import { ColumnHeader } from "./column_header";
-import { COLUMN_WIDTHS, DELETE_COLUMN_WIDTH, EMPTY_COLUMN_WIDTH } from "./display";
+import { COLUMN_WIDTHS, DELETE_COLUMN_WIDTH, tableDisplayName } from "./display";
 import { GridProvider, useGridController } from "./grid_controller";
 import { GridRows } from "./grid_rows";
 import { navigationDirection, neighborKey, parseCellKey } from "./navigation";
@@ -28,6 +28,7 @@ type TableGridProps = {
     table: InstanceTable;
     allTables: ReadonlyArray<InstanceTable>;
     onSetField: (row: TableRow, header: TableHeader, value: LiteralValue | TableRow) => void;
+    onSetRowLabel: (row: TableRow, label: string) => void;
     onAddRow: () => void;
     onDeleteRow: (row: TableRow) => void;
 };
@@ -42,6 +43,7 @@ export function TableGrid(props: TableGridProps) {
                 table={() => props.table}
                 allTables={() => props.allTables}
                 onSetField={props.onSetField}
+                onSetRowLabel={props.onSetRowLabel}
                 onAddRow={props.onAddRow}
             >
                 <div class={styles.scrollViewport}>
@@ -188,6 +190,8 @@ function GridContent(
                     }}
                     class={styles.grid}
                     role="grid"
+                    aria-label={tableDisplayName(props.table)}
+                    aria-colcount={headers().length + 2}
                     tabindex={edit.hasEditor() ? -1 : 0}
                     // Include the column header row in the grid's total row count.
                     aria-rowcount={props.table.rows.length + 1}
@@ -201,53 +205,52 @@ function GridContent(
                     }}
                 >
                     <colgroup>
-                        <col class={styles.rowHeaderColumn} />
-                        <Show
-                            when={headers().length > 0}
-                            fallback={<col style={{ width: `${EMPTY_COLUMN_WIDTH}px` }} />}
-                        >
-                            <Index each={headers()}>
-                                {(header) => (
-                                    <col
-                                        style={{ width: `${COLUMN_WIDTHS[header().type.tag]}px` }}
-                                    />
-                                )}
-                            </Index>
-                        </Show>
+                        <col />
+                        <Index each={headers()}>
+                            {(header) => (
+                                <col style={{ width: `${COLUMN_WIDTHS[header().type.tag]}px` }} />
+                            )}
+                        </Index>
                         <col style={{ width: `${DELETE_COLUMN_WIDTH}px` }} />
                     </colgroup>
                     <thead ref={viewport.setHead}>
-                        <tr>
-                            <th class={styles.columnHeader} scope="col" />
-                            <Show
-                                when={headers().length > 0}
-                                fallback={<th class={styles.columnHeader} scope="col" />}
-                            >
-                                <Index each={headers()}>
-                                    {(header) => (
-                                        <th
-                                            class={styles.columnHeader}
-                                            classList={{
-                                                [styles.columnDeleting]:
-                                                    deletingColumnId() === header().id,
-                                            }}
-                                            scope="col"
-                                        >
-                                            <ColumnHeader
-                                                header={header()}
-                                                onDelete={
-                                                    props.table.label !== null &&
-                                                    header().type.tag === "Unknown"
-                                                        ? props.onDeleteOrphanedColumn
-                                                        : undefined
-                                                }
-                                                onDeleting={setDeletingColumnId}
-                                            />
-                                        </th>
-                                    )}
-                                </Index>
-                            </Show>
-                            <th class={styles.columnHeader} scope="col" />
+                        <tr aria-rowindex={1}>
+                            <th
+                                class={`${styles.columnHeader} ${styles.rowLabelCorner}`}
+                                scope="col"
+                                aria-colindex={1}
+                                aria-label="Row label"
+                            />
+                            <Index each={headers()}>
+                                {(header, index) => (
+                                    <th
+                                        class={styles.columnHeader}
+                                        aria-colindex={index + 2}
+                                        classList={{
+                                            [styles.columnDeleting]:
+                                                deletingColumnId() === header().id,
+                                        }}
+                                        scope="col"
+                                    >
+                                        <ColumnHeader
+                                            header={header()}
+                                            onDelete={
+                                                props.table.label !== null &&
+                                                header().type.tag === "Unknown"
+                                                    ? props.onDeleteOrphanedColumn
+                                                    : undefined
+                                            }
+                                            onDeleting={setDeletingColumnId}
+                                        />
+                                    </th>
+                                )}
+                            </Index>
+                            <th
+                                class={styles.columnHeader}
+                                scope="col"
+                                aria-colindex={headers().length + 2}
+                                aria-label="Row actions"
+                            />
                         </tr>
                     </thead>
                     <GridRows
@@ -277,6 +280,7 @@ function GridContent(
                     width: `${viewport.edges().width}px`,
                     height: `${viewport.edges().height}px`,
                     "--scroll-header-height": `${viewport.headerHeight()}px`,
+                    "--scroll-gutter-width": `${viewport.gutterWidth()}px`,
                 }}
             >
                 <Show when={viewport.edges().top}>
@@ -292,6 +296,15 @@ function GridContent(
                     <div class={styles.scrollRight} data-scroll-direction="right" />
                 </Show>
             </div>
+            <div
+                class={styles.gutterBackdrop}
+                aria-hidden="true"
+                style={{
+                    width: "4px",
+                    height: `${viewport.edges().height}px`,
+                    "--scroll-header-height": `${viewport.headerHeight()}px`,
+                }}
+            />
         </>
     );
 }

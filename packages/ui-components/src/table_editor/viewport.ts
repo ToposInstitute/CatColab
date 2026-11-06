@@ -32,6 +32,8 @@ export function createTableViewport(rows: Accessor<ReadonlyArray<TableRow>>) {
     const [table, setTable] = createSignal<HTMLTableElement>();
     const [height, setHeight] = createSignal(INITIAL_VIEWPORT_HEIGHT);
     const [headerHeight, setHeaderHeight] = createSignal(INITIAL_HEADER_HEIGHT);
+    const [gutterWidth, setGutterWidth] = createSignal(0);
+    const gutter = () => head()?.querySelector("th");
     // Focus parked on the container must not jump back when a selected row remounts.
     const [parked, setParked] = createSignal(false);
     const [edges, setEdges] = createSignal({
@@ -76,10 +78,12 @@ export function createTableViewport(rows: Accessor<ReadonlyArray<TableRow>>) {
                 return;
             }
             const hh = head()?.getBoundingClientRect().height ?? INITIAL_HEADER_HEIGHT;
-            const geometry = `${el.clientWidth}:${el.clientHeight}:${hh}`;
+            const gw = gutter()?.getBoundingClientRect().width ?? 0;
+            const geometry = `${el.clientWidth}:${el.clientHeight}:${hh}:${gw}`;
             const changed = geometry !== lastGeometry;
             lastGeometry = geometry;
             setHeaderHeight(hh);
+            setGutterWidth(gw);
             const available = Math.max(0, el.clientHeight - hh);
             setHeight(available);
             // A stale spacer must not keep overflow alive after the data shrinks.
@@ -95,7 +99,7 @@ export function createTableViewport(rows: Accessor<ReadonlyArray<TableRow>>) {
             if (changed && !parked() && active && el.contains(active) && row) {
                 // Undo one-based ARIA indexing and the column header row.
                 revealRow(Number(row.getAttribute("aria-rowindex")) - 2);
-                const cell = active.closest("td");
+                const cell = active.closest<HTMLTableCellElement>("td, th[scope='row']");
                 if (cell) {
                     revealCell(cell);
                 }
@@ -103,7 +107,8 @@ export function createTableViewport(rows: Accessor<ReadonlyArray<TableRow>>) {
             sync();
         });
     createResizeObserver(
-        () => [area(), head(), table()].filter((el): el is NonNullable<typeof el> => !!el),
+        () =>
+            [area(), head(), table(), gutter()].filter((el): el is NonNullable<typeof el> => !!el),
         measure,
     );
     onMount(() => measure());
@@ -133,12 +138,17 @@ export function createTableViewport(rows: Accessor<ReadonlyArray<TableRow>>) {
         if (!el) {
             return;
         }
+        if (cell.matches("th[scope='row']")) {
+            return;
+        }
         const bounds = cell.getBoundingClientRect();
         const left = el.getBoundingClientRect().left + el.clientLeft;
-        if (bounds.left < left) {
-            el.scrollLeft -= left - bounds.left;
-        } else if (bounds.right > left + el.clientWidth) {
-            el.scrollLeft += bounds.right - left - el.clientWidth;
+        const contentLeft = left + gutterWidth();
+        const right = left + el.clientWidth;
+        if (bounds.right > right || bounds.width > right - contentLeft) {
+            el.scrollLeft += bounds.right - right;
+        } else if (bounds.left < contentLeft) {
+            el.scrollLeft -= contentLeft - bounds.left;
         }
         sync();
     };
@@ -169,6 +179,7 @@ export function createTableViewport(rows: Accessor<ReadonlyArray<TableRow>>) {
         setTable,
         virtual,
         headerHeight,
+        gutterWidth,
         edges,
         parked,
         revealRow,

@@ -90,6 +90,7 @@ export function addInstanceRowsToStore<Handle, Version>(
     schemaModel: ElaboratedModel,
     additions: ReadonlyArray<{
         table: InstanceTable;
+        label?: string | undefined;
         values: ReadonlyArray<Record<string, LiteralValue | TableRow>>;
     }>,
 ): Result<ReadonlyArray<TableRow>> {
@@ -103,7 +104,7 @@ export function addInstanceRowsToStore<Handle, Version>(
 
     store.changeDocument(handle, (changedDocument) => {
         const instanceDocument = changedDocument as InstanceDocument;
-        for (const { table, values } of additions) {
+        for (const { table, label, values } of additions) {
             const schemaTable = schemaTableById.get(table.id);
             if (schemaTable === undefined) {
                 issues.push({
@@ -114,14 +115,15 @@ export function addInstanceRowsToStore<Handle, Version>(
             for (const rowValues of values) {
                 const fields = encodeFieldsByLabel(schemaTable, rowValues, issues);
                 const id = freshRowId(instanceDocument);
+                const row = { fields, label: label?.trim() ?? "" };
                 const storedTable = instanceDocument.tables[schemaTable.id];
                 if (storedTable === undefined) {
                     instanceDocument.tables[schemaTable.id] = {
-                        rows: { [id]: { fields } },
+                        rows: { [id]: row },
                         rowOrder: [id],
                     };
                 } else {
-                    storedTable.rows[id] = { fields };
+                    storedTable.rows[id] = row;
                     storedTable.rowOrder.push(id);
                 }
                 addedRows.push({ schemaTable, id });
@@ -151,7 +153,8 @@ export function updateInstanceFieldsByLabelInStore<Handle, Version>(
     schemaModel: ElaboratedModel,
     updates: ReadonlyArray<{
         row: TableRow;
-        values: ReadonlyArray<Record<string, LiteralValue | TableRow>>;
+        label?: string | undefined;
+        values?: ReadonlyArray<Record<string, LiteralValue | TableRow>>;
     }>,
 ): Result<void> {
     const schemaTables = instanceTablesFromModel(shape, tablesOfHandle(store, handle), schemaModel);
@@ -159,7 +162,7 @@ export function updateInstanceFieldsByLabelInStore<Handle, Version>(
     const issues: Issue[] = [];
     store.changeDocument(handle, (changedDocument) => {
         const instanceDocument = changedDocument as InstanceDocument;
-        for (const { row, values } of updates) {
+        for (const { row, label, values = [] } of updates) {
             const schemaTable = schemaTableForRow(instanceDocument, schemaTables, row, issues);
             if (schemaTable === undefined) {
                 continue;
@@ -167,6 +170,9 @@ export function updateInstanceFieldsByLabelInStore<Handle, Version>(
             const storedRow = instanceDocument.tables[schemaTable.id]?.rows[row.id];
             if (storedRow === undefined) {
                 continue;
+            }
+            if (label !== undefined) {
+                storedRow.label = label.trim();
             }
             for (const rowValues of values) {
                 Object.assign(
@@ -368,9 +374,11 @@ function makeRow(
     rowId: string,
 ): TableRow {
     const storedRow = requireRow(tables, schemaTable.id, rowId);
+    const index = (tables.get(schemaTable.id)?.rows ?? []).findIndex((row) => row.id === rowId);
     return {
         id: rowId,
-        index: (tables.get(schemaTable.id)?.rows ?? []).findIndex((row) => row.id === rowId),
+        label: storedRow.label,
+        index,
         fields: schemaTable.headers.map((header) =>
             fieldValueFromStored(
                 [schemaTable.id, "rows", rowId, "fields", header.id],
