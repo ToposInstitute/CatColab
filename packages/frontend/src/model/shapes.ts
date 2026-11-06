@@ -1,6 +1,13 @@
+import { CausalLoop } from "catcolab-logics/causal-loop";
+import { CausalLoopDelays } from "catcolab-logics/causal-loop-delays";
+import { Empty } from "catcolab-logics/empty";
+import { IndeterminateCausalLoop } from "catcolab-logics/indeterminate-causal-loop";
 import { PetriNet } from "catcolab-logics/petri-net";
+import { PowerSystem } from "catcolab-logics/power-system";
+import { RegNet } from "catcolab-logics/reg-net";
 import { SimpleOlog } from "catcolab-logics/simple-olog";
 import { SimpleSchema } from "catcolab-logics/simple-schema";
+import { UnaryDEC } from "catcolab-logics/unary-dec";
 
 /**
  * Which theories the frontend can load through a document binder, and the
@@ -10,7 +17,18 @@ import type { ModelDocument, Notebook, Shape } from "catcolab-documents";
 import type { ApiDocumentHandle, ApiDocumentVersion } from "../api";
 
 /** Shapes of model notebooks that can be loaded through a document binder. */
-export const notebookShapes = [SimpleOlog, SimpleSchema, PetriNet] as const;
+export const notebookShapes = [
+    Empty,
+    SimpleOlog,
+    SimpleSchema,
+    PetriNet,
+    CausalLoop,
+    CausalLoopDelays,
+    IndeterminateCausalLoop,
+    RegNet,
+    UnaryDEC,
+    PowerSystem,
+] as const;
 
 type NotebookShape = (typeof notebookShapes)[number];
 
