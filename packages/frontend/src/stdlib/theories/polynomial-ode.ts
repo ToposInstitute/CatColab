@@ -2,7 +2,6 @@ import { lazy } from "solid-js";
 
 import { ThPolynomialODE } from "catlog-wasm";
 import { Theory, type TheoryMeta } from "../../theory";
-import * as analyses from "../analyses";
 
 const ObjectCellEditor = lazy(() => import("../../model/object_cell_editor"));
 const ContributionCellEditor = lazy(() => import("../../model/contribution_cell_editor"));
@@ -31,19 +30,6 @@ export default function createPolynomialODETheory(theoryMeta: TheoryMeta): Theor
                 description: "Monomial contribution to ODE system",
                 shortcut: ["C"],
             },
-        ],
-        modelAnalyses: [
-            analyses.polynomialODEEquations({
-                getEquations(model, data) {
-                    return thPolynomialODE.polynomialODEEquations(model, data);
-                },
-            }),
-            analyses.polynomialODESimulation({
-                signedContributions: false,
-                simulate(model, data) {
-                    return thPolynomialODE.polynomialODESimulation(model, data);
-                },
-            }),
         ],
     });
 }

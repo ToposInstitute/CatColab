@@ -1,5 +1,5 @@
 import type { EditorVariantOverrides } from "../model/editors";
-import { type EditorVariant, type ModelAnalysisMeta, Theory } from "./theory";
+import { type EditorVariant, Theory } from "./theory";
 export type { EditorVariant, EditorVariantOverrides };
 
 /** Frontend metadata for a double theory.
@@ -33,19 +33,6 @@ export type TheoryMeta = {
 
 type TheoryConstructor = (meta: TheoryMeta) => Theory;
 
-/** A generic analysis of a model.
-
-Most model analyses make sense only for specific theories. These are the
-exceptional ones that potentially apply to models of any theory.
- */
-type GenericModelAnalysis = {
-    /** Constructor of analysis metadata. */
-    construct: () => ModelAnalysisMeta;
-
-    /** Condition under which the analysis applies (default: always). */
-    when?: (theory: Theory) => boolean;
-};
-
 /** Library of double theories configured for the frontend.
 
 Theories are lazy loaded.
@@ -69,14 +56,11 @@ export class TheoryLibrary {
     /** ID of the default theory for new models. */
     private defaultTheoryId: string | undefined;
 
-    private genericModelAnalyses: Array<GenericModelAnalysis>;
-
     constructor() {
         this.metaMap = new Map();
         this.theoryMap = new Map();
         this.editorVariantMetaMap = new Map();
         this.baseToEditorVariants = new Map();
-        this.genericModelAnalyses = [];
     }
 
     /** Add a theory to the library. */
@@ -126,11 +110,6 @@ export class TheoryLibrary {
         // If that fails, construct and cache it.
         const construct = await theoryOrCons();
         const theory = construct(meta);
-        for (const info of this.genericModelAnalyses) {
-            if (info.when?.(theory) ?? true) {
-                theory.addModelAnalysis(info.construct());
-            }
-        }
 
         // Register editor variants defined on the theory, skipping any
         // that were already registered (can happen with concurrent loads).
@@ -219,13 +198,5 @@ export class TheoryLibrary {
             grouped.set(groupName, group);
         }
         return grouped;
-    }
-
-    /** Adds a generic model analysis to the library.
-
-    Such an analysis will be automatically added to models of any applicable theory.
-     */
-    addGenericModelAnalysis(meta: GenericModelAnalysis) {
-        this.genericModelAnalyses.push(meta);
     }
 }

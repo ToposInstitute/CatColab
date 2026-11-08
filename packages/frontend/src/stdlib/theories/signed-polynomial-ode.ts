@@ -2,7 +2,6 @@ import { lazy } from "solid-js";
 
 import { ThSignedPolynomialODE } from "catlog-wasm";
 import { Theory, type TheoryMeta } from "../../theory";
-import * as analyses from "../analyses";
 
 const ObjectCellEditor = lazy(() => import("../../model/object_cell_editor"));
 const PositiveContributionEditor = lazy(() =>
@@ -48,19 +47,6 @@ export default function createSignedPolynomialODETheory(theoryMeta: TheoryMeta):
                 description: "Subtractive monomial contribution to the system of ODEs",
                 shortcut: ["N"],
             },
-        ],
-        modelAnalyses: [
-            analyses.polynomialODEEquations({
-                getEquations(model, data) {
-                    return thSignedPolynomialODE.polynomialODEEquations(model, data);
-                },
-            }),
-            analyses.polynomialODESimulation({
-                signedContributions: true,
-                simulate(model, data) {
-                    return thSignedPolynomialODE.polynomialODESimulation(model, data);
-                },
-            }),
         ],
     });
 }
