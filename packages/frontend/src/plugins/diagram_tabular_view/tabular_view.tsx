@@ -2,7 +2,7 @@ import { createResource, For, Match, Switch } from "solid-js";
 
 import { PanelHeader, Spinner } from "catcolab-ui-components";
 import type { DblModel } from "catlog-wasm";
-import type { DiagramAnalysisProps } from "../../analysis";
+import type { DiagramAnalysisBuilder, DiagramAnalysisProps } from "../../analysis";
 import { useApi } from "../../api";
 
 import "./tabular_view.css";
@@ -82,11 +82,13 @@ function ACSetTableView(props: { model: DblModel; rawdata: Record<string, string
 Such a visualization makes sense for any discrete double theory and is in
 general restricted to basic objects.
  */
-export default function TabularView(
-    props: DiagramAnalysisProps<Record<string, never>> & {
-        title?: string;
-    },
-) {
+export default {
+    contentVersion: 0,
+    initialContent: () => ({}),
+    component: TabularView,
+} satisfies DiagramAnalysisBuilder<Record<string, never>>;
+
+function TabularView(props: DiagramAnalysisProps<Record<string, never>>) {
     const api = useApi();
 
     const [res] = createResource(

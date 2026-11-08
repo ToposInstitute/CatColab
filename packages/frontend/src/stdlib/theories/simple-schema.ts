@@ -20,12 +20,6 @@ export default function createSchemaTheory(theoryMeta: TheoryMeta): Theory {
             description: "Visualize the instance as a graph",
             help: "visualization",
         }),
-        analyses.tabularView({
-            id: "tabularview",
-            name: "Table view",
-            description: "Visualize the instance as a table",
-            help: "tabularview",
-        }),
     ];
     return new Theory({
         ...theoryMeta,
@@ -132,16 +126,6 @@ export default function createSchemaTheory(theoryMeta: TheoryMeta): Theory {
                 name: "Visualization",
                 description: "Visualize the schema as a graph",
                 help: "visualization",
-            }),
-            analyses.schemaERD({
-                id: "erd",
-                name: "Entity-relationship diagram",
-                description: "Visualize the schema as an entity-relationship diagram",
-                help: "schema-erd",
-            }),
-            analyses.renderSQL({
-                id: "sql",
-                render: (model, data) => thSchema.renderSQL(model, data),
             }),
         ],
         diagramAnalyses: diagramAnalyses,

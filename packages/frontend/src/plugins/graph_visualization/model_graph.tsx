@@ -1,8 +1,8 @@
 import type { DblModel, QualifiedName } from "catlog-wasm";
-import type { ModelAnalysisProps } from "../../analysis";
+import type { ModelAnalysisBuilder, ModelAnalysisProps } from "../../analysis";
 import type { Theory } from "../../theory";
-import type { GraphLayoutConfig, GraphSpec } from "../../visualization";
-import * as graphStyles from "../graph_styles";
+import { GraphLayoutConfig, type GraphSpec } from "../../visualization";
+import * as graphStyles from "./graph_styles";
 import { GraphVisualizationAnalysis } from "./graph_visualization";
 
 /** Visualize a model of a double theory as a graph.
@@ -12,11 +12,13 @@ the generating data for such a model is just a typed graph. For other kinds of
 double theories, the visualization will ignore any basic morphism whose domain
 or codomain is not a basic object.
  */
-export default function ModelGraph(
-    props: ModelAnalysisProps<GraphLayoutConfig.Config> & {
-        title?: string;
-    },
-) {
+export default {
+    contentVersion: 0,
+    initialContent: GraphLayoutConfig.defaultConfig,
+    component: ModelGraph,
+} satisfies ModelAnalysisBuilder<GraphLayoutConfig.Config>;
+
+function ModelGraph(props: ModelAnalysisProps<GraphLayoutConfig.Config>) {
     const graph = () => {
         const theory = props.liveModel.theory();
         const model = props.liveModel.elaboratedModel();
@@ -27,7 +29,6 @@ export default function ModelGraph(
 
     return (
         <GraphVisualizationAnalysis
-            title={props.title}
             graph={graph()}
             config={props.content}
             changeConfig={props.changeContent}

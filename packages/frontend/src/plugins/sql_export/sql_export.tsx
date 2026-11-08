@@ -5,10 +5,11 @@ import Download from "lucide-solid/icons/download";
 import { For, Match, Show, Switch } from "solid-js";
 
 import { CodeView, BlockTitle, ErrorAlert, IconButton } from "catcolab-ui-components";
-import type { ModelAnalysisProps } from "../../analysis";
-import * as SQL from "./sql_types.ts";
+import { ThSchema } from "catlog-wasm";
+import type { ModelAnalysisBuilder, ModelAnalysisProps } from "../../analysis";
+import * as SQL from "./types";
 
-import styles from "./sql.module.css";
+import styles from "./sql_export.module.css";
 
 const copyToClipboard = (text: string) => navigator.clipboard.writeText(text);
 
@@ -56,16 +57,20 @@ export function SQLHeader(sql: string) {
 }
 
 /** Component to interface with SQL analysis. Allows user to download the script and change the backend. */
-export default function SQLSchemaAnalysis(
-    props: ModelAnalysisProps<DownloadConfig> & {
-        render: SQL.SQLRenderer;
-        title: string;
-    },
-) {
+export default {
+    contentVersion: 0,
+    initialContent: SQL.defaultDownloadConfig,
+    component: SQLSchemaAnalysis,
+} satisfies ModelAnalysisBuilder<SQL.DownloadConfig>;
+
+const thSchema = new ThSchema();
+const title = "SQL schema";
+
+function SQLSchemaAnalysis(props: ModelAnalysisProps<SQL.DownloadConfig>) {
     const sql_script = () => {
         const model = props.liveModel.elaboratedModel();
         if (model) {
-            return props.render(model, props.content.backend);
+            return thSchema.renderSQL(model, props.content.backend);
         }
     };
 
@@ -96,7 +101,7 @@ export default function SQLSchemaAnalysis(
                             {(sql) => (
                                 <div>
                                     <BlockTitle
-                                        title={props.title}
+                                        title={title}
                                         actions={SQLHeader(sql())}
                                         settingsPane={BackendConfig()}
                                     />
@@ -108,7 +113,7 @@ export default function SQLSchemaAnalysis(
                         </Match>
                         <Match when={result().tag === "Err"}>
                             <div>
-                                <BlockTitle title={props.title} settingsPane={BackendConfig()} />
+                                <BlockTitle title={title} settingsPane={BackendConfig()} />
                                 <ErrorAlert>
                                     <p>{"The model failed to compile into a SQL script."}</p>
                                     <p>{"Check for cycles in foreign key constraints."}</p>
@@ -121,8 +126,3 @@ export default function SQLSchemaAnalysis(
         </div>
     );
 }
-
-export type DownloadConfig = {
-    backend: SQL.SQLBackend;
-    filename: string;
-};

@@ -1,8 +1,8 @@
 import type * as Viz from "@viz-js/viz";
 import type * as Elk from "elkjs";
 
-import type { BaseTypeMeta } from "../theory";
-import type { GraphvizAttributes } from "../visualization";
+import type { BaseTypeMeta } from "../../theory";
+import type { GraphvizAttributes } from "../../visualization";
 
 import textStyles from "./text_styles.module.css";
 

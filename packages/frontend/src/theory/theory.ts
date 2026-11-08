@@ -359,35 +359,3 @@ type ModelMigration = {
     /** Function to perform the migration. */
     migrate: (model: DblModel, targetTheory: DblTheory) => DblModel;
 };
-
-/** Specifies an analysis with descriptive metadata. */
-export type AnalysisMeta<T> = {
-    /** Identifier of analysis, unique relative to the theory. */
-    id: string;
-
-    /** Human-readable name of analysis. */
-    name: string;
-
-    /** Short description of analysis. */
-    description?: string;
-
-    /** Name of the help page (excluding file extension) for the analysis, if any. */
-    help?: string;
-
-    /** Default content created when the analysis is added. */
-    initialContent: () => T;
-};
-
-/** Specifies a model analysis with descriptive metadata. */
-// oxlint-disable-next-line typescript/no-explicit-any -- content type is data dependent
-export type ModelAnalysisMeta<T = any> = AnalysisMeta<T> & {
-    /** Component that renders the analysis. */
-    component: ModelAnalysisComponent<T>;
-};
-
-/** Specifies a diagram analysis with descriptive metadata. */
-// oxlint-disable-next-line typescript/no-explicit-any -- content type is data dependent
-export type DiagramAnalysisMeta<T = any> = AnalysisMeta<T> & {
-    /** Component that renders the analysis. */
-    component: DiagramAnalysisComponent<T>;
-};

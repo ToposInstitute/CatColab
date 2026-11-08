@@ -1,8 +1,8 @@
 import type { DblModel, DblModelDiagram } from "catlog-wasm";
-import type { DiagramAnalysisProps } from "../../analysis";
+import type { DiagramAnalysisBuilder, DiagramAnalysisProps } from "../../analysis";
 import type { Theory } from "../../theory";
-import type { GraphLayoutConfig, GraphSpec } from "../../visualization";
-import * as graphStyles from "../graph_styles";
+import { GraphLayoutConfig, type GraphSpec } from "../../visualization";
+import * as graphStyles from "./graph_styles";
 import { GraphVisualizationAnalysis } from "./graph_visualization";
 
 /** Visualize a diagram in a model as a graph.
@@ -10,11 +10,13 @@ import { GraphVisualizationAnalysis } from "./graph_visualization";
 Such a visualization makes sense for any discrete double theory and is in
 general restricted to basic objects. See `ModelGraph` for more.
  */
-export default function DiagramGraph(
-    props: DiagramAnalysisProps<GraphLayoutConfig.Config> & {
-        title?: string;
-    },
-) {
+export default {
+    contentVersion: 0,
+    initialContent: GraphLayoutConfig.defaultConfig,
+    component: DiagramGraph,
+} satisfies DiagramAnalysisBuilder<GraphLayoutConfig.Config>;
+
+function DiagramGraph(props: DiagramAnalysisProps<GraphLayoutConfig.Config>) {
     const graph = () => {
         const theory = props.liveDiagram.liveModel.theory();
         const model = props.liveDiagram.liveModel.elaboratedModel();
@@ -26,7 +28,6 @@ export default function DiagramGraph(
 
     return (
         <GraphVisualizationAnalysis
-            title={props.title}
             graph={graph()}
             config={props.content}
             changeConfig={props.changeContent}

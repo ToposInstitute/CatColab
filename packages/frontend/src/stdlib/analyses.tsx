@@ -7,13 +7,10 @@ import type {
     PolynomialODEEquationsData,
     StochasticMassActionProblemData,
 } from "catlog-wasm";
-import type { DiagramAnalysisMeta, ModelAnalysisMeta } from "../theory";
+import type { ModelAnalysisMeta } from "../theory";
 import * as GraphLayoutConfig from "../visualization/graph_layout_config";
 import type * as Checkers from "./analyses/checker_types";
-import { defaultSchemaERDConfig, type SchemaERDConfig } from "./analyses/schema_erd_config";
 import type * as Simulators from "./analyses/simulator_types";
-import type * as SQLDownloadConfig from "./analyses/sql";
-import { SQLBackend, type SQLRenderer } from "./analyses/sql_types";
 
 type AnalysisOptions = {
     id: string;
@@ -21,43 +18,6 @@ type AnalysisOptions = {
     description?: string;
     help?: string;
 };
-
-export const decapodes = (
-    options: AnalysisOptions,
-): DiagramAnalysisMeta<Simulators.DecapodesAnalysisContent> => ({
-    ...options,
-    component: (props) => <Decapodes {...props} />,
-    initialContent: () => ({
-        domain: null,
-        mesh: null,
-        initialConditions: {},
-        plotVariables: {},
-        scalars: {},
-        duration: 10,
-    }),
-});
-
-const Decapodes = lazy(() => import("./analyses/decapodes"));
-
-export const diagramGraph = (
-    options: AnalysisOptions,
-): DiagramAnalysisMeta<GraphLayoutConfig.Config> => ({
-    ...options,
-    component: (props) => <DiagramGraph title={options.name} {...props} />,
-    initialContent: GraphLayoutConfig.defaultConfig,
-});
-
-const DiagramGraph = lazy(() => import("./analyses/diagram_graph"));
-
-export const tabularView = (
-    options: AnalysisOptions,
-): DiagramAnalysisMeta<Record<string, never>> => ({
-    ...options,
-    component: (props) => <TabularView title={options.name} {...props} />,
-    initialContent: () => ({}),
-});
-
-const TabularView = lazy(() => import("./analyses/tabular_view"));
 
 export function kuramoto(
     options: Partial<AnalysisOptions> & {
@@ -257,24 +217,6 @@ export function stochasticMassAction(
 
 const StochasticMassAction = lazy(() => import("./analyses/stochastic_mass_action"));
 
-export const modelGraph = (
-    options: AnalysisOptions,
-): ModelAnalysisMeta<GraphLayoutConfig.Config> => ({
-    ...options,
-    component: (props) => <ModelGraph title={options.name} {...props} />,
-    initialContent: GraphLayoutConfig.defaultConfig,
-});
-
-const ModelGraph = lazy(() => import("./analyses/model_graph"));
-
-export const schemaERD = (options: AnalysisOptions): ModelAnalysisMeta<SchemaERDConfig> => ({
-    ...options,
-    component: (props) => <SchemaERD {...props} />,
-    initialContent: defaultSchemaERDConfig,
-});
-
-const SchemaERD = lazy(() => import("./analyses/schema_erd"));
-
 export function motifFinding(
     options: AnalysisOptions & {
         findMotifs: Checkers.MotifFinder;
@@ -296,77 +238,6 @@ export function motifFinding(
 }
 
 const SubmodelGraphs = lazy(() => import("./analyses/submodel_graphs"));
-
-export const petriNetVisualization = (
-    options: AnalysisOptions,
-): ModelAnalysisMeta<GraphLayoutConfig.Config> => ({
-    ...options,
-    component: PetriNetVisualization,
-    initialContent: GraphLayoutConfig.defaultConfig,
-});
-
-const PetriNetVisualization = lazy(() => import("./analyses/petri_net_visualization"));
-
-export function reachability(
-    options: Partial<AnalysisOptions> & {
-        check: Checkers.ReachabilityChecker;
-    },
-): ModelAnalysisMeta<Checkers.ReachabilityProblemData> {
-    const {
-        id = "subreachability",
-        name = "Sub-reachability check",
-        description = "Check that forbidden tokenings are unreachable",
-        help = "subreachability",
-        ...otherOptions
-    } = options;
-    return {
-        id,
-        name,
-        description,
-        help,
-        component: (props) => <Reachability title={name} {...otherOptions} {...props} />,
-        initialContent: () => ({ tokens: {}, forbidden: {} }),
-    };
-}
-
-const Reachability = lazy(() => import("./analyses/reachability"));
-
-export const stockFlowDiagram = (
-    options: AnalysisOptions,
-): ModelAnalysisMeta<GraphLayoutConfig.Config> => ({
-    ...options,
-    component: StockFlowDiagram,
-    initialContent: GraphLayoutConfig.defaultConfig,
-});
-
-const StockFlowDiagram = lazy(() => import("./analyses/stock_flow_diagram"));
-
-export function renderSQL(
-    options: Partial<AnalysisOptions> & {
-        render: SQLRenderer;
-    },
-): ModelAnalysisMeta<SQLDownloadConfig.DownloadConfig> {
-    const {
-        id = "sql",
-        name = "SQL schema",
-        description = "Produce SQL DML from this schema",
-        help = "sql",
-        render,
-    } = options;
-    return {
-        id,
-        name,
-        description,
-        help,
-        component: (props) => <SQLSchemaAnalysis title={name} render={render} {...props} />,
-        initialContent: () => ({
-            backend: SQLBackend.PostgresSQL,
-            filename: "schema.sql",
-        }),
-    };
-}
-
-const SQLSchemaAnalysis = lazy(() => import("./analyses/sql"));
 
 export function polynomialODEEquations(
     options: Partial<AnalysisOptions> & {

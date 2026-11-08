@@ -6,16 +6,24 @@ import { createResource, Show } from "solid-js";
 
 import { BlockTitle, FormGroup, IconButton, SelectField } from "catcolab-ui-components";
 import type { DblModel, MorType, ObType } from "catlog-wasm";
-import type { ModelAnalysisProps } from "../../analysis";
+import type { ModelAnalysisBuilder, ModelAnalysisProps } from "../../analysis";
 import { loadViz } from "../../visualization";
-import { Direction, type SchemaERDConfig } from "./schema_erd_config";
+import { defaultSchemaERDConfig, Direction, type SchemaERDConfig } from "./types";
+
+import "./erd_visualization.css";
 
 /** Visualize a schema as an Entity-Relationship Diagram.
 
 This visualization is specifically designed for schemas (models of the simple-schema
 theory) and displays entities as tables with their attributes listed inside.
 */
-export default function SchemaERD(props: ModelAnalysisProps<SchemaERDConfig>) {
+export default {
+    contentVersion: 0,
+    initialContent: defaultSchemaERDConfig,
+    component: SchemaERD,
+} satisfies ModelAnalysisBuilder<SchemaERDConfig>;
+
+function SchemaERD(props: ModelAnalysisProps<SchemaERDConfig>) {
     const graph = () => {
         const model = props.liveModel.elaboratedModel();
         if (model) {
@@ -81,7 +89,7 @@ export default function SchemaERD(props: ModelAnalysisProps<SchemaERDConfig>) {
                     </FormGroup>
                 }
             />
-            <div class="graph-visualization">
+            <div class="erd-visualization">
                 {/* oxlint-disable-next-line solid/no-innerhtml -- SVG from trusted Graphviz output */}
                 <Show when={svgString()}>{(svg) => <div innerHTML={svg()} />}</Show>
             </div>

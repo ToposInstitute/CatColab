@@ -3,17 +3,23 @@
 import { createSignal } from "solid-js";
 
 import { BlockTitle } from "catcolab-ui-components";
-import type { ModelAnalysisProps } from "../../analysis";
+import type { ModelAnalysisBuilder, ModelAnalysisProps } from "../../analysis";
 import { DownloadSVGButton, ElkLayout } from "../../visualization";
 import { parseUwdElkLayout, uwdToElk } from "../../visualization/undirected_wiring_diagram_elk";
 import { UwdSVG } from "../../visualization/undirected_wiring_diagram_svg";
-import type { CompositionPatternConfig } from "./composition_pattern_config";
+import { defaultCompositionPatternConfig, type CompositionPatternConfig } from "./types";
 
-import "./graph_visualization.css";
+import "./uwd_visualization.css";
 
 /** Visualize the composition pattern as an undirected wiring diagram (UWD) of a composite model.
  */
-export default function CompositionPattern(props: ModelAnalysisProps<CompositionPatternConfig>) {
+export default {
+    contentVersion: 0,
+    component: CompositionPattern,
+    initialContent: defaultCompositionPatternConfig,
+} satisfies ModelAnalysisBuilder<CompositionPatternConfig>;
+
+function CompositionPattern(props: ModelAnalysisProps<CompositionPatternConfig>) {
     const [svgRef, setSvgRef] = createSignal<SVGSVGElement>();
 
     const uwd = () => props.liveModel.elaboratedModel()?.compositionPattern();
@@ -32,7 +38,7 @@ export default function CompositionPattern(props: ModelAnalysisProps<Composition
                     />
                 }
             />
-            <div class="graph-visualization">
+            <div class="uwd-visualization">
                 <ElkLayout graph={elkGraph()} elkToLayout={parseUwdElkLayout}>
                     {(layout) => <UwdSVG layout={layout()} ref={setSvgRef} />}
                 </ElkLayout>

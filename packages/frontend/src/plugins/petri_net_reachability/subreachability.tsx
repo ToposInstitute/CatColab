@@ -6,19 +6,25 @@ import {
     FixedTableEditor,
     PanelHeader,
 } from "catcolab-ui-components";
-import type { QualifiedName, ReachabilityProblemData } from "catlog-wasm";
-import type { ModelAnalysisProps } from "../../analysis";
-import type { ReachabilityChecker } from "./checker_types";
+import {
+    type QualifiedName,
+    type ReachabilityProblemData,
+    ThSymMonoidalCategory,
+} from "catlog-wasm";
+import type { ModelAnalysisBuilder, ModelAnalysisProps } from "../../analysis";
 
-import "./simulation.css";
+import "../../stdlib/analyses/simulation.css";
 
-/** Check a reachability property in a model. */
-export default function Reachability(
-    props: ModelAnalysisProps<ReachabilityProblemData> & {
-        check: ReachabilityChecker;
-        title?: string;
-    },
-) {
+/** Check a reachability property in a Petri net. */
+export default {
+    contentVersion: 0,
+    initialContent: () => ({ tokens: {}, forbidden: {} }),
+    component: Reachability,
+} satisfies ModelAnalysisBuilder<ReachabilityProblemData>;
+
+const thSymMonoidalCategory = new ThSymMonoidalCategory();
+
+function Reachability(props: ModelAnalysisProps<ReachabilityProblemData>) {
     const elaboratedModel = () => props.liveModel.elaboratedModel();
 
     const obGenerators = createMemo<QualifiedName[]>(() => elaboratedModel()?.obGenerators() ?? []);
@@ -54,12 +60,12 @@ export default function Reachability(
         if (validated?.tag !== "Valid") {
             return;
         }
-        return props.check(validated.model, props.content);
+        return thSymMonoidalCategory.subreachability(validated.model, props.content);
     }, undefined);
 
     return (
         <div class="simulation">
-            <PanelHeader title={props.title} />
+            <PanelHeader title="Sub-reachability check" />
             <FixedTableEditor rows={obGenerators()} schema={obSchema} />
             <Switch>
                 <Match when={isChecked() === true}>

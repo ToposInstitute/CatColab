@@ -44,13 +44,3 @@ export type PolynomialODEEquations = (
     model: DblModel,
     data: PolynomialODEEquationsData,
 ) => LatexEquations;
-
-/** Configuration for a Decapodes analysis of a diagram. */
-export type DecapodesAnalysisContent = {
-    domain: string | null;
-    mesh: string | null;
-    initialConditions: Record<string, string>;
-    plotVariables: Record<string, boolean>;
-    scalars: Record<string, number>;
-    duration: number;
-};

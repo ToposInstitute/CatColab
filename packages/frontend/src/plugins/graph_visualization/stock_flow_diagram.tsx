@@ -1,7 +1,7 @@
 import { type Component, For, Show } from "solid-js";
 
 import type { DblModel } from "catlog-wasm";
-import type { ModelAnalysisProps } from "../../analysis";
+import type { ModelAnalysisBuilder, ModelAnalysisProps } from "../../analysis";
 import type { Theory } from "../../theory";
 import { uniqueIndexArray } from "../../util/indexing";
 import {
@@ -10,7 +10,7 @@ import {
     arrowMarkerSVG,
     EdgeSVG,
     type GraphLayout,
-    type GraphLayoutConfig,
+    GraphLayoutConfig,
     type GraphvizAttributes,
     NodeSVG,
     perpendicularLabelPosition,
@@ -23,7 +23,13 @@ import svgStyles from "../svg_styles.module.css";
 import "./graph_visualization.css";
 
 /** Visualize a stock flow diagram. */
-export default function StockFlowDiagram(props: ModelAnalysisProps<GraphLayoutConfig.Config>) {
+export default {
+    contentVersion: 0,
+    initialContent: GraphLayoutConfig.defaultConfig,
+    component: StockFlowDiagram,
+} satisfies ModelAnalysisBuilder<GraphLayoutConfig.Config>;
+
+function StockFlowDiagram(props: ModelAnalysisProps<GraphLayoutConfig.Config>) {
     const graph = () => {
         const model = props.liveModel.elaboratedModel();
         const theory = props.liveModel.theory();

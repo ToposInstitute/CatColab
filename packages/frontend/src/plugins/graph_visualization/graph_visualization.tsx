@@ -7,7 +7,7 @@ import {
     type GraphSpec,
     GraphVisualization,
 } from "../../visualization";
-import { defaultElkLayoutOptions, defaultGraphvizAttributes } from "../graph_styles";
+import { defaultElkLayoutOptions, defaultGraphvizAttributes } from "./graph_styles";
 
 import "./graph_visualization.css";
 

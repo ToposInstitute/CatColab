@@ -13,16 +13,22 @@ import {
     Warning,
 } from "catcolab-ui-components";
 import type { ModelDiagramPresentation, ModelPresentation, QualifiedName } from "catlog-wasm";
-import type { DiagramAnalysisProps } from "../../analysis";
+import type { DiagramAnalysisBuilder, DiagramAnalysisProps } from "../../analysis";
 import type { LiveDiagramDoc } from "../../diagram";
 import { PDEPlot2D } from "../../visualization";
-import type { DecapodesAnalysisContent } from "./simulator_types";
+import { type DecapodesAnalysisContent, defaultDecapodesAnalysisContent } from "./types";
 
 import "./decapodes.css";
-import "./simulation.css";
+import "../../stdlib/analyses/simulation.css";
 
 /** Analyze a DEC diagram by performing a simulation using Decapodes.jl. */
-export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisContent>) {
+export default {
+    contentVersion: 0,
+    initialContent: defaultDecapodesAnalysisContent,
+    component: Decapodes,
+} satisfies DiagramAnalysisBuilder<DecapodesAnalysisContent>;
+
+function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisContent>) {
     // Step 1: Start the Julia kernel.
     const [kernel, { refetch: restartKernel }] = createResource(() => undefined);
 

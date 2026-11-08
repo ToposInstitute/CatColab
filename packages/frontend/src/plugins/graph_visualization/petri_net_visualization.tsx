@@ -1,14 +1,20 @@
 import invariant from "tiny-invariant";
 
 import { collectProduct, type DblModel } from "catlog-wasm";
-import type { ModelAnalysisProps } from "../../analysis";
-import type { GraphLayoutConfig, GraphSpec } from "../../visualization";
+import type { ModelAnalysisBuilder, ModelAnalysisProps } from "../../analysis";
+import { GraphLayoutConfig, type GraphSpec } from "../../visualization";
 import { GraphVisualizationAnalysis } from "./graph_visualization";
 
 import svgStyles from "../svg_styles.module.css";
 
 /** Visualize a Petri net. */
-export default function PetriNetVisualization(props: ModelAnalysisProps<GraphLayoutConfig.Config>) {
+export default {
+    contentVersion: 0,
+    initialContent: GraphLayoutConfig.defaultConfig,
+    component: PetriNetVisualization,
+} satisfies ModelAnalysisBuilder<GraphLayoutConfig.Config>;
+
+function PetriNetVisualization(props: ModelAnalysisProps<GraphLayoutConfig.Config>) {
     const graph = () => {
         const model = props.liveModel.elaboratedModel();
         if (model) {
