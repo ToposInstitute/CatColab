@@ -6,7 +6,7 @@ export const AttrType = defineObject({ tag: "Basic", content: "AttrType" });
 export const Mapping = defineMorphism({ tag: "Hom", content: Entity.obType });
 export const Attr = defineMorphism(
     { tag: "Basic", content: "Attr" },
-    { domain: Entity.obType, codomain: AttrType.obType },
+    { domain: Entity, codomain: AttrType },
 );
 
 export const SimpleSchema = defineShape({

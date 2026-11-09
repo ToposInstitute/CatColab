@@ -4,12 +4,18 @@ export const Variable = defineObject({ tag: "Basic", content: "State" });
 
 export const PositiveContribution = defineMorphism(
     { tag: "Basic", content: "Contribution" },
-    { domain: { obType: Variable.obType, modality: "SymmetricList" }, codomain: Variable.obType },
+    {
+        domain: { kind: "object-list", obType: Variable.obType, modality: "SymmetricList" },
+        codomain: Variable,
+    },
 );
 
 export const NegativeContribution = defineMorphism(
     { tag: "Basic", content: "NegativeContribution" },
-    { domain: { obType: Variable.obType, modality: "SymmetricList" }, codomain: Variable.obType },
+    {
+        domain: { kind: "object-list", obType: Variable.obType, modality: "SymmetricList" },
+        codomain: Variable,
+    },
 );
 
 export const SignedPolynomialODE = defineShape({

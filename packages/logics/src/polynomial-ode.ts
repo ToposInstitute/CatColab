@@ -4,7 +4,10 @@ export const Variable = defineObject({ tag: "Basic", content: "State" });
 
 export const Contribution = defineMorphism(
     { tag: "Basic", content: "Contribution" },
-    { domain: { obType: Variable.obType, modality: "SymmetricList" }, codomain: Variable.obType },
+    {
+        domain: { kind: "object-list", obType: Variable.obType, modality: "SymmetricList" },
+        codomain: Variable,
+    },
 );
 
 export const PolynomialODE = defineShape({

@@ -16,7 +16,7 @@ describe("defining notebook shapes", () => {
         const AttrType = defineObject({ tag: "Basic", content: "AttrType" });
         const Attr = defineMorphism(
             { tag: "Basic", content: "Attr" },
-            { domain: Entity.obType, codomain: AttrType.obType },
+            { domain: Entity, codomain: AttrType },
         );
         const Composite = defineMorphism({
             tag: "Composite",
@@ -27,10 +27,12 @@ describe("defining notebook shapes", () => {
             { tag: "Hom", content: Entity.obType },
             {
                 domain: {
+                    kind: "operation-list",
                     apply: { tag: "Basic", content: "tensor" },
                     modality: "SymmetricList",
                 },
                 codomain: {
+                    kind: "operation-list",
                     apply: { tag: "Basic", content: "tensor" },
                     modality: "SymmetricList",
                 },
@@ -45,12 +47,12 @@ describe("defining notebook shapes", () => {
             kind: "morphism",
             morType: { tag: "Basic", content: "Attr" },
             endpoints: {
-                domain: Entity.obType,
-                codomain: AttrType.obType,
+                domain: Entity,
+                codomain: AttrType,
             },
         });
         expectTypeOf(Entity.obType.content).toEqualTypeOf<"Entity">();
-        expectTypeOf(Attr.endpoints.codomain).toEqualTypeOf<typeof AttrType.obType>();
+        expectTypeOf(Attr.endpoints.codomain).toEqualTypeOf<typeof AttrType>();
         expectTypeOf(Composite.morType.content[0].content).toEqualTypeOf<"first">();
         expectTypeOf(Tabulator.obType.content.content[0].content).toEqualTypeOf<"first">();
         expectTypeOf(Transition.endpoints.domain.modality).toEqualTypeOf<"SymmetricList">();

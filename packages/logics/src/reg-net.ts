@@ -6,7 +6,7 @@ export const Promotion = defineMorphism({ tag: "Hom", content: Species.obType })
 
 export const Inhibition = defineMorphism(
     { tag: "Basic", content: "Negative" },
-    { domain: Species.obType, codomain: Species.obType },
+    { domain: Species, codomain: Species },
 );
 
 export const RegNet = defineShape({

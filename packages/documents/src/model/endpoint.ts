@@ -1,4 +1,4 @@
-import type { Modality, Ob } from "catcolab-document-types";
+import type { Ob } from "catcolab-document-types";
 import { isRecord } from "../document/parse-structure";
 import type { MorphismEndpoint, MorphismEndpoints, MorphismType } from "../shape";
 import type { DeepReadonly } from "../util/deep-readonly";
@@ -14,22 +14,22 @@ export function getMorphismEndpoints(
 }
 
 export function morphismEndpointsEqual(left: MorphismEndpoint, right: MorphismEndpoint): boolean {
-    if ("apply" in left) {
+    if (left.kind === "operation-list") {
         return (
-            "apply" in right &&
+            right.kind === "operation-list" &&
             left.modality === right.modality &&
             left.apply.tag === right.apply.tag &&
             left.apply.content === right.apply.content
         );
     }
-    if ("obType" in left) {
+    if (left.kind === "object-list") {
         return (
-            "obType" in right &&
+            right.kind === "object-list" &&
             left.modality === right.modality &&
             objectTypesEqual(left.obType, right.obType)
         );
     }
-    return !("modality" in right) && objectTypesEqual(left, right);
+    return right.kind === "object" && objectTypesEqual(left.obType, right.obType);
 }
 
 export function isSingleObjectEndpoint<Value extends { readonly kind: "object" }>(
@@ -38,17 +38,17 @@ export function isSingleObjectEndpoint<Value extends { readonly kind: "object" }
     return isRecord(value) && "kind" in value && value.kind === "object";
 }
 
-type ListEndpoint = Extract<MorphismEndpoint, { readonly modality: Modality }>;
+type ListEndpoint = Extract<MorphismEndpoint, { readonly kind: "object-list" | "operation-list" }>;
 
 function findListEndpointMismatch(
     ob: DeepReadonly<Ob> | null,
     endpoint: MorphismEndpoint | undefined,
 ): ListEndpoint | undefined {
-    if (ob === null || !endpoint || !("modality" in endpoint)) {
+    if (ob === null || !endpoint || endpoint.kind === "object") {
         return undefined;
     }
     const list =
-        "apply" in endpoint
+        endpoint.kind === "operation-list"
             ? ob.tag === "App" &&
               ob.content.op.tag === endpoint.apply.tag &&
               ob.content.op.content === endpoint.apply.content
@@ -74,7 +74,7 @@ export function validateEndpoint(
     if (mismatch) {
         return { kind: "list", endpoint: mismatch };
     }
-    if (ob !== null && (!endpoint || !("modality" in endpoint)) && ob.tag !== "Basic") {
+    if (ob !== null && (!endpoint || endpoint.kind === "object") && ob.tag !== "Basic") {
         return { kind: "single-object" };
     }
     return undefined;

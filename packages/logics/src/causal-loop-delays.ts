@@ -6,17 +6,17 @@ export const PositiveLink = defineMorphism({ tag: "Hom", content: Variable.obTyp
 
 export const NegativeLink = defineMorphism(
     { tag: "Basic", content: "Negative" },
-    { domain: Variable.obType, codomain: Variable.obType },
+    { domain: Variable, codomain: Variable },
 );
 
 export const DelayedPositiveLink = defineMorphism(
     { tag: "Basic", content: "PositiveSlow" },
-    { domain: Variable.obType, codomain: Variable.obType },
+    { domain: Variable, codomain: Variable },
 );
 
 export const DelayedNegativeLink = defineMorphism(
     { tag: "Basic", content: "NegativeSlow" },
-    { domain: Variable.obType, codomain: Variable.obType },
+    { domain: Variable, codomain: Variable },
 );
 
 export const CausalLoopDelays = defineShape({

@@ -39,7 +39,7 @@ export function obFromMorphismEndpoint(
     if (value === null) {
         return null;
     }
-    if (endpoint && "modality" in endpoint) {
+    if (endpoint && endpoint.kind !== "object") {
         assertListModality(endpoint.modality);
         if (!isArray(value)) {
             throw new Error("Expected a list object endpoint.");
@@ -51,7 +51,7 @@ export function obFromMorphismEndpoint(
                 objects: value.map((cell) => obFromObjectCell(data, cell)),
             },
         };
-        return "apply" in endpoint
+        return endpoint.kind === "operation-list"
             ? { tag: "App", content: { op: endpoint.apply, ob: list } }
             : list;
     }

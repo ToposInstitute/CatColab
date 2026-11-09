@@ -31,11 +31,12 @@ export interface Shape {
 }
 
 export type MorphismEndpoint =
-    | ObType
-    | { readonly obType: ObType; readonly modality: Modality }
+    | { readonly kind: "object"; readonly obType: ObType }
+    | { readonly kind: "object-list"; readonly obType: ObType; readonly modality: ListModality }
     | {
+          readonly kind: "operation-list";
           readonly apply: ObOp;
-          readonly modality: Modality;
+          readonly modality: ListModality;
       };
 
 export interface MorphismEndpoints {
@@ -150,11 +151,12 @@ type HomObjectTypesOf<S extends Shape, M extends MorphismType> = M["morType"] ex
     ? MatchingObjectTypesOf<ObjectTypesOf<S>, EndpointObType>
     : ObjectTypesOf<S>;
 
-type EndpointObjectTypesOf<S extends Shape, M extends MorphismType, E> = E extends ObType
-    ? MatchingObjectTypesOf<ObjectTypesOf<S>, E>
-    : E extends { readonly obType: infer O }
-      ? MatchingObjectTypesOf<ObjectTypesOf<S>, O>
-      : HomObjectTypesOf<S, M>;
+type EndpointObjectTypesOf<S extends Shape, M extends MorphismType, E> = E extends {
+    readonly kind: "object" | "object-list";
+    readonly obType: infer O;
+}
+    ? MatchingObjectTypesOf<ObjectTypesOf<S>, O>
+    : HomObjectTypesOf<S, M>;
 
 export type DomainObjectTypesOf<S extends Shape, M extends MorphismType> = M extends {
     readonly endpoints: { readonly domain: infer E };
@@ -176,7 +178,7 @@ export type MorphismEndpointValue<
     Value,
 > = M extends {
     readonly endpoints: {
-        readonly [K in Side]: { readonly modality: ListModality };
+        readonly [K in Side]: { readonly kind: "object-list" | "operation-list" };
     };
 }
     ? readonly (Value | null)[]
