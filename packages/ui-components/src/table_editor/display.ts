@@ -73,6 +73,20 @@ export function rowDisplayLabel(row: TableRow): string {
     return row.label || String(row.index + 1);
 }
 
+export function fieldEditText(
+    field: FieldValue | undefined,
+    header: TableHeader,
+    tables: ReadonlyArray<InstanceTable>,
+): string {
+    if (field?.tag !== "RowRef") {
+        return fieldText(field, header, tables);
+    }
+    const target =
+        codomainOf(header, tables)?.rows.find((row) => row.id === field.content.id) ??
+        tables.flatMap((table) => table.rows).find((row) => row.id === field.content.id);
+    return target ? rowDisplayLabel(target) : "";
+}
+
 export function tableDisplayName(table: InstanceTable): string {
     return table.label === null ? "Unknown table" : table.label || "Unnamed table";
 }
