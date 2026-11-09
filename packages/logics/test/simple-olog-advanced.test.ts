@@ -56,7 +56,7 @@ describe("the simple-olog logic (advanced)", { timeout: 60_000 }, () => {
         const aTable = tables.find((table) => table.label === "A")!;
         const bTable = tables.find((table) => table.label === "B")!;
         const y = expectOk(await instance.addRow(bTable));
-        expectOk(await instance.addRow(aTable, { has: y }));
+        expectOk(await instance.addRow(aTable, { values: { has: y } }));
         expect((await instance.validate()).issues).toEqual([]);
     });
 
