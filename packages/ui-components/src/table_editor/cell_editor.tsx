@@ -15,6 +15,8 @@ in a different cell slot when rows or columns shift under it.
 export function CellEditor(props: {
     focus: FocusHandle;
     text: string;
+    placeholder?: string;
+    ariaLabel?: string;
     setText: (text: string) => void;
     validate: (text: string) => boolean;
     /** Possible values, shown in a popup while the editor is focused.
@@ -24,7 +26,8 @@ export function CellEditor(props: {
     completions?: Completion[];
     /** Whether the editor text is read-only, as for row references. */
     readOnly?: boolean;
-    onCommit: (dir: MoveDirection) => void;
+    commitOnBlur?: boolean;
+    onCommit: (dir?: MoveDirection) => void;
     onCancel: () => void;
 }) {
     let finished = false;
@@ -34,7 +37,7 @@ export function CellEditor(props: {
         finished = true;
     });
 
-    const commit = (dir: MoveDirection) => {
+    const commit = (dir?: MoveDirection) => {
         if (!finished) {
             finished = true;
             props.onCommit(dir);
@@ -46,9 +49,12 @@ export function CellEditor(props: {
             class={styles.cellInput}
             classList={{ [styles.invalid]: !props.validate(props.text) }}
             text={props.text}
+            placeholder={props.placeholder}
+            aria-label={props.ariaLabel}
             setText={props.setText}
             focus={props.focus}
             readOnly={props.readOnly}
+            onBlur={props.commitOnBlur ? () => commit() : undefined}
             completions={props.completions}
             filterCompletionsByText={!props.readOnly}
             exitUp={() => commit("up")}

@@ -12,6 +12,7 @@ export type FieldValueData = DeepReadonly<FieldValue>;
 /** Row data, keyed by stored field id. */
 export interface RowData {
     readonly id: string;
+    readonly label: string;
     readonly fields: Readonly<Record<string, FieldValueData>>;
 }
 
@@ -77,6 +78,7 @@ function buildInstanceData(document: StructurallyValid<InstanceDocument>): Insta
             id,
             rows: table.rowOrder.map((id) => ({
                 id,
+                label: table.rows[id]!.label,
                 fields: table.rows[id]!.fields,
             })),
         })),

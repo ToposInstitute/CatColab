@@ -35,8 +35,14 @@ export function parseInstanceStructure(
                 issues.push({ message: "Expected a row", path: rowPath });
                 continue;
             }
+            const { label, ...contents } = row;
+            if (label != null && typeof label !== "string") {
+                issues.push({ message: "Expected a text label", path: [...rowPath, "label"] });
+            }
+            const normalizedLabel = typeof label === "string" ? label.trim() : "";
             rows.set(rowId, {
-                ...row,
+                ...contents,
+                label: normalizedLabel,
                 fields: record(row["fields"], [...rowPath, "fields"], issues),
             });
         }

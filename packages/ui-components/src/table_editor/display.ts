@@ -10,9 +10,6 @@ export const COLUMN_WIDTHS = {
     Unknown: 220,
 } as const;
 
-/** Width of the single column shown when a table has no headers. */
-export const EMPTY_COLUMN_WIDTH = 180;
-
 /** Width of the column holding the row deletion buttons. */
 export const DELETE_COLUMN_WIDTH = 36;
 
@@ -61,29 +58,19 @@ function rowRefText(
     const codomain = codomainOf(header, tables);
     const target = codomain?.rows.find((row) => row.id === rowId);
     if (codomain && target) {
-        return defaultRowLabel(codomain, target);
+        return rowDisplayLabel(target);
     }
     for (const table of tables) {
         const mistyped = table.rows.find((row) => row.id === rowId);
         if (mistyped) {
-            return defaultRowLabel(table, mistyped);
+            return rowDisplayLabel(mistyped);
         }
     }
     return codomain ? `${tableDisplayName(codomain)} ?` : "?";
 }
 
-/** Default display label for a row referenced by a `RowRef` cell. */
-export function defaultRowLabel(table: InstanceTable, row: TableRow): string {
-    const tableName = tableDisplayName(table);
-    if (table.headers.length === 0) {
-        return `${tableName} row ${row.index + 1}`;
-    }
-    const first = row.fields[0];
-    const value = first?.tag === "String" ? first.content.value : "";
-    if (value === "") {
-        return `${tableName} row ${row.index + 1}`;
-    }
-    return `${tableName} "${value}"`;
+export function rowDisplayLabel(row: TableRow): string {
+    return row.label || String(row.index + 1);
 }
 
 export function tableDisplayName(table: InstanceTable): string {

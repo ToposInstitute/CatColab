@@ -34,22 +34,24 @@ export interface Instance<S extends Shape = Shape, H = unknown, V = unknown> {
 
     addRow(
         table: InstanceTable,
-        values?: Record<string, LiteralValue | TableRow>,
+        options?: { label?: string; values?: Record<string, LiteralValue | TableRow> },
     ): Promise<Result<TableRow>>;
     addRows(
         additions: ReadonlyArray<{
             table: InstanceTable;
+            label?: string;
             values?: ReadonlyArray<Record<string, LiteralValue | TableRow>>;
         }>,
     ): Promise<Result<ReadonlyArray<TableRow>>>;
     updateRow(
         row: TableRow,
-        values: Record<string, LiteralValue | TableRow>,
+        options?: { label?: string; values?: Record<string, LiteralValue | TableRow> },
     ): Promise<Result<void>>;
     updateRows(
         updates: ReadonlyArray<{
             row: TableRow;
-            values: ReadonlyArray<Record<string, LiteralValue | TableRow>>;
+            label?: string;
+            values?: ReadonlyArray<Record<string, LiteralValue | TableRow>>;
         }>,
     ): Promise<Result<void>>;
     set(
@@ -163,8 +165,12 @@ export function instanceFromStore<Handle, S extends Shape, Version>(
         dump(): InstanceDocument {
             return structuredClone(store.getDocumentSnapshot(handle)) as InstanceDocument;
         },
-        async addRow(table, values = {}) {
-            const result = await instance.addRows([{ table, values: [values] }]);
+        async addRow(table, { label, values = {} } = {}) {
+            const result = await withElaboratedSchema((model) =>
+                addInstanceRowsToStore(shape, store, handle, model, [
+                    { table, label, values: [values] },
+                ]),
+            );
             if (result.tag === "Err") {
                 return result;
             }
@@ -180,12 +186,18 @@ export function instanceFromStore<Handle, S extends Shape, Version>(
                     store,
                     handle,
                     model,
-                    additions.map(({ table, values }) => ({ table, values: values ?? [{}] })),
+                    additions.map(({ table, label, values }) => ({
+                        table,
+                        label,
+                        values: values ?? [{}],
+                    })),
                 ),
             );
         },
-        updateRow(row, values) {
-            return instance.updateRows([{ row, values: [values] }]);
+        updateRow(row, { label, values = {} } = {}) {
+            return instance.updateRows([
+                { row, ...(label === undefined ? {} : { label }), values: [values] },
+            ]);
         },
         updateRows(updates) {
             return withElaboratedSchema((model) =>

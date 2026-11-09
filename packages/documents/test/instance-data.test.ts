@@ -70,7 +70,7 @@ describe("instance data", { timeout: 20000 }, () => {
         expect(table.rows).toEqual([]);
         store.changeDocument(instance.handle, (doc) => {
             if (doc.type === "instance") {
-                doc.tables[table.id] = { rows: { stray: { fields: {} } }, rowOrder: [] };
+                doc.tables[table.id] = { rows: { stray: { label: "", fields: {} } }, rowOrder: [] };
             }
         });
         expect(table.rows).toEqual([]);

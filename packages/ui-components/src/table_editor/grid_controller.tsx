@@ -30,10 +30,10 @@ import {
 } from "./navigation";
 
 /** The cell being edited, by ID, and the live text of its editor. */
-export type EditState = { rowId: string; headerId: string; text: string };
+export type EditState = { rowId: string; headerId: string | null; text: string };
 
 /** A cell resolved against the current table. */
-type Cell = { row: TableRow; header: TableHeader };
+type Cell = { row: TableRow; header: TableHeader | null };
 
 /** The selected cell, tracked by key and by the position of its row. */
 type Selection = { key: CellKey; rowIndex: number };
@@ -51,6 +51,7 @@ type GridControllerProps = {
     table: Accessor<InstanceTable>;
     allTables: Accessor<ReadonlyArray<InstanceTable>>;
     onSetField: (row: TableRow, header: TableHeader, value: LiteralValue | TableRow) => void;
+    onSetRowLabel: (row: TableRow, label: string) => void;
     onAddRow: () => void;
 };
 
@@ -86,15 +87,18 @@ function createGridController(props: GridControllerProps) {
         }
         const { headerId, rowId } = parseCellKey(key);
         const { rows, headers } = props.table();
-        if (!rows.length || !headers.length) {
+        if (!rows.length) {
             return null;
         }
         const currentIndex = rows.findIndex((row) => row.id === rowId);
         const lastIndex =
             previous && parseCellKey(previous.key).rowId === rowId ? previous.rowIndex : 0;
         const rowIndex = currentIndex >= 0 ? currentIndex : Math.min(lastIndex, rows.length - 1);
-        const header = headers.find((header) => header.id === headerId) ?? headers[0]!;
-        return { key: makeCellKey(header.id, rows[rowIndex]!.id), rowIndex };
+        const columnId =
+            headerId === null
+                ? null
+                : (headers.find((header) => header.id === headerId)?.id ?? headers[0]?.id ?? null);
+        return { key: makeCellKey(columnId, rows[rowIndex]!.id), rowIndex };
     }, null);
     createEffect(() => {
         if (parent.hasFocus()) {
@@ -115,8 +119,9 @@ function createGridController(props: GridControllerProps) {
         const { headerId, rowId } = parseCellKey(key);
         const table = props.table();
         const row = table.rows.find((row) => row.id === rowId);
-        const header = table.headers.find((header) => header.id === headerId);
-        return row && header ? { row, header } : undefined;
+        const header =
+            headerId === null ? null : table.headers.find((header) => header.id === headerId);
+        return row && header !== undefined ? { row, header } : undefined;
     }
 
     function fieldAt(row: TableRow, header: TableHeader): FieldValue | undefined {
@@ -131,8 +136,8 @@ function createGridController(props: GridControllerProps) {
         parent.setFocused(true);
         if (children.activeChild() === null) {
             const { rows, headers } = props.table();
-            if (rows[0] && headers[0]) {
-                select(makeCellKey(headers[0].id, rows[0].id));
+            if (rows[0]) {
+                select(makeCellKey(headers[0]?.id ?? null, rows[0].id));
             }
         }
     };
@@ -175,10 +180,10 @@ function createGridController(props: GridControllerProps) {
     row is added concurrently, the selection may land on it instead; the
     callback contract leaves this ambiguous.
      */
-    const addRow = (headerId?: string) => {
+    const addRow = (headerId?: string | null) => {
         setPendingSelection({
             rows: new Set(props.table().rows.map((row) => row.id)),
-            headerId: headerId ?? null,
+            headerId: headerId === undefined ? (props.table().headers[0]?.id ?? null) : headerId,
             owner: regions.activeChild() ?? "grid",
         });
         props.onAddRow();
@@ -214,11 +219,8 @@ function createGridController(props: GridControllerProps) {
         if (!newRow) {
             return;
         }
-        const headerId = pending.headerId ?? table.headers[0]?.id;
         setPendingSelection(null);
-        if (headerId !== undefined) {
-            select(makeCellKey(headerId, newRow.id));
-        }
+        select(makeCellKey(pending.headerId, newRow.id));
     });
 
     function isEditing(key: CellKey): boolean {
@@ -228,7 +230,7 @@ function createGridController(props: GridControllerProps) {
 
     const startEdit = (key: CellKey, text?: string) => {
         const cell = findCell(key);
-        if (!cell || !isEditableCell(cell.header)) {
+        if (!cell || (cell.header !== null && !isEditableCell(cell.header))) {
             return;
         }
         batch(() => {
@@ -238,10 +240,16 @@ function createGridController(props: GridControllerProps) {
             select(key);
             setEdit({
                 rowId: cell.row.id,
-                headerId: cell.header.id,
+                headerId: cell.header?.id ?? null,
                 text:
                     text ??
-                    fieldText(fieldAt(cell.row, cell.header), cell.header, props.allTables()),
+                    (cell.header === null
+                        ? cell.row.label
+                        : fieldText(
+                              fieldAt(cell.row, cell.header),
+                              cell.header,
+                              props.allTables(),
+                          )),
             });
         });
     };
@@ -280,7 +288,9 @@ function createGridController(props: GridControllerProps) {
         }
         const key = makeCellKey(state.headerId, state.rowId);
         const cell = findCell(key);
-        if (cell && cell.header.type.tag !== "RowRef") {
+        if (cell?.header === null) {
+            props.onSetRowLabel(cell.row, state.text);
+        } else if (cell && cell.header.type.tag !== "RowRef") {
             const parsed = parseValue(cell.header, state.text);
             props.onSetField(cell.row, cell.header, parsed.ok ? parsed.value : state.text);
         }
@@ -289,7 +299,7 @@ function createGridController(props: GridControllerProps) {
 
     const toggleBool = (key: CellKey) => {
         const cell = findCell(key);
-        if (!cell || cell.header.type.tag !== "Bool") {
+        if (!cell || cell.header?.type.tag !== "Bool") {
             return;
         }
         const field = fieldAt(cell.row, cell.header);
@@ -305,7 +315,7 @@ function createGridController(props: GridControllerProps) {
             return;
         }
         const cell = findCell(key);
-        if (cell) {
+        if (cell?.header) {
             props.onSetField(cell.row, cell.header, target);
         }
         finishEdit(key);
@@ -313,19 +323,23 @@ function createGridController(props: GridControllerProps) {
 
     const clearCell = (key: CellKey) => {
         const cell = findCell(key);
-        if (!cell || !isEditableCell(cell.header)) {
+        if (!cell || (cell.header !== null && !isEditableCell(cell.header))) {
             return;
         }
-        props.onSetField(cell.row, cell.header, null);
+        if (cell.header === null) {
+            props.onSetRowLabel(cell.row, "");
+        } else {
+            props.onSetField(cell.row, cell.header, null);
+        }
     };
 
     function onCellKey(evt: KeyboardEvent, key: CellKey): boolean {
         const cell = findCell(key);
-        if (!cell || !isEditableCell(cell.header)) {
+        if (!cell || (cell.header !== null && !isEditableCell(cell.header))) {
             return false;
         }
-        const isBool = cell.header.type.tag === "Bool";
-        const isRowRef = cell.header.type.tag === "RowRef";
+        const isBool = cell.header?.type.tag === "Bool";
+        const isRowRef = cell.header?.type.tag === "RowRef";
         if (evt.key === "Enter" || evt.key === "F2") {
             if (isBool) {
                 toggleBool(key);
