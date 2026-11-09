@@ -10,7 +10,7 @@ describe("The petri-net logic", () => {
         expect(notebook.data().theory).toBe("petri-net");
     });
 
-    test.skip("Places are basic objects and transitions are hom morphisms", async () => {
+    test("Places are basic objects and transitions are hom morphisms", async () => {
         const binder = createBinder();
         const notebook = await binder.createNotebook(PetriNet, {
             title: "Petri net for catalysis",
@@ -54,7 +54,7 @@ describe("The petri-net logic", () => {
         }
     }, 60_000);
 
-    test.skip("Notebooks validate in the core theory of Petri nets", async () => {
+    test("Notebooks validate in the core theory of Petri nets", async () => {
         const binder = createBinder();
         const notebook = await binder.createNotebook(PetriNet, {
             title: "Petri net for catalysis",
@@ -67,7 +67,7 @@ describe("The petri-net logic", () => {
         const product = notebook.add(Place, { label: "Product" });
         const catalyst = notebook.add(Place, { label: "Catalyst" });
 
-        const _reaction = notebook.add(Transition, {
+        notebook.add(Transition, {
             label: "Reaction",
             from: [reactant, catalyst],
             to: [product, catalyst],

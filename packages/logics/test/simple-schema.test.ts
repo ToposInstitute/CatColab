@@ -1,4 +1,4 @@
-import { SimpleOlog } from "catcolab-logics/simple-olog";
+import { Aspect, SimpleOlog, Type } from "catcolab-logics/simple-olog";
 import { Attr, AttrType, Entity, Mapping, SimpleSchema } from "catcolab-logics/simple-schema";
 import { describe, expect, test } from "vitest";
 
@@ -9,6 +9,7 @@ import { describe, expect, test } from "vitest";
 // entities, a basic `Attr` from entities to attribute types, rich text,
 // equations, instances and a migration to `simple-olog`.
 import { createBinder, RichText } from "catcolab-documents";
+import { expectOk, migrateCoreModel } from "./helpers";
 
 describe("the simple-schema logic", () => {
     test("Entity and AttrType are basic objects; Mapping and Attr relate them", async () => {
@@ -46,7 +47,7 @@ describe("the simple-schema logic", () => {
         }
     }, 60_000);
 
-    test.skip("notebooks validate against the core theory of schemas", async () => {
+    test("notebooks validate against the core theory of schemas", async () => {
         const binder = createBinder();
         const notebook = await binder.createNotebook(SimpleSchema, { title: "Example schema" });
 
@@ -72,22 +73,20 @@ describe("the simple-schema logic", () => {
         expect(note.content).toBe("A note.");
     });
 
-    test.skip("supportsInstances generates the .Diagram shape", async () => {
+    test("supportsInstances enables tabular instances", async () => {
         const binder = createBinder();
         const model = await binder.createNotebook(SimpleSchema, { title: "Example schema" });
 
-        const person = model.add(Entity, { label: "Person" });
+        model.add(Entity, { label: "Person" });
 
-        const diagram = await binder.createNotebook(SimpleSchema.Diagram, {
-            title: "Schema diagram",
-            in: model,
-        });
-
-        const x = diagram.add(SimpleSchema.Diagram.Individual, { label: "x", over: person });
-        expect(x.over?.label).toBe("Person");
+        const instance = expectOk(await binder.createInstance(model, { title: "Schema instance" }));
+        const validation = await instance.validate();
+        expect(validation.tables.map((table) => table.label)).toEqual(["Person"]);
+        expectOk(await instance.addRow(validation.tables[0]!));
+        expect((await instance.validate()).issues).toEqual([]);
     });
 
-    test.skip("schemas migrate to simple-olog", async () => {
+    test("schemas migrate to simple-olog", async () => {
         const binder = createBinder();
         const schema = await binder.createNotebook(SimpleSchema, { title: "Example schema" });
 
@@ -95,12 +94,9 @@ describe("the simple-schema logic", () => {
         const company = schema.add(Entity, { label: "Company" });
         schema.add(Mapping, { label: "employer", from: person, to: company });
 
-        const migration = await schema.migrateTo(SimpleOlog);
-        expect(migration.tag).toBe("Ok");
-        if (migration.tag !== "Ok") {
-            return;
-        }
-        expect(migration.content.data().theory).toBe("simple-olog");
-        expect((await migration.content.validate()).issues).toEqual([]);
+        const { ThSchema } = await import("catlog-wasm");
+        const migrated = await migrateCoreModel(schema, SimpleOlog, ThSchema.toCategory);
+        expect(migrated.obGenerators.map((ob) => ob.obType)).toEqual([Type.obType, Type.obType]);
+        expect(migrated.morGenerators.map((mor) => mor.morType)).toEqual([Aspect.morType]);
     });
 });
