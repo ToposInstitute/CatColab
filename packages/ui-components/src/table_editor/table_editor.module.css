@@ -242,6 +242,10 @@ shadow, it is painted above the cell editor input. */
     z-index: 5;
 }
 
+.grid tbody tr:has(.deleteRow:hover) > .rowLabel {
+    z-index: 5;
+}
+
 .rowLabel.automaticLabel {
     color: var(--color-text-secondary);
     text-align: right;
@@ -283,22 +287,16 @@ shadow, it is painted above the cell editor input. */
     cursor: pointer;
 }
 
-/* Row about to be deleted: a border around the whole row. */
-.grid tr:has(.deleteCell:hover) {
-    position: relative;
+.grid
+    tbody
+    tr:has(.deleteRow:hover)
+    > :is(.cell, .rowHeader, .deleteCell):not(.invalid, :has(.cellInput.invalid)) {
+    background-color: var(--color-hover-bg);
 }
 
-.grid tr:has(.deleteCell:hover)::after {
-    position: absolute;
-    z-index: 6;
-    inset: 0;
-    border: 3px solid #d87878;
-    pointer-events: none;
-    content: "";
-}
-
-.deleteCell:hover .deleteRow {
-    color: #d87878;
+.deleteRow:hover {
+    background-color: var(--color-icon-button-danger-hover);
+    color: var(--color-icon-button-danger-text);
 }
 
 .rowHeader {
@@ -340,37 +338,19 @@ shadow, it is painted above the cell editor input. */
 }
 
 .table:has(.deleteTable:hover) {
-    outline: 3px solid #d87878;
-    outline-offset: -1px;
+    background-color: var(--color-hover-bg);
+}
+
+.table:has(.deleteTable:hover) :is(.header, .columnHeader, .rowHeader, .footer):not(.invalid) {
+    background-color: var(--color-hover-bg);
 }
 
 .columnHeader:has(.deleteColumn) {
     background: var(--color-form-invalid-bg);
 }
 
-/* Preview column deletion without disturbing collapsed borders or selection. */
-.columnDeleting {
-    box-shadow:
-        inset 3px 0 0 #d87878,
-        inset -3px 0 0 #d87878;
-}
-
-.columnHeader.columnDeleting {
-    box-shadow:
-        inset 3px 0 0 #d87878,
-        inset -3px 0 0 #d87878,
-        inset 0 3px 0 #d87878;
-}
-
-.grid tbody .lastRow .cell.columnDeleting {
-    box-shadow:
-        inset 3px 0 0 #d87878,
-        inset -3px 0 0 #d87878,
-        inset 0 -3px 0 #d87878;
-}
-
-.grid:not(:has(tbody tr:not(.spacer))) .columnHeader.columnDeleting {
-    box-shadow: inset 0 0 0 3px #d87878;
+.columnDeleting:not(.invalid, :has(.cellInput.invalid)) {
+    background-color: var(--color-hover-bg);
 }
 
 .checkbox {
