@@ -29,8 +29,8 @@ const tensor = { tag: "Basic", content: "tensor" } as const;
 const ListMor = defineMorphism(
     { tag: "Hom", content: BasicObj.obType },
     {
-        domain: { apply: tensor, modality: "List" },
-        codomain: { apply: tensor, modality: "List" },
+        domain: { kind: "operation-list", apply: tensor, modality: "List" },
+        codomain: { kind: "operation-list", apply: tensor, modality: "List" },
     },
 );
 
@@ -42,8 +42,8 @@ const ListShape = defineShape({
 const SymmetricListMor = defineMorphism(
     { tag: "Hom", content: BasicObj.obType },
     {
-        domain: { apply: tensor, modality: "SymmetricList" },
-        codomain: { apply: tensor, modality: "SymmetricList" },
+        domain: { kind: "operation-list", apply: tensor, modality: "SymmetricList" },
+        codomain: { kind: "operation-list", apply: tensor, modality: "SymmetricList" },
     },
 );
 
@@ -55,8 +55,8 @@ const SymmetricListShape = defineShape({
 const CocartesianListMor = defineMorphism(
     { tag: "Hom", content: BasicObj.obType },
     {
-        domain: { apply: tensor, modality: "CocartesianList" },
-        codomain: { apply: tensor, modality: "CocartesianList" },
+        domain: { kind: "operation-list", apply: tensor, modality: "CocartesianList" },
+        codomain: { kind: "operation-list", apply: tensor, modality: "CocartesianList" },
     },
 );
 
@@ -68,8 +68,8 @@ const CocartesianListShape = defineShape({
 const CartesianListMor = defineMorphism(
     { tag: "Hom", content: BasicObj.obType },
     {
-        domain: { apply: tensor, modality: "CartesianList" },
-        codomain: { apply: tensor, modality: "CartesianList" },
+        domain: { kind: "operation-list", apply: tensor, modality: "CartesianList" },
+        codomain: { kind: "operation-list", apply: tensor, modality: "CartesianList" },
     },
 );
 
@@ -81,8 +81,8 @@ const CartesianListShape = defineShape({
 const AdditiveListMor = defineMorphism(
     { tag: "Hom", content: BasicObj.obType },
     {
-        domain: { apply: tensor, modality: "AdditiveList" },
-        codomain: { apply: tensor, modality: "AdditiveList" },
+        domain: { kind: "operation-list", apply: tensor, modality: "AdditiveList" },
+        codomain: { kind: "operation-list", apply: tensor, modality: "AdditiveList" },
     },
 );
 

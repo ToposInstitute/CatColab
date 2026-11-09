@@ -4,7 +4,7 @@ export const FormType = defineObject({ tag: "Basic", content: "Object" });
 
 export const Operator = defineMorphism(
     { tag: "Basic", content: "Nonscalar" },
-    { domain: FormType.obType, codomain: FormType.obType },
+    { domain: FormType, codomain: FormType },
 );
 
 export const Scalar = defineMorphism({ tag: "Hom", content: FormType.obType });

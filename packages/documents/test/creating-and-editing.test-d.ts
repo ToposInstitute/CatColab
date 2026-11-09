@@ -17,7 +17,7 @@ const Entity = defineObject({ tag: "Basic", content: "Entity" });
 const AttrType = defineObject({ tag: "Basic", content: "AttrType" });
 const Attr = defineMorphism(
     { tag: "Basic", content: "Attr" },
-    { domain: Entity.obType, codomain: AttrType.obType },
+    { domain: Entity, codomain: AttrType },
 );
 const SimpleSchema = defineShape({
     theory: "simple-schema",
