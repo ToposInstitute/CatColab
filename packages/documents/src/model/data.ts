@@ -9,7 +9,11 @@ import type { Result } from "../result";
 import {
     findMorphismType,
     findObjectType,
+    type CodomainObjectTypesOf,
+    type DomainObjectTypesOf,
+    type MorphismEndpoints,
     type MorphismType,
+    type MorphismTypesOf,
     type ObjectType,
     type Shape,
 } from "../shape";
@@ -41,9 +45,31 @@ export interface MorphismCellData<M extends MorphismType = MorphismType> {
     readonly id: string;
     readonly type: M;
     readonly label: string | undefined;
-    readonly from: EndpointData<ObjectCellData> | null | undefined;
-    readonly to: EndpointData<ObjectCellData> | null | undefined;
+    readonly from: EndpointData<ObjectCellData> | MorphismCellData | null | undefined;
+    readonly to: EndpointData<ObjectCellData> | MorphismCellData | null | undefined;
 }
+
+type MatchingMorphismTypes<M, T> = M extends MorphismType
+    ? M["morType"] extends T
+        ? T extends M["morType"]
+            ? M
+            : never
+        : never
+    : never;
+
+export type MorphismEndpointCellData<
+    S extends Shape,
+    M extends MorphismType,
+    Side extends keyof MorphismEndpoints,
+> = M extends {
+    readonly endpoints: {
+        readonly [K in Side]: { readonly kind: "tabulator"; readonly morType: infer T };
+    };
+}
+    ? MorphismCellData<MatchingMorphismTypes<MorphismTypesOf<S>, T>>
+    : ObjectCellData<
+          Side extends "domain" ? DomainObjectTypesOf<S, M> : CodomainObjectTypesOf<S, M>
+      >;
 
 export type EquationSideData = ObjectCellData | ReadonlyArray<MorphismCellData | null>;
 
@@ -137,14 +163,20 @@ function buildNotebookData(document: StructurallyValid<ModelDocument>): ModelNot
         }
     }
     const cellData = new Map<string, CellData>();
+    const inProgressIds = new Set<string>();
 
     function cellOf(id: string): CellData | undefined {
         const existing = cellData.get(id);
         if (existing) {
             return existing;
         }
+        if (inProgressIds.has(id)) {
+            return undefined;
+        }
+        inProgressIds.add(id);
         const cell = cellContents[id];
         const built = cell === undefined ? undefined : buildCellData(id, cell);
+        inProgressIds.delete(id);
         if (built) {
             cellData.set(id, built);
         }
@@ -212,8 +244,16 @@ function buildNotebookData(document: StructurallyValid<ModelDocument>): ModelNot
                         morType: structuredClone(decl.morType) as MorType,
                     },
                     label,
-                    from: resolveEndpointDataFromOb(decl.dom, resolveObject),
-                    to: resolveEndpointDataFromOb(decl.cod, resolveObject),
+                    from: resolveEndpointDataFromOb<ObjectCellData, MorphismCellData>(
+                        decl.dom,
+                        resolveObject,
+                        morphismFromId,
+                    ),
+                    to: resolveEndpointDataFromOb<ObjectCellData, MorphismCellData>(
+                        decl.cod,
+                        resolveObject,
+                        morphismFromId,
+                    ),
                 };
             }
             case "equation":

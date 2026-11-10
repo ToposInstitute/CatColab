@@ -5,8 +5,6 @@ import {
     findObjectType,
     type AnyCellType,
     type CellTypeOf,
-    type CodomainObjectTypesOf,
-    type DomainObjectTypesOf,
     type EquationType,
     type MorphismEndpoints,
     type MorphismEndpointValue,
@@ -28,6 +26,7 @@ import {
     type EquationCellData,
     type EquationSideData,
     type MorphismCellData,
+    type MorphismEndpointCellData,
     type ModelNotebookData,
     type ObjectCellData,
     type RichTextCellData,
@@ -62,12 +61,12 @@ type CellValuesOf<S extends Shape, T extends CellTypeOf<S>> = T extends RichText
               from: MorphismEndpointValue<
                   T,
                   "domain",
-                  ObjectCellData<DomainObjectTypesOf<S, T>>
+                  MorphismEndpointCellData<S, T, "domain">
               > | null;
               to: MorphismEndpointValue<
                   T,
                   "codomain",
-                  ObjectCellData<CodomainObjectTypesOf<S, T>>
+                  MorphismEndpointCellData<S, T, "codomain">
               > | null;
           }
         : T extends EquationType
@@ -183,6 +182,7 @@ export interface Notebook<
     H = unknown,
     V = unknown,
 > {
+    readonly type: D["type"];
     readonly shape: S;
     readonly title: string;
     readonly handle: H;
@@ -233,6 +233,7 @@ export function modelNotebookFromStore<Handle, S extends Shape, Version>(
     }
 
     return {
+        type: "model",
         shape,
         handle,
         get title() {
@@ -292,7 +293,7 @@ export function modelNotebookFromStore<Handle, S extends Shape, Version>(
         data() {
             return getNotebookData(store, handle);
         },
-        update(target: Partial<{ title: string }> | CellRef, patch?: AnyCellPatch<S>) {
+        update(target: Partial<{ title: string }> | CellRef, patch?: AnyCellPatch) {
             if (isCellRef(target)) {
                 updateNotebookCell(store, handle, shape, target, patch ?? {});
                 return;
