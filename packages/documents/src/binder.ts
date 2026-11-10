@@ -20,6 +20,10 @@ import type { Commit, Transaction } from "./transaction";
 import { assertExhaustive } from "./util/assert_exhaustive";
 import type { DeepReadonly } from "./util/deep-readonly";
 
+export interface BinderOptions {
+    shapes?: ReadonlyArray<Shape & { readonly theory: string }>;
+}
+
 export interface Binder<Handle, Version> {
     getHandle(ref: DocumentRef): Promise<Result<Handle>>;
     getDocumentRef(handle: Handle): DocumentRef;
@@ -59,17 +63,11 @@ export interface Binder<Handle, Version> {
         ref: DocumentRef,
     ): Promise<Result<Instance<S, Handle, Version>>>;
 
-    /** Load the supported document at a ref. Model notebooks are loaded with
-     * the given candidate shapes, matched by theory. */
     loadSupportedDocumentFromRef(
-        shapes: ReadonlyArray<Shape & { readonly theory: string }>,
         ref: DocumentRef,
     ): Promise<Result<SupportedDocument<Shape, Handle, Version>>>;
 
-    /** Load a document dump into the store as a supported document. Model
-     * notebooks are loaded with the given candidate shapes, matched by theory. */
     loadSupportedDocument(
-        shapes: ReadonlyArray<Shape & { readonly theory: string }>,
         document: Document,
     ): Promise<Result<SupportedDocument<Shape, Handle, Version>>>;
 
@@ -78,29 +76,27 @@ export interface Binder<Handle, Version> {
     ): Promise<{ tx: Transaction<Handle, Version>; draftDocs: Docs }>;
 }
 
-/* Overloads rather than a single signature `createBinder<Handle, Version>(store?:
-   DocumentStore<Handle, Version>)`: a single optional-parameter signature would
-   allow the nonsensical pattern `createBinder<S>()` for some concrete S, which
-   the implementation would have to ignore. With overloads, an explicit type
-   argument requires the store argument, the zero-argument form takes no type
-   arguments, and the zero-argument form's return type is specific to the
-   in-memory store's handle and version types.
- */
-export function createBinder(): Binder<Document, Document>;
+export function createBinder(options?: BinderOptions): Binder<Document, Document>;
 export function createBinder<Handle, Version>(
     store: DocumentStore<Handle, Version>,
+    options?: BinderOptions,
 ): Binder<Handle, Version>;
 export function createBinder<Handle, Version>(
-    store?: DocumentStore<Handle, Version>,
+    storeOrOptions: DocumentStore<Handle, Version> | BinderOptions = {},
+    options: BinderOptions = {},
 ): Binder<Document, Document> | Binder<Handle, Version> {
-    return store === undefined ? binderFromStore(createInMemoryStore()) : binderFromStore(store);
+    return "createHandle" in storeOrOptions
+        ? binderFromStore(storeOrOptions, options)
+        : binderFromStore(createInMemoryStore(), storeOrOptions);
 }
 
 function binderFromStore<Handle, Version>(
     store: DocumentStore<Handle, Version>,
+    options: BinderOptions,
 ): Binder<Handle, Version> {
+    const shapesByTheory = new Map(options.shapes?.map((shape) => [shape.theory, shape]));
+
     async function loadSupportedDocumentFromRef(
-        shapes: ReadonlyArray<Shape & { readonly theory: string }>,
         ref: DocumentRef,
     ): Promise<Result<SupportedDocument<Shape, Handle, Version>>> {
         const result = await store.getHandle(ref);
@@ -111,7 +107,7 @@ function binderFromStore<Handle, Version>(
         const document = store.getDocumentSnapshot(handle);
         switch (document.type) {
             case "model": {
-                const shape = shapes.find((candidate) => candidate.theory === document.theory);
+                const shape = shapesByTheory.get(document.theory);
                 if (shape === undefined) {
                     return {
                         tag: "Err",
@@ -126,7 +122,7 @@ function binderFromStore<Handle, Version>(
                 return binder.loadNotebookFromRef(shape, ref);
             }
             case "instance": {
-                const schemaResult = await loadSupportedDocumentFromRef(shapes, {
+                const schemaResult = await loadSupportedDocumentFromRef({
                     id: document.instanceOf._id,
                     version: document.instanceOf._version,
                     server: document.instanceOf._server,
@@ -149,7 +145,7 @@ function binderFromStore<Handle, Version>(
                 return binder.loadInstanceFromRef(schema, ref);
             }
             case "llmconversation": {
-                const attachmentResult = await loadSupportedDocumentFromRef(shapes, {
+                const attachmentResult = await loadSupportedDocumentFromRef({
                     id: document.llmConversationOf._id,
                     version: document.llmConversationOf._version,
                     server: document.llmConversationOf._server,
@@ -365,11 +361,10 @@ function binderFromStore<Handle, Version>(
         },
         loadSupportedDocumentFromRef,
         async loadSupportedDocument(
-            shapes: ReadonlyArray<Shape & { readonly theory: string }>,
             document: Document,
         ): Promise<Result<SupportedDocument<Shape, Handle, Version>>> {
             const handle = await store.createHandle(document);
-            return loadSupportedDocumentFromRef(shapes, store.getDocumentRef(handle));
+            return loadSupportedDocumentFromRef(store.getDocumentRef(handle));
         },
         async beginTransaction<
             Docs extends Record<string, SupportedDocument<Shape, Handle, Version>>,

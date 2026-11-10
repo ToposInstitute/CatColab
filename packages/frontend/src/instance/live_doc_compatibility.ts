@@ -103,7 +103,7 @@ export async function createInstance(
     modelRefId: string,
 ): Promise<string> {
     const ref = { id: modelRefId, version: null, server: api.serverHost };
-    const model = await binder.loadSupportedDocumentFromRef(instanceShapes, ref);
+    const model = await binder.loadSupportedDocumentFromRef(ref);
     if (model.tag === "Err") {
         throw new Error(model.content.map((issue) => issue.message).join("\n"));
     }

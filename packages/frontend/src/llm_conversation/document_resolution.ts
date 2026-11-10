@@ -1,5 +1,4 @@
 import type { Binder, Shape, SupportedDocument } from "catcolab-documents";
-import { notebookShapes } from "../model/shapes";
 
 /** A document resolved from a handle, together with the ref id of the model
  * notebook at the root of its dependency chain.
@@ -16,10 +15,7 @@ export async function resolveSupportedDocument<Handle, Version>(
     binder: Binder<Handle, Version>,
     handle: Handle,
 ): Promise<ResolvedSupportedDocument<Handle, Version> | undefined> {
-    const result = await binder.loadSupportedDocumentFromRef(
-        notebookShapes,
-        binder.getDocumentRef(handle),
-    );
+    const result = await binder.loadSupportedDocumentFromRef(binder.getDocumentRef(handle));
     if (result.tag === "Err") {
         return undefined;
     }
