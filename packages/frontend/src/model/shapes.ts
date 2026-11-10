@@ -5,6 +5,8 @@ import { IndeterminateCausalLoop } from "catcolab-logics/indeterminate-causal-lo
 import { PetriNet } from "catcolab-logics/petri-net";
 import { PolynomialODE } from "catcolab-logics/polynomial-ode";
 import { PowerSystem } from "catcolab-logics/power-system";
+import { PrimitiveSignedStockFlow } from "catcolab-logics/primitive-signed-stock-flow";
+import { PrimitiveStockFlow } from "catcolab-logics/primitive-stock-flow";
 import { RegNet } from "catcolab-logics/reg-net";
 import { SignedPolynomialODE } from "catcolab-logics/signed-polynomial-ode";
 import { SimpleOlog } from "catcolab-logics/simple-olog";
@@ -29,6 +31,8 @@ export const notebookShapes = [
     CausalLoop,
     CausalLoopDelays,
     IndeterminateCausalLoop,
+    PrimitiveStockFlow,
+    PrimitiveSignedStockFlow,
     RegNet,
     UnaryDEC,
     PowerSystem,

@@ -3,8 +3,6 @@ import type { DocumentStore } from "../document-store";
 import { isRecord } from "../document/parse-structure";
 import {
     findMorphismType,
-    type CodomainObjectTypesOf,
-    type DomainObjectTypesOf,
     type MorphismEndpoints,
     type MorphismEndpointValue,
     type MorphismType,
@@ -13,7 +11,14 @@ import {
 } from "../shape";
 import { assertExhaustive } from "../util/assert_exhaustive";
 import { obFromMorphismEndpoint } from "./cell";
-import { getNotebookData, type CellData, type EquationSideData, type ObjectCellData } from "./data";
+import {
+    getNotebookData,
+    type CellData,
+    type EquationSideData,
+    type ObjectCellData,
+    type MorphismCellData,
+    type MorphismEndpointCellData,
+} from "./data";
 import type { ModelDocument } from "./document";
 import type { EndpointData } from "./endpoint";
 import { morFromSide } from "./equation-translate";
@@ -29,8 +34,8 @@ export type RichTextCellPatch = Partial<{ content: RichTextContent }>;
 export type ObjectCellPatch = Partial<{ label: string | null }>;
 export type MorphismCellPatch<S extends Shape, M extends MorphismType> = Partial<{
     label: string | null;
-    from: MorphismEndpointValue<M, "domain", ObjectCellData<DomainObjectTypesOf<S, M>>> | null;
-    to: MorphismEndpointValue<M, "codomain", ObjectCellData<CodomainObjectTypesOf<S, M>>> | null;
+    from: MorphismEndpointValue<M, "domain", MorphismEndpointCellData<S, M, "domain">> | null;
+    to: MorphismEndpointValue<M, "codomain", MorphismEndpointCellData<S, M, "codomain">> | null;
 }>;
 export type EquationCellPatch = Partial<{
     label: string | null;
@@ -49,16 +54,16 @@ export type CellPatchOf<S extends Shape, C extends CellData> = C extends { kind:
           ? EquationCellPatch
           : never;
 
-type AnyMorphismCellPatch<S extends Shape> = Partial<{
+type AnyMorphismCellPatch = Partial<{
     label: string | null;
-    from: EndpointData<ObjectCellData<DomainObjectTypesOf<S, MorphismType>>> | null;
-    to: EndpointData<ObjectCellData<CodomainObjectTypesOf<S, MorphismType>>> | null;
+    from: EndpointData<ObjectCellData> | MorphismCellData | null;
+    to: EndpointData<ObjectCellData> | MorphismCellData | null;
 }>;
 
-export type AnyCellPatch<S extends Shape> =
+export type AnyCellPatch =
     | RichTextCellPatch
     | ObjectCellPatch
-    | AnyMorphismCellPatch<S>
+    | AnyMorphismCellPatch
     | EquationCellPatch;
 
 /** Apply a patch to the cell with the given id. Missing cells are ignored. */
@@ -67,7 +72,7 @@ export function updateNotebookCell<Handle, S extends Shape, Version>(
     handle: Handle,
     shape: S,
     cell: CellRef,
-    patch: AnyCellPatch<S>,
+    patch: AnyCellPatch,
 ): void {
     const cellId = cell.id;
     const data = getNotebookData(store, handle);
@@ -102,7 +107,7 @@ export function updateNotebookCell<Handle, S extends Shape, Version>(
         case "object":
             break;
         case "morphism": {
-            const morphism = patch as AnyMorphismCellPatch<S>;
+            const morphism = patch as AnyMorphismCellPatch;
             const type = findMorphismType(shape, stored.type.morType) ?? stored.type;
             const endpoints = (type as MorphismType & { readonly endpoints?: MorphismEndpoints })
                 .endpoints;

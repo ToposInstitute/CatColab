@@ -32,6 +32,7 @@ export interface Shape {
 
 export type MorphismEndpoint =
     | { readonly kind: "object"; readonly obType: ObType }
+    | { readonly kind: "tabulator"; readonly morType: MorType }
     | { readonly kind: "object-list"; readonly obType: ObType; readonly modality: ListModality }
     | {
           readonly kind: "operation-list";
