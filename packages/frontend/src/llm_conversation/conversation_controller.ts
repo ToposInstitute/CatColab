@@ -24,6 +24,7 @@ import type { ApiLLMConversation } from "./live_doc_compatibility";
 export type LLMTurnState = {
     liveInteractions: LLMInteraction[];
     streamingContent: string;
+    streamingReasoning: string;
     isRunning: boolean;
     notice: LLMTurnNotice | null;
 };
@@ -37,6 +38,7 @@ export type LLMTurnNotice = {
 const newLLMTurnState = (overrides?: Partial<LLMTurnState>) => ({
     liveInteractions: [],
     streamingContent: "",
+    streamingReasoning: "",
     isRunning: false,
     notice: null,
     ...overrides,
@@ -88,6 +90,9 @@ export function createLLMConversationController(
             case "Streaming":
                 setLLMTurnState("streamingContent", event.snapshot);
                 break;
+            case "Reasoning":
+                setLLMTurnState("streamingReasoning", event.snapshot);
+                break;
             case "RunTool": {
                 // Finalize any narration streamed since the last tool call.
                 const narration = llmTurnState.streamingContent.trim();
@@ -95,6 +100,8 @@ export function createLLMConversationController(
                     pushLiveInteraction(LLMConversation.newLLMMessage(narration));
                     setLLMTurnState("streamingContent", "");
                 }
+                // The reasoning segment ends when the model starts using tools.
+                setLLMTurnState("streamingReasoning", "");
 
                 const toolCallId = `ephemeral-${ephemeralToolCallCount++}`;
                 runningToolCallId = toolCallId;
@@ -145,6 +152,7 @@ export function createLLMConversationController(
         } finally {
             setLLMTurnState("isRunning", false);
             setLLMTurnState("streamingContent", "");
+            setLLMTurnState("streamingReasoning", "");
         }
     };
 

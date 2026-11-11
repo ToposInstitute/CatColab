@@ -56,31 +56,47 @@ test("navigation disposes an editor without losing the running turn or its strea
     const pending = pendingTurn();
     const controller = editor.controller();
     const turn = controller.runTurn(input);
-    pending.emit({ tag: "Streaming", delta: "Before navigation", snapshot: "Before navigation" });
+    pending.emit({ tag: "Streaming", snapshot: "Before navigation" });
+    pending.emit({ tag: "Reasoning", snapshot: "Thinking before navigation" });
     editor.dispose();
 
     // Another conversation must not inherit the running turn.
     const other = registry.get(conversation("second"));
     assert.isFalse(other.state.isRunning);
-    pending.emit({
-        tag: "Streaming",
-        delta: "Updated in the background",
-        snapshot: "Updated in the background",
-    });
+    pending.emit({ tag: "Streaming", snapshot: "Updated in the background" });
+    pending.emit({ tag: "Reasoning", snapshot: "Thinking in the background" });
 
     // Loading the same document again can produce a different API object.
     const reopened = registry.get(conversation("first"));
     assert.strictEqual(reopened, controller);
     assert.isTrue(reopened.state.isRunning);
     assert.equal(reopened.state.streamingContent, "Updated in the background");
+    assert.equal(reopened.state.streamingReasoning, "Thinking in the background");
     assert.equal(other.state.streamingContent, "");
+    assert.equal(other.state.streamingReasoning, "");
     assert.strictEqual(runTurn.mock.calls[0]?.[0], original);
 
     pending.finish({ tag: "Completed", content: "Done" });
     await turn;
     assert.isFalse(reopened.state.isRunning);
     assert.equal(reopened.state.streamingContent, "");
+    assert.equal(reopened.state.streamingReasoning, "");
     assert.isNull(reopened.state.notice);
+});
+
+test("a tool call ends the reasoning segment", async () => {
+    const registry = createLLMConversationRegistry(binder, inferenceKey);
+    const pending = pendingTurn();
+    const controller = registry.get(conversation("first"));
+    const turn = controller.runTurn(input);
+
+    pending.emit({ tag: "Reasoning", snapshot: "Thinking..." });
+    assert.equal(controller.state.streamingReasoning, "Thinking...");
+    pending.emit({ tag: "RunTool", code: "1 + 1" });
+    assert.equal(controller.state.streamingReasoning, "");
+
+    pending.finish({ tag: "Completed", content: "Done" });
+    await turn;
 });
 
 test("reopening a running conversation cannot start a duplicate turn", async () => {

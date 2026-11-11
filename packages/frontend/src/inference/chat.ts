@@ -51,7 +51,8 @@ export type ChatTurnResult = {
 
 /** Event emitted while an inference attempt runs. */
 export type ChatTurnEvent =
-    | { tag: "Streaming"; delta: string; snapshot: string }
+    | { tag: "Streaming"; snapshot: string }
+    | { tag: "Reasoning"; snapshot: string }
     | { tag: "RunTool"; code: string }
     | { tag: "ToolResult"; code: string; result: EvalResult };
 
@@ -78,8 +79,7 @@ export async function runChatTurn(
     onSuccessHook?: () => Promise<void>,
 ): Promise<ChatTurnResult> {
     const contextScope: ContextExecScope = { files: EMPTY_FILES, ...scope };
-
-    // The ordering is as follows:
+    // The prompt ordering is as follows:
     // [fixed system prompt] u1 a1 ... uN [dynamic system prompt] aN
     // so we're not 100% cache friendly but if you look at the rollouts:
 
@@ -96,6 +96,10 @@ export async function runChatTurn(
     if (suffix.length > 0) {
         messages.push({ role: "system", content: suffix });
     }
+
+    // Snapshot of the current reasoning text: everything the model has reasoned
+    // since it last spoke or called a tool.
+    let reasoningSnapshot = "";
 
     const runner = client.chat.completions.runTools(
         {
@@ -134,6 +138,7 @@ export async function runChatTurn(
                                 onSuccessHook,
                             );
                             onEvent?.({ tag: "ToolResult", code: args.code, result });
+                            reasoningSnapshot = "";
                             return result;
                         },
                     },
@@ -144,9 +149,21 @@ export async function runChatTurn(
     );
 
     if (onEvent) {
-        runner.on("content", (delta: string, snapshot: string) =>
-            onEvent({ tag: "Streaming", delta, snapshot }),
-        );
+        runner.on("content", (_delta, snapshot) => onEvent({ tag: "Streaming", snapshot }));
+        runner.on("chunk", (chunk) => {
+            // Reasoning is an OpenRouter extension absent from the SDK types.
+            const delta = chunk.choices[0]?.delta as
+                | { reasoning?: unknown; content?: unknown }
+                | undefined;
+            if (typeof delta?.content === "string" && delta.content.length > 0) {
+                reasoningSnapshot = "";
+            }
+            const reasoning = delta?.reasoning;
+            if (typeof reasoning === "string" && reasoning.length > 0) {
+                reasoningSnapshot += reasoning;
+                onEvent({ tag: "Reasoning", snapshot: reasoningSnapshot });
+            }
+        });
     }
 
     const content = (await runner.finalContent()) ?? "";
