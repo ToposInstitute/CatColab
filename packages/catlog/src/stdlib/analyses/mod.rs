@@ -1,6 +1,7 @@
 //! Various analyses that can be performed on models.
 
 pub(crate) mod petri;
+pub(crate) mod stock_flow;
 
 #[cfg(feature = "ode")]
 pub mod ode;

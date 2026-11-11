@@ -1,60 +1,35 @@
 import { Show } from "solid-js";
 
-import { CheckboxField, FormGroup, SelectField } from "catcolab-ui-components";
-import type { MassActionEquationsData, MassActionProblemData, RateGranularity } from "catlog-wasm";
-
-/** Configuration of a mass-action analysis. */
-export type Config = MassActionProblemData | MassActionEquationsData;
+import { FormGroup, SelectField } from "catcolab-ui-components";
+import type { MassActionVariant, MassActionProblemData } from "catlog-wasm";
 
 /** Form to configure a mass-action analysis. */
 export function MassActionConfigForm(props: {
-    config: Config;
-    changeConfig: (f: (config: Config) => void) => void;
+    config: MassActionProblemData;
+    changeConfig: (f: (config: MassActionProblemData) => void) => void;
     enableGranularity: boolean;
 }) {
-    const massConservation = () => props.config.massConservationType;
-    const massConservationGranularity = () =>
-        props.config.massConservationType.type === "Unbalanced"
-            ? props.config.massConservationType.granularity
-            : undefined;
+    function massActionVariant(): MassActionVariant {
+        return props.config.variant || "Balanced";
+    }
 
     return (
         <FormGroup compact style={{ "min-width": "286px" }}>
-            <CheckboxField
-                label="Conserve mass"
-                checked={massConservation().type === "Balanced"}
+            <SelectField
+                label="Rate granularity"
+                value={massActionVariant()}
                 onChange={(evt) => {
                     props.changeConfig((content) => {
-                        if (evt.currentTarget.checked) {
-                            content.massConservationType = {
-                                type: "Balanced",
-                            };
-                        } else {
-                            content.massConservationType = {
-                                type: "Unbalanced",
-                                granularity: "PerTransition",
-                            };
-                        }
+                        content.variant = evt.currentTarget.value as MassActionVariant;
                     });
                 }}
-            />
-            <Show when={massConservation().type === "Unbalanced" && props.enableGranularity}>
-                <SelectField
-                    label="Rate granularity"
-                    value={massConservationGranularity() ?? "PerTransition"}
-                    onChange={(evt) => {
-                        props.changeConfig((content) => {
-                            if (content.massConservationType.type === "Unbalanced") {
-                                content.massConservationType.granularity = evt.currentTarget
-                                    .value as RateGranularity;
-                            }
-                        });
-                    }}
-                >
-                    <option value={"PerTransition"}>{"Per transition"}</option>
-                    <option value={"PerPlace"}>{"Per place"}</option>
-                </SelectField>
-            </Show>
+            >
+                <option value="Balanced">Mass-conserving</option>
+                <option value="Unbalanced">Per flow</option>
+                <Show when={props.enableGranularity}>
+                    <option value="PerPlace">Per place</option>
+                </Show>
+            </SelectField>
         </FormGroup>
     );
 }

@@ -34,8 +34,8 @@ export default function createPolynomialODETheory(theoryMeta: TheoryMeta): Theor
         ],
         modelAnalyses: [
             analyses.polynomialODEEquations({
-                getEquations(model, data) {
-                    return thPolynomialODE.polynomialODEEquations(model, data);
+                getEquations(model) {
+                    return thPolynomialODE.polynomialODEEquations(model);
                 },
             }),
             analyses.polynomialODESimulation({
