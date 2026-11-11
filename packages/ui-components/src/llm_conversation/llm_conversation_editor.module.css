@@ -37,6 +37,23 @@
     padding-inline: var(--message-inset);
 }
 
+/* Tails the most recent lines of the model's reasoning while a turn runs.
+   Anchored to the bottom so overflowing text is clipped at the top. */
+.streamingReasoning {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    max-height: calc(3lh + 1rem);
+    overflow: hidden;
+    padding: 0.5rem var(--message-inset);
+    border: 1px solid var(--color-gray-400);
+    border-radius: var(--message-radius);
+    background: var(--color-gray-50);
+    color: var(--color-text-secondary);
+    font-size: smaller;
+    white-space: pre-wrap;
+}
+
 .plainMessage {
     white-space: pre-wrap;
 }

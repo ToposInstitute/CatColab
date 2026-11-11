@@ -89,6 +89,8 @@ export function createLLMConversationController(
         switch (event.tag) {
             case "Streaming":
                 setLLMTurnState("streamingContent", event.snapshot);
+                // Speaking ends the current reasoning.
+                setLLMTurnState("streamingReasoning", "");
                 break;
             case "Reasoning":
                 setLLMTurnState("streamingReasoning", event.snapshot);
