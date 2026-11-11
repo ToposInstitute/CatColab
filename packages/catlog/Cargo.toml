@@ -6,9 +6,10 @@ version = "0.1.0"
 edition = "2024"
 
 [features]
+reachability = ["serde", "serde-wasm"]
 ode = ["dep:ode_solvers", "dep:nalgebra"]
 serde = ["dep:serde", "nonempty/serialize", "ustr/serde", "uuid/serde"]
-serde-wasm = ["serde", "dep:wasm-bindgen", "dep:tsify"]
+serde-wasm = ["serde", "dep:wasm-bindgen", "dep:tsify", "dep:serde-wasm-bindgen", "dep:serde_json"]
 sql = ["dep:sea-query", "dep:sqlformat" ]
 stochastic = ["dep:rebop"]
 
@@ -31,7 +32,9 @@ pretty = "0.12"
 rebop = { version = "0.9.4", default-features = false, optional = true }
 ref-cast = "1"
 scopeguard = "1.2.0"
-serde = { version = "1", features = ["derive"], optional = true }
+serde = { version = "1.0.219", features = ["derive"], optional = true }
+serde-wasm-bindgen = { version = "0.6.5", optional = true }
+serde_json = {version = "1.0.143", optional = true }
 tattle = "0.4.3"
 thiserror = "1"
 tsify = { version = "0.5.6", features = ["js"], optional = true }

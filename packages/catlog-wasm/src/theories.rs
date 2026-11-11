@@ -149,7 +149,7 @@ impl ThSignedCategory {
     pub fn lotka_volterra(
         &self,
         model: &DblModel,
-        data: analyses::ode::LotkaVolterraProblemData,
+        data: analyses::ode::lotka_volterra::LotkaVolterraProblemData,
     ) -> Result<ODEResult, String> {
         Ok(ODEResult(
             analyses::ode::SignedCoefficientBuilder::new(name("Object"))
@@ -167,7 +167,7 @@ impl ThSignedCategory {
     pub fn linear_ode(
         &self,
         model: &DblModel,
-        data: analyses::ode::LinearODEProblemData,
+        data: analyses::ode::linear_ode::LinearODEProblemData,
     ) -> Result<ODEResult, String> {
         Ok(ODEResult(
             analyses::ode::SignedCoefficientBuilder::new(name("Object"))
@@ -339,7 +339,7 @@ impl ThCategoryLinks {
     pub fn mass_action(
         &self,
         model: &DblModel,
-        data: analyses::ode::MassActionProblemData,
+        data: analyses::ode::mass_action::MassActionProblemData,
     ) -> Result<ODEResultWithEquations, String> {
         mass_action_simulation(model, data, MassActionAnalysisLogic::StockFlow)
     }
@@ -376,7 +376,7 @@ impl ThCategorySignedLinks {
     pub fn mass_action(
         &self,
         model: &DblModel,
-        data: analyses::ode::MassActionProblemData,
+        data: analyses::ode::mass_action::MassActionProblemData,
     ) -> Result<ODEResultWithEquations, String> {
         mass_action_simulation(model, data, MassActionAnalysisLogic::StockFlow)
     }
@@ -413,7 +413,7 @@ impl ThSymMonoidalCategory {
     pub fn mass_action(
         &self,
         model: &DblModel,
-        data: analyses::ode::MassActionProblemData,
+        data: analyses::ode::mass_action::MassActionProblemData,
     ) -> Result<ODEResultWithEquations, String> {
         mass_action_simulation(model, data, MassActionAnalysisLogic::PetriNet)
     }
@@ -433,10 +433,10 @@ impl ThSymMonoidalCategory {
     pub fn stochastic_mass_action(
         &self,
         model: &DblModel,
-        data: analyses::stochastic::StochasticMassActionProblemData,
+        data: analyses::stochastic::stochastic_mass_action::StochasticMassActionProblemData,
     ) -> Result<ODEResult, String> {
         Ok(ODEResult(JsResult::Ok(
-            analyses::stochastic::PetriNetStochasticMassActionAnalysis::default()
+            analyses::stochastic::stochastic_mass_action::PetriNetStochasticMassActionAnalysis::default()
                 .build_stochastic_system(model.modal_unital()?, data)
                 .simulate(),
         )))
@@ -475,7 +475,7 @@ impl ThPolynomialODE {
     pub fn polynomial_ode_simulation(
         &self,
         model: &DblModel,
-        data: analyses::ode::PolynomialODEProblemData,
+        data: analyses::ode::polynomial_ode::PolynomialODEProblemData,
     ) -> Result<ODEResultWithEquations, String> {
         polynomial_ode_simulation(model, data)
     }
@@ -512,7 +512,7 @@ impl ThSignedPolynomialODE {
     pub fn polynomial_ode_simulation(
         &self,
         model: &DblModel,
-        data: analyses::ode::PolynomialODEProblemData,
+        data: analyses::ode::polynomial_ode::PolynomialODEProblemData,
     ) -> Result<ODEResultWithEquations, String> {
         polynomial_ode_simulation(model, data)
     }
@@ -549,10 +549,10 @@ impl ThPowerSystem {
     pub fn kuramoto(
         &self,
         model: &DblModel,
-        data: &analyses::ode::KuramotoProblemData,
+        data: &analyses::ode::kuramoto::KuramotoProblemData,
     ) -> Result<ODEResult, String> {
         Ok(ODEResult(
-            analyses::ode::KuramotoAnalysis::new(name("Bus"))
+            analyses::ode::kuramoto::KuramotoAnalysis::new(name("Bus"))
                 // Should we distinguish between lines and transformers?
                 .add_link_type(Path::empty(name("Bus")))
                 .add_link_type(Path::single(name("Passive")))

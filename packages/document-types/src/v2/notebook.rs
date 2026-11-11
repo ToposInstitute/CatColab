@@ -4,11 +4,9 @@ use super::cell::NotebookCell;
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use tsify::Tsify;
 use uuid::Uuid;
 
-#[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Tsify)]
-#[tsify(into_wasm_abi, from_wasm_abi, hashmap_as_object)]
+#[derive(PartialEq, Eq, Debug, Serialize, Deserialize)]
 pub struct Notebook<T> {
     #[serde(rename = "cellContents")]
     pub cell_contents: HashMap<Uuid, NotebookCell<T>>,
@@ -16,12 +14,10 @@ pub struct Notebook<T> {
     pub cell_order: Vec<Uuid>,
 }
 
-#[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Tsify)]
-#[tsify(into_wasm_abi, from_wasm_abi)]
+#[derive(PartialEq, Eq, Debug, Serialize, Deserialize)]
 pub struct ModelNotebook(pub Notebook<super::model_judgment::ModelJudgment>);
 
-#[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Tsify)]
-#[tsify(into_wasm_abi, from_wasm_abi)]
+#[derive(PartialEq, Eq, Debug, Serialize, Deserialize)]
 pub struct DiagramNotebook(pub Notebook<super::diagram_judgment::DiagramJudgment>);
 
 /// Arbitrary instances for property-based testing.

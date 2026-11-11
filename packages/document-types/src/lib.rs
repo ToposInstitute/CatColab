@@ -6,6 +6,7 @@ use wasm_bindgen::prelude::*;
 mod v0;
 pub mod v1;
 pub mod v2;
+pub mod v3;
 
 pub mod automerge_json;
 
@@ -21,7 +22,7 @@ pub(crate) mod common_test;
 pub mod current {
     // this should always track the latest version, and is the only version
     // that is exported from document-types
-    pub use crate::v2::*;
+    pub use crate::v3::*;
 }
 
 /// Generate type defs for dependencies supporting `serde` but not `tsify`.
@@ -39,7 +40,7 @@ type Ustr = string;
 type Value = unknown;
 "#;
 
-pub static CURRENT_VERSION: &str = "2";
+pub static CURRENT_VERSION: &str = "3";
 
 #[wasm_bindgen(js_name = "currentVersion")]
 pub fn current_version() -> String {
@@ -51,6 +52,7 @@ pub enum VersionedDocument {
     V0(v0::Document),
     V1(v1::Document),
     V2(v2::Document),
+    V3(v3::Document),
 }
 
 impl<'de> Deserialize<'de> for VersionedDocument {
@@ -78,6 +80,11 @@ impl<'de> Deserialize<'de> for VersionedDocument {
                     serde_json::from_value(value).map_err(serde::de::Error::custom)?;
                 Ok(VersionedDocument::V2(doc))
             }
+            "3" => {
+                let doc: v3::Document =
+                    serde_json::from_value(value).map_err(serde::de::Error::custom)?;
+                Ok(VersionedDocument::V3(doc))
+            }
             other => Err(serde::de::Error::custom(format!("unsupported version {other}"))),
         }
     }
@@ -96,7 +103,12 @@ impl VersionedDocument {
                 VersionedDocument::V2(v2::Document::migrate_from_v1(v1)).to_current()
             }
 
-            VersionedDocument::V2(old2) => old2,
+            VersionedDocument::V2(v2) => {
+                // Recursive call to VersionedDocument::to_current
+                VersionedDocument::V3(v3::Document::migrate_from_v2(v2)).to_current()
+            }
+
+            VersionedDocument::V3(v3) => v3,
         }
     }
 }
