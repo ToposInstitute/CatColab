@@ -99,6 +99,21 @@ test("a tool call ends the reasoning segment", async () => {
     await turn;
 });
 
+test("speaking ends the reasoning", async () => {
+    const registry = createLLMConversationRegistry(binder, inferenceKey);
+    const pending = pendingTurn();
+    const controller = registry.get(conversation("first"));
+    const turn = controller.runTurn(input);
+
+    pending.emit({ tag: "Reasoning", snapshot: "Thinking..." });
+    assert.equal(controller.state.streamingReasoning, "Thinking...");
+    pending.emit({ tag: "Streaming", snapshot: "Hello" });
+    assert.equal(controller.state.streamingReasoning, "");
+
+    pending.finish({ tag: "Completed", content: "Done" });
+    await turn;
+});
+
 test("reopening a running conversation cannot start a duplicate turn", async () => {
     const registry = createLLMConversationRegistry(binder, inferenceKey);
     const pending = pendingTurn();

@@ -89,18 +89,20 @@ export function createLLMConversationController(
         switch (event.tag) {
             case "Streaming":
                 setLLMTurnState("streamingContent", event.snapshot);
+                // Non-reasoning content ends the reasoning preview.
+                setLLMTurnState("streamingReasoning", "");
                 break;
             case "Reasoning":
                 setLLMTurnState("streamingReasoning", event.snapshot);
                 break;
             case "RunTool": {
-                // Finalize any narration streamed since the last tool call.
+                // Finalize any reasoning content streamed since the last tool call.
                 const narration = llmTurnState.streamingContent.trim();
                 if (narration.length > 0) {
                     pushLiveInteraction(LLMConversation.newLLMMessage(narration));
                     setLLMTurnState("streamingContent", "");
                 }
-                // The reasoning segment ends when the model starts using tools.
+                // Non-reasoning content ends the reasoning preview.
                 setLLMTurnState("streamingReasoning", "");
 
                 const toolCallId = `ephemeral-${ephemeralToolCallCount++}`;

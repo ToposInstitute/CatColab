@@ -43,6 +43,7 @@ export type LLMConversationInput = {
 export type LLMConversationEditorProps = {
     interactions: DeepReadonly<LLMInteraction[]>;
     streamingContent?: string;
+    streamingReasoning?: string;
     status: string;
     busy: boolean;
     notice?: LLMConversationNotice | null;
@@ -124,6 +125,11 @@ export function LLMConversationEditor(props: LLMConversationEditorProps) {
                         />
                     )}
                 </For>
+                <Show when={props.busy && props.streamingReasoning}>
+                    <div class={styles.streamingReasoning} aria-hidden="true">
+                        {props.streamingReasoning}
+                    </div>
+                </Show>
                 <Show when={props.streamingContent}>
                     {(content) => (
                         <div class={styles.llmMessage}>

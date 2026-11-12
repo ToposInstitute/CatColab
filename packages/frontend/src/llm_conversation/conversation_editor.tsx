@@ -37,6 +37,7 @@ export function LLMConversationEditor(props: { conversation: ApiLLMConversation 
         <LLMConversationEditorView
             interactions={interactions()}
             streamingContent={controller().state.streamingContent}
+            streamingReasoning={controller().state.streamingReasoning}
             status={
                 inferenceKey()?.tag !== "Ready"
                     ? "Loading inference key..."

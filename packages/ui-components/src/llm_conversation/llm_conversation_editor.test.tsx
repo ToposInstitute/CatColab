@@ -43,6 +43,24 @@ test("Complete", async () => {
     expect(canvas.getByRole("textbox")).toHaveFocus();
 });
 
+test("StreamingReasoning", () => {
+    const args = {
+        interactions: [],
+        streamingReasoning: "Considering the theory signature...",
+        status: "Running...",
+        busy: true,
+        available: false,
+        validateAttachments: () => undefined,
+        onSubmit: vi.fn<EditorProps["onSubmit"]>(async () => true),
+        onResolveFeedback: vi.fn<EditorProps["onResolveFeedback"]>(),
+    };
+    const canvasElement = mount(() => <LLMConversationEditor {...args} />);
+    const canvas = within(canvasElement);
+
+    const reasoning = canvas.getByText("Considering the theory signature...");
+    expect(reasoning).toHaveAttribute("aria-hidden", "true");
+});
+
 test("RejectedSubmissionPreservesDraft", async () => {
     const args = {
         interactions: [],
