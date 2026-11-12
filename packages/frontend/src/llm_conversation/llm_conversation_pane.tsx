@@ -213,7 +213,10 @@ export function LLMConversationPane(props: {
                 </Show>
                 <Show
                     when={
-                        !liveConversation.loading && !liveConversation.error && liveConversation()
+                        props.selectedRefId !== undefined &&
+                        !liveConversation.loading &&
+                        !liveConversation.error &&
+                        liveConversation()
                     }
                 >
                     {(conversation) => (
