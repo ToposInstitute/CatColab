@@ -4,7 +4,13 @@ import invariant from "tiny-invariant";
 
 import { Nb } from "catcolab-document-methods";
 import { type FocusHandle } from "catcolab-ui-components";
-import { type CellConstructor, type FormalCellEditorProps, NotebookEditor } from "../notebook";
+import {
+    type CellConstructor,
+    type FormalCellEditorProps,
+    type NotebookComments,
+    NotebookEditor,
+    type NotebookDiff,
+} from "../notebook";
 import type { AnalysisMeta, DiagramAnalysisMeta, ModelAnalysisMeta } from "../theory";
 import { LiveAnalysisContext } from "./context";
 import {
@@ -20,6 +26,8 @@ import type { Analysis } from "./types";
 export function AnalysisNotebookEditor(props: {
     liveAnalysis: LiveAnalysisDoc;
     focus: FocusHandle;
+    diff?: NotebookDiff<Analysis<unknown>>;
+    comments?: NotebookComments;
 }) {
     const liveDoc = () => props.liveAnalysis.liveDoc;
 
@@ -44,6 +52,8 @@ export function AnalysisNotebookEditor(props: {
                 formalCellEditor={AnalysisCellEditor}
                 cellConstructors={cellConstructors()}
                 focus={props.focus}
+                diff={props.diff}
+                comments={props.comments}
             />
         </LiveAnalysisContext.Provider>
     );
@@ -67,6 +77,7 @@ function AnalysisCellEditor(props: FormalCellEditorProps<Analysis<unknown>>) {
                         component={analysis().component}
                         liveModel={(liveAnalysis() as LiveModelAnalysisDoc).liveModel}
                         content={props.content.content}
+                        baseline={props.baseline?.content}
                         changeContent={(f: (c: unknown) => void) =>
                             props.changeContent((content) => f(content.content))
                         }
@@ -84,6 +95,7 @@ function AnalysisCellEditor(props: FormalCellEditorProps<Analysis<unknown>>) {
                         component={analysis().component}
                         liveDiagram={(liveAnalysis() as LiveDiagramAnalysisDoc).liveDiagram}
                         content={props.content.content}
+                        baseline={props.baseline?.content}
                         changeContent={(f: (c: unknown) => void) =>
                             props.changeContent((content) => f(content.content))
                         }

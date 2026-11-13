@@ -36,7 +36,7 @@ import { type Command, EditorState, type Plugin, type Transaction } from "prosem
 import { EditorView } from "prosemirror-view";
 import { createEffect, createSignal, type JSX, onCleanup, Show } from "solid-js";
 
-import { useDocHandleReady } from "../../api/document";
+import { isScopeReplaced, useDocHandleReady } from "../../api/document";
 import { hasStructuralReplacement, hasTextAtPath } from "./automerge_text";
 import {
     decreaseIndent,
@@ -135,8 +135,8 @@ export const RichTextEditor = (
         const handle = props.handle;
         const path = props.path;
         let disposed = false;
-        const onRemoteChange = ({ patches }: DocHandleChangePayload<unknown>) => {
-            if (hasStructuralReplacement(patches, path)) {
+        const onRemoteChange = (payload: DocHandleChangePayload<unknown>) => {
+            if (isScopeReplaced(payload) || hasStructuralReplacement(payload.patches, path)) {
                 queueMicrotask(() => {
                     if (!disposed) {
                         setReinitTrigger((c) => c + 1);

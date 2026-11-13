@@ -58,6 +58,7 @@ export default function MassAction(
         createNumericalColumn({
             name: "Initial value",
             data: (id) => props.content.initialValues[id],
+            previous: (id) => props.baseline?.initialValues[id],
             validate: (_, data) => data >= 0,
             setData: (id, data) =>
                 props.changeContent((content) => {
@@ -151,6 +152,7 @@ export default function MassAction(
         createNumericalColumn({
             name: "Rate (𝑟)",
             data: (mor) => props.content.rates[mor],
+            previous: (mor) => props.baseline?.rates[mor],
             default: 1,
             validate: (_, data) => data >= 0,
             setData: (mor, data) =>
@@ -170,6 +172,7 @@ export default function MassAction(
         createNumericalColumn({
             name: "Consumption (𝜅)",
             data: (mor) => props.content.transitionConsumptionRates[mor],
+            previous: (mor) => props.baseline?.transitionConsumptionRates[mor],
             default: 1,
             validate: (_, data) => data >= 0,
             setData: (mor, data) =>
@@ -187,6 +190,7 @@ export default function MassAction(
         createNumericalColumn({
             name: "Production (𝜌)",
             data: (mor) => props.content.transitionProductionRates[mor],
+            previous: (mor) => props.baseline?.transitionProductionRates[mor],
             default: 1,
             validate: (_, data) => data >= 0,
             setData: (mor, data) =>
@@ -211,6 +215,7 @@ export default function MassAction(
         createNumericalColumn({
             name: "Consumption (𝜅)",
             data: ([mor, input]) => props.content.placeConsumptionRates[mor]?.[input],
+            previous: ([mor, input]) => props.baseline?.placeConsumptionRates[mor]?.[input],
             default: 1,
             validate: (_, data) => data >= 0,
             setData: ([mor, input], data) =>
@@ -237,6 +242,7 @@ export default function MassAction(
         createNumericalColumn({
             name: "Production (𝜌)",
             data: ([mor, output]) => props.content.placeProductionRates[mor]?.[output],
+            previous: ([mor, output]) => props.baseline?.placeProductionRates[mor]?.[output],
             default: 1,
             validate: (_, data) => data >= 0,
             setData: ([mor, output], data) =>
@@ -282,6 +288,7 @@ export default function MassAction(
         createNumericalColumn({
             name: "Duration",
             data: (_) => props.content.duration,
+            previous: (_) => props.baseline?.duration,
             validate: (_, data) => data >= 0,
             setData: (_, data) =>
                 props.changeContent((content) => {
