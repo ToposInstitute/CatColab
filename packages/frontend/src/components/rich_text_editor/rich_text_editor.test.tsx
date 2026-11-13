@@ -2,11 +2,11 @@
 import { splice } from "@automerge/automerge";
 import { Repo } from "@automerge/automerge-repo";
 import type { EditorView } from "prosemirror-view";
-import { makeDocumentProjection } from "solid-automerge";
 import { render } from "solid-js/web";
 import { describe, expect, test, vi } from "vitest";
 
 import { Nb } from "catcolab-document-methods";
+import { makeDocHandleReactive } from "../../api/document";
 import { RichTextEditor } from "./rich_text_editor";
 
 async function createFixture() {
@@ -25,7 +25,7 @@ async function createFixture() {
     document.body.appendChild(container);
     let projection!: ReturnType<typeof handle.doc>;
     const dispose = render(() => {
-        projection = makeDocumentProjection(handle);
+        projection = makeDocHandleReactive(handle);
         // Intentionally keep the component mounted when its cell disappears:
         // structural changes must be safe independently of parent cleanup.
         return <RichTextEditor handle={handle} path={path} ref={(view) => views.push(view)} />;
