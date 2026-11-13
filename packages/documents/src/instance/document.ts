@@ -24,8 +24,10 @@ export type { InstanceDocument } from "catcolab-document-methods";
 
 /** API for an instance document and its schema-derived tables. */
 export interface Instance<S extends Shape = Shape, H = unknown, V = unknown> {
+    readonly type: "instance";
     readonly handle: H;
     readonly shape: S;
+    readonly schema: Notebook<S, ModelDocument, H, V>;
     data(): InstanceData;
     readonly title: string;
 
@@ -149,8 +151,10 @@ export function instanceFromStore<Handle, S extends Shape, Version>(
     }
 
     const instance: Instance<S, Handle, Version> = {
+        type: "instance",
         handle,
         shape: schema.shape,
+        schema,
         data: currentData,
         get title(): string {
             return currentData().name;

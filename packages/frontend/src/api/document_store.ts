@@ -14,6 +14,7 @@ import {
     type HandlesByLinkType,
     type Result,
 } from "catcolab-documents";
+import { notebookShapes } from "../model/shapes";
 import type { Api } from "./types";
 
 export type ApiDocumentHandle = {
@@ -37,7 +38,7 @@ application (via context) so that document handles are cached and deduplicated
 between loads.
  */
 export function createApiBinder(api: Api, userState: UserState): ApiBinder {
-    return createBinder(createApiDocumentStore(api, userState));
+    return createBinder(createApiDocumentStore(api, userState), { shapes: notebookShapes });
 }
 
 /** Adapt frontend Automerge documents to the storage boundary used by catcolab-documents.
