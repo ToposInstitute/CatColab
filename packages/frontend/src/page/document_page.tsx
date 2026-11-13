@@ -1,3 +1,4 @@
+import { next as Automerge } from "@automerge/automerge";
 import Resizable, { type ContextValue } from "@corvu/resizable";
 import { makeEventListener } from "@solid-primitives/event-listener";
 import { Title } from "@solidjs/meta";
@@ -19,6 +20,7 @@ import {
 } from "solid-js";
 import invariant from "tiny-invariant";
 
+import { serializeAutomergeDocument } from "catcolab-document-types";
 import {
     Button,
     type FocusHandle,
@@ -30,6 +32,7 @@ import {
     useChildFocus,
     WarningBanner,
 } from "catcolab-ui-components";
+import type { Document } from "catlog-wasm";
 import { getLiveAnalysis, type LiveAnalysisDoc } from "../analysis";
 import { AnalysisNotebookEditor } from "../analysis/analysis_editor";
 import { AnalysisInfo } from "../analysis/analysis_info";
@@ -471,6 +474,17 @@ function PaneToolbarButtons(props: {
     toggleHistorySidebar: () => void;
     paneFocus: FocusHandle;
 }) {
+    const api = useApi();
+    const navigate = useNavigate();
+
+    const onDuplicate = async () => {
+        const doc = serializeAutomergeDocument(
+            Automerge.save<Document>(props.doc.liveDoc.docHandle.doc()),
+        ) as Document;
+        const newRef = await api.duplicateDoc(doc);
+        navigate(`/${doc.type}/${newRef}`);
+    };
+
     return (
         <>
             <IconButton
@@ -482,7 +496,12 @@ function PaneToolbarButtons(props: {
             >
                 <History size={20} />
             </IconButton>
-            <PermissionsButton liveDoc={props.doc.liveDoc} docRef={props.docRef} />
+            <PermissionsButton
+                docName={props.doc.liveDoc.doc.name}
+                documentType={props.doc.liveDoc.doc.type}
+                docRef={props.docRef}
+                onDuplicate={onDuplicate}
+            />
         </>
     );
 }
