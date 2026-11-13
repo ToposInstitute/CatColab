@@ -16,7 +16,6 @@ import { basicSchemaAdapter, init } from "@automerge/prosemirror";
 import { SimpleOlog } from "catcolab-logics/simple-olog";
 import { EditorState } from "prosemirror-state";
 import { EditorView } from "prosemirror-view";
-import { makeDocumentProjection } from "solid-automerge";
 import { createEffect, createSignal, For, onCleanup } from "solid-js";
 import { render } from "solid-js/web";
 import { describe, expect, test } from "vitest";
@@ -33,7 +32,6 @@ import { getDocumentSnapshot } from "./helpers/snapshot";
 
 type StoreHandle = {
     readonly docHandle: DocHandle<Document>;
-    readonly docView: Document;
 };
 
 function makeAutomergeRichTextStore(): DocumentStore<StoreHandle> {
@@ -41,7 +39,7 @@ function makeAutomergeRichTextStore(): DocumentStore<StoreHandle> {
     return {
         createHandle: async (initialDoc) => {
             const docHandle = repo.create<Document>(initialDoc);
-            return { docHandle, docView: makeDocumentProjection(docHandle) };
+            return { docHandle };
         },
         getDocumentSnapshot: (handle) => getDocumentSnapshot(handle.docHandle.doc()),
         changeDocument: (handle, fn) => handle.docHandle.change(fn),
