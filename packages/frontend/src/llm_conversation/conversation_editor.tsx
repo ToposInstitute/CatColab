@@ -1,3 +1,4 @@
+import { useNavigate } from "@solidjs/router";
 import { createDocumentDataView } from "catcolab-documents-solid";
 import { createMemo } from "solid-js";
 
@@ -5,11 +6,15 @@ import {
     type LLMConversationInput,
     LLMConversationEditor as LLMConversationEditorView,
 } from "catcolab-ui-components";
+import { type DocRef, useApi } from "../api";
 import { useInferenceKey } from "../user/inference_key_context";
+import { PermissionsButton } from "../user/permissions";
 import { useLLMConversations } from "./conversation_provider";
 import type { ApiLLMConversation } from "./live_doc_compatibility";
 
-export function LLMConversationEditor(props: { conversation: ApiLLMConversation }) {
+export function LLMConversationEditor(props: { conversation: ApiLLMConversation; docRef: DocRef }) {
+    const api = useApi();
+    const navigate = useNavigate();
     const inferenceKey = useInferenceKey();
     const conversations = useLLMConversations();
     const controller = createMemo(() => conversations.get(props.conversation));
@@ -18,6 +23,10 @@ export function LLMConversationEditor(props: { conversation: ApiLLMConversation 
         ...data().interactions,
         ...controller().state.liveInteractions,
     ]);
+    const onDuplicate = async () => {
+        const newRef = await api.duplicateDoc(props.conversation.dump());
+        navigate(`/llmconversation/${newRef}`);
+    };
     const submit = async (input: LLMConversationInput): Promise<boolean> => {
         // Keep the submission attached to the original conversation even if navigation
         // changes the editor's props while files are being read.
@@ -44,6 +53,14 @@ export function LLMConversationEditor(props: { conversation: ApiLLMConversation 
                     : controller().state.isRunning
                       ? "Running..."
                       : "Idle"
+            }
+            statusActions={
+                <PermissionsButton
+                    docName={data().name}
+                    documentType="llmconversation"
+                    docRef={props.docRef}
+                    onDuplicate={onDuplicate}
+                />
             }
             busy={controller().state.isRunning || inferenceKey()?.tag !== "Ready"}
             notice={controller().state.notice}
