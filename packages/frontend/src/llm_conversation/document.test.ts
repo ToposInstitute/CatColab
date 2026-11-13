@@ -105,6 +105,43 @@ describe("LLM conversation turns", { timeout: 30_000 }, () => {
         inference.createInferenceClient.mockReturnValue({});
     });
 
+    test("interruption discards staged changes and leaves the user message retryable", async () => {
+        const fixture = await makeFixture();
+        const controller = new AbortController();
+        inference.runChatTurn.mockImplementation(
+            async (_client, _transcript, scope, _onEvent, _model, _suffix, _hook, abortSignal) => {
+                assert.strictEqual(abortSignal, controller.signal);
+                schemaBinding(scope).update({ title: "Discarded" });
+                controller.abort();
+                return response("Must not persist.");
+            },
+        );
+
+        const result = await runLLMConversationTurn(
+            fixture.conversation,
+            fixture.binder,
+            { tag: "Ready", key: "inference-key" },
+            { content: "Inspect the document.", files: [] },
+            undefined,
+            controller.signal,
+        );
+        assert.deepStrictEqual(result, { tag: "Interrupted" });
+        assert.strictEqual(fixture.schema.title, "Company schema");
+        assert.deepStrictEqual(
+            fixture.conversation.interactions().map((interaction) => interaction.tag),
+            ["user-message"],
+        );
+
+        inference.runChatTurn.mockResolvedValue(response("Retried."));
+        const retried = await retryLastLLMConversationResponse(
+            fixture.conversation,
+            fixture.binder,
+            { tag: "Ready", key: "inference-key" },
+        );
+        assert.deepStrictEqual(retried, { tag: "Completed", content: "Retried." });
+        assert.strictEqual(fixture.conversation.interactions().length, 2);
+    });
+
     test("runs against an isolated document scope and commits valid changes", async () => {
         const fixture = await makeFixture();
         inference.runChatTurn.mockImplementation(async (_client, _transcript, scope) => {

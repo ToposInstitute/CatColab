@@ -1,4 +1,4 @@
-import type { JSX } from "solid-js";
+import { type ComponentProps, type JSX, createSignal } from "solid-js";
 import type { Meta, StoryObj } from "storybook-solidjs-vite";
 
 import { LLMConversationEditor } from "./llm_conversation_editor";
@@ -52,6 +52,27 @@ export const Streaming: Story = {
         status: "Running...",
         busy: true,
         available: false,
+    },
+};
+
+export const Interrupt: Story = {
+    args: {
+        interactions: interactions.slice(0, 1),
+    },
+    render: (args: ComponentProps<typeof LLMConversationEditor>) => {
+        const [running, setRunning] = createSignal(true);
+        return (
+            <LLMConversationEditor
+                {...args}
+                busy={running()}
+                available={!running()}
+                status={running() ? "Running..." : "Interrupted"}
+                streamingContent={running() ? "Working through the calculation..." : undefined}
+                canRetry={!running()}
+                onInterrupt={() => setRunning(false)}
+                onRetry={() => setRunning(true)}
+            />
+        );
     },
 };
 

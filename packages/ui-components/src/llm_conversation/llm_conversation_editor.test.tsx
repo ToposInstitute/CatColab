@@ -1,4 +1,4 @@
-import type { ComponentProps } from "solid-js";
+import { type ComponentProps, createSignal } from "solid-js";
 import { userEvent, waitFor, within } from "storybook/test";
 import { test, expect, vi } from "vitest";
 
@@ -43,6 +43,42 @@ test("Complete", async () => {
     expect(canvas.getByRole("textbox")).toHaveFocus();
 });
 
+test("Interrupt via button", async () => {
+    const [busy, setBusy] = createSignal(true);
+    const onInterrupt = vi.fn<() => void>(() => setBusy(false));
+    const canvasElement = mount(() => (
+        <>
+            <button type="button">Outside editor</button>
+            <LLMConversationEditor
+                interactions={[]}
+                status={busy() ? "Running..." : "Idle"}
+                busy={busy()}
+                available={!busy()}
+                validateAttachments={() => undefined}
+                onSubmit={() => Promise.resolve(true)}
+                onInterrupt={onInterrupt}
+                onResolveFeedback={() => undefined}
+            />
+        </>
+    ));
+    const canvas = within(canvasElement);
+
+    const interrupt = canvas.getByRole("button", { name: "Interrupt" });
+    expect(interrupt).toHaveTextContent("Interrupt");
+    expect(interrupt).not.toHaveAttribute("aria-keyshortcuts");
+    await userEvent.click(canvas.getByRole("textbox"));
+    await userEvent.keyboard("{Escape}");
+    await userEvent.click(canvas.getByRole("button", { name: "Outside editor" }));
+    await userEvent.keyboard("{Escape}");
+    expect(onInterrupt).not.toHaveBeenCalled();
+    await userEvent.click(interrupt);
+    expect(onInterrupt).toHaveBeenCalledOnce();
+    expect(canvas.queryByRole("button", { name: "Interrupt" })).not.toBeInTheDocument();
+    await userEvent.click(canvas.getByRole("textbox"));
+    await userEvent.keyboard("{Escape}");
+    expect(onInterrupt).toHaveBeenCalledOnce();
+});
+
 test("StreamingReasoning", () => {
     const args = {
         interactions: [],
@@ -59,6 +95,10 @@ test("StreamingReasoning", () => {
 
     const reasoning = canvas.getByText("Considering the theory signature...");
     expect(reasoning).toHaveAttribute("aria-hidden", "true");
+    expect(
+        canvas.getByText("Running...").compareDocumentPosition(reasoning) &
+            Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
 });
 
 test("RejectedSubmissionPreservesDraft", async () => {
