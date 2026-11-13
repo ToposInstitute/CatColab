@@ -13,6 +13,7 @@ import {
     createSignal,
     createUniqueId,
     For,
+    type JSX,
     lazy,
     Match,
     onMount,
@@ -45,6 +46,7 @@ export type LLMConversationEditorProps = {
     streamingContent?: string;
     streamingReasoning?: string;
     status: string;
+    statusActions?: JSX.Element;
     busy: boolean;
     notice?: LLMConversationNotice | null;
     available: boolean;
@@ -158,6 +160,9 @@ export function LLMConversationEditor(props: LLMConversationEditorProps) {
                             Retry
                         </Button>
                     )}
+                </Show>
+                <Show when={props.statusActions}>
+                    {(actions) => <div class={styles.statusActions}>{actions()}</div>}
                 </Show>
             </div>
             <div class={styles.transcript}>
