@@ -65,20 +65,40 @@ export function createInferenceClient(apiKey: string): InferenceClient {
     });
 }
 
+/** Inputs for running one inference attempt. */
+export type ChatTurnArgs = {
+    /** Client used to send inference requests. */
+    client: InferenceClient;
+    /** Complete, ephemeral conversation history sent to the model. */
+    transcript: readonly ChatTranscriptMessage[];
+    /** Local bindings available to contextExec tool calls. */
+    scope: ContextExecScope;
+    /** Receives streaming content, reasoning, and tool execution events. */
+    onEvent?: (event: ChatTurnEvent) => void;
+    /** Model identifier; defaults to DEFAULT_LLM_MODEL. */
+    model?: string;
+    /** Additional system prompt appended after the transcript. */
+    systemPromptSuffix?: string;
+    /** Runs after each successful tool execution; errors become tool feedback. */
+    onSuccessHook?: () => Promise<void>;
+    /** Cancels the inference attempt and suppresses subsequent events. */
+    abortSignal?: AbortSignal;
+};
+
 /**
  * Run one inference attempt against a complete, ephemeral transcript.
  * The provider request budget includes any continuations after tool calls.
  */
-export async function runChatTurn(
-    client: InferenceClient,
-    transcript: readonly ChatTranscriptMessage[],
-    scope: ContextExecScope,
-    onEvent?: (event: ChatTurnEvent) => void,
+export async function runChatTurn({
+    client,
+    transcript,
+    scope,
+    onEvent,
     model = DEFAULT_LLM_MODEL,
-    systemPromptSuffix?: string,
-    onSuccessHook?: () => Promise<void>,
-    abortSignal?: AbortSignal,
-): Promise<ChatTurnResult> {
+    systemPromptSuffix,
+    onSuccessHook,
+    abortSignal,
+}: ChatTurnArgs): Promise<ChatTurnResult> {
     abortSignal?.throwIfAborted();
     const emitEvent = onEvent
         ? (event: ChatTurnEvent) => {

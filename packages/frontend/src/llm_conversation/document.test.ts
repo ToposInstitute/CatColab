@@ -108,14 +108,12 @@ describe("LLM conversation turns", { timeout: 30_000 }, () => {
     test("interruption discards staged changes and leaves the user message retryable", async () => {
         const fixture = await makeFixture();
         const controller = new AbortController();
-        inference.runChatTurn.mockImplementation(
-            async (_client, _transcript, scope, _onEvent, _model, _suffix, _hook, abortSignal) => {
-                assert.strictEqual(abortSignal, controller.signal);
-                schemaBinding(scope).update({ title: "Discarded" });
-                controller.abort();
-                return response("Must not persist.");
-            },
-        );
+        inference.runChatTurn.mockImplementation(async ({ scope, abortSignal }) => {
+            assert.strictEqual(abortSignal, controller.signal);
+            schemaBinding(scope).update({ title: "Discarded" });
+            controller.abort();
+            return response("Must not persist.");
+        });
 
         const result = await runLLMConversationTurn(
             fixture.conversation,
@@ -144,7 +142,7 @@ describe("LLM conversation turns", { timeout: 30_000 }, () => {
 
     test("runs against an isolated document scope and commits valid changes", async () => {
         const fixture = await makeFixture();
-        inference.runChatTurn.mockImplementation(async (_client, _transcript, scope) => {
+        inference.runChatTurn.mockImplementation(async ({ scope }) => {
             schemaBinding(scope).update({ title: "Updated schema" });
             assert.strictEqual(fixture.schema.title, "Company schema");
             return response("Done.");
@@ -154,8 +152,8 @@ describe("LLM conversation turns", { timeout: 30_000 }, () => {
         assert.strictEqual(fixture.schema.title, "Updated schema");
 
         const call = inference.runChatTurn.mock.calls[0]!;
-        assert.strictEqual(call[4], "test-model");
-        assert.match(call[5] ?? "", /attached document "Company schema"/);
+        assert.strictEqual(call[0].model, "test-model");
+        assert.match(call[0].systemPromptSuffix ?? "", /attached document "Company schema"/);
         assert.deepStrictEqual(
             fixture.conversation.interactions().map((interaction) => interaction.tag),
             ["user-message", "llm-message"],
@@ -168,26 +166,24 @@ describe("LLM conversation turns", { timeout: 30_000 }, () => {
             await fixture.binder.createInstance(fixture.schema, { title: "Company data" }),
         );
 
-        inference.runChatTurn.mockImplementation(
-            async (_client, _transcript, scope, _onContent, _model, systemPromptSuffix) => {
-                const scopedSchema = schemaBinding(scope);
-                const scopedInstance = scope.document_Company_data as
-                    | Instance<typeof SimpleSchema, unknown, Document>
-                    | undefined;
-                assert(scopedInstance);
-                assert.match(systemPromptSuffix ?? "", /Company schema/);
-                assert.match(
-                    systemPromptSuffix ?? "",
-                    /`document_Company_data` is the document .*`instance-of` link points to `document_Company_schema`\./s,
-                );
+        inference.runChatTurn.mockImplementation(async ({ scope, systemPromptSuffix }) => {
+            const scopedSchema = schemaBinding(scope);
+            const scopedInstance = scope.document_Company_data as
+                | Instance<typeof SimpleSchema, unknown, Document>
+                | undefined;
+            assert(scopedInstance);
+            assert.match(systemPromptSuffix ?? "", /Company schema/);
+            assert.match(
+                systemPromptSuffix ?? "",
+                /`document_Company_data` is the document .*`instance-of` link points to `document_Company_schema`\./s,
+            );
 
-                // Both documents are staged in the same transaction: edits to
-                // either commit together with the turn.
-                scopedSchema.update({ title: "Updated schema" });
-                scopedInstance.update({ title: "Updated data" });
-                return response("Done.");
-            },
-        );
+            // Both documents are staged in the same transaction: edits to
+            // either commit together with the turn.
+            scopedSchema.update({ title: "Updated schema" });
+            scopedInstance.update({ title: "Updated data" });
+            return response("Done.");
+        });
 
         assert.deepStrictEqual(await runTurn(fixture), { tag: "Completed", content: "Done." });
         assert.strictEqual(fixture.schema.title, "Updated schema");
@@ -200,22 +196,20 @@ describe("LLM conversation turns", { timeout: 30_000 }, () => {
             title: "Conversation 2",
         });
 
-        inference.runChatTurn.mockImplementation(
-            async (_client, _transcript, scope, _onContent, _model, systemPromptSuffix) => {
-                // The running conversation itself is not staged: only its
-                // sibling is in the draft scope.
-                const stagedConversation = scope.document_Conversation_2 as
-                    | typeof fixture.conversation
-                    | undefined;
-                assert(stagedConversation);
-                assert.match(
-                    systemPromptSuffix ?? "",
-                    /`document_Conversation_2` is the document .*`llmconversation-of` link points to `document_Company_schema`\./s,
-                );
-                stagedConversation.update({ title: "Renamed" });
-                return response("Done.");
-            },
-        );
+        inference.runChatTurn.mockImplementation(async ({ scope, systemPromptSuffix }) => {
+            // The running conversation itself is not staged: only its
+            // sibling is in the draft scope.
+            const stagedConversation = scope.document_Conversation_2 as
+                | typeof fixture.conversation
+                | undefined;
+            assert(stagedConversation);
+            assert.match(
+                systemPromptSuffix ?? "",
+                /`document_Conversation_2` is the document .*`llmconversation-of` link points to `document_Company_schema`\./s,
+            );
+            stagedConversation.update({ title: "Renamed" });
+            return response("Done.");
+        });
 
         assert.deepStrictEqual(await runTurn(fixture), { tag: "Completed", content: "Done." });
         assert.strictEqual(sibling.title, "Renamed");
@@ -231,16 +225,14 @@ describe("LLM conversation turns", { timeout: 30_000 }, () => {
             title: "Outer",
         });
 
-        inference.runChatTurn.mockImplementation(
-            async (_client, _transcript, scope, _onContent, _model, systemPromptSuffix) => {
-                assert.match(
-                    systemPromptSuffix ?? "",
-                    /`document_Inner` is the attached document .*`llmconversation-of` link points to `document_Company_schema`\./s,
-                );
-                schemaBinding(scope).update({ title: "Updated schema" });
-                return response("Done.");
-            },
-        );
+        inference.runChatTurn.mockImplementation(async ({ scope, systemPromptSuffix }) => {
+            assert.match(
+                systemPromptSuffix ?? "",
+                /`document_Inner` is the attached document .*`llmconversation-of` link points to `document_Company_schema`\./s,
+            );
+            schemaBinding(scope).update({ title: "Updated schema" });
+            return response("Done.");
+        });
 
         const result = await runLLMConversationTurn(
             outer,
@@ -265,7 +257,7 @@ describe("LLM conversation turns", { timeout: 30_000 }, () => {
             }
         });
 
-        inference.runChatTurn.mockImplementation(async (_client, _transcript, scope) => {
+        inference.runChatTurn.mockImplementation(async ({ scope }) => {
             assert(!("document_Company_diagram" in scope));
             return response("Done.");
         });
@@ -275,38 +267,28 @@ describe("LLM conversation turns", { timeout: 30_000 }, () => {
 
     test("blocks notebook commits until schema issues are repaired", async () => {
         const fixture = await makeFixture();
-        inference.runChatTurn.mockImplementation(
-            async (
-                _client,
-                _transcript,
-                scope,
-                _onContent,
-                _model,
-                _systemPromptSuffix,
-                onSuccessHook,
-            ) => {
-                const schema = schemaBinding(scope);
-                const invalid = schema.add(Mapping, {
-                    label: "invalid",
-                    from: null,
-                    to: null,
-                });
-                assert(onSuccessHook);
+        inference.runChatTurn.mockImplementation(async ({ scope, onSuccessHook }) => {
+            const schema = schemaBinding(scope);
+            const invalid = schema.add(Mapping, {
+                label: "invalid",
+                from: null,
+                to: null,
+            });
+            assert(onSuccessHook);
 
-                let validationError: unknown;
-                try {
-                    await onSuccessHook();
-                } catch (error) {
-                    validationError = error;
-                }
-                assert(validationError instanceof Error);
-                assert.match(validationError.message, /document_Company_schema: .*"message"/s);
-
-                schema.delete(invalid);
+            let validationError: unknown;
+            try {
                 await onSuccessHook();
-                return response("Repaired.");
-            },
-        );
+            } catch (error) {
+                validationError = error;
+            }
+            assert(validationError instanceof Error);
+            assert.match(validationError.message, /document_Company_schema: .*"message"/s);
+
+            schema.delete(invalid);
+            await onSuccessHook();
+            return response("Repaired.");
+        });
 
         assert.deepStrictEqual(await runTurn(fixture), {
             tag: "Completed",
@@ -318,15 +300,7 @@ describe("LLM conversation turns", { timeout: 30_000 }, () => {
         const fixture = await makeFixture(true);
         const { table, row } = await makeInvalidInstance(fixture);
         inference.runChatTurn.mockImplementation(
-            async (
-                _client,
-                _transcript,
-                scope,
-                _onContent,
-                _model,
-                systemPromptSuffix,
-                onSuccessHook,
-            ) => {
+            async ({ scope, systemPromptSuffix, onSuccessHook }) => {
                 const attachedDocument = scope.document_Company_data as
                     | Instance<typeof SimpleSchema, unknown, Document>
                     | undefined;
@@ -404,7 +378,7 @@ describe("LLM conversation turns", { timeout: 30_000 }, () => {
 
     test("commits valid progress when the provider request limit is reached", async () => {
         const fixture = await makeFixture();
-        inference.runChatTurn.mockImplementation(async (_client, _transcript, scope) => {
+        inference.runChatTurn.mockImplementation(async ({ scope }) => {
             schemaBinding(scope).update({ title: "Unfinished update" });
             return {
                 content: "",
@@ -524,7 +498,7 @@ describe("LLM conversation turns", { timeout: 30_000 }, () => {
             tag: "Completed",
             content: "Follow-up done.",
         });
-        const transcript = inference.runChatTurn.mock.calls[1]![1];
+        const transcript = inference.runChatTurn.mock.calls[1]![0].transcript;
         assert.deepStrictEqual(
             transcript.map((message) => message.role),
             ["user", "assistant", "assistant", "tool", "assistant", "tool", "assistant", "user"],
@@ -566,7 +540,7 @@ describe("LLM conversation turns", { timeout: 30_000 }, () => {
             ["user-message", "llm-message"],
         );
         assert.deepStrictEqual(
-            inference.runChatTurn.mock.calls[1]?.[1].map((message) => message.role),
+            inference.runChatTurn.mock.calls[1]?.[0].transcript.map((message) => message.role),
             ["user"],
         );
     });
