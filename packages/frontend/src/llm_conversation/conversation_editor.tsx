@@ -55,6 +55,7 @@ export function LLMConversationEditor(props: { conversation: ApiLLMConversation 
             }}
             onSubmit={submit}
             onRetry={() => void controller().retryTurn()}
+            onInterrupt={controller().state.isRunning ? () => controller().interrupt() : undefined}
             onResolveFeedback={(id, resolution) =>
                 props.conversation.resolveFeedbackRequest(id, resolution)
             }

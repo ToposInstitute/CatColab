@@ -77,7 +77,16 @@ export async function runChatTurn(
     model = DEFAULT_LLM_MODEL,
     systemPromptSuffix?: string,
     onSuccessHook?: () => Promise<void>,
+    abortSignal?: AbortSignal,
 ): Promise<ChatTurnResult> {
+    abortSignal?.throwIfAborted();
+    const emitEvent = onEvent
+        ? (event: ChatTurnEvent) => {
+              if (!abortSignal?.aborted) {
+                  onEvent(event);
+              }
+          }
+        : undefined;
     const contextScope: ContextExecScope = { files: EMPTY_FILES, ...scope };
     // The prompt ordering is as follows:
     // [fixed system prompt] u1 a1 ... uN [dynamic system prompt] aN
@@ -127,17 +136,19 @@ export async function runChatTurn(
                             additionalProperties: false,
                         },
                         function: async (rawArgs: string): Promise<EvalResult> => {
+                            abortSignal?.throwIfAborted();
                             const args = parseContextExecArguments(rawArgs);
                             if (!args) {
                                 return { tag: "Err", error: "Invalid contextExec arguments" };
                             }
-                            onEvent?.({ tag: "RunTool", code: args.code });
+                            emitEvent?.({ tag: "RunTool", code: args.code });
                             const result = await contextExec(
                                 args.code,
                                 contextScope,
                                 onSuccessHook,
                             );
-                            onEvent?.({ tag: "ToolResult", code: args.code, result });
+                            abortSignal?.throwIfAborted();
+                            emitEvent?.({ tag: "ToolResult", code: args.code, result });
                             reasoningSnapshot = "";
                             return result;
                         },
@@ -145,11 +156,11 @@ export async function runChatTurn(
                 },
             ],
         },
-        { maxChatCompletions: MAX_PROVIDER_REQUESTS_PER_ATTEMPT },
+        { maxChatCompletions: MAX_PROVIDER_REQUESTS_PER_ATTEMPT, signal: abortSignal },
     );
 
-    if (onEvent) {
-        runner.on("content", (_delta, snapshot) => onEvent({ tag: "Streaming", snapshot }));
+    if (emitEvent) {
+        runner.on("content", (_delta, snapshot) => emitEvent({ tag: "Streaming", snapshot }));
         runner.on("chunk", (chunk) => {
             // Reasoning is an OpenRouter extension absent from the SDK types.
             const delta = chunk.choices[0]?.delta as
@@ -161,12 +172,29 @@ export async function runChatTurn(
             const reasoning = delta?.reasoning;
             if (typeof reasoning === "string" && reasoning.length > 0) {
                 reasoningSnapshot += reasoning;
-                onEvent({ tag: "Reasoning", snapshot: reasoningSnapshot });
+                emitEvent({ tag: "Reasoning", snapshot: reasoningSnapshot });
             }
         });
     }
 
-    const content = (await runner.finalContent()) ?? "";
+    let rejectOnAbort: (() => void) | undefined;
+    const interrupted = new Promise<never>((_resolve, reject) => {
+        rejectOnAbort = () => reject(abortSignal?.reason);
+        abortSignal?.addEventListener("abort", rejectOnAbort, { once: true });
+        if (abortSignal?.aborted) {
+            rejectOnAbort();
+        }
+    });
+    let content: string;
+    try {
+        content = (await Promise.race([runner.finalContent(), interrupted])) ?? "";
+    } finally {
+        if (rejectOnAbort) {
+            abortSignal?.removeEventListener("abort", rejectOnAbort);
+        }
+    }
+    // Cancellation may arrive just after finalContent wins the race.
+    abortSignal?.throwIfAborted();
     const generatedMessageDelta: GeneratedChatMessage[] = [];
     for (const message of runner.messages.slice(messages.length)) {
         if (message.role !== "assistant" && message.role !== "tool") {
