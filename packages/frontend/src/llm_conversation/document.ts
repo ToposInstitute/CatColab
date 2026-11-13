@@ -161,14 +161,14 @@ async function generateLLMConversationResponse<
         abortSignal?.throwIfAborted();
         const context = LLMConversationAdapter.prepareLLMConversationInference(conversation.dump());
         const client = createInferenceClient(inferenceKey.key);
-        const result = await runChatTurn(
+        const result = await runChatTurn({
             client,
-            context.transcript,
-            { ...executionScope.bindings, files: context.files },
+            transcript: context.transcript,
+            scope: { ...executionScope.bindings, files: context.files },
             onEvent,
-            conversation.data().llmModel,
-            executionScope.systemPromptSuffix,
-            async () => {
+            model: conversation.data().llmModel,
+            systemPromptSuffix: executionScope.systemPromptSuffix,
+            onSuccessHook: async () => {
                 abortSignal?.throwIfAborted();
                 const problems = await executionScope.validate();
                 if (problems.length > 0) {
@@ -176,7 +176,7 @@ async function generateLLMConversationResponse<
                 }
             },
             abortSignal,
-        );
+        });
         abortSignal?.throwIfAborted();
         const problems = await executionScope.validate();
         abortSignal?.throwIfAborted();

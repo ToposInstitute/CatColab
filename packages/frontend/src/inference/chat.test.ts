@@ -60,7 +60,7 @@ describe("chat turn over OpenRouter", () => {
             const transcript: ChatTranscript = [
                 { role: "user", content: "Reply with exactly the word: pong" },
             ];
-            const result = await runChatTurn(client, transcript, {}, undefined, testModel);
+            const result = await runChatTurn({ client, transcript, scope: {}, model: testModel });
 
             assert.ok(result.content.length > 0, "final content should be a non-empty string");
             assert.deepStrictEqual(result.termination, { tag: "FinalResponse" });
@@ -84,7 +84,7 @@ describe("chat turn over OpenRouter", () => {
                     content: "Use contextExec to evaluate 6 * 7, then tell me the result.",
                 },
             ];
-            const result = await runChatTurn(client, transcript, {}, undefined, testModel);
+            const result = await runChatTurn({ client, transcript, scope: {}, model: testModel });
 
             assert.deepStrictEqual(result.termination, { tag: "FinalResponse" });
             const assistant = result.generatedMessageDelta.find(
