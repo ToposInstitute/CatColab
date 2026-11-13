@@ -39,7 +39,13 @@ with lib;
       wheelNeedsPassword = false;
     };
 
-    services.openssh.enable = true;
+    services.openssh = {
+      enable = true;
+      settings = {
+        PasswordAuthentication = false;
+        KbdInteractiveAuthentication = false;
+      };
+    };
     nix = {
       settings.trusted-users = [
         "catcolab"
