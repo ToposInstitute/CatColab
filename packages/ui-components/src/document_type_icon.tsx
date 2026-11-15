@@ -6,9 +6,8 @@ import Network from "lucide-solid/icons/network";
 import Table2 from "lucide-solid/icons/table-2";
 import { Match, Switch } from "solid-js";
 
+import type { DocumentType } from "catcolab-document-types";
 import { ModelFileIcon } from "./model_file_icon";
-
-export type DocumentType = "model" | "diagram" | "analysis" | "instance" | "llmconversation";
 
 export function DocumentTypeIcon(props: {
     documentType: DocumentType;
