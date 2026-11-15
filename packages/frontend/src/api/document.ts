@@ -5,6 +5,7 @@ import { type Accessor, createEffect, createSignal } from "solid-js";
 import invariant from "tiny-invariant";
 
 import type { Permissions } from "catcolab-api";
+import type { DocumentType } from "catcolab-document-types";
 import { type Document, migrateDocument } from "catlog-wasm";
 import { assertExhaustive } from "../util/assert_exhaustive";
 
@@ -41,9 +42,6 @@ export type LiveDocWithRef<Doc extends Document = Document> = {
     /** Associated document ref in the backend. */
     docRef: DocRef;
 };
-
-/** The type discriminator for documents */
-export type DocumentType = Document["type"];
 
 /** Human-readable name for a document type. */
 export function documentTypeLabel(documentType: DocumentType): string {

@@ -46,7 +46,11 @@ pub struct AnalysisDocumentContent {
 }
 
 /// The type/kind of a document, without any associated content.
-#[derive(PartialEq, Eq, Debug, Clone, Copy, Serialize, Deserialize, Tsify)]
+///
+/// `Tsify` is deliberately omitted: this enum was re-implemented in v2, which
+/// owns the generated TypeScript definition, and deriving `Tsify` here would
+/// emit a duplicate, conflicting `DocumentType` declaration.
+#[derive(PartialEq, Eq, Debug, Clone, Copy, Serialize, Deserialize)]
 #[cfg_attr(
     feature = "backend",
     derive(autosurgeon::Reconcile, autosurgeon::Hydrate, ts_rs::TS)
@@ -56,7 +60,6 @@ pub struct AnalysisDocumentContent {
     ts(export_to = "user_state.ts", rename_all = "lowercase")
 )]
 #[serde(rename_all = "lowercase")]
-#[tsify(into_wasm_abi, from_wasm_abi)]
 pub enum DocumentType {
     #[cfg_attr(feature = "backend", autosurgeon(rename = "model"))]
     Model,
