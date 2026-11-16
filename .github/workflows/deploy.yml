@@ -17,11 +17,12 @@ permissions:
 
 jobs:
   create_deployment:
-    name: Create GitHub deployment
+    name: Create Netlify GitHub deployment
     runs-on: ubuntu-latest
     if: >
-      github.event_name == 'pull_request' &&
-      github.event.pull_request.head.repo.full_name == 'ToposInstitute/CatColab'
+      (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/production')) ||
+      (github.event_name == 'pull_request' &&
+       github.event.pull_request.head.repo.full_name == 'ToposInstitute/CatColab')
     outputs:
       deployment_id: ${{ steps.create_deployment.outputs.deployment_id }}
     steps:
@@ -30,10 +31,11 @@ jobs:
         uses: chrnorm/deployment-action@v2
         with:
           token: ${{ github.token }}
-          environment: netlify-preview
-          ref: ${{ github.head_ref }}
-          sha: ${{ github.event.pull_request.head.sha }}
-          transient-environment: true
+          environment: ${{ github.ref == 'refs/heads/production' && 'netlify-production' || github.ref == 'refs/heads/main' && 'netlify-next' || 'netlify-preview' }}
+          ref: ${{ github.head_ref || github.ref_name }}
+          sha: ${{ github.event.pull_request.head.sha || github.sha }}
+          transient-environment: ${{ github.event_name == 'pull_request' }}
+          production-environment: ${{ github.ref == 'refs/heads/production' }}
           auto-inactive: true
           log-url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
@@ -76,7 +78,7 @@ jobs:
         uses: actions/download-artifact@v8
 
       - name: Consolidate and deploy to Staging
-        if: github.event_name == 'push' || github.event_name == 'pull_request'
+        if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'pull_request'
         id: netlify_deploy
         run: |
           mv app site/
@@ -103,7 +105,7 @@ jobs:
           npx netlify deploy --dir ../site --site ${{ secrets.NETLIFY_SITE_ID }} --auth ${{ secrets.NETLIFY_API_TOKEN }} $branch_flag --json > ../deploy_output.json
 
       - name: Consolidate and deploy to Production
-        if: github.event_name == 'release'
+        if: github.event_name == 'push' && github.ref == 'refs/heads/production'
         run: |
           mv app site/
           mv gaios site/gaios
@@ -116,19 +118,19 @@ jobs:
 
       - name: Generate URL preview
         id: url_preview
-        if: env.BRANCH_NAME != 'main' && (github.event_name == 'push' || github.event_name == 'pull_request')
+        if: env.BRANCH_NAME != 'main' && github.event_name == 'pull_request'
         run: |
           NETLIFY_PREVIEW_URL=$(jq -r '.deploy_url' deploy_output.json)
           echo "NETLIFY_PREVIEW_URL=$NETLIFY_PREVIEW_URL" >> "$GITHUB_OUTPUT"
 
   report_deployment_status:
-    name: Report deployment status
+    name: Report Netlify deployment status
     runs-on: ubuntu-latest
     needs: [create_deployment, deploy]
-    if: always() && github.event_name == 'pull_request' && needs.create_deployment.result == 'success'
+    if: always() && needs.create_deployment.result == 'success'
     steps:
       - name: Delete old deployments
-        if: needs.deploy.result == 'success'
+        if: github.event_name == 'pull_request' && needs.deploy.result == 'success'
         uses: actions/github-script@v9
         with:
           script: |
@@ -173,9 +175,9 @@ jobs:
         continue-on-error: true
         with:
           token: ${{ github.token }}
-          environment-url: ${{ needs.deploy.outputs.deploy_url }}
+          environment-url: ${{ github.ref == 'refs/heads/production' && 'https://catcolab.org' || github.ref == 'refs/heads/main' && 'https://next.catcolab.org' || needs.deploy.outputs.deploy_url }}
           log-url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          description: 'Netlify preview deployment'
+          description: ${{ github.ref == 'refs/heads/production' && 'Netlify production deployment' || github.ref == 'refs/heads/main' && 'Netlify staging deployment' || 'Netlify preview deployment' }}
           state: 'success'
           deployment-id: ${{ needs.create_deployment.outputs.deployment_id }}
 
@@ -196,7 +198,7 @@ jobs:
     runs-on: ubuntu-latest
     if: >
       github.event_name == 'push' &&
-      github.ref == 'refs/heads/main'
+      (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/production')
     outputs:
       deployment_id: ${{ steps.create_deployment.outputs.deployment_id }}
     steps:
@@ -205,7 +207,7 @@ jobs:
         uses: chrnorm/deployment-action@v2
         with:
           token: ${{ github.token }}
-          environment: backend-next
+          environment: ${{ github.ref == 'refs/heads/production' && 'backend-production' || 'backend-next' }}
           ref: ${{ github.ref_name }}
           sha: ${{ github.sha }}
           auto-inactive: true
@@ -224,6 +226,9 @@ jobs:
     name: Deploy backend to AWS
     runs-on: ubuntu-latest
     needs: [create_backend_deployment]
+    env:
+      DEPLOY_TARGET: ${{ github.ref == 'refs/heads/production' && 'catcolab' || 'catcolab-next' }}
+      DEPLOY_HOST: ${{ github.ref == 'refs/heads/production' && 'backend.catcolab.org' || 'backend-next.catcolab.org' }}
     steps:
     - name: Checkout
       uses: actions/checkout@v7
@@ -241,21 +246,27 @@ jobs:
         name: topos-institute
         authToken: '${{ secrets.CACHIX_TOPOS_AUTH_TOKEN }}'
 
-    - name: Set the SSH key for deployment to catcolab-next
+    - name: Set the SSH key for deployment
+      env:
+        DEPLOY_KEY: ${{ secrets[github.ref == 'refs/heads/production' && 'CATCOLAB_PROD_DEPLOYUSER_KEY' || 'CATCOLAB_NEXT_DEPLOYUSER_KEY'] }}
       run: |
+        if [ -z "$DEPLOY_KEY" ]; then
+          echo "ERROR: Deployment SSH key is not configured for $DEPLOY_TARGET"
+          exit 1
+        fi
         mkdir -p ~/.ssh
-        echo "${{ secrets.CATCOLAB_NEXT_DEPLOYUSER_KEY }}" > ~/.ssh/id_ed25519
+        printf '%s\n' "$DEPLOY_KEY" > ~/.ssh/id_ed25519
         chmod 600 ~/.ssh/id_ed25519
-        ssh-keyscan backend-next.catcolab.org >> ~/.ssh/known_hosts
+        ssh-keyscan "$DEPLOY_HOST" >> ~/.ssh/known_hosts
 
-    - name: Deploy to catcolab-next
+    - name: Deploy backend
       run: |
-       nix run .#deploy-rs -- --skip-checks .#catcolab-next
+        nix run .#deploy-rs -- --skip-checks ".#$DEPLOY_TARGET"
 
     - name: Verify deployment
       run: |
-        EXPECTED=$(nix eval --raw .#nixosConfigurations.catcolab-next.config.system.build.toplevel)
-        ACTUAL=$(ssh catcolab@backend-next.catcolab.org "readlink -f /run/current-system")
+        EXPECTED=$(nix eval --raw ".#nixosConfigurations.$DEPLOY_TARGET.config.system.build.toplevel")
+        ACTUAL=$(ssh "catcolab@$DEPLOY_HOST" "readlink -f /run/current-system")
 
         if [[ "$ACTUAL" != "$EXPECTED" ]]; then
           echo "ERROR: Deployment verification failed, the server is not running the expected nix profile"
@@ -271,7 +282,7 @@ jobs:
     # make recovery slightly less aweful in the event nix commands need to be run on the remote.
     - name: Rsync the repo to remote host
       run: |
-         rsync -az --delete ./ catcolab@backend-next.catcolab.org:~/catcolab
+         rsync -az --delete ./ "catcolab@$DEPLOY_HOST:~/catcolab"
 
   report_backend_deployment_status:
     name: Report backend deployment status
@@ -284,7 +295,7 @@ jobs:
         uses: chrnorm/deployment-status@v2
         with:
           token: ${{ github.token }}
-          environment-url: https://backend-next.catcolab.org
+          environment-url: ${{ github.ref == 'refs/heads/production' && 'https://backend.catcolab.org' || 'https://backend-next.catcolab.org' }}
           log-url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           description: 'Backend deployed to AWS'
           state: 'success'

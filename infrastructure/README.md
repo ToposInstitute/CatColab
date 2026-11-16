@@ -1,7 +1,7 @@
 # Infrastructure
 
-We have two deployments the application, one for production which runs the latest release (by tagged
-version), and one for staging which runs the main branch. The application is split into frontend and
+We have two deployments of the application: production runs the `production` branch, and staging runs
+the `main` branch. The application is split into frontend and
 backend, with the frontend hosted on netlify and the backend for each deployment hosted on separate AWS
 EC2 instances.
 
@@ -11,6 +11,9 @@ EC2 instances.
 - Staging deployment `catcolab-next`
     - frontend: `next.catcolab.org`
     - backend: `backend-next.catcolab.org`
+
+Production deploys use the `CATCOLAB_PRODUCTION_DEPLOYUSER_KEY` repository secret; staging uses
+`CATCOLAB_NEXT_DEPLOYUSER_KEY`. Publishing a release does not deploy.
 
 ## PR Previews
 

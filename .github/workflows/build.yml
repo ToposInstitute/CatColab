@@ -4,9 +4,8 @@ on:
   push:
     branches:
       - main
+      - production
   pull_request:
-  release:
-    types: [published]
 
 jobs:
   deploy:
@@ -105,16 +104,14 @@ jobs:
 
       - name: Cache frontend build
         id: cache-frontend-build
-        # Skip caching for production builds
-        if: github.event_name != 'release'
         uses: actions/cache@v6
         with:
           path: |
             packages/frontend/dist
-          key: frontend-build-${{ steps.cache-key.outputs.git-hash }}-${{ github.event_name == 'release' && 'production' || 'staging' }}
+          key: frontend-build-${{ steps.cache-key.outputs.git-hash }}-${{ github.ref == 'refs/heads/production' && 'production' || 'staging' }}
 
       - name: Install Nix
-        if: github.event_name == 'release' || steps.cache-frontend-build.outputs.cache-hit != 'true'
+        if: steps.cache-frontend-build.outputs.cache-hit != 'true'
         uses: cachix/install-nix-action@v25
         with:
           extra_nix_config: |
@@ -122,14 +119,14 @@ jobs:
             download-attempts = 5
 
       - name: Configure Cachix
-        if: github.event_name == 'release' || steps.cache-frontend-build.outputs.cache-hit != 'true'
+        if: steps.cache-frontend-build.outputs.cache-hit != 'true'
         uses: cachix/cachix-action@v17
         with:
           name: topos-institute
           authToken: '${{ secrets.CACHIX_TOPOS_AUTH_TOKEN }}'
 
       - name: Build for Staging
-        if: (github.event_name == 'push' || github.event_name == 'pull_request') && steps.cache-frontend-build.outputs.cache-hit != 'true'
+        if: github.ref != 'refs/heads/production' && steps.cache-frontend-build.outputs.cache-hit != 'true'
         run: |
           nix develop --command pnpm install
           nix develop --command pnpm --filter ./packages/frontend run build:deps
@@ -137,7 +134,7 @@ jobs:
           nix develop --command pnpm --filter ./packages/frontend run build:staging
 
       - name: Build for Production
-        if: github.event_name == 'release'
+        if: github.event_name == 'push' && github.ref == 'refs/heads/production' && steps.cache-frontend-build.outputs.cache-hit != 'true'
         run: |
           nix develop --command pnpm install
           nix develop --command pnpm --filter ./packages/frontend run build:deps
@@ -146,9 +143,7 @@ jobs:
 
       - name: Report cache status
         run: |
-          if [ "${{ github.event_name }}" = "release" ]; then
-            echo "🔨 Frontend production build completed (cache disabled)"
-          elif [ "${{ steps.cache-frontend-build.outputs.cache-hit }}" = "true" ]; then
+          if [ "${{ steps.cache-frontend-build.outputs.cache-hit }}" = "true" ]; then
             echo "✅ Frontend build restored from cache"
           else
             echo "🔨 Frontend build completed and cached"
