@@ -1,11 +1,8 @@
-import type { LiteralValue, TableHeader } from "catcolab-documents";
+import type { LiteralValue, Result, TableHeader } from "catcolab-documents";
 
 export function isEditableCell(header: TableHeader): boolean {
     return header.type.tag !== "Unknown";
 }
-
-/** The result of parsing cell text: a literal value or a parse failure. */
-type ParsedValue = { ok: true; value: LiteralValue } | { ok: false };
 
 /** Parse text committed by a cell editor into a literal field value.
 
@@ -13,29 +10,29 @@ An empty field parses to `null`, clearing the cell. Row references are never
 parsed here: they are committed through completions instead, so the read-only
 draft text of a row-reference editor is always invalid.
  */
-export function parseValue(header: TableHeader, text: string): ParsedValue {
+export function parseValue(header: TableHeader, text: string): Result<LiteralValue> {
     const trimmed = text.trim();
     if (trimmed === "") {
-        return { ok: true, value: null };
+        return { tag: "Ok", content: null };
     }
     switch (header.type.tag) {
         case "String":
-            // Interior spaces are significant, so the text is kept as is.
-            return { ok: true, value: text };
-        case "Int": {
-            const parsed = Number(trimmed);
-            return Number.isInteger(parsed) ? { ok: true, value: parsed } : { ok: false };
-        }
-        case "Float": {
-            const parsed = Number(trimmed);
-            return Number.isFinite(parsed) ? { ok: true, value: parsed } : { ok: false };
-        }
+            return { tag: "Ok", content: text };
         case "Bool":
             return trimmed === "true" || trimmed === "false"
-                ? { ok: true, value: trimmed === "true" }
-                : { ok: false };
+                ? { tag: "Ok", content: trimmed === "true" }
+                : { tag: "Err", content: [{ message: "Expected a Bool literal" }] };
+        case "Int":
+        case "Float": {
+            const value = Number(trimmed);
+            const valid =
+                header.type.tag === "Int" ? Number.isInteger(value) : Number.isFinite(value);
+            return valid
+                ? { tag: "Ok", content: value }
+                : { tag: "Err", content: [{ message: `Invalid ${header.type.tag} literal` }] };
+        }
         default:
-            return { ok: false };
+            return { tag: "Err", content: [{ message: "Expected a literal column" }] };
     }
 }
 

@@ -10,6 +10,7 @@ import { assertInstanceCapableShape, type Shape } from "../shape";
 import { parseInstanceData, type InstanceData } from "./data";
 import type { InstanceValidation } from "./document";
 import { validatePathEquations } from "./equation-validation";
+import { interpretLiteralValue } from "./literal-value";
 import {
     instanceTablesFromModel,
     indexInstanceTables,
@@ -20,7 +21,7 @@ import {
 
 export { atomicTypeOfAttributeType } from "./atomic-types";
 import type { FieldPath, TableFieldIssue, TableIssue, UnsupportedEndpointIssue } from "./errors";
-import type { InstanceTable, LiteralType, TableHeader } from "./tables";
+import type { InstanceTable, TableHeader } from "./tables";
 
 /** Current-document validation and change callbacks for an instance. */
 export interface InstanceValidator<S extends Shape = Shape> {
@@ -194,7 +195,7 @@ export function validateInstanceTables(
                             issueType: "MistypedRowRef",
                         });
                     }
-                } else if (!storedValueMatchesLiteralType(value, header.type.tag)) {
+                } else if (interpretLiteralValue(header.type.tag, value).tag === "Err") {
                     issues.push(mistypedLiteralIssue(table, header, path));
                 }
             }
@@ -220,22 +221,6 @@ function fieldPath(tableId: string, rowId: string, fieldId: string): FieldPath {
 
 function isStoredRowRef(value: DocumentTypes.FieldValue): value is { RowRef: string } {
     return value !== "Null" && "RowRef" in value;
-}
-
-function storedValueMatchesLiteralType(
-    value: Exclude<DocumentTypes.FieldValue, "Null">,
-    type: LiteralType,
-): boolean {
-    switch (type) {
-        case "Bool":
-            return "Bool" in value && typeof value.Bool === "boolean";
-        case "Int":
-            return "Int" in value && Number.isInteger(value.Int);
-        case "Float":
-            return "Float" in value && Number.isFinite(value.Float);
-        case "String":
-            return "String" in value && typeof value.String === "string";
-    }
 }
 
 function mistypedLiteralIssue(

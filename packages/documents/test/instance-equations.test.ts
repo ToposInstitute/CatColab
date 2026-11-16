@@ -149,6 +149,35 @@ describe("instance validation of path equations", { timeout: 30000 }, () => {
         expect(equationViolations((await instance.validate()).issues)).toEqual([]);
     });
 
+    test("equations compare interpreted literals and skip invalid ones", async () => {
+        const binder = createBinder();
+        const schema = await binder.createNotebook(SimpleSchema, { title: "Schema" });
+        const entity = schema.add(Entity, { label: "Entity" });
+        const type = schema.add(AttrType, { label: "Int" });
+        const first = schema.add(Attr, { label: "first", from: entity, to: type });
+        const second = schema.add(Attr, { label: "second", from: entity, to: type });
+        schema.add(PathEquation, { label: "agree", lhs: [first], rhs: [second] });
+        const instance = expectOk(await binder.createInstance(schema, { title: "Instance" }));
+        const table = (await instance.validate()).tables[0]!;
+        expectOk(await instance.addRow(table, { values: { first: "15.6", second: 15.6 } }));
+        expectOk(await instance.addRow(table, { values: { first: "16.6", second: 15.6 } }));
+        const stored = instance.dump();
+
+        schema.update(type, { label: "Float" });
+        const floats = await instance.validate();
+        expect(floats.issues.filter((issue) => issue.issueType === "MistypedLiteral")).toEqual([]);
+        expect(equationViolations(floats.issues)).toHaveLength(1);
+
+        schema.update(type, { label: "Int" });
+        const ints = await instance.validate();
+        expect(ints.issues.filter((issue) => issue.issueType === "MistypedLiteral")).toHaveLength(
+            4,
+        );
+        expect(equationViolations(ints.issues)).toEqual([]);
+        expect(instance.dump()).toEqual(stored);
+        instance.dispose();
+    });
+
     test("a row where an equation cannot be evaluated is not a counterexample", async () => {
         const binder = createBinder();
         const schema = await binder.createNotebook(SimpleSchema, { title: "Schema" });

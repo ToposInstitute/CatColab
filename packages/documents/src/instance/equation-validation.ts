@@ -7,6 +7,7 @@ import type { ElaboratedModel, EquationJudgmentSide } from "../model/elaborated-
 import { isSingleObjectEndpoint } from "../model/endpoint";
 import { PathEquation, type Shape } from "../shape";
 import type { EquationViolationIssue } from "./errors";
+import { isLiteralValue } from "./literal-value";
 import type { LiteralFieldValue, InstanceTable, TableRow } from "./tables";
 import { isLiteralField } from "./tables";
 
@@ -148,7 +149,12 @@ function evaluateSide<S extends Shape>(
                     current = { table: target, row };
                 } else {
                     // A literal header ends the path, as elaboration ensures.
-                    if (!isLast || !isLiteralField(field) || field.tag !== header.type.tag) {
+                    if (
+                        !isLast ||
+                        !isLiteralField(field) ||
+                        field.tag !== header.type.tag ||
+                        !isLiteralValue(field.tag, field.content.value)
+                    ) {
                         return undefined; // mistyped literal, reported elsewhere
                     }
                     return { kind: "literal", field };

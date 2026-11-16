@@ -13,6 +13,7 @@ import type { DeepReadonly } from "../util/deep-readonly";
 import { atomicTypeOfAttributeType } from "./atomic-types";
 import { getInstanceData, type RowData, type TableData } from "./data";
 import type { FieldPath } from "./errors";
+import { interpretLiteralValue } from "./literal-value";
 import type {
     FieldValue,
     InstancePath,
@@ -69,13 +70,18 @@ export function readInstancePath(
     if (fieldsSegment !== "fields" || fieldId === undefined || rest.length > 0) {
         return pathError("An instance path after a row must address a field");
     }
-    if (!table.headers.some((header) => header.id === fieldId)) {
+    const header = table.headers.find((header) => header.id === fieldId);
+    if (header === undefined) {
         return pathError(`Field \`${fieldId}\` does not exist in table \`${tableId}\``);
     }
     const stored = storedRow.fields[fieldId] ?? "Null";
     return {
         tag: "Ok",
-        content: fieldValueFromStored([tableId, "rows", rowId, "fields", fieldId], stored),
+        content: fieldValueFromStored(
+            [tableId, "rows", rowId, "fields", fieldId],
+            stored,
+            header.type,
+        ),
     };
 }
 
@@ -427,6 +433,7 @@ function makeRow(
             fieldValueFromStored(
                 [schemaTable.id, "rows", rowId, "fields", header.id],
                 storedRow.fields[header.id] ?? "Null",
+                header.type,
             ),
         ),
     };
@@ -587,7 +594,14 @@ function displayLabel(label: QualifiedLabel): string {
 function fieldValueFromStored(
     path: FieldPath,
     value: DeepReadonly<DocumentTypes.FieldValue>,
+    type: TableHeader["type"],
 ): FieldValue {
+    if (type.tag !== "Unknown" && type.tag !== "RowRef") {
+        const interpreted = interpretLiteralValue(type.tag, value);
+        if (interpreted.tag === "Ok") {
+            value = interpreted.content;
+        }
+    }
     if (value === "Null") {
         return { tag: "Null", content: { path } };
     }

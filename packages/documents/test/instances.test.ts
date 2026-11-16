@@ -521,7 +521,7 @@ describe("tabular instances", () => {
                     throw new Error("Alice row is missing from the stored instance");
                 }
                 row.fields[employerHeader.id] = { RowRef: bob.id };
-                row.fields[nameHeader.id] = { Int: 42 };
+                row.fields[nameHeader.id] = { RowRef: bob.id };
             });
 
             const revalidation = await instance.validate();

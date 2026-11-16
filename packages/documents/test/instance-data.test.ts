@@ -1,7 +1,12 @@
-import { Entity, SimpleSchema } from "catcolab-logics/simple-schema";
+import { Attr, AttrType, Entity, SimpleSchema } from "catcolab-logics/simple-schema";
 import { describe, expect, test } from "vitest";
 
-import { createBinder, createInMemoryStore, type Result } from "catcolab-documents";
+import {
+    createBinder,
+    createInMemoryStore,
+    type LiteralType,
+    type Result,
+} from "catcolab-documents";
 import { parseInstanceData, getInstanceData } from "../src/instance/data";
 import {
     indexInstanceTables,
@@ -54,6 +59,113 @@ describe("instance data", { timeout: 20000 }, () => {
         expect(validateInstanceTables(data, tables)).toMatchObject([
             { path: ["entity", "rows", "row", "fields", "x"], issueType: "MistypedLiteral" },
         ]);
+    });
+
+    test.each<{
+        value: string | number | boolean;
+        initialType: LiteralType;
+        nextType: LiteralType;
+        initiallyValid: boolean;
+        nextValue: string | number | boolean;
+    }>([
+        {
+            value: "15.6",
+            initialType: "Int",
+            nextType: "Float",
+            initiallyValid: false,
+            nextValue: 15.6,
+        },
+        {
+            value: 15.6,
+            initialType: "Int",
+            nextType: "Float",
+            initiallyValid: false,
+            nextValue: 15.6,
+        },
+        { value: 15, initialType: "Float", nextType: "Int", initiallyValid: true, nextValue: 15 },
+    ])(
+        "reinterprets $value on $initialType → $nextType → $initialType changes",
+        async ({ value, initialType, nextType, initiallyValid, nextValue }) => {
+            const store = createInMemoryStore();
+            const binder = createBinder(store);
+            const schema = await binder.createNotebook(SimpleSchema, { title: "Schema" });
+            const planet = schema.add(Entity, { label: "Planet" });
+            const initial = schema.add(AttrType, { label: initialType });
+            const next = schema.add(AttrType, { label: nextType });
+            const temperature = schema.add(Attr, {
+                label: "temperature",
+                from: planet,
+                to: initial,
+            });
+            const instance = expectOk(await binder.createInstance(schema, { title: "Instance" }));
+            const table = (await instance.validate()).tables[0]!;
+            const row = expectOk(await instance.addRow(table, { values: { temperature: value } }));
+            const stored = instance.dump();
+            const data = instance.data();
+            let latest: Awaited<ReturnType<typeof instance.validate>> | undefined;
+            const unsubscribe = instance.onValidate((validation) => {
+                latest = validation;
+            });
+            try {
+                await expect.poll(() => latest?.tables[0]?.headers[0]?.type.tag).toBe(initialType);
+                const original = latest!;
+                expect(original.issues.map((issue) => issue.issueType)).toEqual(
+                    initiallyValid ? [] : ["MistypedLiteral"],
+                );
+                schema.update(temperature, { to: next });
+                await expect.poll(() => latest?.tables[0]?.headers[0]?.type.tag).toBe(nextType);
+                expect(latest?.issues).toEqual([]);
+                const field = latest!.tables[0]!.rows[0]!.fields[0]!;
+                expect(field).toMatchObject({ tag: nextType, content: { value: nextValue } });
+                expect(expectOk(latest!.get(field.content.path))).toEqual(field);
+                expect(expectOk(latest!.get([table.id, "rows", row.id]))).toEqual(
+                    latest!.tables[0]!.rows[0],
+                );
+                expect(original.tables[0]?.headers[0]?.type.tag).toBe(initialType);
+                schema.update(temperature, { to: initial });
+                await expect.poll(() => latest?.tables[0]?.headers[0]?.type.tag).toBe(initialType);
+                expect(latest?.tables).toEqual(original.tables);
+                expect(latest?.issues).toEqual(original.issues);
+                expect(instance.dump()).toEqual(stored);
+                expect(instance.data()).toBe(data);
+            } finally {
+                unsubscribe();
+                instance.dispose();
+            }
+        },
+    );
+
+    test("reinterprets values when the attribute type is renamed", async () => {
+        const binder = createBinder();
+        const schema = await binder.createNotebook(SimpleSchema, { title: "Schema" });
+        const entity = schema.add(Entity, { label: "Entity" });
+        const type = schema.add(AttrType, { label: "String" });
+        schema.add(Attr, { label: "value", from: entity, to: type });
+        const instance = expectOk(await binder.createInstance(schema, { title: "Instance" }));
+        const table = (await instance.validate()).tables[0]!;
+        expectOk(await instance.addRow(table, { values: { value: "true" } }));
+        const stored = instance.dump();
+        let latest: Awaited<ReturnType<typeof instance.validate>> | undefined;
+        const unsubscribe = instance.onValidate((validation) => {
+            latest = validation;
+        });
+        try {
+            await expect.poll(() => latest?.tables[0]?.headers[0]?.type.tag).toBe("String");
+            schema.update(type, { label: "Bool" });
+            await expect.poll(() => latest?.tables[0]?.headers[0]?.type.tag).toBe("Bool");
+            expect(latest?.issues).toEqual([]);
+            expect(latest?.tables[0]?.rows[0]?.fields[0]).toMatchObject({
+                tag: "Bool",
+                content: { value: true },
+            });
+            schema.update(type, { label: "Int" });
+            await expect.poll(() => latest?.tables[0]?.headers[0]?.type.tag).toBe("Int");
+            expect(latest?.issues.map((issue) => issue.issueType)).toEqual(["MistypedLiteral"]);
+            expect(instance.dump()).toEqual(stored);
+        } finally {
+            unsubscribe();
+            instance.dispose();
+        }
     });
 
     test("reads repair order without persisting it and retain older snapshots", async () => {

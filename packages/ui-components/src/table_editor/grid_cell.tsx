@@ -124,7 +124,8 @@ export function GridCell(props: {
                     text={edit.editText()}
                     setText={edit.setEditText}
                     validate={(text) =>
-                        props.header.type.tag === "RowRef" || parseValue(props.header, text).ok
+                        props.header.type.tag === "RowRef" ||
+                        parseValue(props.header, text).tag === "Ok"
                     }
                     completions={completions()}
                     onCommit={edit.commitEdit}

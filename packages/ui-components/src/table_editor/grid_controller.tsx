@@ -313,7 +313,11 @@ function createGridController(props: GridControllerProps) {
             }
         } else if (cell) {
             const parsed = parseValue(cell.header, state.text);
-            props.onSetField(cell.row, cell.header, parsed.ok ? parsed.value : state.text);
+            props.onSetField(
+                cell.row,
+                cell.header,
+                parsed.tag === "Ok" ? parsed.content : state.text,
+            );
         }
         finishEdit(key, dir);
     };
