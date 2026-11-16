@@ -4,9 +4,8 @@ on:
   push:
     branches:
       - main
+      - production
   pull_request:
-  release:
-    types: [published]
 
 jobs:
   deploy:
@@ -16,7 +15,6 @@ jobs:
       - build_rust_docs
       - build_math-docs
       - build_rfc
-      - build_gaios
       - build_ui_components
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == 'ToposInstitute/CatColab'
     permissions:
@@ -101,20 +99,18 @@ jobs:
 
       - name: Cache frontend build
         id: cache-frontend-build
-        # Skip caching for production builds
-        if: github.event_name != 'release'
         uses: actions/cache@v4
         with:
           path: |
             packages/frontend/dist
-          key: frontend-build-${{ steps.cache-key.outputs.git-hash }}-${{ github.event_name == 'release' && 'production' || 'staging' }}
+          key: frontend-build-${{ steps.cache-key.outputs.git-hash }}-${{ github.ref == 'refs/heads/production' && 'production' || 'staging' }}
 
       - name: Setup pnpm
-        if: github.event_name == 'release' || steps.cache-frontend-build.outputs.cache-hit != 'true'
+        if: steps.cache-frontend-build.outputs.cache-hit != 'true'
         uses: pnpm/action-setup@v4
 
       - name: Setup NodeJS
-        if: github.event_name == 'release' || steps.cache-frontend-build.outputs.cache-hit != 'true'
+        if: steps.cache-frontend-build.outputs.cache-hit != 'true'
         uses: actions/setup-node@v4
         with:
           node-version: 24
@@ -128,7 +124,7 @@ jobs:
           rustflags: ""
 
       - name: Build for Staging
-        if: (github.event_name == 'push' || github.event_name == 'pull_request') && steps.cache-frontend-build.outputs.cache-hit != 'true'
+        if: github.ref != 'refs/heads/production' && steps.cache-frontend-build.outputs.cache-hit != 'true'
         run: |
           pnpm install
           pnpm --filter ./packages/frontend run build:deps
@@ -136,7 +132,7 @@ jobs:
           pnpm --filter ./packages/frontend run build:staging
 
       - name: Build for Production
-        if: github.event_name == 'release'
+        if: github.event_name == 'push' && github.ref == 'refs/heads/production' && steps.cache-frontend-build.outputs.cache-hit != 'true'
         run: |
           pnpm install
           pnpm --filter ./packages/frontend run build:deps
@@ -145,9 +141,7 @@ jobs:
 
       - name: Report cache status
         run: |
-          if [ "${{ github.event_name }}" = "release" ]; then
-            echo "🔨 Frontend production build completed (cache disabled)"
-          elif [ "${{ steps.cache-frontend-build.outputs.cache-hit }}" = "true" ]; then
+          if [ "${{ steps.cache-frontend-build.outputs.cache-hit }}" = "true" ]; then
             echo "✅ Frontend build restored from cache"
           else
             echo "🔨 Frontend build completed and cached"

@@ -4,6 +4,7 @@ let
     epatters = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAKXx6wMJSeYKCHNmbyR803RQ72uto9uYsHhAPPWNl2D evan@epatters.org";
     jmoggr = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMiaHaeJ5PQL0mka/lY1yGXIs/bDK85uY1O3mLySnwHd j@jmoggr.com";
     kasbah = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIM1K/FB6dCjo1/xfddi9VoHEGchFo/bcz6v7SC7wAuFQ kaspar@topos";
+    catcolab-production-deployuser = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGRyhcR38yYCSWzhKzkLZq9Qnlyttdm/t47tPJ8ilAU8 deployuser@catcolab.org";
     catcolab-next-deployuser = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIM7AYg1fZM0zMxb/BuZTSwK4O3ycUIHruApr1tKoO8nJ deployuser@next.catcolab.org";
     catcolab-private-actions-user = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIE5jfvVKRGR2QO3mP1ZKvowpO+BKjeCM8OAO+St+A+GX github.com/ToposInstitute/catcolab-private-actions";
   };
@@ -18,6 +19,7 @@ let
         jmoggr
         kasbah
         catcolab-private-actions-user
+        catcolab-production-deployuser
       ];
       allKeys = [ hostKey ] ++ userKeys;
     };
