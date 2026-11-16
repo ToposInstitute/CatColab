@@ -1,12 +1,20 @@
-import type { AnyDocumentId, ChangeFn, DocHandle, Repo } from "@automerge/automerge-repo";
+import type {
+    AnyDocumentId,
+    ChangeFn,
+    DocHandle,
+    DocHandleChangePayload,
+    Repo,
+} from "@automerge/automerge-repo";
 import jsonpatch from "fast-json-patch";
-import { makeDocumentProjection } from "solid-automerge";
+import { autoproduce } from "solid-automerge";
 import { type Accessor, createEffect, createSignal } from "solid-js";
+import { createStore, produce, reconcile } from "solid-js/store";
 import invariant from "tiny-invariant";
 
 import type { Permissions } from "catcolab-api";
 import { type Document, migrateDocument } from "catlog-wasm";
 import { assertExhaustive } from "../util/assert_exhaustive";
+import { normalizeImmutableStrings } from "../util/immutable_string";
 
 /** Live document, typically retrieved from the backend.
 
@@ -125,6 +133,44 @@ export function makeLiveDoc<Doc extends Document>(
     const doc = makeDocumentProjection(docHandle);
     const changeDoc = (f: ChangeFn<Doc>) => docHandle.change(f);
     return { doc, changeDoc, docHandle };
+}
+
+const projections = new WeakMap<DocHandle<unknown>, unknown>();
+
+/** Reactive store that follows an Automerge document handle.
+
+Like `makeDocumentProjection` from `solid-automerge`, except that the store
+holds a copy of the document. Solid writes into the objects that a store wraps,
+and Automerge shares unchanged objects between versions of a document, so a
+store wrapping the document itself would overwrite the handle's own view of it
+when Patchwork swaps in another branch's content.
+ */
+function makeDocumentProjection<Doc extends object>(handle: DocHandle<Doc>): Doc {
+    const cached = projections.get(handle);
+    if (cached) {
+        return cached as Doc;
+    }
+
+    const [doc, setDoc] = createStore<Doc>(normalizeImmutableStrings(handle.doc()));
+    handle.on("change", (payload) => {
+        if (isScopeReplaced(payload)) {
+            setDoc(reconcile(normalizeImmutableStrings(payload.doc)));
+        } else {
+            setDoc(produce(autoproduce(payload)));
+        }
+    });
+    projections.set(handle, doc);
+    return doc;
+}
+
+/** Whether a change replaced the whole document rather than patching it.
+
+Patchwork emits such a change, with no patches, when it re-points a handle at
+another branch of the document. Listeners that react to patches must re-read
+the document instead.
+ */
+export function isScopeReplaced(payload: DocHandleChangePayload<unknown>): boolean {
+    return (payload as { scopeReplaced?: boolean }).scopeReplaced === true;
 }
 
 /** Create a boolean signal for whether an Automerge document handle is ready. */

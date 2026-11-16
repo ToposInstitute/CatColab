@@ -1,5 +1,5 @@
-import type { DocHandle, Repo } from "@automerge/automerge-repo";
-import { createResource, Match, Switch } from "solid-js";
+import type { AutomergeUrl, DocHandle, Repo } from "@automerge/automerge-repo";
+import { type Accessor, createEffect, createResource, Match, onCleanup, Switch } from "solid-js";
 import { render } from "solid-js/web";
 
 import {
@@ -19,7 +19,10 @@ import { DocumentHead } from "../../frontend/src/page/document_head";
 import { stdTheories } from "../../frontend/src/stdlib";
 import { TheoryLibraryContext } from "../../frontend/src/theory";
 import { rootFocus, useChildFocus } from "../../ui-components/src/util/focus";
+import { version } from "../package.json";
 import type { AnalysisDoc } from "./analysis_datatype";
+import { createNotebookComments } from "./notebook_comments";
+import { createNotebookDiff } from "./notebook_diff";
 
 import "../../ui-components/src/global.css";
 
@@ -44,8 +47,6 @@ export function AnalysisTool(props: { handle: DocHandle<AnalysisDoc>; element: T
         // oxlint-disable-next-line solid/reactivity -- the host element and its repo are fixed for the tool's lifetime
         (docUrl) => getLiveAnalysisFromRepo(docUrl, props.element.repo, modelLibrary),
     );
-
-    const { childFocus } = useChildFocus<"model" | "analysis">(rootFocus, { default: "model" });
 
     return (
         <Switch>
@@ -72,29 +73,10 @@ export function AnalysisTool(props: { handle: DocHandle<AnalysisDoc>; element: T
                                     <ModelLibraryContext.Provider
                                         value={modelLibrary as ModelLibrary<string>}
                                     >
-                                        <div style={{ display: "flex", height: "100%" }}>
-                                            <div
-                                                style={{
-                                                    ...paneStyle,
-                                                    "border-right": "1px solid rgba(0, 0, 0, 0.15)",
-                                                }}
-                                            >
-                                                <ModelDocumentHead
-                                                    liveModel={modelAnalysis().liveModel}
-                                                />
-                                                <ModelNotebookEditor
-                                                    liveModel={modelAnalysis().liveModel}
-                                                    focus={childFocus("model")}
-                                                />
-                                            </div>
-                                            <div style={paneStyle}>
-                                                <DocumentHead liveDoc={modelAnalysis().liveDoc} />
-                                                <AnalysisNotebookEditor
-                                                    liveAnalysis={modelAnalysis()}
-                                                    focus={childFocus("analysis")}
-                                                />
-                                            </div>
-                                        </div>
+                                        <ModelAndAnalysisPanes
+                                            modelAnalysis={modelAnalysis()}
+                                            element={props.element}
+                                        />
                                     </ModelLibraryContext.Provider>
                                 </TheoryLibraryContext.Provider>
                             )}
@@ -104,6 +86,82 @@ export function AnalysisTool(props: { handle: DocHandle<AnalysisDoc>; element: T
             </Match>
         </Switch>
     );
+}
+
+/** The model and its analysis side by side, each highlighting its changes
+against the active draft's baseline.
+ */
+function ModelAndAnalysisPanes(props: {
+    modelAnalysis: LiveModelAnalysisDoc;
+    element: ToolElement;
+}) {
+    const { childFocus } = useChildFocus<"model" | "analysis">(rootFocus, { default: "model" });
+
+    // oxlint-disable solid/reactivity -- the host element is fixed for the tool's lifetime
+    const modelDiff = createNotebookDiff(
+        props.element,
+        () => props.modelAnalysis.liveModel.liveDoc.docHandle,
+    );
+    const analysisDiff = createNotebookDiff(
+        props.element,
+        () => props.modelAnalysis.liveDoc.docHandle,
+    );
+    const modelComments = createNotebookComments(
+        props.element,
+        () => props.modelAnalysis.liveModel.liveDoc.docHandle,
+        () => props.modelAnalysis.liveModel.liveDoc.doc,
+    );
+    const analysisComments = createNotebookComments(
+        props.element,
+        () => props.modelAnalysis.liveDoc.docHandle,
+        () => props.modelAnalysis.liveDoc.doc,
+    );
+    announceMounted(
+        props.element,
+        () => props.modelAnalysis.liveModel.liveDoc.docHandle.url,
+        "catcolab-model",
+    );
+    // oxlint-enable solid/reactivity
+
+    return (
+        <div style={{ display: "flex", height: "100%", position: "relative" }}>
+            <div style={versionStyle}>v{version}</div>
+            <div
+                style={{
+                    ...paneStyle,
+                    "border-right": "1px solid rgba(0, 0, 0, 0.15)",
+                }}
+            >
+                <ModelDocumentHead liveModel={props.modelAnalysis.liveModel} />
+                <ModelNotebookEditor
+                    liveModel={props.modelAnalysis.liveModel}
+                    focus={childFocus("model")}
+                    diff={modelDiff()}
+                    comments={modelComments}
+                />
+            </div>
+            <div style={paneStyle}>
+                <DocumentHead liveDoc={props.modelAnalysis.liveDoc} />
+                <AnalysisNotebookEditor
+                    liveAnalysis={props.modelAnalysis}
+                    focus={childFocus("analysis")}
+                    diff={analysisDiff()}
+                    comments={analysisComments}
+                />
+            </div>
+        </div>
+    );
+}
+
+/** Tell Patchwork a document is shown here, as `<patchwork-view>` does for the
+documents it mounts, so host services such as the comments provider watch it.
+ */
+function announceMounted(element: HTMLElement, url: Accessor<AutomergeUrl>, toolId: string) {
+    createEffect(() => {
+        const init = { detail: { url: url(), toolId }, bubbles: true, composed: true };
+        element.dispatchEvent(new CustomEvent("patchwork:mounted", init));
+        onCleanup(() => element.dispatchEvent(new CustomEvent("patchwork:unmounted", init)));
+    });
 }
 
 function asModelAnalysis(liveAnalysis: LiveAnalysisDoc): LiveModelAnalysisDoc | undefined {
@@ -118,3 +176,13 @@ const paneStyle = {
 };
 
 const messageStyle = { padding: "52px" };
+
+const versionStyle = {
+    position: "absolute",
+    right: "8px",
+    bottom: "6px",
+    "font-size": "11px",
+    color: "rgba(0, 0, 0, 0.4)",
+    "pointer-events": "none",
+    "z-index": "1",
+} as const;

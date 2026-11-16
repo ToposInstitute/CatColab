@@ -1,3 +1,5 @@
+import { skillDescriptions } from "./skills";
+
 export const plugins = [
     {
         type: "patchwork:datatype",
@@ -45,4 +47,5 @@ export const plugins = [
             return renderAnalysisTool;
         },
     },
+    ...skillDescriptions,
 ];

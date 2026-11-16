@@ -24,6 +24,9 @@ export type AnalysisProps<T> = {
     /** Content associated with the analysis itself. */
     content: T;
 
+    /** Content at the diff baseline, if it has changed since. For display only. */
+    baseline?: T;
+
     /** Update content associated with the analysis. */
     changeContent: (f: (content: T) => void) => void;
 };

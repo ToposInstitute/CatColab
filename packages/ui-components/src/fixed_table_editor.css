@@ -26,6 +26,24 @@
     }
 }
 
+.fixed-table-cell {
+    display: flex;
+    align-items: baseline;
+    gap: 0.75ex;
+}
+
+.fixed-table-cell-previous {
+    color: #dc2626;
+    white-space: nowrap;
+}
+
+.fixed-table-cell-input.changed {
+    flex: none;
+    width: auto;
+    color: #16a34a;
+    font-weight: 500;
+}
+
 .fixed-table-cell-input {
     background: transparent;
     border: none;

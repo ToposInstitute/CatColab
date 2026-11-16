@@ -38,6 +38,13 @@ export type TextColumnSchema<Row> = BaseColumnSchema & {
     column is not editable.
      */
     setContent?: (row: Row, content: string) => boolean;
+
+    /** Text content of the column at the given row in some earlier version.
+
+    When given and different from the current content, it is shown struck
+    through beside the current content.
+     */
+    previous?: (row: Row) => string | undefined;
 };
 
 /** Schema for a boolean column in a table editor.
@@ -91,6 +98,7 @@ export const createNumericalColumn = <Row,>(args: {
     default?: number;
     validate?: (row: Row, data: number) => boolean;
     setData?: (row: Row, data: number) => void;
+    previous?: (row: Row) => number | undefined;
 }): TextColumnSchema<Row> => ({
     contentType: "string",
     name: args.name,
@@ -117,6 +125,7 @@ export const createNumericalColumn = <Row,>(args: {
             }
             return isValid;
         }),
+    previous: args.previous && ((row) => args.previous?.(row)?.toString()),
 });
 
 /** Edit tabular data given by a fixed list of rows.
@@ -195,20 +204,31 @@ function TextCellEditor<Row>(props: { row: Row; schema: TextColumnSchema<Row> })
     const [isValid, setIsValid] = createSignal(true);
     createEffect(() => setIsValid(schema().validate?.(row(), text()) ?? true));
 
+    const previous = () => {
+        const old = schema().previous?.(row());
+        return old !== undefined && old !== schema().content(row()) ? old : undefined;
+    };
+
     return (
-        <Show when={schema().setContent} fallback={schema().content(row())}>
-            <input
-                class="fixed-table-cell-input"
-                classList={{
-                    invalid: !isValid(),
-                }}
-                type="text"
-                size="1"
-                value={text()}
-                onInput={(evt) => setText(evt.target.value)}
-                onChange={(evt) => applyText(evt.target.value)}
-            />
-        </Show>
+        <div class="fixed-table-cell">
+            <Show when={schema().setContent} fallback={schema().content(row())}>
+                <input
+                    class="fixed-table-cell-input"
+                    classList={{
+                        invalid: !isValid(),
+                        changed: previous() !== undefined,
+                    }}
+                    type="text"
+                    size={previous() !== undefined ? Math.max(1, text().length) : 1}
+                    value={text()}
+                    onInput={(evt) => setText(evt.target.value)}
+                    onChange={(evt) => applyText(evt.target.value)}
+                />
+            </Show>
+            <Show when={previous()}>
+                {(old) => <del class="fixed-table-cell-previous">{old()}</del>}
+            </Show>
+        </div>
     );
 }
 
