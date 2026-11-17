@@ -10,6 +10,6 @@ export const plugins = [
         scope: {
             theory: ["petri-net"],
         },
-        load: async () => (await import("./stochastic_mass_action")).default,
+        load: async () => (await import("./mass_action_stochastic")).default,
     },
 ] satisfies ModelAnalysisPlugin[];
