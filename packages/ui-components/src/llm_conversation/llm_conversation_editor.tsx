@@ -8,7 +8,7 @@ import ChevronRight from "lucide-solid/icons/chevron-right";
 import Paperclip from "lucide-solid/icons/paperclip";
 import RotateCcw from "lucide-solid/icons/rotate-ccw";
 import Send from "lucide-solid/icons/send";
-import X from "lucide-solid/icons/x";
+import XIcon from "lucide-solid/icons/x";
 import {
     createSignal,
     createUniqueId,
@@ -52,6 +52,7 @@ export type LLMConversationEditorProps = {
     validateAttachments: (files: readonly File[]) => string | undefined;
     onSubmit: (input: LLMConversationInput) => Promise<boolean>;
     onRetry?: () => void;
+    onInterrupt?: () => void;
     onResolveFeedback: (requestId: string, resolution: "approved" | "rejected") => void;
 };
 
@@ -110,12 +111,55 @@ export function LLMConversationEditor(props: LLMConversationEditorProps) {
     let conversation!: HTMLDivElement;
     let scrollSentinel!: HTMLDivElement;
     onMount(() => {
-        scrollSentinel.scrollIntoView({ block: "end" });
+        scrollSentinel.scrollIntoView({ block: "nearest", inline: "nearest" });
         autoscroll(conversation, scrollSentinel);
     });
 
     return (
         <div class={styles.conversation} ref={conversation}>
+            <div class={styles.statusRow}>
+                <div class={styles.status} aria-live="polite">
+                    <Show when={props.busy}>
+                        <Spinner size="small" aria-hidden="true" />
+                    </Show>
+                    {props.status}
+                    <Show when={props.notice}>
+                        {(notice) => (
+                            <>
+                                {" • "}
+                                <LLMConversationNoticeView notice={notice()} />
+                            </>
+                        )}
+                    </Show>
+                </div>
+                <Show when={props.busy && props.onInterrupt}>
+                    {(interrupt) => (
+                        <Button
+                            type="button"
+                            variant="utility"
+                            aria-label="Interrupt"
+                            onClick={interrupt()}
+                        >
+                            <XIcon size={16} />
+                            Interrupt
+                        </Button>
+                    )}
+                </Show>
+                <Show when={props.canRetry && props.onRetry}>
+                    {(retry) => (
+                        <Button
+                            type="button"
+                            variant="utility"
+                            class={styles.retry}
+                            disabled={form.submitting || !props.available}
+                            onClick={retry()}
+                        >
+                            <RotateCcw size={16} />
+                            Retry
+                        </Button>
+                    )}
+                </Show>
+            </div>
             <div class={styles.transcript}>
                 <For each={props.interactions}>
                     {(interaction) => (
@@ -139,36 +183,6 @@ export function LLMConversationEditor(props: LLMConversationEditorProps) {
                 </Show>
             </div>
             <div class={styles.composer}>
-                <div class={styles.statusRow}>
-                    <div class={styles.status} aria-live="polite">
-                        <Show when={props.busy}>
-                            <Spinner size="small" aria-hidden="true" />
-                        </Show>
-                        {props.status}
-                        <Show when={props.notice}>
-                            {(notice) => (
-                                <>
-                                    {" • "}
-                                    <LLMConversationNoticeView notice={notice()} />
-                                </>
-                            )}
-                        </Show>
-                    </div>
-                    <Show when={props.canRetry && props.onRetry}>
-                        {(retry) => (
-                            <Button
-                                type="button"
-                                variant="utility"
-                                class={styles.retry}
-                                disabled={form.submitting || !props.available}
-                                onClick={retry()}
-                            >
-                                <RotateCcw size={16} />
-                                Retry
-                            </Button>
-                        )}
-                    </Show>
-                </div>
                 <Form class={styles.form} onSubmit={onSubmit}>
                     <input
                         ref={filePicker}
@@ -251,9 +265,13 @@ function autoscroll(content: HTMLElement, sentinel: HTMLElement) {
     const useVisibilityObserver = createVisibilityObserver({ initialValue: true });
     const following = useVisibilityObserver(() => sentinel);
 
+    let previousHeight = content.getBoundingClientRect().height;
     createResizeObserver(content, () => {
-        if (following()) {
-            sentinel.scrollIntoView({ block: "end" });
+        const height = content.getBoundingClientRect().height;
+        const grew = height > previousHeight;
+        previousHeight = height;
+        if (grew && following()) {
+            sentinel.scrollIntoView({ block: "nearest", inline: "nearest" });
         }
     });
 }
@@ -337,7 +355,7 @@ const CodeExecution = (props: {
             />
             <div class={styles.executionSummary}>
                 <span>Ran code</span>
-                <Show when={succeeded()} fallback={<X size={16} class={styles.error} />}>
+                <Show when={succeeded()} fallback={<XIcon size={16} class={styles.error} />}>
                     <Check size={16} />
                 </Show>
             </div>
@@ -371,7 +389,7 @@ const Attachment = (props: { filename: string; remove: () => void }) => (
             onClick={props.remove}
             tooltip="Remove attachment"
         >
-            <X size={14} />
+            <XIcon size={14} />
         </IconButton>
     </div>
 );

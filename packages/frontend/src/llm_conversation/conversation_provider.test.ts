@@ -84,6 +84,72 @@ test("navigation disposes an editor without losing the running turn or its strea
     assert.isNull(reopened.state.notice);
 });
 
+test("interrupt aborts the turn and ignores its late events after another turn starts", async () => {
+    const registry = createLLMConversationRegistry(binder, inferenceKey);
+    const controller = registry.get(conversation("first"));
+    const pending = pendingTurn();
+    const turn = controller.runTurn(input);
+    const abortSignal = runTurn.mock.calls[0]?.[5];
+    assert(abortSignal);
+    pending.emit({ tag: "Streaming", snapshot: "Before interruption" });
+
+    controller.interrupt();
+    assert.isTrue(abortSignal.aborted);
+    pending.emit({ tag: "Streaming", snapshot: "Ignored" });
+    assert.equal(controller.state.streamingContent, "Before interruption");
+    pending.finish({ tag: "Interrupted" });
+    assert.deepStrictEqual(await turn, { tag: "Interrupted" });
+    assert.isFalse(controller.state.isRunning);
+    assert.equal(controller.state.streamingContent, "");
+    assert.deepStrictEqual(controller.state.notice, { kind: "note", message: "Interrupted." });
+
+    const next = pendingTurn();
+    const nextTurn = controller.runTurn(input);
+    pending.emit({ tag: "Streaming", snapshot: "Stale event" });
+    assert.equal(controller.state.streamingContent, "");
+    next.emit({ tag: "Streaming", snapshot: "New turn" });
+    assert.equal(controller.state.streamingContent, "New turn");
+    next.finish({ tag: "Completed", content: "Done" });
+    await nextTurn;
+    controller.interrupt();
+    assert.isFalse(controller.state.isRunning);
+});
+
+test("deleting a conversation interrupts only its running controller", async () => {
+    const registry = createLLMConversationRegistry(binder, inferenceKey);
+    const deleted = registry.get(conversation("deleted"));
+    const retained = registry.get(conversation("retained"));
+    const deletedPending = pendingTurn();
+    const deletedTurn = deleted.runTurn(input);
+    const retainedPending = pendingTurn();
+    const retainedTurn = retained.runTurn(input);
+    const deletedAbortSignal = runTurn.mock.calls[0]?.[5];
+    const retainedAbortSignal = runTurn.mock.calls[1]?.[5];
+    assert(deletedAbortSignal);
+    assert(retainedAbortSignal);
+
+    registry.interrupt("deleted");
+    assert.isTrue(deletedAbortSignal.aborted);
+    assert.isFalse(retainedAbortSignal.aborted);
+    deletedPending.finish({ tag: "Interrupted" });
+    retainedPending.finish({ tag: "Completed", content: "Done" });
+    await Promise.all([deletedTurn, retainedTurn]);
+});
+
+test("clearing the registry interrupts running conversations", async () => {
+    const registry = createLLMConversationRegistry(binder, inferenceKey);
+    const controller = registry.get(conversation("first"));
+    const pending = pendingTurn();
+    const turn = controller.runTurn(input);
+    const abortSignal = runTurn.mock.calls[0]?.[5];
+    assert(abortSignal);
+
+    registry.clear();
+    assert.isTrue(abortSignal.aborted);
+    pending.finish({ tag: "Interrupted" });
+    await turn;
+});
+
 test("a tool call ends the reasoning segment", async () => {
     const registry = createLLMConversationRegistry(binder, inferenceKey);
     const pending = pendingTurn();

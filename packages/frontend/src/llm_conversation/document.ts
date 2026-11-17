@@ -59,6 +59,7 @@ export function conversationAttachmentMetadata(
 /** Outcome of attempting one LLM conversation turn. */
 export type LLMConversationTurnResult =
     | { tag: "Completed"; content: string }
+    | { tag: "Interrupted" }
     | { tag: "Incomplete"; reason: string }
     | { tag: "Failed"; error: string }
     | {
@@ -78,6 +79,7 @@ export async function runLLMConversationTurn<
     inferenceKey: InferenceKeyResult,
     userInput: LLMConversationUserInput,
     onEvent?: (event: ChatTurnEvent) => void,
+    abortSignal?: AbortSignal,
 ): Promise<LLMConversationTurnResult> {
     if (inferenceKey.tag !== "Ready") {
         return { tag: "Failed", error: "Inference is unavailable." };
@@ -93,7 +95,13 @@ export async function runLLMConversationTurn<
         conversation.appendInteraction(
             LLMConversation.newUserMessage(userInput.content, userInput.files),
         );
-        return generateLLMConversationResponse(conversation, binder, inferenceKey, onEvent);
+        return generateLLMConversationResponse(
+            conversation,
+            binder,
+            inferenceKey,
+            onEvent,
+            abortSignal,
+        );
     } catch (error) {
         return { tag: "Failed", error: errorMessage(error) };
     }
@@ -115,6 +123,7 @@ export async function retryLastLLMConversationResponse<
     binder: Binder<Handle, Version>,
     inferenceKey: InferenceKeyResult,
     onEvent?: (event: ChatTurnEvent) => void,
+    abortSignal?: AbortSignal,
 ): Promise<LLMConversationTurnResult> {
     if (inferenceKey.tag !== "Ready") {
         return { tag: "Failed", error: "Inference is unavailable." };
@@ -124,7 +133,13 @@ export async function retryLastLLMConversationResponse<
         return { tag: "Failed", error: "The latest interaction is not a user message." };
     }
 
-    return generateLLMConversationResponse(conversation, binder, inferenceKey, onEvent);
+    return generateLLMConversationResponse(
+        conversation,
+        binder,
+        inferenceKey,
+        onEvent,
+        abortSignal,
+    );
 }
 
 async function generateLLMConversationResponse<
@@ -136,11 +151,14 @@ async function generateLLMConversationResponse<
     binder: Binder<Handle, Version>,
     inferenceKey: Extract<InferenceKeyResult, { tag: "Ready" }>,
     onEvent?: (event: ChatTurnEvent) => void,
+    abortSignal?: AbortSignal,
 ): Promise<LLMConversationTurnResult> {
     let createdScope: LLMConversationExecutionScope | undefined;
     try {
+        abortSignal?.throwIfAborted();
         const executionScope = await createLLMConversationExecutionScope(conversation, binder);
         createdScope = executionScope;
+        abortSignal?.throwIfAborted();
         const context = LLMConversationAdapter.prepareLLMConversationInference(conversation.dump());
         const client = createInferenceClient(inferenceKey.key);
         const result = await runChatTurn(
@@ -151,13 +169,17 @@ async function generateLLMConversationResponse<
             conversation.data().llmModel,
             executionScope.systemPromptSuffix,
             async () => {
+                abortSignal?.throwIfAborted();
                 const problems = await executionScope.validate();
                 if (problems.length > 0) {
                     throw new Error(validationFeedback(problems));
                 }
             },
+            abortSignal,
         );
+        abortSignal?.throwIfAborted();
         const problems = await executionScope.validate();
+        abortSignal?.throwIfAborted();
         const generated = generatedChatMessageDeltaToLLMInteractions(result.generatedMessageDelta);
         if (generated.tag === "Err") {
             executionScope.abort();
@@ -209,6 +231,9 @@ async function generateLLMConversationResponse<
         return { tag: "Completed", content: result.content };
     } catch (error) {
         createdScope?.abort();
+        if (abortSignal?.aborted) {
+            return { tag: "Interrupted" };
+        }
         return { tag: "Retryable", error: errorMessage(error), attempts: [] };
     }
 }
