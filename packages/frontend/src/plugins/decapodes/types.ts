@@ -8,7 +8,7 @@ export type DecapodesAnalysisContent = {
     duration: number;
 };
 
-export const defaultDecapodesAnalysisContent = (): DecapodesAnalysisContent => ({
+export const newDecapodesAnalysisContent = (): DecapodesAnalysisContent => ({
     domain: null,
     mesh: null,
     initialConditions: {},

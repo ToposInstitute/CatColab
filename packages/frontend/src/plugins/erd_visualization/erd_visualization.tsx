@@ -8,7 +8,7 @@ import { BlockTitle, FormGroup, IconButton, SelectField } from "catcolab-ui-comp
 import type { DblModel, MorType, ObType } from "catlog-wasm";
 import type { ModelAnalysisBuilder, ModelAnalysisProps } from "../../analysis";
 import { loadViz } from "../../visualization";
-import { defaultSchemaERDConfig, Direction, type SchemaERDConfig } from "./types";
+import { newSchemaERDConfig, Direction, type SchemaERDConfig } from "./types";
 
 import "./erd_visualization.css";
 
@@ -19,7 +19,7 @@ theory) and displays entities as tables with their attributes listed inside.
 */
 export default {
     contentVersion: 0,
-    initialContent: defaultSchemaERDConfig,
+    initialContent: newSchemaERDConfig,
     component: SchemaERD,
 } satisfies ModelAnalysisBuilder<SchemaERDConfig>;
 

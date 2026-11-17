@@ -59,7 +59,7 @@ export function SQLHeader(sql: string) {
 /** Component to interface with SQL analysis. Allows user to download the script and change the backend. */
 export default {
     contentVersion: 0,
-    initialContent: SQL.defaultDownloadConfig,
+    initialContent: SQL.newDownloadConfig,
     component: SQLSchemaAnalysis,
 } satisfies ModelAnalysisBuilder<SQL.DownloadConfig>;
 

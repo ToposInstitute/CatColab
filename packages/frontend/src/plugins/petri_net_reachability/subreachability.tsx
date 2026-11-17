@@ -6,19 +6,16 @@ import {
     FixedTableEditor,
     PanelHeader,
 } from "catcolab-ui-components";
-import {
-    type QualifiedName,
-    type ReachabilityProblemData,
-    ThSymMonoidalCategory,
-} from "catlog-wasm";
+import { type QualifiedName, ThSymMonoidalCategory } from "catlog-wasm";
 import type { ModelAnalysisBuilder, ModelAnalysisProps } from "../../analysis";
+import { newReachabilityProblemData, type ReachabilityProblemData } from "./types";
 
 import "../../visualization/simulation.css";
 
 /** Check a reachability property in a Petri net. */
 export default {
     contentVersion: 0,
-    initialContent: () => ({ tokens: {}, forbidden: {} }),
+    initialContent: newReachabilityProblemData,
     component: Reachability,
 } satisfies ModelAnalysisBuilder<ReachabilityProblemData>;
 

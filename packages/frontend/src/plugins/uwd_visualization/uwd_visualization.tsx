@@ -7,7 +7,7 @@ import type { ModelAnalysisBuilder, ModelAnalysisProps } from "../../analysis";
 import { DownloadSVGButton, ElkLayout } from "../../visualization";
 import { parseUwdElkLayout, uwdToElk } from "../../visualization/undirected_wiring_diagram_elk";
 import { UwdSVG } from "../../visualization/undirected_wiring_diagram_svg";
-import { defaultCompositionPatternConfig, type CompositionPatternConfig } from "./types";
+import { newCompositionPatternConfig, type CompositionPatternConfig } from "./types";
 
 import "./uwd_visualization.css";
 
@@ -16,7 +16,7 @@ import "./uwd_visualization.css";
 export default {
     contentVersion: 0,
     component: CompositionPattern,
-    initialContent: defaultCompositionPatternConfig,
+    initialContent: newCompositionPatternConfig,
 } satisfies ModelAnalysisBuilder<CompositionPatternConfig>;
 
 function CompositionPattern(props: ModelAnalysisProps<CompositionPatternConfig>) {

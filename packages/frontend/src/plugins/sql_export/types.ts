@@ -9,7 +9,7 @@ export type DownloadConfig = {
     filename: string;
 };
 
-export const defaultDownloadConfig = (): DownloadConfig => ({
+export const newDownloadConfig = (): DownloadConfig => ({
     backend: SQLBackend.PostgresSQL,
     filename: "schema.sql",
 });

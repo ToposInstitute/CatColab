@@ -8,6 +8,6 @@ export type SchemaERDConfig = {
     direction?: Direction;
 };
 
-export const defaultSchemaERDConfig = (): SchemaERDConfig => ({
+export const newSchemaERDConfig = (): SchemaERDConfig => ({
     direction: Direction.Vertical,
 });

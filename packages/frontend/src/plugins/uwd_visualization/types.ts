@@ -4,4 +4,4 @@
 export type CompositionPatternConfig = {};
 
 /** Default configuration. */
-export const defaultCompositionPatternConfig = (): CompositionPatternConfig => ({});
+export const newCompositionPatternConfig = (): CompositionPatternConfig => ({});

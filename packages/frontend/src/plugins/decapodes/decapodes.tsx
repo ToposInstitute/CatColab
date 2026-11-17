@@ -16,7 +16,7 @@ import type { ModelDiagramPresentation, ModelPresentation, QualifiedName } from 
 import type { DiagramAnalysisBuilder, DiagramAnalysisProps } from "../../analysis";
 import type { LiveDiagramDoc } from "../../diagram";
 import { PDEPlot2D } from "../../visualization";
-import { type DecapodesAnalysisContent, defaultDecapodesAnalysisContent } from "./types";
+import { type DecapodesAnalysisContent, newDecapodesAnalysisContent } from "./types";
 
 import "./decapodes.css";
 import "../../visualization/simulation.css";
@@ -24,7 +24,7 @@ import "../../visualization/simulation.css";
 /** Analyze a DEC diagram by performing a simulation using Decapodes.jl. */
 export default {
     contentVersion: 0,
-    initialContent: defaultDecapodesAnalysisContent,
+    initialContent: newDecapodesAnalysisContent,
     component: Decapodes,
 } satisfies DiagramAnalysisBuilder<DecapodesAnalysisContent>;
 
