@@ -2,7 +2,6 @@ import { lazy } from "solid-js";
 
 import { ThCategory } from "catlog-wasm";
 import { Theory, type TheoryMeta } from "../../theory";
-import * as analyses from "../analyses";
 
 const ObjectCellEditor = lazy(() => import("../../model/object_cell_editor"));
 const MorphismCellEditor = lazy(() => import("../../model/morphism_cell_editor"));
@@ -68,22 +67,6 @@ export default function createOlogTheory(theoryMeta: TheoryMeta): Theory {
                 description: "Aspect or property of an individual",
                 shortcut: ["M"],
             },
-        ],
-        modelAnalyses: [
-            analyses.modelGraph({
-                id: "diagram",
-                name: "Visualization",
-                description: "Visualize the olog as a graph",
-                help: "visualization",
-            }),
-        ],
-        diagramAnalyses: [
-            analyses.diagramGraph({
-                id: "graph",
-                name: "Visualization",
-                description: "Visualize the instance as a graph",
-                help: "visualization",
-            }),
         ],
     });
 }

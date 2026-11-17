@@ -12,6 +12,7 @@ import {
 import { type Api, type DocRef, findAndMigrate, type LiveDoc, makeLiveDoc } from "../api";
 import { getLiveDiagram, getLiveDiagramFromRepo, type LiveDiagramDoc } from "../diagram";
 import type { LiveModelDoc, ModelLibrary } from "../model";
+import type { PluginRegistry } from "../plugin";
 import { assertExhaustive } from "../util/assert_exhaustive";
 
 /** A document defining an analysis. */
@@ -88,6 +89,7 @@ export async function getLiveAnalysis(
     refId: Uuid,
     api: Api,
     models: ModelLibrary<Uuid>,
+    plugins: PluginRegistry,
 ): Promise<LiveAnalysisDocWithRef> {
     const { liveDoc, docRef } = await api.getLiveDoc<AnalysisDocument>(refId, "analysis");
     const { doc } = liveDoc;
@@ -114,7 +116,7 @@ export async function getLiveAnalysis(
         throw new Error(`Unknown analysis type: ${doc.analysisType}`);
     }
 
-    migrateAnalysis(liveAnalysis);
+    await migrateAnalysis(liveAnalysis, plugins);
     return { liveAnalysis, docRef };
 }
 
@@ -126,6 +128,7 @@ export async function getLiveAnalysisFromRepo(
     docId: AnyDocumentId,
     repo: Repo,
     models: ModelLibrary<AnyDocumentId>,
+    plugins: PluginRegistry,
 ): Promise<LiveAnalysisDoc> {
     const docHandle = await findAndMigrate(repo, docId);
     const liveDoc = makeLiveDoc<AnalysisDocument>(docHandle, "analysis");
@@ -153,7 +156,7 @@ export async function getLiveAnalysisFromRepo(
         throw new Error(`Unknown analysis type: ${doc.analysisType}`);
     }
 
-    migrateAnalysis(liveAnalysis);
+    await migrateAnalysis(liveAnalysis, plugins);
     return liveAnalysis;
 }
 
@@ -163,25 +166,16 @@ This is a stop-gap (read: hacky) method to migrate the content of analyses when
 the set of fields changes. It allow new fields to be added. Renaming or removing
 existing fields is *not* supported.
  */
-function migrateAnalysis(liveAnalysis: LiveAnalysisDoc) {
-    const theory = theoryForLiveAnalysis(liveAnalysis);
-
-    const getAnalysisMeta = (analysisId: string) => {
-        switch (liveAnalysis.analysisType) {
-            case "model":
-                return theory?.modelAnalysis(analysisId);
-            case "diagram":
-                return theory?.diagramAnalysis(analysisId);
-        }
-    };
-
+async function migrateAnalysis(liveAnalysis: LiveAnalysisDoc, plugins: PluginRegistry) {
     const doc = liveAnalysis.liveDoc.doc;
     for (const cell of Nb.getFormalCells(doc.notebook)) {
-        const meta = getAnalysisMeta(cell.content.id);
-        if (!meta) {
+        let builder;
+        try {
+            builder = await plugins.analysisBuilder(cell.content.id);
+        } catch {
             continue;
         }
-        const initialContent = meta.initialContent() as Record<string, unknown>;
+        const initialContent = builder.initialContent() as Record<string, unknown>;
         for (const key in initialContent) {
             if (!(key in cell.content.content)) {
                 liveAnalysis.liveDoc.changeDoc((doc) => {

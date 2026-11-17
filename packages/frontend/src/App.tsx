@@ -17,7 +17,8 @@ import { createModelLibraryWithApi, ModelLibraryContext } from "./model";
 import { createModel } from "./model/document";
 import { ErrorBoundaryDialog } from "./page/error_boundary";
 import { PageContainer } from "./page/page_container";
-import { stdTheories } from "./stdlib";
+import { PluginRegistryContext } from "./plugin";
+import { stdPlugins, stdTheories } from "./stdlib";
 import { TheoryLibraryContext } from "./theory";
 import { InferenceKeyProvider } from "./user/inference_key_provider";
 import { UserSettingsProvider } from "./user/user_settings_provider";
@@ -53,6 +54,7 @@ const Root = (props: RouteSectionProps) => {
                 values={[
                     [ApiContext, api],
                     [TheoryLibraryContext, theories],
+                    [PluginRegistryContext, stdPlugins],
                     [ModelLibraryContext, models],
                     UserStateProvider,
                     BinderProvider,

@@ -2,7 +2,6 @@ import { lazy } from "solid-js";
 
 import { ThDelayableSignedCategory } from "catlog-wasm";
 import { Theory, type TheoryMeta } from "../../theory";
-import * as analyses from "../analyses";
 
 const ObjectCellEditor = lazy(() => import("../../model/object_cell_editor"));
 const MorphismCellEditor = lazy(() => import("../../model/morphism_cell_editor"));
@@ -70,50 +69,6 @@ export default function createCausalLoopDelaysTheory(theoryMeta: TheoryMeta): Th
                 arrowStyle: "minusCaesura",
                 preferUnnamed: true,
             },
-        ],
-        modelAnalyses: [
-            analyses.modelGraph({
-                id: "diagram",
-                name: "Visualization",
-                description: "Visualize the causal loop diagram",
-                help: "visualization",
-            }),
-            analyses.motifFinding({
-                id: "negative-loops",
-                name: "Balancing loops",
-                description: "Find the fast-acting balancing loops",
-                help: "loops",
-                findMotifs(model, options) {
-                    return thDelayedSignedCategory.negativeLoops(model, options);
-                },
-            }),
-            analyses.motifFinding({
-                id: "positive-loops",
-                name: "Reinforcing loops",
-                description: "Find the fast-acting reinforcing loops",
-                help: "loops",
-                findMotifs(model, options) {
-                    return thDelayedSignedCategory.positiveLoops(model, options);
-                },
-            }),
-            analyses.motifFinding({
-                id: "delayed-negative-loops",
-                name: "Delayed balancing loops",
-                description: "Find the slow-acting balancing loops",
-                help: "loops",
-                findMotifs(model, options) {
-                    return thDelayedSignedCategory.delayedNegativeLoops(model, options);
-                },
-            }),
-            analyses.motifFinding({
-                id: "delayed-positive-loops",
-                name: "Delayed reinforcing loops",
-                description: "Find the slow-acting reinforcing loops",
-                help: "loops",
-                findMotifs(model, options) {
-                    return thDelayedSignedCategory.delayedPositiveLoops(model, options);
-                },
-            }),
         ],
     });
 }

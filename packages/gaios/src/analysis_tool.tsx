@@ -1,4 +1,5 @@
 import type { DocHandle, Repo } from "@automerge/automerge-repo";
+import { MultiProvider } from "@solid-primitives/context";
 import { createResource, Match, Switch } from "solid-js";
 import { render } from "solid-js/web";
 
@@ -8,15 +9,12 @@ import {
     type LiveModelAnalysisDoc,
 } from "../../frontend/src/analysis";
 import { AnalysisNotebookEditor } from "../../frontend/src/analysis/analysis_editor";
-import {
-    createModelLibraryWithRepo,
-    type ModelLibrary,
-    ModelLibraryContext,
-} from "../../frontend/src/model";
+import { createModelLibraryWithRepo, ModelLibraryContext } from "../../frontend/src/model";
 import { ModelNotebookEditor } from "../../frontend/src/model/model_editor";
 import { ModelDocumentHead } from "../../frontend/src/model/model_info";
 import { DocumentHead } from "../../frontend/src/page/document_head";
-import { stdTheories } from "../../frontend/src/stdlib";
+import { PluginRegistryContext } from "../../frontend/src/plugin";
+import { stdPlugins, stdTheories } from "../../frontend/src/stdlib";
 import { TheoryLibraryContext } from "../../frontend/src/theory";
 import { rootFocus, useChildFocus } from "../../ui-components/src/util/focus";
 import type { AnalysisDoc } from "./analysis_datatype";
@@ -42,7 +40,7 @@ export function AnalysisTool(props: { handle: DocHandle<AnalysisDoc>; element: T
     const [liveAnalysis] = createResource(
         () => props.handle.url,
         // oxlint-disable-next-line solid/reactivity -- the host element and its repo are fixed for the tool's lifetime
-        (docUrl) => getLiveAnalysisFromRepo(docUrl, props.element.repo, modelLibrary),
+        (docUrl) => getLiveAnalysisFromRepo(docUrl, props.element.repo, modelLibrary, stdPlugins),
     );
 
     const { childFocus } = useChildFocus<"model" | "analysis">(rootFocus, { default: "model" });
@@ -68,35 +66,37 @@ export function AnalysisTool(props: { handle: DocHandle<AnalysisDoc>; element: T
                     >
                         <Match when={asModelAnalysis(liveAnalysis())}>
                             {(modelAnalysis) => (
-                                <TheoryLibraryContext.Provider value={stdTheories}>
-                                    <ModelLibraryContext.Provider
-                                        value={modelLibrary as ModelLibrary<string>}
-                                    >
-                                        <div style={{ display: "flex", height: "100%" }}>
-                                            <div
-                                                style={{
-                                                    ...paneStyle,
-                                                    "border-right": "1px solid rgba(0, 0, 0, 0.15)",
-                                                }}
-                                            >
-                                                <ModelDocumentHead
-                                                    liveModel={modelAnalysis().liveModel}
-                                                />
-                                                <ModelNotebookEditor
-                                                    liveModel={modelAnalysis().liveModel}
-                                                    focus={childFocus("model")}
-                                                />
-                                            </div>
-                                            <div style={paneStyle}>
-                                                <DocumentHead liveDoc={modelAnalysis().liveDoc} />
-                                                <AnalysisNotebookEditor
-                                                    liveAnalysis={modelAnalysis()}
-                                                    focus={childFocus("analysis")}
-                                                />
-                                            </div>
+                                <MultiProvider
+                                    values={[
+                                        [TheoryLibraryContext, stdTheories],
+                                        [PluginRegistryContext, stdPlugins],
+                                        [ModelLibraryContext, modelLibrary],
+                                    ]}
+                                >
+                                    <div style={{ display: "flex", height: "100%" }}>
+                                        <div
+                                            style={{
+                                                ...paneStyle,
+                                                "border-right": "1px solid rgba(0, 0, 0, 0.15)",
+                                            }}
+                                        >
+                                            <ModelDocumentHead
+                                                liveModel={modelAnalysis().liveModel}
+                                            />
+                                            <ModelNotebookEditor
+                                                liveModel={modelAnalysis().liveModel}
+                                                focus={childFocus("model")}
+                                            />
                                         </div>
-                                    </ModelLibraryContext.Provider>
-                                </TheoryLibraryContext.Provider>
+                                        <div style={paneStyle}>
+                                            <DocumentHead liveDoc={modelAnalysis().liveDoc} />
+                                            <AnalysisNotebookEditor
+                                                liveAnalysis={modelAnalysis()}
+                                                focus={childFocus("analysis")}
+                                            />
+                                        </div>
+                                    </div>
+                                </MultiProvider>
                             )}
                         </Match>
                     </Switch>

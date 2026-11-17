@@ -19,6 +19,9 @@ importers:
       '@automerge/automerge-repo':
         specifier: ^2.5.6
         version: 2.5.6
+      '@solid-primitives/context':
+        specifier: ^0.3.1
+        version: 0.3.2(solid-js@1.9.15)
       catcolab-document-methods:
         specifier: link:../document-methods
         version: link:../document-methods
@@ -782,6 +785,11 @@ packages:
     resolution: {integrity: sha512-zD6NdeWEByGE9QF9vCrlJ5YQB4oq9q91kPZS37Jwj5hOkvR1lTBSpsKhKDw4IJtbQ35LsTS1HD9DZYGKIshU1Q==}
     cpu: [x64]
     os: [win32]
+
+  '@solid-primitives/context@0.3.2':
+    resolution: {integrity: sha512-6fvTtpK17PFHnUf/UOc1TzBjd+kLFjtA62aRFEm1kDP9ufTo7FYW2kUzQAWbfbRHi30yjBJtopbR8qd6nShwyg==}
+    peerDependencies:
+      solid-js: ^1.6.12
 
   '@types/babel__core@7.20.5':
     resolution: {integrity: sha512-qoQprZvz5wQFJwMDqeseRXWv3rqMvhgpbXFfVyWhbx9X47POIA6i/+dXefEmZKoAgOaTdaIgNSMqMIU61yRyzA==}
@@ -2540,6 +2548,10 @@ snapshots:
 
   '@rollup/rollup-win32-x64-msvc@4.62.4':
     optional: true
+
+  '@solid-primitives/context@0.3.2(solid-js@1.9.15)':
+    dependencies:
+      solid-js: 1.9.15
 
   '@types/babel__core@7.20.5':
     dependencies:

@@ -1,12 +1,7 @@
 import { TheoryLibrary } from "../theory";
-import { compositionPattern } from "./generic_analyses";
 
 /** Standard library of double theories supported by the frontend. */
 export const stdTheories = new TheoryLibrary();
-
-stdTheories.addGenericModelAnalysis({
-    construct: compositionPattern,
-});
 
 stdTheories.add(
     {

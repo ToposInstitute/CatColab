@@ -5,6 +5,8 @@ use std::rc::Rc;
 
 use all_the_same::all_the_same;
 use derive_more::{From, TryInto};
+use serde::{Deserialize, Serialize};
+use tsify::Tsify;
 use ustr::Ustr;
 
 use wasm_bindgen::prelude::*;
@@ -236,6 +238,19 @@ pub enum DblTheoryBox {
     ModalNonUnital(Rc<theory::ModalDblTheory<NonUnital>>),
 }
 
+/// Double doctrine, or kind of double theory.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, Tsify)]
+#[serde(rename_all = "kebab-case")]
+#[tsify(into_wasm_abi, from_wasm_abi)]
+pub enum Doctrine {
+    /// Discrete double theories.
+    Discrete,
+    /// Discrete tabulator theories.
+    DiscreteTab,
+    /// Modal double theories, unital or non-unital.
+    Modal,
+}
+
 /// Wasm binding for a double theory.
 #[wasm_bindgen]
 pub struct DblTheory(#[wasm_bindgen(skip)] pub DblTheoryBox);
@@ -261,6 +276,16 @@ impl DblTheory {
 
 #[wasm_bindgen]
 impl DblTheory {
+    /// Doctrine to which the theory belongs.
+    #[wasm_bindgen(getter)]
+    pub fn doctrine(&self) -> Doctrine {
+        match &self.0 {
+            DblTheoryBox::Discrete(_) => Doctrine::Discrete,
+            DblTheoryBox::DiscreteTab(_) => Doctrine::DiscreteTab,
+            DblTheoryBox::ModalUnital(_) | DblTheoryBox::ModalNonUnital(_) => Doctrine::Modal,
+        }
+    }
+
     /// Returns whether the theory contains the object type.
     #[wasm_bindgen(js_name = "hasObType")]
     pub fn has_ob_type(&self, ob_type: ObType) -> Result<bool, String> {

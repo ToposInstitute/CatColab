@@ -19,6 +19,7 @@ export * from "./graphviz";
 export type * as GraphvizJSON from "./graphviz_json";
 export * from "./graphviz_svg";
 export * from "./label_position";
+export * from "./model_ode_plot";
 export * from "./ode_plot";
 export * from "./pde_plot";
 export * from "./types";

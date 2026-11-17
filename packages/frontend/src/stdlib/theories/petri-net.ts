@@ -3,7 +3,6 @@ import { lazy } from "solid-js";
 import { ThSymMonoidalCategory } from "catlog-wasm";
 import { Theory, type TheoryMeta } from "../../theory";
 import { MorTypeMap } from "../../theory/types";
-import * as analyses from "../analyses";
 
 const ObjectCellEditor = lazy(() => import("../../model/object_cell_editor"));
 const MorphismCellEditor = lazy(() => import("../../model/morphism_cell_editor"));
@@ -63,40 +62,6 @@ export default function createPetriNetTheory(theoryMeta: TheoryMeta): Theory {
                     apply: { tag: "Basic", content: "tensor" },
                 },
             },
-        ],
-        modelAnalyses: [
-            analyses.petriNetVisualization({
-                id: "diagram",
-                name: "Visualization",
-                description: "Visualize the Petri net",
-                help: "visualization",
-            }),
-            analyses.massAction({
-                ratesHaveGranularity: true,
-                simulate(model, data) {
-                    return thSymMonoidalCategory.massAction(model, data);
-                },
-            }),
-            analyses.massActionEquations({
-                ratesHaveGranularity: true,
-                getEquations(model, data) {
-                    return thSymMonoidalCategory.massActionEquations(model, data);
-                },
-            }),
-            analyses.stochasticMassAction({
-                id: "stochastic-mass-action",
-                name: "Stochastic mass-action dynamics",
-                description: "Simulate a stochastic system using the law of mass action",
-                help: "stochastic-mass-action",
-                simulate(model, data) {
-                    return thSymMonoidalCategory.stochasticMassAction(model, data);
-                },
-            }),
-            analyses.reachability({
-                check(model, data) {
-                    return thSymMonoidalCategory.subreachability(model, data);
-                },
-            }),
         ],
     });
 }

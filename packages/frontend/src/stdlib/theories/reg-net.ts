@@ -2,7 +2,6 @@ import { lazy } from "solid-js";
 
 import { ThSignedCategory } from "catlog-wasm";
 import { Theory, type TheoryMeta } from "../../theory";
-import * as analyses from "../analyses";
 
 const ObjectCellEditor = lazy(() => import("../../model/object_cell_editor"));
 const MorphismCellEditor = lazy(() => import("../../model/morphism_cell_editor"));
@@ -46,40 +45,6 @@ export default function createRegulatoryNetworkTheory(theoryMeta: TheoryMeta): T
                 arrowStyle: "flat",
                 preferUnnamed: true,
             },
-        ],
-        modelAnalyses: [
-            analyses.modelGraph({
-                id: "diagram",
-                name: "Visualization",
-                description: "Visualize the regulatory network",
-                help: "visualization",
-            }),
-            analyses.motifFinding({
-                id: "positive-loops",
-                name: "Positive feedback",
-                description: "Analyze the network for positive feedback loops",
-                help: "loops",
-                findMotifs(model, options) {
-                    return thSignedCategory.positiveLoops(model, options);
-                },
-            }),
-            analyses.motifFinding({
-                id: "negative-loops",
-                name: "Negative feedback",
-                description: "Analyze the network for negative feedback loops",
-                help: "loops",
-                findMotifs(model, options) {
-                    return thSignedCategory.negativeLoops(model, options);
-                },
-            }),
-            analyses.linearODE({
-                simulate: (model, data) => thSignedCategory.linearODE(model, data),
-            }),
-            analyses.lotkaVolterra({
-                simulate(model, data) {
-                    return thSignedCategory.lotkaVolterra(model, data);
-                },
-            }),
         ],
     });
 }
