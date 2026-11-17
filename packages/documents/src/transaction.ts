@@ -1,11 +1,16 @@
 import type { DocumentChange } from "./document-store";
+import type { Shape } from "./shape";
+import type { SupportedDocument } from "./supported-document";
 
 /**
  * The changes committed by a transaction: for each document it touched, the
  * change that was committed to it.
  */
 export interface Commit<Handle, Version> {
-    readonly documents: ReadonlyMap<Handle, DocumentChange<Version>>;
+    readonly documents: ReadonlyMap<
+        SupportedDocument<Shape, Handle, Version>,
+        DocumentChange<Version>
+    >;
 }
 
 /**

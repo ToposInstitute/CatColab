@@ -34,8 +34,14 @@ describe("transactions", () => {
             ]);
 
             const commit = tx.commit();
+            expect([...commit.documents.keys()]).toEqual([schema]);
+            expect(commit.documents.has(schema)).toBe(true);
+            expect(commit.documents.has(draftDocs.schema)).toBe(false);
             expect(schema.cellsOf(Entity).map((cell) => cell.label)).toEqual(["Person", "Company"]);
 
+            const reloaded = expectOk(await binder.loadNotebookFromRef(SimpleSchema, schema.ref));
+            expect(() => reloaded.revert(commit)).toThrow("not part of the commit");
+            reloaded.dispose();
             schema.revert(commit);
             expect(schema.cellsOf(Entity).length).toBe(0);
         },
@@ -60,7 +66,11 @@ describe("transactions", () => {
         // ...while the real instance still sees the real schema.
         expect((await instance.validate()).tables.map((table) => table.label)).toEqual(["Person"]);
 
-        tx.commit();
+        const commit = tx.commit();
+        expect(commit.documents.size).toBe(2);
+        expect(commit.documents.has(schema)).toBe(true);
+        expect(commit.documents.has(instance)).toBe(true);
+        expect(commit.documents.has(draftDocs.instance)).toBe(false);
         expect((await instance.validate()).tables.map((table) => table.label)).toEqual([
             "Person",
             "Company",
@@ -84,8 +94,8 @@ describe("transactions", () => {
 
             // Each draft conversation is attached to the draft of the document
             // it is attached to.
-            expect(draftDocs.inner.attachment.handle).toBe(draftDocs.schema.handle);
-            expect(draftDocs.outer.attachment.handle).toBe(draftDocs.inner.handle);
+            expect(draftDocs.inner.attachment).toBe(draftDocs.schema);
+            expect(draftDocs.outer.attachment).toBe(draftDocs.inner);
 
             draftDocs.outer.update({ title: "Renamed" });
             expect(outer.title).toBe("Outer");
@@ -109,7 +119,7 @@ describe("transactions", () => {
             const { tx, draftDocs } = await binder.beginTransaction({ conversation });
 
             const draft = draftDocs.conversation;
-            expect(draft.attachment.handle).toBe(schema.handle);
+            expect(draft.attachment.ref).toEqual(schema.ref);
 
             draft.update({ title: "Renamed" });
             tx.commit();
@@ -157,20 +167,19 @@ describe("transactions", () => {
         const schema = await binder.createNotebook(SimpleSchema, { title: "Example schema" });
 
         const { tx, draftDocs } = await binder.beginTransaction({ schema });
-        const draftRef = binder.getDocumentRef(draftDocs.schema.handle);
+        const draftRef = draftDocs.schema.ref;
 
         // The draft's own ref resolves to the draft, while the source's ref
         // keeps resolving to the committed document.
-        const resolvedDraft = expectOk(await binder.getHandle(draftRef));
-        expect(resolvedDraft).toBe(draftDocs.schema.handle);
-        const resolvedSource = expectOk(
-            await binder.getHandle(binder.getDocumentRef(schema.handle)),
-        );
-        expect(resolvedSource).toBe(schema.handle);
+        draftDocs.schema.update({ title: "Draft schema" });
+        const resolvedDraft = expectOk(await binder.getDocumentSnapshotFromRef(draftRef));
+        expect(resolvedDraft.name).toBe("Draft schema");
+        const resolvedSource = expectOk(await binder.getDocumentSnapshotFromRef(schema.ref));
+        expect(resolvedSource.name).toBe("Example schema");
 
         tx.commit();
         // Once committed, the draft's ref no longer resolves.
-        expect((await binder.getHandle(draftRef)).tag).toBe("Err");
+        expect((await binder.getDocumentSnapshotFromRef(draftRef)).tag).toBe("Err");
     });
 
     test(
@@ -198,6 +207,9 @@ describe("transactions", () => {
             const commit = tx.commit();
             expect(instance.dump().tables[personTable.id]?.rowOrder).toEqual([row.id]);
 
+            const reloaded = expectOk(await binder.loadInstanceFromRef(schema, instance.ref));
+            expect(() => reloaded.revert(commit)).toThrow("not part of the commit");
+            reloaded.dispose();
             instance.revert(commit);
             // Reverting restores the exact pre-commit state, where the table
             // did not exist yet at all.

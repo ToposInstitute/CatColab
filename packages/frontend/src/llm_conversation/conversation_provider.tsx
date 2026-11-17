@@ -25,7 +25,7 @@ export function createLLMConversationRegistry(
     const controllers = new Map<string, { refId: string; controller: LLMConversationController }>();
     return {
         get(conversation: ApiLLMConversation): LLMConversationController {
-            const { server, id, version } = conversation.handle.ref;
+            const { server, id, version } = conversation.ref;
             const key = `${server}/${id}/${version ?? "live"}`;
             let controller = controllers.get(key)?.controller;
             if (!controller) {

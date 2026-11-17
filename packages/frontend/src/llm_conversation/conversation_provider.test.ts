@@ -23,7 +23,7 @@ const input = { content: "Hello", files: [] };
 
 function conversation(id: string): ApiLLMConversation {
     return {
-        handle: { ref: { id, server: "test-server", version: null } },
+        ref: { id, server: "test-server", version: null },
         interactions: () => [],
     } as unknown as ApiLLMConversation;
 }

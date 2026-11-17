@@ -64,13 +64,16 @@ describe("instance data", { timeout: 20000 }, () => {
         const instance = expectOk(await binder.createInstance(schema, { title: "Instance" }));
         const validation = await instance.validate();
         const table = validation.tables[0]!;
-        const initial = getInstanceData(store, instance.handle);
+        const initial = getInstanceData(store, expectOk(await store.getHandle(instance.ref)));
         expect(instance.data()).toBe(expectOk(initial).value);
         expect(instance.data()).toBe(instance.data());
         expect(table.rows).toEqual([]);
-        store.changeDocument(instance.handle, (doc) => {
+        store.changeDocument(expectOk(await store.getHandle(instance.ref)), (doc) => {
             if (doc.type === "instance") {
-                doc.tables[table.id] = { rows: { stray: { label: "", fields: {} } }, rowOrder: [] };
+                doc.tables[table.id] = {
+                    rows: { stray: { label: "", fields: {} } },
+                    rowOrder: [],
+                };
             }
         });
         expect(table.rows).toEqual([]);
@@ -79,14 +82,14 @@ describe("instance data", { timeout: 20000 }, () => {
         expect(current.tables[0]?.rows.map((row) => row.id)).toEqual(["stray"]);
         expect(current.tables[0]?.rows[0]?.index).toBe(0);
         expect(current.tables[0]?.rows[0]?.fields).toEqual([]);
-        const after = getInstanceData(store, instance.handle);
+        const after = getInstanceData(store, expectOk(await store.getHandle(instance.ref)));
         expect(after).not.toBe(initial);
         expect(instance.data()).toBe(expectOk(after).value);
         expect(structuredClone(instance.data())).toEqual(instance.data());
         expect(instance.dump().tables[table.id]?.rowOrder).toEqual([]);
         schema.add(Entity, { label: "Other" });
         await instance.validate();
-        expect(getInstanceData(store, instance.handle)).toBe(after);
+        expect(getInstanceData(store, expectOk(await store.getHandle(instance.ref)))).toBe(after);
         instance.dispose();
     });
 });

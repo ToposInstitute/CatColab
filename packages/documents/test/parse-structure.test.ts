@@ -97,7 +97,7 @@ describe("essential snapshot structure", () => {
         const binder = createBinder(store);
         const notebook = await binder.createNotebook(SimpleSchema, { title: "Schema" });
         notebook.add(Entity, { label: "Unordered" });
-        store.changeDocument(notebook.handle, (document) => {
+        store.changeDocument(ok(await store.getHandle(notebook.ref)), (document) => {
             if (document.type === "model") {
                 document.notebook.cellOrder = [];
             }
@@ -115,7 +115,7 @@ describe("essential snapshot structure", () => {
         const binder = createBinder(store);
         const schema = await binder.createNotebook(SimpleSchema, { title: "Schema" });
         const instance = ok(await binder.createInstance(schema, { title: "Data" }));
-        store.changeDocument(instance.handle, (document) => {
+        store.changeDocument(ok(await store.getHandle(instance.ref)), (document) => {
             if (document.type === "instance") {
                 Object.assign(document, { tables: null });
             }
@@ -142,7 +142,7 @@ describe("essential snapshot structure", () => {
         )!;
         // The schema-derived table legitimately has no stored data yet.
         expect(table.rows).toEqual([]);
-        store.changeDocument(instance.handle, (document) => {
+        store.changeDocument(ok(await store.getHandle(instance.ref)), (document) => {
             if (document.type !== "instance") {
                 throw new Error("Expected instance");
             }
@@ -163,7 +163,7 @@ describe("essential snapshot structure", () => {
         });
         expect(validation.tables[0]?.rows.map((row) => row.id)).toEqual(["alice"]);
         expect(instance.dump().tables[table.id]?.rowOrder).toEqual(["missing", "alice", "alice"]);
-        store.changeDocument(instance.handle, (document) => {
+        store.changeDocument(ok(await store.getHandle(instance.ref)), (document) => {
             if (document.type === "instance") {
                 document.tables[table.id]!.rowOrder = ["alice"];
             }

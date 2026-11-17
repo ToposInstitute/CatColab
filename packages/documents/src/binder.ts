@@ -3,10 +3,11 @@ import {
     LLMConversation as LLMConversationMethods,
     Model,
 } from "catcolab-document-methods";
-import type { Document } from "catcolab-document-types";
+import type { Document, LinkType } from "catcolab-document-types";
 import type { DocumentRef, DocumentStore, HandlesByLinkType } from "./document-store";
 import { createInMemoryStore } from "./document-store";
 import type { DocumentChange } from "./document-store";
+import { getBoundHandle } from "./document/handle_registry";
 import { parseInstanceData } from "./instance/data";
 import { instanceFromStore, type Instance } from "./instance/document";
 import { type LLMConversation, llmConversationFromStore } from "./llm-conversation";
@@ -20,13 +21,17 @@ import type { Commit, Transaction } from "./transaction";
 import { assertExhaustive } from "./util/assert_exhaustive";
 import type { DeepReadonly } from "./util/deep-readonly";
 
+export type DocumentRefsByLinkType = Record<LinkType, ReadonlyArray<DocumentRef>>;
+
 export interface Binder<Handle, Version> {
-    getHandle(ref: DocumentRef): Promise<Result<Handle>>;
-    getDocumentRef(handle: Handle): DocumentRef;
     //TODO: We shouldn't be exposing this but it is needed for resolving linked documents in frontend LLM execution scopes.
-    getDocumentSnapshot(handle: Handle): DeepReadonly<Document>;
-    listUsedBy(handle: Handle): Promise<HandlesByLinkType<Handle>>;
-    listDependsOn(handle: Handle): Promise<HandlesByLinkType<Handle>>;
+    getDocumentSnapshotFromRef(ref: DocumentRef): Promise<Result<DeepReadonly<Document>>>;
+    listUsedBy(
+        document: SupportedDocument<Shape, Handle, Version>,
+    ): Promise<DocumentRefsByLinkType>;
+    listDependsOn(
+        document: SupportedDocument<Shape, Handle, Version>,
+    ): Promise<DocumentRefsByLinkType>;
 
     createNotebook<S extends Shape & { readonly theory: string }>(
         shape: S,
@@ -85,12 +90,29 @@ export function createBinder<Handle, Version>(
 function binderFromStore<Handle, Version>(
     store: DocumentStore<Handle, Version>,
 ): Binder<Handle, Version> {
+    const handleOf = (document: SupportedDocument<Shape, Handle, Version>): Handle =>
+        getBoundHandle(store, document);
+
+    const refs = (handles: ReadonlyArray<Handle>): DocumentRef[] =>
+        handles.map((handle) => store.getDocumentRef(handle));
+    const refsByLinkType = (handles: HandlesByLinkType<Handle>): DocumentRefsByLinkType => ({
+        "analysis-of": refs(handles["analysis-of"]),
+        "diagram-in": refs(handles["diagram-in"]),
+        "instance-of": refs(handles["instance-of"]),
+        "llmconversation-of": refs(handles["llmconversation-of"]),
+        instantiation: refs(handles.instantiation),
+    });
+
     return {
-        getHandle: (ref) => store.getHandle(ref),
-        getDocumentRef: (handle) => store.getDocumentRef(handle),
-        getDocumentSnapshot: (handle) => store.getDocumentSnapshot(handle),
-        listUsedBy: (handle) => store.listUsedBy(handle),
-        listDependsOn: (handle) => store.listDependsOn(handle),
+        async getDocumentSnapshotFromRef(ref) {
+            const result = await store.getHandle(ref);
+            return result.tag === "Err"
+                ? result
+                : { tag: "Ok", content: store.getDocumentSnapshot(result.content) };
+        },
+        listUsedBy: async (document) => refsByLinkType(await store.listUsedBy(handleOf(document))),
+        listDependsOn: async (document) =>
+            refsByLinkType(await store.listDependsOn(handleOf(document))),
         async createNotebook<S extends Shape & { readonly theory: string }>(
             shape: S,
             options: { title: string },
@@ -153,7 +175,7 @@ function binderFromStore<Handle, Version>(
                 };
             }
 
-            const schemaRef = store.getDocumentRef(schema.handle);
+            const schemaRef = store.getDocumentRef(handleOf(schema));
             const document = InstanceMethods.newInstanceDocument({
                 _id: schemaRef.id,
                 _version: schemaRef.version,
@@ -172,7 +194,7 @@ function binderFromStore<Handle, Version>(
             llmModel: string,
             options: { title: string },
         ) {
-            const attachmentRef = store.getDocumentRef(attachment.handle);
+            const attachmentRef = store.getDocumentRef(handleOf(attachment));
             const document = LLMConversationMethods.newLLMConversationDocument(
                 {
                     _id: attachmentRef.id,
@@ -205,7 +227,7 @@ function binderFromStore<Handle, Version>(
                     ],
                 };
             }
-            const attachmentRef = store.getDocumentRef(attachment.handle);
+            const attachmentRef = store.getDocumentRef(handleOf(attachment));
             if (
                 document.llmConversationOf._id !== attachmentRef.id ||
                 document.llmConversationOf._version !== attachmentRef.version ||
@@ -252,7 +274,7 @@ function binderFromStore<Handle, Version>(
             }
             const parsedDocument = parseResult.content.value;
 
-            const schemaRef = store.getDocumentRef(schema.handle);
+            const schemaRef = store.getDocumentRef(handleOf(schema));
             if (
                 parsedDocument.instanceOf._id !== schemaRef.id ||
                 parsedDocument.instanceOf._version !== schemaRef.version ||
@@ -282,7 +304,7 @@ function binderFromStore<Handle, Version>(
             const sources = Object.values(docs) as Array<SupportedDocument<Shape, Handle, Version>>;
 
             for (const doc of sources) {
-                if (sources.some((other) => other !== doc && other.handle === doc.handle)) {
+                if (sources.some((other) => other !== doc && handleOf(other) === handleOf(doc))) {
                     throw new Error("A document appears more than once in the transaction.");
                 }
             }
@@ -294,9 +316,9 @@ function binderFromStore<Handle, Version>(
             const draftHandleBySource = new Map<Handle, Handle>();
             const draftHandleBySourceRefId = new Map<string, Handle>();
             for (const doc of sources) {
-                const draftHandle = store.createDraft(doc.handle);
-                draftHandleBySource.set(doc.handle, draftHandle);
-                draftHandleBySourceRefId.set(store.getDocumentRef(doc.handle).id, draftHandle);
+                const draftHandle = store.createDraft(handleOf(doc));
+                draftHandleBySource.set(handleOf(doc), draftHandle);
+                draftHandleBySourceRefId.set(store.getDocumentRef(handleOf(doc)).id, draftHandle);
             }
 
             const drafts = new Map<Handle, SupportedDocument<Shape, Handle, Version>>();
@@ -315,7 +337,7 @@ function binderFromStore<Handle, Version>(
             async function draftDoc(
                 doc: SupportedDocument<Shape, Handle, Version>,
             ): Promise<SupportedDocument<Shape, Handle, Version> | undefined> {
-                const draftHandle = draftHandleBySource.get(doc.handle)!;
+                const draftHandle = draftHandleBySource.get(handleOf(doc))!;
                 const document = doc.data();
                 switch (document.type) {
                     case "model": {
@@ -369,9 +391,9 @@ function binderFromStore<Handle, Version>(
                                 Handle
                             >
                         ).attachment;
-                        if (draftHandleBySource.has(attachment.handle)) {
+                        if (draftHandleBySource.has(handleOf(attachment))) {
                             const attachmentDraft = drafts.get(
-                                draftHandleBySource.get(attachment.handle)!,
+                                draftHandleBySource.get(handleOf(attachment))!,
                             );
                             if (attachmentDraft === undefined) {
                                 return undefined;
@@ -395,7 +417,7 @@ function binderFromStore<Handle, Version>(
                     for (const [index, result] of results.entries()) {
                         if (result.status === "fulfilled" && result.value !== undefined) {
                             drafts.set(
-                                draftHandleBySource.get(pending[index]!.handle)!,
+                                draftHandleBySource.get(handleOf(pending[index]!))!,
                                 result.value,
                             );
                         }
@@ -425,13 +447,14 @@ function binderFromStore<Handle, Version>(
             const draftDocs = Object.fromEntries(
                 Object.entries(docs).map(([key, doc]) => [
                     key,
-                    drafts.get(draftHandleBySource.get(doc.handle)!),
+                    drafts.get(draftHandleBySource.get(handleOf(doc))!),
                 ]),
             ) as Docs;
 
             const staged = sources.map((doc) => ({
-                sourceHandle: doc.handle,
-                draftHandle: draftHandleBySource.get(doc.handle)!,
+                source: doc,
+                sourceHandle: handleOf(doc),
+                draftHandle: draftHandleBySource.get(handleOf(doc))!,
             }));
 
             let state: "open" | "committed" | "aborted" = "open";
@@ -445,9 +468,12 @@ function binderFromStore<Handle, Version>(
                         draft.dispose();
                     }
 
-                    const documents = new Map<Handle, DocumentChange<Version>>();
-                    for (const { sourceHandle, draftHandle } of staged) {
-                        documents.set(sourceHandle, store.commitDraft(sourceHandle, draftHandle));
+                    const documents = new Map<
+                        SupportedDocument<Shape, Handle, Version>,
+                        DocumentChange<Version>
+                    >();
+                    for (const { source, sourceHandle, draftHandle } of staged) {
+                        documents.set(source, store.commitDraft(sourceHandle, draftHandle));
                     }
                     return { documents };
                 },

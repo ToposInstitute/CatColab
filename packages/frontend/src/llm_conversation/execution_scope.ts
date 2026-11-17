@@ -2,6 +2,7 @@ import type { LinkType } from "catcolab-document-types";
 import {
     type AnyCellType,
     type Binder,
+    type DocumentRef,
     type LLMConversation,
     type Shape,
     type SupportedDocument,
@@ -11,10 +12,10 @@ import type { ContextExecScope } from "../inference/context_exec";
 import { resolveSupportedDocument } from "./document_resolution";
 import { type ScopedDocument, uniqueBinding, validateDraft } from "./scoped_document";
 
-type ScopeEntry<Handle> =
-    | { kind: "dependency"; link: LinkType; handle: Handle }
-    | { kind: "attachment"; handle: Handle }
-    | { kind: "dependent"; link: LinkType; handle: Handle };
+type ScopeEntry =
+    | { kind: "dependency"; link: LinkType; ref: DocumentRef }
+    | { kind: "attachment" }
+    | { kind: "dependent"; link: LinkType; ref: DocumentRef };
 
 export type LLMConversationExecutionScope = {
     bindings: ContextExecScope;
@@ -87,31 +88,31 @@ async function createScopedDocuments<
     const origin = conversation.attachment;
 
     const [dependsOn, usedBy] = await Promise.all([
-        binder.listDependsOn(origin.handle),
-        binder.listUsedBy(origin.handle),
+        binder.listDependsOn(origin),
+        binder.listUsedBy(origin),
     ]);
 
     // Stage the origin together with every document it depends on and every
     // document that depends on it. The running conversation is the one
     // exception: we don't put it into the scope.
-    const conversationRefId = binder.getDocumentRef(conversation.handle).id;
-    const entries: Array<ScopeEntry<Handle>> = [];
-    for (const [link, handles] of Object.entries(dependsOn) as Array<
-        [LinkType, ReadonlyArray<Handle>]
+    const conversationRefId = conversation.ref.id;
+    const entries: Array<ScopeEntry> = [];
+    for (const [link, refs] of Object.entries(dependsOn) as Array<
+        [LinkType, ReadonlyArray<DocumentRef>]
     >) {
-        for (const handle of handles) {
-            entries.push({ kind: "dependency", link, handle });
+        for (const ref of refs) {
+            entries.push({ kind: "dependency", link, ref });
         }
     }
-    entries.push({ kind: "attachment", handle: origin.handle });
-    for (const [link, handles] of Object.entries(usedBy) as Array<
-        [LinkType, ReadonlyArray<Handle>]
+    entries.push({ kind: "attachment" });
+    for (const [link, refs] of Object.entries(usedBy) as Array<
+        [LinkType, ReadonlyArray<DocumentRef>]
     >) {
-        for (const handle of handles) {
-            if (binder.getDocumentRef(handle).id === conversationRefId) {
+        for (const ref of refs) {
+            if (ref.id === conversationRefId) {
                 continue;
             }
-            entries.push({ kind: "dependent", link, handle });
+            entries.push({ kind: "dependent", link, ref });
         }
     }
 
@@ -127,7 +128,7 @@ async function createScopedDocuments<
         const document =
             entry.kind === "attachment"
                 ? origin
-                : (await resolveSupportedDocument(binder, entry.handle))?.document;
+                : (await resolveSupportedDocument(binder, entry.ref))?.document;
         if (document === undefined) {
             continue;
         }

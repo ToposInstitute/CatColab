@@ -67,7 +67,7 @@ describe("instance document creation", () => {
         expect(instance.shape).toBe(SimpleSchema);
         expect(instance.data().type).toBe("instance");
         expect(instance.data().tables).toEqual([]);
-        expect(instance.data().instanceOf._id).toBe(binder.getDocumentRef(schema.handle).id);
+        expect(instance.data().instanceOf._id).toBe(schema.ref.id);
         expect(instance.data().instanceOf.type).toBe("instance-of");
 
         const dumped = instance.dump();
@@ -109,9 +109,7 @@ describe("instance document creation", () => {
             expect(predatorPrey.title).toBe("Predator-prey");
             expect(predatorPrey.shape).toBe(SimpleSchema);
             expect(predatorPrey.data().tables).toEqual([]);
-            expect(predatorPrey.data().instanceOf._id).toBe(
-                binder.getDocumentRef(causalLoop.handle).id,
-            );
+            expect(predatorPrey.data().instanceOf._id).toBe(causalLoop.ref.id);
         },
     );
 
@@ -132,13 +130,11 @@ describe("instance document creation", () => {
             await binder.createInstance(schema, { title: "Company instance" }),
         );
 
-        const loaded = expectOk(
-            await binder.loadInstanceFromRef(schema, binder.getDocumentRef(instance.handle)),
-        );
+        const loaded = expectOk(await binder.loadInstanceFromRef(schema, instance.ref));
 
         expect(loaded.title).toBe("Company instance");
         expect(loaded.shape).toBe(SimpleSchema);
-        expect(loaded.handle).toBe(instance.handle);
+        expect(loaded.ref).toEqual(instance.ref);
     });
 });
 
@@ -243,7 +239,7 @@ describe("instance schema validation", () => {
             .poll(() => latest?.tables.map((table) => table.label))
             .toEqual(["Person", "Company"]);
 
-        store.changeDocument(instance.handle, (document) => {
+        store.changeDocument(expectOk(await store.getHandle(instance.ref)), (document) => {
             const stored = document as unknown as StoredInstanceForTest;
             stored.tables["ghost-table"] = {
                 rows: { "ghost-row": { fields: { mystery: { Int: 3 } } } },
@@ -510,7 +506,7 @@ describe("tabular instances", () => {
             );
             const bob = expectOk(await instance.addRow(personTable, { values: { name: "Bob" } }));
 
-            store.changeDocument(instance.handle, (document) => {
+            store.changeDocument(expectOk(await store.getHandle(instance.ref)), (document) => {
                 const stored = document as unknown as StoredInstanceForTest;
                 const table = stored.tables[personTable.id];
                 if (table === undefined) {
@@ -706,7 +702,7 @@ describe("tabular instances", () => {
                 await instance.addRow(personTable, { values: { name: "Alice" } }),
             );
 
-            store.changeDocument(instance.handle, (document) => {
+            store.changeDocument(expectOk(await store.getHandle(instance.ref)), (document) => {
                 const stored = document as unknown as StoredInstanceForTest;
                 const row = stored.tables[personTable.id]?.rows[alice.id];
                 if (row === undefined) {
@@ -762,7 +758,7 @@ describe("tabular instances", () => {
                 await binder.createInstance(schema, { title: "Company instance" }),
             );
 
-            store.changeDocument(instance.handle, (document) => {
+            store.changeDocument(expectOk(await store.getHandle(instance.ref)), (document) => {
                 const stored = document as unknown as StoredInstanceForTest;
                 stored.tables["ghost-table"] = {
                     rows: { "ghost-row": { fields: { mystery: { Int: 3 } } } },
@@ -811,7 +807,7 @@ describe("deleting orphaned instance data", () => {
             await binder.createInstance(schema, { title: "Company instance" }),
         );
 
-        store.changeDocument(instance.handle, (document) => {
+        store.changeDocument(expectOk(await store.getHandle(instance.ref)), (document) => {
             const stored = document as unknown as StoredInstanceForTest;
             stored.tables["ghost-table"] = {
                 rows: { "ghost-row": { fields: { mystery: { Int: 3 } } } },
@@ -873,7 +869,7 @@ describe("deleting orphaned instance data", () => {
         const alice = expectOk(await instance.addRow(personTable, { values: { name: "Alice" } }));
         const bob = expectOk(await instance.addRow(personTable, { values: { name: "Bob" } }));
 
-        store.changeDocument(instance.handle, (document) => {
+        store.changeDocument(expectOk(await store.getHandle(instance.ref)), (document) => {
             const stored = document as unknown as StoredInstanceForTest;
             const rows = stored.tables[personTable.id]?.rows;
             if (rows === undefined) {
@@ -916,7 +912,7 @@ describe("deleting orphaned instance data", () => {
         }
         const alice = expectOk(await instance.addRow(personTable, { values: { name: "Alice" } }));
 
-        store.changeDocument(instance.handle, (document) => {
+        store.changeDocument(expectOk(await store.getHandle(instance.ref)), (document) => {
             const stored = document as unknown as StoredInstanceForTest;
             stored.tables["ghost-table"] = {
                 rows: { "ghost-row": { fields: { mystery: { Int: 3 } } } },
