@@ -12,27 +12,18 @@ import {
     FormGroup,
     InputField,
 } from "catcolab-ui-components";
-import {
-    type DblModel,
-    type QualifiedName,
-    type StochasticMassActionProblemData,
-    ThSymMonoidalCategory,
-} from "catlog-wasm";
+import { type DblModel, type QualifiedName, ThSymMonoidalCategory } from "catlog-wasm";
 import type { ModelAnalysisBuilder, ModelAnalysisProps } from "../../analysis";
 import { morLabelOrDefault } from "../../model";
 import { createModelODEPlot, ODEResultPlot } from "../../visualization";
+import { newStochasticMassActionProblemData, type StochasticMassActionProblemData } from "./types";
 
 import "../../visualization/simulation.css";
 
 /** Analyze a model using stochastic mass-action dynamics. */
 export default {
     contentVersion: 0,
-    initialContent: () => ({
-        rates: {},
-        initialValues: {},
-        seed: null,
-        duration: 10,
-    }),
+    initialContent: newStochasticMassActionProblemData,
     component: StochasticMassAction,
 } satisfies ModelAnalysisBuilder<StochasticMassActionProblemData>;
 

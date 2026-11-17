@@ -1,5 +1,4 @@
 import type { ModelAnalysisPlugin } from "../../plugin";
-import { loadLinearODEAnalysis } from "./builder";
 
 export const plugins = [
     {
@@ -11,8 +10,6 @@ export const plugins = [
         scope: {
             theory: ["causal-loop", "reg-net"],
         },
-        load: loadLinearODEAnalysis({
-            loadSimulator: async () => (await import("./bindings")).linearODE,
-        }),
+        load: async () => (await import("./linear_ode")).default,
     },
 ] satisfies ModelAnalysisPlugin[];

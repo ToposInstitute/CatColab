@@ -1,8 +1,6 @@
-import type { DblModel, LinearODEProblemData, ODEResult } from "catlog-wasm";
+import type { LinearODEProblemData } from "catlog-wasm";
 
 export type { LinearODEProblemData };
-
-export type LinearODESimulator = (model: DblModel, data: LinearODEProblemData) => ODEResult;
 
 export const newLinearODEProblemData = (): LinearODEProblemData => ({
     coefficients: {},

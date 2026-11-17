@@ -1,5 +1,4 @@
 import type { ModelAnalysisPlugin } from "../../plugin";
-import { loadLotkaVolterraAnalysis } from "./builder";
 
 export const plugins = [
     {
@@ -11,8 +10,6 @@ export const plugins = [
         scope: {
             theory: ["causal-loop", "reg-net"],
         },
-        load: loadLotkaVolterraAnalysis({
-            loadSimulator: async () => (await import("./bindings")).lotkaVolterra,
-        }),
+        load: async () => (await import("./lotka_volterra")).default,
     },
 ] satisfies ModelAnalysisPlugin[];

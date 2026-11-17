@@ -5,20 +5,24 @@ import {
     FixedTableEditor,
     Foldable,
 } from "catcolab-ui-components";
-import { type DblModel, type LotkaVolterraProblemData, type QualifiedName } from "catlog-wasm";
-import type { ModelAnalysisProps } from "../../analysis";
+import { type DblModel, type QualifiedName, ThSignedCategory } from "catlog-wasm";
+import type { ModelAnalysisBuilder, ModelAnalysisProps } from "../../analysis";
 import { morLabelOrDefault } from "../../model";
 import { createModelODEPlot, ODEResultPlot } from "../../visualization";
-import type { LotkaVolterraSimulator } from "./types";
+import { newLotkaVolterraProblemData, type LotkaVolterraProblemData } from "./types";
 
 import "../../visualization/simulation.css";
 
 /** Analyze a model using Lotka-Volterra dynamics. */
-export default function LotkaVolterra(
-    props: ModelAnalysisProps<LotkaVolterraProblemData> & {
-        simulate: LotkaVolterraSimulator;
-    },
-) {
+export default {
+    contentVersion: 0,
+    initialContent: newLotkaVolterraProblemData,
+    component: LotkaVolterra,
+} satisfies ModelAnalysisBuilder<LotkaVolterraProblemData>;
+
+const thSignedCategory = new ThSignedCategory();
+
+function LotkaVolterra(props: ModelAnalysisProps<LotkaVolterraProblemData>) {
     const elaboratedModel = () => props.liveModel.elaboratedModel();
 
     const obSchema: ColumnSchema<QualifiedName>[] = [
@@ -78,7 +82,7 @@ export default function LotkaVolterra(
 
     const plotResult = createModelODEPlot(
         () => props.liveModel.validatedModel(),
-        (model: DblModel) => props.simulate(model, props.content),
+        (model: DblModel) => thSignedCategory.lotkaVolterra(model, props.content),
     );
 
     return (

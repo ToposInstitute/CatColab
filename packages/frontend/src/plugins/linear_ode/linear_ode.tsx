@@ -5,20 +5,24 @@ import {
     FixedTableEditor,
     Foldable,
 } from "catcolab-ui-components";
-import { type DblModel, type LinearODEProblemData, type QualifiedName } from "catlog-wasm";
-import type { ModelAnalysisProps } from "../../analysis";
+import { type DblModel, type QualifiedName, ThSignedCategory } from "catlog-wasm";
+import type { ModelAnalysisBuilder, ModelAnalysisProps } from "../../analysis";
 import { morLabelOrDefault } from "../../model";
 import { createModelODEPlot, ODEResultPlot } from "../../visualization";
-import type { LinearODESimulator } from "./types";
+import { newLinearODEProblemData, type LinearODEProblemData } from "./types";
 
 import "../../visualization/simulation.css";
 
 /** Analyze a model using LinearODE dynamics. */
-export default function LinearODE(
-    props: ModelAnalysisProps<LinearODEProblemData> & {
-        simulate: LinearODESimulator;
-    },
-) {
+export default {
+    contentVersion: 0,
+    initialContent: newLinearODEProblemData,
+    component: LinearODE,
+} satisfies ModelAnalysisBuilder<LinearODEProblemData>;
+
+const thSignedCategory = new ThSignedCategory();
+
+function LinearODE(props: ModelAnalysisProps<LinearODEProblemData>) {
     const elaboratedModel = () => props.liveModel.elaboratedModel();
 
     const obSchema: ColumnSchema<QualifiedName>[] = [
@@ -70,7 +74,7 @@ export default function LinearODE(
 
     const plotResult = createModelODEPlot(
         () => props.liveModel.validatedModel(),
-        (model: DblModel) => props.simulate(model, props.content),
+        (model: DblModel) => thSignedCategory.linearODE(model, props.content),
     );
 
     return (
