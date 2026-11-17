@@ -1,7 +1,8 @@
 import { type Accessor, createMemo, createResource, type Resource } from "solid-js";
 import { stringify as uuidStringify } from "uuid";
 
-import { type ApiDocumentHandle, useApi, useBinder } from "../api";
+import type { DocumentRef } from "catcolab-documents";
+import { useApi, useBinder } from "../api";
 import { useUserState } from "../user/user_state_context";
 import { resolveSupportedDocument } from "./document_resolution";
 import type { ApiLLMConversation, ApiLLMConversationAttachment } from "./live_doc_compatibility";
@@ -46,35 +47,33 @@ export function useLLMConversationsOf(
     const [conversations] = createResource(source, async (ids) => {
         const origins = await Promise.all(
             ids.map(async (id) => {
-                const handle = await binder.getHandle({
-                    id,
-                    version: null,
-                    server: api.serverHost,
-                });
-                if (handle.tag === "Err") {
+                const ref = { id, version: null, server: api.serverHost };
+                const snapshot = await binder.getDocumentSnapshotFromRef(ref);
+                if (snapshot.tag === "Err") {
                     return undefined;
                 }
-                return handle.content;
+                return (await resolveSupportedDocument(binder, ref))?.document;
             }),
         );
 
-        const scope = new Map<string, ApiDocumentHandle>();
+        const scope = new Map<string, DocumentRef>();
         await Promise.all(
             origins.map(async (origin) => {
                 if (!origin) {
                     return;
                 }
-                scope.set(origin.ref.id, origin);
+                scope.set(origin.id, binder.getDocumentRef(origin));
                 const [dependsOn, usedBy] = await Promise.all([
                     binder.listDependsOn(origin),
                     binder.listUsedBy(origin),
                 ]);
-                for (const handle of [
+                for (const ref of [
                     ...Object.values(dependsOn).flat(),
                     ...Object.values(usedBy).flat(),
                 ]) {
-                    if (binder.getDocumentSnapshot(handle).type !== "llmconversation") {
-                        scope.set(handle.ref.id, handle);
+                    const snapshot = await binder.getDocumentSnapshotFromRef(ref);
+                    if (snapshot.tag === "Ok" && snapshot.content.type !== "llmconversation") {
+                        scope.set(ref.id, ref);
                     }
                 }
             }),
@@ -86,13 +85,13 @@ export function useLLMConversationsOf(
                 if (!resolved) {
                     return [];
                 }
-                const usedBy = await binder.listUsedBy(attachment);
+                const usedBy = await binder.listUsedBy(resolved.document);
                 return (
                     await Promise.all(
-                        usedBy["llmconversation-of"].map(async (handle) => {
+                        usedBy["llmconversation-of"].map(async (ref) => {
                             const result = await binder.loadLLMConversationFromRef(
                                 resolved.document,
-                                handle.ref,
+                                ref,
                             );
                             return result.tag === "Ok"
                                 ? { conversation: result.content, attachment: resolved.document }
@@ -102,13 +101,11 @@ export function useLLMConversationsOf(
                 ).filter((item) => item !== undefined);
             }),
         );
-        const byRefId = new Map(
-            conversations.flat().map((item) => [item.conversation.handle.ref.id, item]),
-        );
+        const byRefId = new Map(conversations.flat().map((item) => [item.conversation.id, item]));
         return [...byRefId.values()].toSorted(
             (a, b) =>
-                (userState.documents[b.conversation.handle.ref.id]?.createdAt ?? 0) -
-                (userState.documents[a.conversation.handle.ref.id]?.createdAt ?? 0),
+                (userState.documents[b.conversation.id]?.createdAt ?? 0) -
+                (userState.documents[a.conversation.id]?.createdAt ?? 0),
         );
     });
 

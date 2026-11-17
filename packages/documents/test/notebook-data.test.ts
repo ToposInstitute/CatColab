@@ -44,13 +44,10 @@ describe("notebook data", { timeout: 30000 }, () => {
             throw new Error("Expected an instance");
         }
         expect(
-            await binder.loadNotebookFromRef(SimpleOlog, binder.getDocumentRef(notebook.handle)),
+            await binder.loadNotebookFromRef(SimpleOlog, binder.getDocumentRef(notebook)),
         ).toMatchObject({ tag: "Err", content: [{ path: ["theory"] }] });
         expect(
-            await binder.loadNotebookFromRef(
-                SimpleSchema,
-                binder.getDocumentRef(instance.content.handle),
-            ),
+            await binder.loadNotebookFromRef(SimpleSchema, binder.getDocumentRef(instance.content)),
         ).toMatchObject({ tag: "Err", content: [{ path: ["type"] }] });
         instance.content.dispose();
         notebook.dispose();

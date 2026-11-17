@@ -97,11 +97,14 @@ describe("essential snapshot structure", () => {
         const binder = createBinder(store);
         const notebook = await binder.createNotebook(SimpleSchema, { title: "Schema" });
         notebook.add(Entity, { label: "Unordered" });
-        store.changeDocument(notebook.handle, (document) => {
-            if (document.type === "model") {
-                document.notebook.cellOrder = [];
-            }
-        });
+        store.changeDocument(
+            ok(await store.getHandle(binder.getDocumentRef(notebook))),
+            (document) => {
+                if (document.type === "model") {
+                    document.notebook.cellOrder = [];
+                }
+            },
+        );
         expect(notebook.data().cells).toHaveLength(1);
         const validation = await notebook.validate();
         expect(validation.model.judgments()).toEqual([]);
@@ -115,11 +118,14 @@ describe("essential snapshot structure", () => {
         const binder = createBinder(store);
         const schema = await binder.createNotebook(SimpleSchema, { title: "Schema" });
         const instance = ok(await binder.createInstance(schema, { title: "Data" }));
-        store.changeDocument(instance.handle, (document) => {
-            if (document.type === "instance") {
-                Object.assign(document, { tables: null });
-            }
-        });
+        store.changeDocument(
+            ok(await store.getHandle(binder.getDocumentRef(instance))),
+            (document) => {
+                if (document.type === "instance") {
+                    Object.assign(document, { tables: null });
+                }
+            },
+        );
         expect(instance.data().tables).toEqual([]);
         expect((await instance.validate()).issues).toContainEqual({
             issueType: "MalformedDocument",
@@ -142,15 +148,18 @@ describe("essential snapshot structure", () => {
         )!;
         // The schema-derived table legitimately has no stored data yet.
         expect(table.rows).toEqual([]);
-        store.changeDocument(instance.handle, (document) => {
-            if (document.type !== "instance") {
-                throw new Error("Expected instance");
-            }
-            document.tables[table.id] = {
-                rows: { alice: { label: "", fields: {} } },
-                rowOrder: ["missing", "alice", "alice"],
-            };
-        });
+        store.changeDocument(
+            ok(await store.getHandle(binder.getDocumentRef(instance))),
+            (document) => {
+                if (document.type !== "instance") {
+                    throw new Error("Expected instance");
+                }
+                document.tables[table.id] = {
+                    rows: { alice: { label: "", fields: {} } },
+                    rowOrder: ["missing", "alice", "alice"],
+                };
+            },
+        );
         const validation = await instance.validate();
         expect(validation.issues).toContainEqual({
             issueType: "MalformedDocument",
@@ -163,11 +172,14 @@ describe("essential snapshot structure", () => {
         });
         expect(validation.tables[0]?.rows.map((row) => row.id)).toEqual(["alice"]);
         expect(instance.dump().tables[table.id]?.rowOrder).toEqual(["missing", "alice", "alice"]);
-        store.changeDocument(instance.handle, (document) => {
-            if (document.type === "instance") {
-                document.tables[table.id]!.rowOrder = ["alice"];
-            }
-        });
+        store.changeDocument(
+            ok(await store.getHandle(binder.getDocumentRef(instance))),
+            (document) => {
+                if (document.type === "instance") {
+                    document.tables[table.id]!.rowOrder = ["alice"];
+                }
+            },
+        );
         expect((await instance.validate()).issues).toEqual([]);
     }, 20_000);
 });

@@ -1,6 +1,7 @@
 import { Model, Nb, type ModelDocument } from "catcolab-document-methods";
 import type { ModelJudgment } from "catcolab-document-types";
 import type { DocumentStore } from "../document-store";
+import { registerDocument } from "../document/handle_registry";
 import {
     findObjectType,
     type AnyCellType,
@@ -182,9 +183,9 @@ export interface Notebook<
     H = unknown,
     V = unknown,
 > {
+    readonly id: string;
     readonly shape: S;
     readonly title: string;
-    readonly handle: H;
 
     add<T extends CellTypeOf<S>>(type: T, values: CellValuesOf<S, T>): AddedCellOf<S, T>;
     cells(): readonly CellData[];
@@ -231,9 +232,9 @@ export function modelNotebookFromStore<Handle, S extends Shape, Version>(
         return added;
     }
 
-    return {
+    const notebook: Notebook<S, ModelDocument, Handle, Version> = {
+        id: store.getDocumentRef(handle).id,
         shape,
-        handle,
         get title() {
             const parsed = parseNotebookData(store.getDocumentSnapshot(handle));
             return parsed.tag === "Ok" ? parsed.content.value.name : "";
@@ -322,4 +323,6 @@ export function modelNotebookFromStore<Handle, S extends Shape, Version>(
             store.revertCommit(handle, change);
         },
     };
+
+    return registerDocument(store, handle, notebook);
 }

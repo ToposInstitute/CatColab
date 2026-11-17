@@ -62,13 +62,18 @@ describe("stock-flow influence links", { timeout: 20000 }, () => {
 
     test("reads notebook cells when a stored link targets itself", async () => {
         const store = createInMemoryStore();
-        const notebook = await createBinder(store).createNotebook(PrimitiveSignedStockFlow, {
+        const binder = createBinder(store);
+        const notebook = await binder.createNotebook(PrimitiveSignedStockFlow, {
             title: "Self-referencing link",
         });
         try {
             const stock = notebook.add(Stock, { label: "Stock" });
             const link = notebook.add(PositiveLink, { label: "link", from: stock, to: null });
-            store.changeDocument(notebook.handle, (document) => {
+            const handle = await store.getHandle(binder.getDocumentRef(notebook));
+            if (handle.tag === "Err") {
+                throw new Error("Expected a notebook handle");
+            }
+            store.changeDocument(handle.content, (document) => {
                 const cell = document.notebook.cellContents[link.id];
                 // Create a self-referencing link.
                 cell.content.cod = {
@@ -85,7 +90,8 @@ describe("stock-flow influence links", { timeout: 20000 }, () => {
 
     test("reports wrong morphism types and malformed stored endpoints", async () => {
         const store = createInMemoryStore();
-        const notebook = await createBinder(store).createNotebook(PrimitiveSignedStockFlow, {
+        const binder = createBinder(store);
+        const notebook = await binder.createNotebook(PrimitiveSignedStockFlow, {
             title: "Cycle",
         });
         try {
@@ -101,7 +107,11 @@ describe("stock-flow influence links", { timeout: 20000 }, () => {
             expect((await notebook.validate()).issues).toContainEqual(
                 expect.objectContaining({ message: "Morphism `negative` has a mistyped codomain" }),
             );
-            store.changeDocument(notebook.handle, (document) => {
+            const handle = await store.getHandle(binder.getDocumentRef(notebook));
+            if (handle.tag === "Err") {
+                throw new Error("Expected a notebook handle");
+            }
+            store.changeDocument(handle.content, (document) => {
                 if (document.type !== "model") {
                     throw new Error("Expected a model");
                 }

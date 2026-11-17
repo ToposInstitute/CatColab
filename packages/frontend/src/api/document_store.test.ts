@@ -93,7 +93,23 @@ async function createFixtureWithSchema() {
         throw new Error("expected schema to load");
     }
 
-    return { ...fixture, schema: schema.content };
+    const schemaHandle = await fixture.store.getHandle(
+        fixture.binder.getDocumentRef(schema.content),
+    );
+    const instanceHandle = await fixture.store.getHandle({
+        id: instanceRef,
+        version: null,
+        server,
+    });
+    if (schemaHandle.tag === "Err" || instanceHandle.tag === "Err") {
+        throw new Error("expected store handles");
+    }
+    return {
+        ...fixture,
+        schema: schema.content,
+        schemaStoreHandle: schemaHandle.content,
+        instanceStoreHandle: instanceHandle.content,
+    };
 }
 
 describe("API document store", () => {
@@ -129,7 +145,14 @@ describe("API document store", () => {
     });
 
     test("instance views refresh after committing an unchanged schema draft", async () => {
-        const { binder, schema, store, schemaAutomergeHandle } = await createFixtureWithSchema();
+        const {
+            binder,
+            schema,
+            store,
+            schemaAutomergeHandle,
+            schemaStoreHandle,
+            instanceStoreHandle,
+        } = await createFixtureWithSchema();
         schema.add(Type, { label: "Person" });
         const result = await binder.loadInstanceFromRef(schema, {
             id: instanceRef,
@@ -154,10 +177,10 @@ describe("API document store", () => {
         }));
         try {
             await expect.poll(() => validation()?.tables[0]?.rows.length).toBe(1);
-            const before = store.getDocumentSnapshot(schema.handle);
+            const before = store.getDocumentSnapshot(schemaStoreHandle);
             const rootBefore = schemaAutomergeHandle.doc();
-            const schemaDraft = store.createDraft(schema.handle);
-            const instanceDraft = store.createDraft(instance.handle);
+            const schemaDraft = store.createDraft(schemaStoreHandle);
+            const instanceDraft = store.createDraft(instanceStoreHandle);
             store.changeDocument(instanceDraft, (document) => {
                 const stored = document as InstanceDocument;
                 delete stored.tables[table.id]!.rows[row.content.id];
@@ -165,10 +188,10 @@ describe("API document store", () => {
             });
 
             // LLM transactions merge the schema even when only instance rows changed.
-            store.commitDraft(schema.handle, schemaDraft);
+            store.commitDraft(schemaStoreHandle, schemaDraft);
             expect(schemaAutomergeHandle.doc()).not.toBe(rootBefore);
-            expect(store.getDocumentSnapshot(schema.handle)).toBe(before);
-            store.commitDraft(instance.handle, instanceDraft);
+            expect(store.getDocumentSnapshot(schemaStoreHandle)).toBe(before);
+            store.commitDraft(instanceStoreHandle, instanceDraft);
             await expect.poll(() => validation()?.tables[0]?.rows.length).toBe(0);
         } finally {
             dispose();
@@ -176,7 +199,7 @@ describe("API document store", () => {
     });
 
     test("document snapshots apply map key deletions", async () => {
-        const { binder, schema, store } = await createFixtureWithSchema();
+        const { binder, schema, store, instanceStoreHandle } = await createFixtureWithSchema();
         schema.add(Type, { label: "Person" });
 
         const instance = await binder.loadInstanceFromRef(schema, {
@@ -196,11 +219,11 @@ describe("API document store", () => {
             throw new Error("expected row to be added");
         }
 
-        const before = store.getDocumentSnapshot(instance.content.handle) as InstanceDocument;
+        const before = store.getDocumentSnapshot(instanceStoreHandle) as InstanceDocument;
         expect(Object.keys(before.tables[table.id]?.rows ?? {})).toEqual([added.content.id]);
 
         instance.content.deleteRow(table.id, added.content.id);
-        const after = store.getDocumentSnapshot(instance.content.handle) as InstanceDocument;
+        const after = store.getDocumentSnapshot(instanceStoreHandle) as InstanceDocument;
         expect(after.tables[table.id]?.rows).toEqual({});
         expect(after.tables[table.id]?.rowOrder).toEqual([]);
         expect(Object.keys(before.tables[table.id]?.rows ?? {})).toEqual([added.content.id]);
@@ -367,28 +390,28 @@ describe("API document store", () => {
     });
 
     test("snapshots are stable, detached, and refresh without subscribers", async () => {
-        const { schema, store } = await createFixtureWithSchema();
-        const before = store.getDocumentSnapshot(schema.handle);
-        expect(store.getDocumentSnapshot(schema.handle)).toBe(before);
+        const { schema, store, schemaStoreHandle } = await createFixtureWithSchema();
+        const before = store.getDocumentSnapshot(schemaStoreHandle);
+        expect(store.getDocumentSnapshot(schemaStoreHandle)).toBe(before);
         expect(() => structuredClone(before)).not.toThrow();
         schema.update({ title: "Changed" });
-        const after = store.getDocumentSnapshot(schema.handle);
+        const after = store.getDocumentSnapshot(schemaStoreHandle);
         expect(after).not.toBe(before);
         expect(after).toMatchObject({ name: "Changed" });
         expect(before).toMatchObject({ name: "" });
-        expect(store.getDocumentSnapshot(schema.handle)).toBe(after);
+        expect(store.getDocumentSnapshot(schemaStoreHandle)).toBe(after);
     });
 
     test("subscriptions deliver handles without initial delivery", async () => {
-        const { schema, store } = await createFixtureWithSchema();
+        const { schema, store, schemaStoreHandle } = await createFixtureWithSchema();
         const received: object[] = [];
-        const stop = store.subscribe(schema.handle, (handle) => {
-            expect(handle).toBe(schema.handle);
+        const stop = store.subscribe(schemaStoreHandle, (handle) => {
+            expect(handle).toBe(schemaStoreHandle);
             received.push(store.getDocumentSnapshot(handle));
         });
         expect(received).toEqual([]);
         schema.update({ title: "Changed" });
-        expect(received).toEqual([store.getDocumentSnapshot(schema.handle)]);
+        expect(received).toEqual([store.getDocumentSnapshot(schemaStoreHandle)]);
         stop();
         stop();
         schema.update({ title: "Unobserved" });
@@ -396,41 +419,42 @@ describe("API document store", () => {
     });
 
     test("edits during notifications preserve saved snapshots while reads reflect current state", async () => {
-        const { schema, store } = await createFixtureWithSchema();
+        const { schema, store, schemaStoreHandle } = await createFixtureWithSchema();
         const received: object[] = [];
         let outerSnapshot: object | undefined;
-        const stopFirst = store.subscribe(schema.handle, (handle) => {
+        const stopFirst = store.subscribe(schemaStoreHandle, (handle) => {
             const snapshot = store.getDocumentSnapshot(handle);
             if (snapshot.name === "Outer") {
                 outerSnapshot = snapshot;
                 schema.update({ title: "Inner" });
             }
         });
-        const stopSecond = store.subscribe(schema.handle, (handle) =>
+        const stopSecond = store.subscribe(schemaStoreHandle, (handle) =>
             received.push(store.getDocumentSnapshot(handle)),
         );
         schema.update({ title: "Outer" });
         // Automerge defers the listener's edit until the current change is delivered.
         expect(received).toMatchObject([{ name: "Outer" }, { name: "Inner" }]);
         expect(outerSnapshot).toMatchObject({ name: "Outer" });
-        expect(store.getDocumentSnapshot(schema.handle)).toBe(received[1]);
+        expect(store.getDocumentSnapshot(schemaStoreHandle)).toBe(received[1]);
         stopFirst();
         stopSecond();
     });
 
     test("drafts, commits, undo, and remote merges select fresh snapshots", async () => {
-        const { schema, store, schemaAutomergeHandle, repo } = await createFixtureWithSchema();
-        const before = store.getDocumentSnapshot(schema.handle);
-        const draft = store.createDraft(schema.handle);
+        const { store, schemaStoreHandle, schemaAutomergeHandle, repo } =
+            await createFixtureWithSchema();
+        const before = store.getDocumentSnapshot(schemaStoreHandle);
+        const draft = store.createDraft(schemaStoreHandle);
         store.changeDocument(draft, (doc) => {
             doc.name = "Draft";
         });
         const draftSnapshot = store.getDocumentSnapshot(draft);
-        expect(store.getDocumentSnapshot(schema.handle)).toBe(before);
-        const change = store.commitDraft(schema.handle, draft);
-        expect(store.getDocumentSnapshot(schema.handle)).toMatchObject({ name: "Draft" });
-        store.revertCommit(schema.handle, change);
-        expect(store.getDocumentSnapshot(schema.handle)).toMatchObject({ name: "" });
+        expect(store.getDocumentSnapshot(schemaStoreHandle)).toBe(before);
+        const change = store.commitDraft(schemaStoreHandle, draft);
+        expect(store.getDocumentSnapshot(schemaStoreHandle)).toMatchObject({ name: "Draft" });
+        store.revertCommit(schemaStoreHandle, change);
+        expect(store.getDocumentSnapshot(schemaStoreHandle)).toMatchObject({ name: "" });
         expect(draftSnapshot).toMatchObject({ name: "Draft" });
         expect(before).toMatchObject({ name: "" });
         const remote = repo.clone(schemaAutomergeHandle);
@@ -438,7 +462,9 @@ describe("API document store", () => {
             doc.name = "Remote";
         });
         schemaAutomergeHandle.merge(remote);
-        expect(store.getDocumentSnapshot(schema.handle)).toMatchObject({ name: "Remote" });
+        expect(store.getDocumentSnapshot(schemaStoreHandle)).toMatchObject({
+            name: "Remote",
+        });
     });
 
     test("notebook dump returns a detached plain document", async () => {

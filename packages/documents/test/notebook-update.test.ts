@@ -22,7 +22,7 @@ async function schema() {
     const employer = notebook.add(Mapping, { label: "employer", from: person, to: company });
     const find = <C extends { id: string }>(cell: C) =>
         notebook.data().cells.find((candidate) => candidate.id === cell.id);
-    return { store, notebook, person, company, employer, find };
+    return { binder, store, notebook, person, company, employer, find };
 }
 
 describe("notebook updates", { timeout: 30000 }, () => {
@@ -72,10 +72,10 @@ describe("notebook updates", { timeout: 30000 }, () => {
     });
 
     test("rejects missing and wrong-kind references before entering a change", async () => {
-        const { store, notebook, person, employer } = await schema();
+        const { binder, store, notebook, person, employer } = await schema();
         const equation = notebook.add(PathEquation, { label: "e", lhs: [], rhs: [] });
         notebook.delete(person);
-        const before = store.getDocumentSnapshot(notebook.handle);
+        const before = binder.getDocumentSnapshot(notebook);
         const change = vi.spyOn(store, "changeDocument");
         expect(() => notebook.update(employer, { label: "not written", from: person })).toThrow(
             `Cell ${person.id} does not exist.`,
@@ -90,7 +90,7 @@ describe("notebook updates", { timeout: 30000 }, () => {
             `Cell ${equation.id} is not a morphism.`,
         );
         expect(change).not.toHaveBeenCalled();
-        expect(store.getDocumentSnapshot(notebook.handle)).toBe(before);
+        expect(binder.getDocumentSnapshot(notebook)).toBe(before);
         notebook.delete(employer);
         change.mockClear();
         expect(() => notebook.update(equation, { rhs: [employer] })).toThrow(

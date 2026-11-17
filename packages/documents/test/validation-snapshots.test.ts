@@ -55,14 +55,17 @@ describe("validation snapshots", { timeout: 20_000 }, () => {
         const previousCount = received.length;
         const table = old.tables[0]!;
         schema.add(Entity, { label: "New" });
-        store.changeDocument(instance.handle, (doc) => {
-            if (doc.type === "instance") {
-                doc.tables[table.id] = {
-                    rows: { stray: { label: "", fields: {} } },
-                    rowOrder: ["stray"],
-                };
-            }
-        });
+        store.changeDocument(
+            expectOk(await store.getHandle(binder.getDocumentRef(instance))),
+            (doc) => {
+                if (doc.type === "instance") {
+                    doc.tables[table.id] = {
+                        rows: { stray: { label: "", fields: {} } },
+                        rowOrder: ["stray"],
+                    };
+                }
+            },
+        );
         // Instance edits publish immediately using the latest available schema.
         expect(received).toHaveLength(previousCount + 1);
         expect(received.at(-1)?.tables.map((table) => table.label)).toEqual(["Original"]);

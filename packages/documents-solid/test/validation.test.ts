@@ -54,7 +54,7 @@ describe("Solid validation accessors", { timeout: 20_000 }, () => {
 
         let validation!: ReturnType<
             typeof createInstanceValidationView<
-                typeof result.content.handle,
+                Awaited<ReturnType<typeof store.createHandle>>,
                 typeof SimpleSchema,
                 unknown
             >
@@ -79,7 +79,11 @@ describe("Solid validation accessors", { timeout: 20_000 }, () => {
             .poll(() => validation()?.issues.map((issue) => issue.issueType))
             .toEqual(["MissingValue"]);
 
-        store.changeDocument(result.content.handle, (document) => {
+        const handle = await store.getHandle(binder.getDocumentRef(result.content));
+        if (handle.tag === "Err") {
+            throw new Error("Expected an instance handle");
+        }
+        store.changeDocument(handle.content, (document) => {
             const stored = document as unknown as {
                 tables: Record<
                     string,
