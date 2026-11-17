@@ -110,6 +110,17 @@ stdTheories.add(
 
 stdTheories.add(
     {
+        id: "graded-causal-loop",
+        name: "Causal loop diagram with gradings",
+        description: "Positive and negative quantified causal relationships",
+        iconLetters: ["C", "g"],
+        group: "System Dynamics",
+    },
+    async () => (await import("./theories/graded-causal-loop")).default,
+);
+
+stdTheories.add(
+    {
         id: "primitive-stock-flow",
         name: "Stock and flow",
         description: "Accumulation (stocks) and change (flows)",

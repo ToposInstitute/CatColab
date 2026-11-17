@@ -121,6 +121,36 @@ pub fn th_nullable_signed_category() -> DiscreteDblTheory {
     sgn.into()
 }
 
+/// The theory of N-graded signed categories (a.k.a. signed categories with degrees).
+///
+/// An *N-graded signed category* is a category sliced over the product monoid of the sign monoid
+/// ({+1, -1}, multiplication) and the natural numbers monoid ({0, 1, 2, ...}, addition). We refer
+/// to the natural number component as the *degree* of the morphism.
+pub fn th_signed_category_with_degrees() -> DiscreteDblTheory {
+    let mut gsc = FpCategory::new();
+    gsc.add_ob_generator(name("Object"));
+
+    gsc.add_mor_generator(name("Negative"), name("Object"), name("Object"));
+    gsc.add_mor_generator(name("Degree"), name("Object"), name("Object"));
+
+    // Signs act multiplicatively under composition (just as in `th_signed_category()`).
+    gsc.equate(
+        name("negative_involution"),
+        Path::pair(name("Negative"), name("Negative")),
+        Path::empty(name("Object")),
+    );
+    // Signs and degrees commute with one another.
+    gsc.equate(
+        name("sign_and_degree_commute"),
+        Path::pair(name("Negative"), name("Degree")),
+        Path::pair(name("Degree"), name("Negative")),
+    );
+    // Implicit in the absence of any equation concerning `Degree` is the fact that we are freely
+    // generating a copy of the entire natural numbers simply by concatenating `Degree` with itself.
+
+    gsc.into()
+}
+
 /// The theory of categories with scalars.
 ///
 /// A *category with scalars* is a category sliced over the monoid representing a walking
@@ -416,6 +446,7 @@ mod tests {
         assert!(th_signed_category().validate().is_ok());
         assert!(th_delayable_signed_category().validate().is_ok());
         assert!(th_nullable_signed_category().validate().is_ok());
+        assert!(th_signed_category_with_degrees().validate().is_ok());
         assert!(th_category_with_scalars().validate().is_ok());
         assert!(th_power_system().validate().is_ok());
     }

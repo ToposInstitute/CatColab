@@ -301,6 +301,23 @@ impl ThNullableSignedCategory {
     }
 }
 
+/// The theory of N-graded signed categories (signed categories with degrees).
+#[wasm_bindgen]
+pub struct ThSignedCategoryWithDegrees(Rc<theory::DiscreteDblTheory>);
+
+#[wasm_bindgen]
+impl ThSignedCategoryWithDegrees {
+    #[wasm_bindgen(constructor)]
+    pub fn new() -> Self {
+        Self(Rc::new(theories::th_signed_category_with_degrees()))
+    }
+
+    #[wasm_bindgen]
+    pub fn theory(&self) -> DblTheory {
+        DblTheory(self.0.clone().into())
+    }
+}
+
 /// The theory of categories with scalars.
 #[wasm_bindgen]
 pub struct ThCategoryWithScalars(Rc<theory::DiscreteDblTheory>);
