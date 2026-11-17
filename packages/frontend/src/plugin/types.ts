@@ -1,4 +1,5 @@
 import type { AnalysisType } from "catcolab-document-types";
+import type { Doctrine } from "catlog-wasm";
 import type { DiagramAnalysisBuilder, ModelAnalysisBuilder } from "../analysis";
 
 /** Manifest for an analysis contributed by a plugin. */
@@ -23,7 +24,7 @@ export type AnalysisManifest = {
     The analysis will apply iff *all* supplied constraints are satisfied.
      */
     scope: {
-        doctrine?: Array<"discrete" | "discrete_tab" | "model">;
+        doctrine?: Array<Doctrine>;
         theory?: Array<string>;
         model?: Array<string>;
     };
@@ -31,10 +32,12 @@ export type AnalysisManifest = {
 
 export type ModelAnalysisPlugin = AnalysisManifest & {
     type: "model";
-    load: (manifest: AnalysisManifest) => Promise<ModelAnalysisBuilder<any>>;
+    load: (manifest: AnalysisManifest) => Promise<ModelAnalysisBuilder<unknown>>;
 };
 
 export type DiagramAnalysisPlugin = AnalysisManifest & {
     type: "diagram";
-    load: (manifest: AnalysisManifest) => Promise<DiagramAnalysisBuilder<any>>;
+    load: (manifest: AnalysisManifest) => Promise<DiagramAnalysisBuilder<unknown>>;
 };
+
+export type AnalysisPlugin = ModelAnalysisPlugin | DiagramAnalysisPlugin;

@@ -65,7 +65,7 @@ export type CellConstructor<T> = {
     shortcut?: KbdKey[];
 
     /** Called to construct a new cell. */
-    construct: () => Cell<T>;
+    construct: () => Cell<T> | Promise<Cell<T>>;
 };
 
 /** Notebook editor based on Automerge.
@@ -117,14 +117,14 @@ export function NotebookEditor<T>(props: {
                 name,
                 description,
                 shortcut: shortcut && [cellShortcutModifier, ...shortcut],
-                onComplete: () => {
+                onComplete: async () => {
                     const activeCellId = cellFocus.activeChild();
                     const activeIndex = activeCellId ? cellOrder().indexOf(activeCellId) : -1;
                     const cellIndex =
                         activeIndex >= 0
                             ? Math.min(activeIndex + 1, cellOrder().length)
                             : cellOrder().length;
-                    const newCell = cc.construct();
+                    const newCell = await cc.construct();
                     props.changeNotebook((nb) => {
                         Nb.insertCellAtIndex(nb, newCell, cellIndex);
                     });
@@ -152,9 +152,9 @@ export function NotebookEditor<T>(props: {
                 name,
                 description,
                 shortcut: shortcut && [cellShortcutModifier, ...shortcut],
-                onComplete: () => {
+                onComplete: async () => {
                     const index = i + 1;
-                    const newCell = cc.construct();
+                    const newCell = await cc.construct();
                     props.changeNotebook((nb) => {
                         Nb.insertCellAtIndex(nb, newCell, index);
                     });
@@ -172,8 +172,8 @@ export function NotebookEditor<T>(props: {
                 name,
                 description,
                 shortcut: shortcut && [cellShortcutModifier, ...shortcut],
-                onComplete: () => {
-                    const newCell = cc.construct();
+                onComplete: async () => {
+                    const newCell = await cc.construct();
                     props.changeNotebook((nb) => {
                         Nb.appendCell(nb, newCell);
                     });

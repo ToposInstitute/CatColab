@@ -9,7 +9,7 @@ settings for a visualization or numerical parameters for a simulation.
 @packageDocumentation
  */
 
-import type { Component } from "solid-js";
+import type { JSX } from "solid-js";
 
 import type { LiveDiagramDoc } from "../diagram";
 import type { LiveModelDoc } from "../model";
@@ -38,19 +38,13 @@ export type ModelAnalysisProps<T> = AnalysisProps<T> & {
     liveModel: LiveModelDoc;
 };
 
-/** Component that renders an analysis of a model. */
-export type ModelAnalysisComponent<T> = Component<ModelAnalysisProps<T>>;
-
 /** Props passed to a diagram analysis component. */
 export type DiagramAnalysisProps<T> = AnalysisProps<T> & {
     /** The diagram being analyzed. */
     liveDiagram: LiveDiagramDoc;
 };
 
-/** Component that renders an analysis of diagram model. */
-export type DiagramAnalysisComponent<T> = Component<DiagramAnalysisProps<T>>;
-
-/** Constructs and migrates realizations of an analysis. */
+/** Constructs, migrates, and renders an analysis. */
 export type AnalysisBuilder<T> = {
     /** Version number for content data format.
 
@@ -70,10 +64,10 @@ export type AnalysisBuilder<T> = {
 
 export type ModelAnalysisBuilder<T> = AnalysisBuilder<T> & {
     /** Component that renders the analysis. */
-    component: ModelAnalysisComponent<T>;
+    component(props: ModelAnalysisProps<T>): JSX.Element;
 };
 
 export type DiagramAnalysisBuilder<T> = AnalysisBuilder<T> & {
     /** Component that renders the analysis. */
-    component: DiagramAnalysisComponent<T>;
+    component(props: DiagramAnalysisProps<T>): JSX.Element;
 };

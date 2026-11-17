@@ -38,7 +38,7 @@ export const plugins = [
         description: "Visualize the diagram",
         type: "model",
         scope: {
-            theory: ["primitive-stock-flow"],
+            theory: ["primitive-stock-flow", "primitive-signed-stock-flow"],
         },
         load: async () => (await import("./stock_flow_diagram")).default,
     } satisfies ModelAnalysisPlugin,

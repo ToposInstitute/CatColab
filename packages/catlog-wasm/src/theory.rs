@@ -240,6 +240,7 @@ pub enum DblTheoryBox {
 
 /// Double doctrine, or kind of double theory.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, Tsify)]
+#[serde(rename_all = "kebab-case")]
 #[tsify(into_wasm_abi, from_wasm_abi)]
 pub enum Doctrine {
     /// Discrete double theories.

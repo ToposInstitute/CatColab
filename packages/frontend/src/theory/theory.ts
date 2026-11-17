@@ -2,13 +2,11 @@ import type { Component } from "solid-js";
 
 import type { KbdKey } from "catcolab-ui-components";
 import type { DblModel, DblTheory, MorType, ObOp, ObType } from "catlog-wasm";
-import type { DiagramAnalysisComponent, ModelAnalysisComponent } from "../analysis";
 import type {
     EditorVariantOverrides,
     MorphismEditorProps,
     ObjectEditorProps,
 } from "../model/editors";
-import { uniqueIndexArray } from "../util/indexing";
 import type { ArrowStyle } from "../visualization";
 import { MorTypeMap, ObTypeMap } from "./types";
 
@@ -122,12 +120,6 @@ export class Theory {
     private readonly instanceObTypeMap: ObTypeMap<InstanceObTypeMeta>;
     private readonly instanceMorTypeMap: MorTypeMap<InstanceMorTypeMeta>;
 
-    /** Map from IDs of model analyses to their metadata. */
-    private readonly modelAnalysisMap: Map<string, ModelAnalysisMeta>;
-
-    /** Map from IDs of diagram analyses to their metadata. */
-    private readonly diagramAnalysisMap: Map<string, DiagramAnalysisMeta>;
-
     constructor(props: {
         id: string;
         theory: DblTheory;
@@ -138,12 +130,10 @@ export class Theory {
         pushforwards?: ModelMigration[];
         editorVariants?: EditorVariants;
         modelTypes?: ModelTypeMeta[];
-        modelAnalyses?: ModelAnalysisMeta[];
         onlyFreeModels?: boolean;
         equationCellMeta?: EquationCellMeta;
         instanceOfName?: string;
         instanceTypes?: InstanceTypeMeta[];
-        diagramAnalyses?: DiagramAnalysisMeta[];
     }) {
         // Theory.
         this.id = props.id;
@@ -171,7 +161,6 @@ export class Theory {
                 throw new Error(`Invalid discriminator for model-level type metadata: ${meta}`);
             }
         }
-        this.modelAnalysisMap = uniqueIndexArray(props.modelAnalyses ?? [], (meta) => meta.id);
         this.onlyFreeModels = props.onlyFreeModels ?? false;
         this.equationCellMeta = props.equationCellMeta;
 
@@ -188,7 +177,6 @@ export class Theory {
                 throw new Error(`Invalid discriminator for instance-level type metadata: ${meta}`);
             }
         }
-        this.diagramAnalysisMap = uniqueIndexArray(props.diagramAnalyses ?? [], (meta) => meta.id);
     }
 
     /** List of IDs of theories to which models of this theory can be migrated. */
@@ -224,35 +212,6 @@ export class Theory {
     /** Get metadata for a morphism type as used in instances. */
     instanceMorTypeMeta(typ: MorType): InstanceMorTypeMeta | undefined {
         return this.instanceMorTypeMap.get(typ);
-    }
-
-    /** List of analyses defined for models. */
-    get modelAnalyses(): Array<ModelAnalysisMeta> {
-        return Array.from(this.modelAnalysisMap.values());
-    }
-
-    /** Get metadata for a model analysis. */
-    modelAnalysis(id: string): ModelAnalysisMeta | undefined {
-        return this.modelAnalysisMap.get(id);
-    }
-
-    /** Adds a model analysis to the theory. */
-    addModelAnalysis(meta: ModelAnalysisMeta) {
-        const { id } = meta;
-        if (this.modelAnalysisMap.has(id)) {
-            throw new Error(`Model analysis with ID ${id} already defined`);
-        }
-        this.modelAnalysisMap.set(id, meta);
-    }
-
-    /** List of analyses defined for diagrams. */
-    get diagramAnalyses(): Array<DiagramAnalysisMeta> {
-        return Array.from(this.diagramAnalysisMap.values());
-    }
-
-    /** Get metadata for a diagram analysis. */
-    diagramAnalysis(id: string): DiagramAnalysisMeta | undefined {
-        return this.diagramAnalysisMap.get(id);
     }
 }
 

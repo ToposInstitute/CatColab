@@ -64,6 +64,7 @@ import { ModelDocumentHead } from "../model/model_info";
 import { DocumentBreadcrumbs, DocumentLoadingScreen } from "../page";
 import { DocumentHead } from "../page/document_head";
 import { SidebarLayout } from "../page/sidebar_layout";
+import { type PluginRegistry, PluginRegistryContext } from "../plugin";
 import { PermissionsButton } from "../user";
 import { isDocumentVisible, useUserSettings } from "../user/user_settings";
 import { assertExhaustive } from "../util/assert_exhaustive";
@@ -100,6 +101,8 @@ export default function DocumentPage() {
     const binder = useBinder();
     const models = useContext(ModelLibraryContext);
     invariant(models, "Must provide model library as context to page");
+    const plugins = useContext(PluginRegistryContext);
+    invariant(plugins, "Must provide plugin registry as context to page");
 
     const params = useParams();
     const location = useLocation();
@@ -127,7 +130,8 @@ export default function DocumentPage() {
 
     const [primaryLiveDoc, { refetch: refetchPrimaryDoc }] = createResource(
         () => (documentIsVisible(params.kind) ? params.ref : undefined),
-        (refId) => getLiveDocument(refId, api, models, binder, params.kind as DocumentType),
+        (refId) =>
+            getLiveDocument(refId, api, models, plugins, binder, params.kind as DocumentType),
     );
 
     createEffect(() => {
@@ -170,7 +174,14 @@ export default function DocumentPage() {
                 return undefined;
             }
 
-            return getLiveDocument(source.ref, api, models, binder, source.kind as DocumentType);
+            return getLiveDocument(
+                source.ref,
+                api,
+                models,
+                plugins,
+                binder,
+                source.kind as DocumentType,
+            );
         },
     );
 
@@ -783,6 +794,7 @@ async function getLiveDocument(
     refId: string,
     api: Api,
     models: ModelLibrary<string>,
+    plugins: PluginRegistry,
     binder: ApiBinder,
     documentType: DocumentType,
 ): Promise<AnyLiveDocWithRef> {
@@ -797,7 +809,7 @@ async function getLiveDocument(
             return { liveDoc: liveDiagram, docRef };
         }
         case "analysis": {
-            const { liveAnalysis, docRef } = await getLiveAnalysis(refId, api, models);
+            const { liveAnalysis, docRef } = await getLiveAnalysis(refId, api, models, plugins);
             return { liveDoc: liveAnalysis, docRef };
         }
         case "instance": {
