@@ -4,9 +4,10 @@ import Ellipsis from "lucide-solid/icons/ellipsis";
 import { createMemo, createResource, Match, Show, Switch, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
+import type { DocumentType } from "catcolab-document-types";
 import { DocumentTypeIcon, IconButton } from "catcolab-ui-components";
 import { createAnalysis } from "../analysis";
-import { type DocRef, type DocumentType, type LiveDoc, useApi, useBinder } from "../api";
+import { type DocRef, type LiveDoc, useApi, useBinder } from "../api";
 import { createDiagram } from "../diagram";
 import { createInstance, shapeForTheory } from "../instance/live_doc_compatibility";
 import {

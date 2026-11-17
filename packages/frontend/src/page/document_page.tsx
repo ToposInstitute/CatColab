@@ -19,6 +19,7 @@ import {
 } from "solid-js";
 import invariant from "tiny-invariant";
 
+import type { DocumentType } from "catcolab-document-types";
 import {
     Button,
     type FocusHandle,
@@ -37,7 +38,6 @@ import {
     type Api,
     type ApiBinder,
     type DocRef,
-    type DocumentType,
     type LiveDocWithRef,
     documentTypeLabel,
     useApi,
