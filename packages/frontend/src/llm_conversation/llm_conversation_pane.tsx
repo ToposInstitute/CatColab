@@ -122,8 +122,7 @@ export function LLMConversationPane(props: {
     const [liveConversation] = createResource(
         () => props.selectedRefId,
         async (refId) => {
-            const { liveConversation } = await getLiveLLMConversation(refId, api, models, binder);
-            return liveConversation;
+            return getLiveLLMConversation(refId, api, models, binder);
         },
     );
 
@@ -220,7 +219,10 @@ export function LLMConversationPane(props: {
                     }
                 >
                     {(conversation) => (
-                        <LLMConversationEditor conversation={conversation().conversation} />
+                        <LLMConversationEditor
+                            conversation={conversation().liveConversation.conversation}
+                            docRef={conversation().docRef}
+                        />
                     )}
                 </Show>
             </div>
