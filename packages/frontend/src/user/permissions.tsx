@@ -1,5 +1,3 @@
-import { next as Automerge } from "@automerge/automerge";
-import { useNavigate } from "@solidjs/router";
 import { getAuth, signOut } from "firebase/auth";
 import Copy from "lucide-solid/icons/copy";
 import FileLock from "lucide-solid/icons/file-lock-2";
@@ -23,7 +21,6 @@ import { createStore, produce } from "solid-js/store";
 import invariant from "tiny-invariant";
 
 import type { NewPermissions, PermissionLevel, Permissions, UserSummary } from "catcolab-api";
-import { serializeAutomergeDocument } from "catcolab-document-types";
 import {
     Button,
     Dialog,
@@ -32,8 +29,7 @@ import {
     SelectField,
     Warning,
 } from "catcolab-ui-components";
-import type { Document } from "catlog-wasm";
-import { type DocRef, type LiveDoc, useApi } from "../api";
+import { type DocRef, type DocumentType, useApi } from "../api";
 import { removeProxyAndCopy } from "../util/remove_proxy_and_copy";
 import { Login } from "./login";
 import { AddUserInput, NameUser } from "./username";
@@ -231,10 +227,15 @@ export function PermissionsForm(props: { refId: string; onComplete?: () => void 
 }
 
 /** Toolbar button summarizing the document's permissions. */
-export const PermissionsButton = (props: { liveDoc: LiveDoc; docRef: DocRef }) => {
+export const PermissionsButton = (props: {
+    docName: string;
+    documentType: DocumentType;
+    docRef: DocRef;
+    onDuplicate: () => void | Promise<void>;
+}) => {
     const anyone = () => props.docRef.permissions.anyone;
     const user = () => props.docRef.permissions.user;
-    const docName = () => props.liveDoc.doc.name || "Untitled";
+    const docName = () => props.docName || "Untitled";
     return (
         <Switch fallback={<EditorPermissionsButton permissions={props.docRef.permissions} />}>
             <Match when={anyone() === "Own"}>
@@ -244,7 +245,11 @@ export const PermissionsButton = (props: { liveDoc: LiveDoc; docRef: DocRef }) =
                 <OwnerPermissionsButton refId={props.docRef.refId} docName={docName()} />
             </Match>
             <Match when={[anyone(), user()].every((level) => level === null || level === "Read")}>
-                <ReadonlyPermissionsButton liveDoc={props.liveDoc} docName={docName()} />
+                <ReadonlyPermissionsButton
+                    docName={docName()}
+                    documentType={props.documentType}
+                    onDuplicate={props.onDuplicate}
+                />
             </Match>
         </Switch>
     );
@@ -303,18 +308,12 @@ const AnonPermissionsTrigger = (props: ComponentProps<"button">) => {
     );
 };
 
-const ReadonlyPermissionsButton = (props: { liveDoc: LiveDoc; docName: string }) => {
+const ReadonlyPermissionsButton = (props: {
+    docName: string;
+    documentType: DocumentType;
+    onDuplicate: () => void | Promise<void>;
+}) => {
     const [open, setOpen] = createSignal(false);
-    const api = useApi();
-    const navigate = useNavigate();
-
-    const onDuplicateDocument = async () => {
-        const doc = serializeAutomergeDocument(
-            Automerge.save(props.liveDoc.docHandle.doc()),
-        ) as Document;
-        const newRef = await api.duplicateDoc(doc);
-        navigate(`/${doc.type}/${newRef}`);
-    };
 
     return (
         <Dialog
@@ -331,9 +330,9 @@ const ReadonlyPermissionsButton = (props: { liveDoc: LiveDoc; docName: string })
             <form class="permissions" onSubmit={(evt) => evt.preventDefault()}>
                 <div class="duplicate-button-container">
                     <span>
-                        <Button type="button" variant="utility" onClick={onDuplicateDocument}>
+                        <Button type="button" variant="utility" onClick={props.onDuplicate}>
                             <Copy />
-                            Duplicate {props.liveDoc.doc.type}
+                            Duplicate {props.documentType}
                         </Button>
                     </span>
                     <span class="duplicate-button-height-text"> to make permanent changes.</span>
