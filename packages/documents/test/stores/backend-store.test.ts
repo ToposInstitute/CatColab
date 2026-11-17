@@ -8,7 +8,6 @@
 
 import type { DocHandle, DocumentId } from "@automerge/automerge-repo";
 import { SimpleOlog, Type } from "catcolab-logics/simple-olog";
-import { makeDocumentProjection } from "solid-automerge";
 import { describe, expect, test } from "vitest";
 
 import type { Document } from "catcolab-document-types";
@@ -27,12 +26,10 @@ const repo = backend.repo;
 
 type StoreHandle = {
     docHandle: DocHandle<Document>;
-    docView: Document;
 };
 
 const makeHandle = (docHandle: DocHandle<Document>): StoreHandle => ({
     docHandle,
-    docView: makeDocumentProjection(docHandle),
 });
 
 const refByDocId = new Map<DocumentId, string>();
@@ -81,7 +78,7 @@ const backendStore: DocumentStore<StoreHandle> = {
             if (other === handle) {
                 continue;
             }
-            for (const link of documentLinks(other.docView)) {
+            for (const link of documentLinks(other.docHandle.doc())) {
                 if (link._id === refId) {
                     linked[link.type].push(other);
                 }
@@ -91,7 +88,7 @@ const backendStore: DocumentStore<StoreHandle> = {
     },
     listDependsOn: async (handle) => {
         const linked = emptyHandlesByLinkType<StoreHandle>();
-        for (const link of documentLinks(handle.docView)) {
+        for (const link of documentLinks(handle.docHandle.doc())) {
             const other = handleByRefId.get(link._id);
             if (other !== undefined && other !== handle) {
                 linked[link.type].push(other);
