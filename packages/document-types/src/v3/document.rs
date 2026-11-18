@@ -1,0 +1,167 @@
+use crate::{
+    v0::AnalysisType,
+    v2::{self, LLMConversationDocumentContent, Link, instance::Table},
+};
+use std::{collections::HashMap, str::FromStr};
+
+use super::analysis::Analysis;
+use super::notebook::Notebook;
+
+use serde::{Deserialize, Serialize};
+use tsify::Tsify;
+
+/// This is the content of a model document. For legacy reasons, we reserve
+/// the name "ModelDocument" for `Document & { type: "model" }`.
+#[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Tsify)]
+#[tsify(into_wasm_abi, from_wasm_abi)]
+pub struct ModelDocumentContent {
+    pub name: String,
+    pub theory: String,
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        rename = "editorVariant"
+    )]
+    pub editor_variant: Option<String>,
+    pub notebook: Notebook<super::model_judgment::ModelJudgment>,
+    pub version: String,
+}
+
+#[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Tsify)]
+#[tsify(into_wasm_abi, from_wasm_abi)]
+pub struct DiagramDocumentContent {
+    pub name: String,
+    #[serde(rename = "diagramIn")]
+    pub diagram_in: Link,
+    pub notebook: Notebook<super::diagram_judgment::DiagramJudgment>,
+    pub version: String,
+}
+
+#[derive(PartialEq, Debug, Serialize, Deserialize, Tsify)]
+#[tsify(into_wasm_abi, from_wasm_abi, hashmap_as_object)]
+pub struct InstanceDocumentContent {
+    pub name: String,
+    #[serde(rename = "instanceOf")]
+    pub instance_of: Link,
+    /// Tables keyed by their schema entity `QualifiedName`.
+    pub tables: HashMap<String, Table>,
+    pub version: String,
+}
+
+#[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Tsify)]
+#[tsify(into_wasm_abi, from_wasm_abi)]
+pub struct AnalysisDocumentContent {
+    pub name: String,
+    #[serde(rename = "analysisType")]
+    pub analysis_type: AnalysisType,
+    #[serde(rename = "analysisOf")]
+    pub analysis_of: Link,
+    pub notebook: Notebook<Analysis>,
+    pub version: String,
+}
+
+#[derive(PartialEq, Debug, Serialize, Deserialize, Tsify)]
+#[serde(tag = "type")]
+#[tsify(into_wasm_abi, from_wasm_abi)]
+pub enum Document {
+    #[serde(rename = "model")]
+    Model(ModelDocumentContent),
+    #[serde(rename = "diagram")]
+    Diagram(DiagramDocumentContent),
+    #[serde(rename = "analysis")]
+    Analysis(AnalysisDocumentContent),
+    #[serde(rename = "instance")]
+    Instance(InstanceDocumentContent),
+    #[serde(rename = "llmconversation")]
+    LLMConversation(LLMConversationDocumentContent),
+}
+
+/// The type/kind of a document, without any associated content.
+#[derive(PartialEq, Eq, Debug, Clone, Copy, Serialize, Deserialize, Tsify)]
+#[cfg_attr(
+    feature = "backend",
+    derive(autosurgeon::Reconcile, autosurgeon::Hydrate, ts_rs::TS)
+)]
+#[cfg_attr(
+    feature = "backend",
+    ts(export_to = "user_state.ts", rename_all = "lowercase")
+)]
+#[serde(rename_all = "lowercase")]
+#[tsify(into_wasm_abi, from_wasm_abi)]
+pub enum DocumentType {
+    #[cfg_attr(feature = "backend", autosurgeon(rename = "model"))]
+    Model,
+    #[cfg_attr(feature = "backend", autosurgeon(rename = "diagram"))]
+    Diagram,
+    #[cfg_attr(feature = "backend", autosurgeon(rename = "instance"))]
+    Instance,
+    #[cfg_attr(feature = "backend", autosurgeon(rename = "analysis"))]
+    Analysis,
+    #[cfg_attr(feature = "backend", autosurgeon(rename = "llmconversation"))]
+    LLMConversation,
+}
+
+impl FromStr for DocumentType {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "model" => Ok(DocumentType::Model),
+            "diagram" => Ok(DocumentType::Diagram),
+            "instance" => Ok(DocumentType::Instance),
+            "analysis" => Ok(DocumentType::Analysis),
+            "llmconversation" => Ok(DocumentType::LLMConversation),
+            other => Err(format!("unknown document type: {other}")),
+        }
+    }
+}
+
+impl Document {
+    pub fn migrate_from_v2(old: v2::Document) -> Self {
+        match old {
+            v2::Document::Model(old) => Document::Model(ModelDocumentContent {
+                name: old.name,
+                theory: old.theory,
+                editor_variant: old.editor_variant,
+                notebook: Notebook::migrate_from_v2(old.notebook),
+                version: "3".to_string(),
+            }),
+
+            v2::Document::Diagram(old) => Document::Diagram(DiagramDocumentContent {
+                name: old.name,
+                diagram_in: old.diagram_in,
+                notebook: Notebook::migrate_from_v2(old.notebook),
+                version: "3".to_string(),
+            }),
+
+            v2::Document::Analysis(old) => Document::Analysis(AnalysisDocumentContent {
+                name: old.name,
+                analysis_type: old.analysis_type,
+                analysis_of: old.analysis_of,
+                // Since we are migrating from `Notebook<v0::Analysis>` to `Notebook<v2::Analysis>`,
+                // we cannot simply use `Notebook::migrate_from_v1` as the value of the generic `T`
+                // changes.
+                notebook: Notebook::migrate_from_v2_with_generic(
+                    old.notebook,
+                    Analysis::migrate_from_v2,
+                ),
+                version: "3".to_string(),
+            }),
+            v2::Document::Instance(old) => Document::Instance(InstanceDocumentContent {
+                name: old.name,
+                instance_of: old.instance_of,
+                tables: old.tables,
+                version: "3".to_string(),
+            }),
+            v2::Document::LLMConversation(old) => {
+                Document::LLMConversation(LLMConversationDocumentContent {
+                    name: old.name,
+                    conversation_of: old.conversation_of,
+                    llm_model: old.llm_model,
+                    interactions: old.interactions,
+                    version: "3".to_string(),
+                })
+            }
+        }
+    }
+}
