@@ -11,7 +11,9 @@ use scopeguard::guard;
 use tattle::display::SourceInfo;
 use tattle::{Reporter, declare_error};
 
-use super::{text_elab::*, theory::std_theories, toplevel::*};
+use super::{modelgen::instance_from_diag, text_elab::*, theory::std_theories, toplevel::*};
+use crate::dbl::discrete::{DiscreteDblModelInstance, DiscreteInstanceTerm};
+use crate::one::path::Path;
 use crate::zero::NameSegment;
 
 declare_error!(TOP_ERROR, "top", "an error at the top-level");
@@ -61,6 +63,42 @@ impl BatchOutput {
                 writeln!(out.borrow_mut(), "#/ declared: {}", name).unwrap();
             }
             BatchOutput::Interactive => {}
+        }
+    }
+
+    fn instance_summary(&self, instance: &DiscreteDblModelInstance) {
+        if let BatchOutput::Snapshot(out) = self {
+            let mut out = out.borrow_mut();
+            let gens: Vec<_> = instance.generators().collect();
+            let eqns: Vec<_> = instance.equations().collect();
+            if gens.is_empty() && eqns.is_empty() {
+                writeln!(out, "#/ instance has no generators or equations").unwrap();
+                return;
+            }
+            if !gens.is_empty() {
+                writeln!(out, "#/ instance generators:").unwrap();
+                for (name, fiber) in &gens {
+                    writeln!(out, "#/   {name} : {fiber}").unwrap();
+                }
+            }
+            if !eqns.is_empty() {
+                writeln!(out, "#/ instance equations:").unwrap();
+                for (lhs, rhs) in &eqns {
+                    writeln!(
+                        out,
+                        "#/   {} == {}",
+                        format_instance_term(lhs),
+                        format_instance_term(rhs)
+                    )
+                    .unwrap();
+                }
+            }
+        }
+    }
+
+    fn instance_error(&self, msg: &str) {
+        if let BatchOutput::Snapshot(out) = self {
+            writeln!(out.borrow_mut(), "#/ instance generation failed: {msg}").unwrap();
         }
     }
 
@@ -179,8 +217,18 @@ pub fn elaborate(src: &str, path: &str, output: &BatchOutput) -> io::Result<bool
                 } else {
                     match d {
                         TopElabResult::Declaration(name_segment, top_decl) => {
+                            let is_diag = matches!(top_decl, TopDecl::Diag(_));
                             toplevel.declarations.insert(name_segment, top_decl);
                             output.declared(name_segment);
+                            if is_diag
+                                && let Some(TopDecl::Diag(diag)) =
+                                    toplevel.declarations.get(&name_segment)
+                            {
+                                match instance_from_diag(&toplevel, &diag.theory.definition, diag) {
+                                    Ok((instance, _)) => output.instance_summary(&instance),
+                                    Err(msg) => output.instance_error(&msg),
+                                }
+                            }
                         }
                         TopElabResult::Output(s) => {
                             output.got_result(&s);
@@ -241,4 +289,16 @@ fn snapshot_examples() {
         }
     }
     assert!(succeeded);
+}
+
+/// Render an instance term for snapshot output as `f(g(base))`, with
+/// `f` the outermost (last-applied) model morphism in the path.
+fn format_instance_term(tm: &DiscreteInstanceTerm) -> String {
+    let mut s = format!("{}", tm.base);
+    if let Path::Seq(edges) = &tm.path {
+        for mor in edges.iter() {
+            s = format!("{}({})", mor, s);
+        }
+    }
+    s
 }

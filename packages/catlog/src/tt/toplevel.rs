@@ -1,6 +1,7 @@
 //! Data structures for managing toplevel declarations in the type theory.
 //!
-//! Specifically, notebooks will produce [TopDecl::Type] declarations.
+//! Specifically, notebooks will produce [TopDecl::Type] declarations, or
+//! maybe [TopDecl::Diag] declartions.
 
 use derive_more::Constructor;
 
@@ -16,6 +17,8 @@ pub enum TopDecl {
     DefConst(DefConst),
     /// See [Def].
     Def(Def),
+    /// See [Diag].
+    Diag(Diag),
 }
 
 /// A toplevel declaration of a type.
@@ -64,6 +67,29 @@ pub struct Def {
     pub body: TmS,
 }
 
+/// A toplevel declaration of an instance of a model (sketch).
+///
+/// The body is a level-shifted introduction value of the model type
+/// — generator slots, equation witnesses, and sub-instance imports
+/// packaged into a [`super::stx::TmS_::Instance`]
+/// term whose evaluated form is [`super::val::TmV_::Instance`].
+#[derive(Constructor, Clone)]
+pub struct Diag {
+    /// The theory that the instance is defined in.
+    pub theory: Theory,
+    /// The model (sketch) type that this is an instance of.
+    pub model: TyV,
+    /// Body syntax: a [`super::stx::TmS_::Instance`] term.
+    pub body_stx: TmS,
+    /// Body value: a [`super::val::TmV_::Instance`] term.
+    pub body_val: TmV,
+    /// Synthesized record type matching the instance's structure — the
+    /// shape a sub-instance import sees when this instance is named as
+    /// a type via `lookup_ty`. Each generator becomes an `@over`-typed
+    /// field; each sub-instance recurses; equations are elided (they're
+    /// not projectable).
+    pub body_ty: TyV,
+}
 impl TopDecl {
     /// Unwraps the type for a toplevel-declaration of a type, or panics.
     ///
@@ -92,6 +118,14 @@ impl TopDecl {
         match self {
             TopDecl::Def(d) => d,
             _ => panic!("top-level should be a term judgment"),
+        }
+    }
+
+    /// Unwraps the diagram for a toplevel diagram declaration, or panics.
+    pub fn unwrap_diag(self) -> Diag {
+        match self {
+            TopDecl::Diag(d) => d,
+            _ => panic!("top-level should be a diagram declaration"),
         }
     }
 }

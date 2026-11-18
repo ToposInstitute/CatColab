@@ -2,6 +2,8 @@ use serde::{Deserialize, Serialize};
 use tsify::Tsify;
 use uuid::Uuid;
 
+use crate::v1::Link;
+
 use super::model::{Mor, Ob};
 use super::theory::{MorType, ObType};
 
@@ -80,4 +82,36 @@ pub enum DiagramJudgment {
     /// Declares an equation between morphisms in the diagram.
     #[serde(rename = "equation")]
     Equation(DiagramEqnDecl),
+
+    ///
+    #[serde(rename = "instantiation")]
+    Instantiation(InstantiatedDiagram),
+}
+
+/// Instantiates an existing diagram into the current diagram
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize, Tsify)]
+#[tsify(into_wasm_abi, from_wasm_abi, missing_as_null)]
+pub struct InstantiatedDiagram {
+    /// Human-readable label for the instantiation.
+    pub name: String,
+
+    /// Globally unique identifier of the instantiation.
+    pub id: Uuid,
+
+    /// Link to the diagram to instantiate.
+    pub diagram: Option<Link>,
+
+    /// List of specializations to perform on the instantiated diagram.
+    pub specializations: Vec<SpecializeDiagram>,
+}
+
+/// A specialization of a generating object in an instantiated diagram.
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize, Tsify)]
+#[tsify(into_wasm_abi, from_wasm_abi, missing_as_null)]
+pub struct SpecializeDiagram {
+    /// ID (qualified name) of generating object to specialize.
+    pub id: Option<String>,
+
+    /// Object to insert as the specialization.
+    pub ob: Option<Ob>,
 }
