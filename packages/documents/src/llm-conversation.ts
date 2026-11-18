@@ -12,6 +12,8 @@ import { createSubscriptionScope } from "./util/subscription-scope";
 export type { LLMConversationDocument } from "catcolab-document-methods";
 
 export interface LLMConversation<A, H> {
+    /** The document's type, discriminating `SupportedDocument`. */
+    readonly type: "llmconversation";
     readonly handle: H;
     readonly attachment: A;
     data(): DeepReadonly<LLMConversationDocument>;
@@ -62,6 +64,7 @@ export function llmConversationFromStore<
     }
 
     return {
+        type: "llmconversation",
         handle,
         attachment,
         data,
