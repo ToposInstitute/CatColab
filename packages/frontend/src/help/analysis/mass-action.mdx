@@ -3,16 +3,14 @@
 <dl>
   <dt>Initial value: $\mathbb{R}_{\geqslant0}$</dt>
   <dd>The initial value of the concentration</dd>
-  <dt>Mass conservation: `True | False`</dt>
-  <dd>Whether or not flows should preserve mass</dd>
+  <dt>Rate granularity: `Mass conserving | Unbalanced | Per place`</dt>
+  <dd>Should a single rate be prescribed per flow (mass conserving), or should separate consumption and production rates be given; in the latter case, should they be given per flow (unbalanced) or per input/output place (per place)</dd>
   <dt>Rate: $\mathbb{R}_{\geqslant0}$</dt>
-  <dd>*(Only if **Mass conservation** = `True`)* The rate coefficient ($r$) of the reaction</dd>
-  <dt>Rate granularity: `Per transition | Per place`</dt>
-  <dd>*(Only if **Mass conservation** = `False`)* If flows can have multiple inputs/outputs (e.g. in the case of Petri nets) then rates can be given per flow or per individual input/output</dd>
+  <dd>*(Only if **RateGranularity** = Mass conserving)* The rate coefficient ($r$) of the reaction</dd>
   <dt>Consumption: $\mathbb{R}_{\geqslant0}$</dt>
-  <dd>The consumption rate coefficient ($\kappa$), either per transition (flow) or per place (input/output) depending on **Mass conservation**</dd>
+  <dd>The consumption rate coefficient ($\kappa$), either per flow or per (input/output) place, depending on **RateGranularity**</dd>
   <dt>Production: $\mathbb{R}_{\geqslant0}$</dt>
-  <dd>The production rate coefficient ($\rho$), either per transition (flow) or per place (input/output) depending on **Mass conservation**</dd>
+  <dd>The production rate coefficient ($\rho$), either per flow or per (input/output) place, depending on **RateGranularity**</dd>
   <dt>Duration: $\mathbb{R}_{\geqslant0}$</dt>
   <dd>The total duration of the simulation in units of time</dd>
 </dl>
