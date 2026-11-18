@@ -1,0 +1,323 @@
+{
+    "diagram": {
+        "obGenerators": [
+            {
+                "id": "019cde08-b1bf-76da-80f9-1af6fbcef269",
+                "label": [
+                    "u"
+                ],
+                "obType": {
+                    "tag": "Basic",
+                    "content": "Object"
+                },
+                "over": {
+                    "tag": "Basic",
+                    "content": "019cde06-171a-718d-9e4c-82c943045e9f"
+                }
+            },
+            {
+                "id": "019cde09-32c7-761d-af2d-51b6011ef442",
+                "label": [
+                    "v"
+                ],
+                "obType": {
+                    "tag": "Basic",
+                    "content": "Object"
+                },
+                "over": {
+                    "tag": "Basic",
+                    "content": "019cde06-171a-718d-9e4c-82c943045e9f"
+                }
+            },
+            {
+                "id": "019cde08-d8b7-772a-bb36-f8c84bc13460",
+                "label": [
+                    "dot-u"
+                ],
+                "obType": {
+                    "tag": "Basic",
+                    "content": "Object"
+                },
+                "over": {
+                    "tag": "Basic",
+                    "content": "019cde06-171a-718d-9e4c-82c943045e9f"
+                }
+            }
+        ],
+        "morGenerators": [
+            {
+                "id": "019cde08-f9b7-7120-9d20-ef3d6eea012d",
+                "morType": {
+                    "tag": "Basic",
+                    "content": "Multihom"
+                },
+                "over": {
+                    "tag": "Basic",
+                    "content": "019cde08-0528-727f-8bae-5ef388ee01a2"
+                },
+                "dom": {
+                    "tag": "List",
+                    "content": {
+                        "modality": "List",
+                        "objects": [
+                            {
+                                "tag": "Basic",
+                                "content": "019cde09-32c7-761d-af2d-51b6011ef442"
+                            },
+                            {
+                                "tag": "Basic",
+                                "content": "019cde08-b1bf-76da-80f9-1af6fbcef269"
+                            }
+                        ]
+                    }
+                },
+                "cod": {
+                    "tag": "Basic",
+                    "content": "019cde08-d8b7-772a-bb36-f8c84bc13460"
+                }
+            },
+            {
+                "id": "019cde09-b45f-77b4-be4b-8c0faf76aa0f",
+                "morType": {
+                    "tag": "Basic",
+                    "content": "Multihom"
+                },
+                "over": {
+                    "tag": "Basic",
+                    "content": "019cde07-a55f-7696-9399-6ae3b5f71002"
+                },
+                "dom": {
+                    "tag": "List",
+                    "content": {
+                        "modality": "List",
+                        "objects": [
+                            {
+                                "tag": "Basic",
+                                "content": "019cde08-b1bf-76da-80f9-1af6fbcef269"
+                            }
+                        ]
+                    }
+                },
+                "cod": {
+                    "tag": "Basic",
+                    "content": "019cde08-d8b7-772a-bb36-f8c84bc13460"
+                }
+            }
+        ]
+    },
+    "model": {
+        "obGenerators": [
+            {
+                "id": "019cde06-171a-718d-9e4c-82c943045e9f",
+                "label": [
+                    "Form0"
+                ],
+                "obType": {
+                    "tag": "Basic",
+                    "content": "Object"
+                }
+            },
+            {
+                "id": "019cde07-07df-719e-8e96-e41ecc125bb4",
+                "label": [
+                    "DualForm0"
+                ],
+                "obType": {
+                    "tag": "Basic",
+                    "content": "Object"
+                }
+            },
+            {
+                "id": "019cde06-368b-75e7-b538-9f859b1d7f2d",
+                "label": [
+                    "Form1"
+                ],
+                "obType": {
+                    "tag": "Basic",
+                    "content": "Object"
+                }
+            },
+            {
+                "id": "019cde07-1957-777f-bdbe-1f778850176e",
+                "label": [
+                    "DualForm1"
+                ],
+                "obType": {
+                    "tag": "Basic",
+                    "content": "Object"
+                }
+            },
+            {
+                "id": "019cde06-4d8e-77cb-922b-2fd09905027e",
+                "label": [
+                    "Form2"
+                ],
+                "obType": {
+                    "tag": "Basic",
+                    "content": "Object"
+                }
+            },
+            {
+                "id": "019cde07-2b07-75a9-86dd-3d266c1e1195",
+                "label": [
+                    "DualForm2"
+                ],
+                "obType": {
+                    "tag": "Basic",
+                    "content": "Object"
+                }
+            }
+        ],
+        "morGenerators": [
+            {
+                "id": "019cde06-6c67-770b-a9fa-3af2f350fc0e",
+                "label": [
+                    "d0"
+                ],
+                "morType": {
+                    "tag": "Basic",
+                    "content": "Multihom"
+                },
+                "dom": {
+                    "tag": "List",
+                    "content": {
+                        "modality": "List",
+                        "objects": [
+                            {
+                                "tag": "Basic",
+                                "content": "019cde06-171a-718d-9e4c-82c943045e9f"
+                            }
+                        ]
+                    }
+                },
+                "cod": {
+                    "tag": "Basic",
+                    "content": "019cde06-368b-75e7-b538-9f859b1d7f2d"
+                }
+            },
+            {
+                "id": "019cde06-ae91-74c1-afba-4ad9d32ecd6c",
+                "label": [
+                    "d1"
+                ],
+                "morType": {
+                    "tag": "Basic",
+                    "content": "Multihom"
+                },
+                "dom": {
+                    "tag": "List",
+                    "content": {
+                        "modality": "List",
+                        "objects": [
+                            {
+                                "tag": "Basic",
+                                "content": "019cde06-368b-75e7-b538-9f859b1d7f2d"
+                            }
+                        ]
+                    }
+                },
+                "cod": {
+                    "tag": "Basic",
+                    "content": "019cde06-4d8e-77cb-922b-2fd09905027e"
+                }
+            },
+            {
+                "id": "019cde07-a55f-7696-9399-6ae3b5f71002",
+                "label": [
+                    "partial"
+                ],
+                "morType": {
+                    "tag": "Basic",
+                    "content": "Multihom"
+                },
+                "dom": {
+                    "tag": "List",
+                    "content": {
+                        "modality": "List",
+                        "objects": [
+                            {
+                                "tag": "Basic",
+                                "content": "019cde06-171a-718d-9e4c-82c943045e9f"
+                            }
+                        ]
+                    }
+                },
+                "cod": {
+                    "tag": "Basic",
+                    "content": "019cde06-171a-718d-9e4c-82c943045e9f"
+                }
+            },
+            {
+                "id": "019cde08-0528-727f-8bae-5ef388ee01a2",
+                "label": [
+                    "wedge00"
+                ],
+                "morType": {
+                    "tag": "Basic",
+                    "content": "Multihom"
+                },
+                "dom": {
+                    "tag": "List",
+                    "content": {
+                        "modality": "List",
+                        "objects": [
+                            {
+                                "tag": "Basic",
+                                "content": "019cde06-171a-718d-9e4c-82c943045e9f"
+                            },
+                            {
+                                "tag": "Basic",
+                                "content": "019cde06-171a-718d-9e4c-82c943045e9f"
+                            }
+                        ]
+                    }
+                },
+                "cod": {
+                    "tag": "Basic",
+                    "content": "019cde06-171a-718d-9e4c-82c943045e9f"
+                }
+            },
+            {
+                "id": "019cde07-da78-7468-ac04-059fb33a4084",
+                "label": [
+                    "wedge01"
+                ],
+                "morType": {
+                    "tag": "Basic",
+                    "content": "Multihom"
+                },
+                "dom": {
+                    "tag": "List",
+                    "content": {
+                        "modality": "List",
+                        "objects": [
+                            {
+                                "tag": "Basic",
+                                "content": "019cde06-171a-718d-9e4c-82c943045e9f"
+                            },
+                            {
+                                "tag": "Basic",
+                                "content": "019cde06-368b-75e7-b538-9f859b1d7f2d"
+                            }
+                        ]
+                    }
+                },
+                "cod": {
+                    "tag": "Basic",
+                    "content": "019cde06-368b-75e7-b538-9f859b1d7f2d"
+                }
+            }
+        ]
+    },
+	"analysis": {
+		"domain": "Plane",
+		"mesh": "Rectangle",
+		"initialConditions": {
+		  "019cde08-b1bf-76da-80f9-1af6fbcef269": "Gaussian",
+		  "019cde09-32c7-761d-af2d-51b6011ef442": "Gaussian"
+		},
+		"plotVariables": {},
+		"scalars": {},
+		"duration": 10
+	}
+}
