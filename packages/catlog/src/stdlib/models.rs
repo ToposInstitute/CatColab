@@ -1,5 +1,6 @@
 //! Standard library of models of double theories.
 
+use nonempty::nonempty;
 use std::rc::Rc;
 
 use crate::dbl::{model::*, theory::*};
@@ -77,6 +78,35 @@ pub fn negative_feedback(th: Rc<DiscreteDblTheory>) -> DiscreteDblModel {
     model.add_ob(name("y"), name("Object"));
     model.add_mor(name("positive"), name("x"), name("y"), Path::Id(name("Object")));
     model.add_mor(name("negative"), name("y"), name("x"), name("Negative").into());
+    model
+}
+
+/// A simple Lotka–Volterra type system as an N-graded signed category.
+///
+/// Two negative feedback loops glued together along a common object, with "interaction weights".
+pub fn graded_lotka_volterra(th: Rc<DiscreteDblTheory>) -> DiscreteDblModel {
+    let mut model = DiscreteDblModel::new(th);
+    model.add_ob(name("x"), name("Object"));
+    model.add_ob(name("y"), name("Object"));
+    model.add_ob(name("z"), name("Object"));
+    // A degree-0 positive link from x to y.
+    model.add_mor(name("positive_xy"), name("x"), name("y"), Path::Id(name("Object")));
+    // A degree-0 negative link from y to x.
+    model.add_mor(name("negative_yx"), name("y"), name("x"), name("Negative").into());
+    // A degree-2 positive link from y to z.
+    model.add_mor(
+        name("positive_yz"),
+        name("y"),
+        name("z"),
+        Path::Seq(nonempty!(name("Degree"), name("Degree"))),
+    );
+    // A degree-1 negative link from z to y.
+    model.add_mor(
+        name("negative_zy"),
+        name("z"),
+        name("y"),
+        Path::Seq(nonempty!(name("Negative"), name("Degree"))),
+    );
     model
 }
 
@@ -265,6 +295,12 @@ mod tests {
         assert!(negative_loop(th.clone()).validate().is_ok());
         assert!(delayed_positive_loop(th.clone()).validate().is_ok());
         assert!(delayed_negative_loop(th.clone()).validate().is_ok());
+    }
+
+    #[test]
+    fn graded_signed_categories() {
+        let th = Rc::new(th_signed_category_with_degrees());
+        assert!(graded_lotka_volterra(th).validate().is_ok());
     }
 
     #[test]
