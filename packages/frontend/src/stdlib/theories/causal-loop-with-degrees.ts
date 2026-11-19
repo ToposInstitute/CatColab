@@ -51,7 +51,7 @@ export default function createCausalLoopTheory(theoryMeta: TheoryMeta): Theory {
             analyses.modelGraph({
                 id: "diagram",
                 name: "Visualization",
-                description: "Visualize the graded causal loop diagram",
+                description: "Visualize the causal loop diagram with degrees",
                 help: "visualization",
             }),
         ],

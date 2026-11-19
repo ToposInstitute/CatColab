@@ -81,7 +81,7 @@ pub fn negative_feedback(th: Rc<DiscreteDblTheory>) -> DiscreteDblModel {
     model
 }
 
-/// A simple Lotka–Volterra type system as a graded signed category.
+/// A simple Lotka–Volterra type system as an N-graded signed category.
 ///
 /// Two negative feedback loops glued together along a common object, with "interaction weights".
 pub fn graded_lotka_volterra(th: Rc<DiscreteDblTheory>) -> DiscreteDblModel {

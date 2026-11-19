@@ -10,7 +10,7 @@ export const NegativeLink = defineMorphism(
 );
 
 export const GradedCausalLoop = defineShape({
-    theory: "graded-causal-loop",
+    theory: "causal-loop-with-degrees",
     getCoreTheory: async () => {
         const { ThSignedCategoryWithDegrees } = await import("catlog-wasm");
         return new ThSignedCategoryWithDegrees().theory();
