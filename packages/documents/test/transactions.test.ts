@@ -84,8 +84,8 @@ describe("transactions", () => {
 
             // Each draft conversation is attached to the draft of the document
             // it is attached to.
-            expect(draftDocs.inner.attachment.handle).toBe(draftDocs.schema.handle);
-            expect(draftDocs.outer.attachment.handle).toBe(draftDocs.inner.handle);
+            expect(draftDocs.inner.attachment).toBe(draftDocs.schema);
+            expect(draftDocs.outer.attachment).toBe(draftDocs.inner);
 
             draftDocs.outer.update({ title: "Renamed" });
             expect(outer.title).toBe("Outer");
@@ -109,7 +109,7 @@ describe("transactions", () => {
             const { tx, draftDocs } = await binder.beginTransaction({ conversation });
 
             const draft = draftDocs.conversation;
-            expect(draft.attachment.handle).toBe(schema.handle);
+            expect(binder.getDocumentRef(draft.attachment)).toEqual(binder.getDocumentRef(schema));
 
             draft.update({ title: "Renamed" });
             tx.commit();
@@ -157,20 +157,23 @@ describe("transactions", () => {
         const schema = await binder.createNotebook(SimpleSchema, { title: "Example schema" });
 
         const { tx, draftDocs } = await binder.beginTransaction({ schema });
-        const draftRef = binder.getDocumentRef(draftDocs.schema.handle);
+        const draftRef = binder.getDocumentRef(draftDocs.schema);
 
         // The draft's own ref resolves to the draft, while the source's ref
         // keeps resolving to the committed document.
-        const resolvedDraft = expectOk(await binder.getHandle(draftRef));
-        expect(resolvedDraft).toBe(draftDocs.schema.handle);
+        draftDocs.schema.update({ title: "Draft schema" });
+        const resolvedDraft = expectOk(await binder.getDocumentSnapshotFromRef(draftRef));
+        expect(resolvedDraft).toBe(binder.getDocumentSnapshot(draftDocs.schema));
+        expect(resolvedDraft.name).toBe("Draft schema");
         const resolvedSource = expectOk(
-            await binder.getHandle(binder.getDocumentRef(schema.handle)),
+            await binder.getDocumentSnapshotFromRef(binder.getDocumentRef(schema)),
         );
-        expect(resolvedSource).toBe(schema.handle);
+        expect(resolvedSource).toBe(binder.getDocumentSnapshot(schema));
+        expect(resolvedSource.name).toBe("Example schema");
 
         tx.commit();
         // Once committed, the draft's ref no longer resolves.
-        expect((await binder.getHandle(draftRef)).tag).toBe("Err");
+        expect((await binder.getDocumentSnapshotFromRef(draftRef)).tag).toBe("Err");
     });
 
     test(

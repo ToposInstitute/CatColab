@@ -1,6 +1,7 @@
 import { createMemo, createRoot } from "solid-js";
 import { assert, beforeEach, test, vi } from "vitest";
 
+import type { DocumentRef } from "catcolab-documents";
 import type { ApiBinder } from "../api";
 import type { ChatTurnEvent } from "../inference/chat";
 import type { InferenceKeyResult } from "../user/inference_key_context";
@@ -17,15 +18,24 @@ vi.mock("./document", () => ({
 
 import { createLLMConversationRegistry } from "./conversation_provider";
 
-const binder = {} as ApiBinder;
+const refs = new WeakMap<ApiLLMConversation, DocumentRef>();
+const binder = {
+    getDocumentRef(document: ApiLLMConversation) {
+        const ref = refs.get(document);
+        assert(ref);
+        return ref;
+    },
+} as ApiBinder;
 const inferenceKey = (): InferenceKeyResult => ({ tag: "Ready", key: "test-key" });
 const input = { content: "Hello", files: [] };
 
 function conversation(id: string): ApiLLMConversation {
-    return {
-        handle: { ref: { id, server: "test-server", version: null } },
+    const document = {
+        id,
         interactions: () => [],
     } as unknown as ApiLLMConversation;
+    refs.set(document, { id, server: "test-server", version: null });
+    return document;
 }
 
 function pendingTurn() {

@@ -4,6 +4,7 @@ import {
 } from "catcolab-document-methods";
 import type { FeedbackResolution, LLMInteraction, Uuid } from "catcolab-document-types";
 import type { DocumentStore } from "./document-store";
+import { type DocumentOwner, registerDocument } from "./document/handle_registry";
 import type { Shape } from "./shape";
 import type { SupportedDocument } from "./supported-document";
 import type { DeepReadonly } from "./util/deep-readonly";
@@ -11,8 +12,8 @@ import { createSubscriptionScope } from "./util/subscription-scope";
 
 export type { LLMConversationDocument } from "catcolab-document-methods";
 
-export interface LLMConversation<A, H> {
-    readonly handle: H;
+export interface LLMConversation<A, H> extends DocumentOwner<H> {
+    readonly id: string;
     readonly attachment: A;
     data(): DeepReadonly<LLMConversationDocument>;
     readonly title: string;
@@ -61,8 +62,8 @@ export function llmConversationFromStore<
         });
     }
 
-    return {
-        handle,
+    const conversation: LLMConversation<Attachment, Handle> = {
+        id: store.getDocumentRef(handle).id,
         attachment,
         data,
         get title(): string {
@@ -111,4 +112,6 @@ export function llmConversationFromStore<
             return scope.track(store.subscribe(handle, callback));
         },
     };
+
+    return registerDocument(store, handle, conversation);
 }

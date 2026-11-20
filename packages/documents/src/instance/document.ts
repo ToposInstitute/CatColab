@@ -1,6 +1,7 @@
 import type { InstanceDocument } from "catcolab-document-methods";
 import type { Document } from "catcolab-document-types";
 import type { DocumentStore } from "../document-store";
+import { registerDocument } from "../document/handle_registry";
 import type { ModelDocument } from "../model/document";
 import type { Notebook } from "../model/document";
 import type { ElaboratedModel, ModelValidation } from "../model/elaborated-model";
@@ -24,7 +25,7 @@ export type { InstanceDocument } from "catcolab-document-methods";
 
 /** API for an instance document and its schema-derived tables. */
 export interface Instance<S extends Shape = Shape, H = unknown, V = unknown> {
-    readonly handle: H;
+    readonly id: string;
     readonly shape: S;
     data(): InstanceData;
     readonly title: string;
@@ -149,7 +150,7 @@ export function instanceFromStore<Handle, S extends Shape, Version>(
     }
 
     const instance: Instance<S, Handle, Version> = {
-        handle,
+        id: store.getDocumentRef(handle).id,
         shape: schema.shape,
         data: currentData,
         get title(): string {
@@ -245,5 +246,5 @@ export function instanceFromStore<Handle, S extends Shape, Version>(
         },
     };
 
-    return instance;
+    return registerDocument(store, handle, instance);
 }

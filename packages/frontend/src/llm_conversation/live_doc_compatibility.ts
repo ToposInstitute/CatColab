@@ -45,14 +45,6 @@ export type LiveLLMConversationDoc = {
     modelLiveDoc: LiveModelDoc["liveDoc"];
 };
 
-async function getHandle(binder: ApiBinder, ref: DocumentRef) {
-    const result = await binder.getHandle(ref);
-    if (result.tag === "Err") {
-        throw new Error(result.content.map((issue) => issue.message).join("\n"));
-    }
-    return result.content;
-}
-
 /** Whether an LLM conversation can be attached to the given document. */
 export function supportsLLMConversation(document: Document): boolean {
     switch (document.type) {
@@ -83,16 +75,14 @@ export async function getLiveLLMConversation(
     if (of._version !== null || of._server !== api.serverHost) {
         throw new Error("LLM conversations require a live attachment on the current server.");
     }
-    const attachmentHandle = await getHandle(binder, {
+    const attachmentRef: DocumentRef = {
         id: of._id,
         version: null,
         server: api.serverHost,
-    });
-    const resolved = await resolveSupportedDocument(binder, attachmentHandle);
+    };
+    const resolved = await resolveSupportedDocument(binder, attachmentRef);
     if (resolved === undefined) {
-        throw new Error(
-            `Cannot attach an LLM conversation to a "${binder.getDocumentSnapshot(attachmentHandle).type}" document.`,
-        );
+        throw new Error("Cannot attach an LLM conversation to an unsupported document.");
     }
     const { document: attachment, modelRefId } = resolved;
     const liveModel = await models.getLiveModel(modelRefId);
@@ -125,12 +115,11 @@ export async function createLLMConversation(
     attachTo: LiveDocWithRef,
     llmModel: string,
 ): Promise<string> {
-    const handle = await getHandle(binder, {
+    const resolved = await resolveSupportedDocument(binder, {
         id: attachTo.docRef.refId,
         version: null,
         server: api.serverHost,
     });
-    const resolved = await resolveSupportedDocument(binder, handle);
     if (resolved === undefined) {
         throw new Error(
             `Cannot attach an LLM conversation to a "${attachTo.liveDoc.doc.type}" document.`,
@@ -139,5 +128,5 @@ export async function createLLMConversation(
     const conversation = await binder.createLLMConversation(resolved.document, llmModel, {
         title: "",
     });
-    return conversation.handle.ref.id;
+    return conversation.id;
 }

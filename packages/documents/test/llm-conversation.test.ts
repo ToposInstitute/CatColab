@@ -38,7 +38,7 @@ describe("LLM conversation documents", () => {
         expect(conversation.data().type).toBe("llmconversation");
         expect(conversation.data().llmModel).toBe("test-model");
 
-        const modelRef = binder.getDocumentRef(model.handle);
+        const modelRef = binder.getDocumentRef(model);
         expect(conversation.data().llmConversationOf).toMatchObject({
             _id: modelRef.id,
             _version: modelRef.version,
@@ -46,8 +46,8 @@ describe("LLM conversation documents", () => {
         });
         expect(conversation.interactions()).toHaveLength(0);
 
-        // The link can be resolved back to the attachment's handle through the store.
-        const resolved = await binder.getHandle({
+        // The link resolves back to the attachment snapshot.
+        const resolved = await binder.getDocumentSnapshotFromRef({
             id: conversation.data().llmConversationOf._id,
             version: null,
         });
@@ -55,7 +55,7 @@ describe("LLM conversation documents", () => {
         if (resolved.tag !== "Ok") {
             return;
         }
-        expect(resolved.content).toBe(model.handle);
+        expect(resolved.content).toBe(binder.getDocumentSnapshot(model));
     });
 
     test("interactions are appended in order and readable from conversation data", async () => {
@@ -172,7 +172,7 @@ describe("LLM conversation documents", () => {
 
         const result = await binder.loadLLMConversationFromRef(
             created.attachment,
-            binder.getDocumentRef(created.handle),
+            binder.getDocumentRef(created),
         );
         expect(result.tag).toBe("Ok");
         if (result.tag !== "Ok") {
@@ -188,7 +188,7 @@ describe("LLM conversation documents", () => {
         const notebook = await binder.createNotebook(SimpleOlog, { title: "Model" });
         const result = await binder.loadLLMConversationFromRef(
             notebook,
-            binder.getDocumentRef(notebook.handle),
+            binder.getDocumentRef(notebook),
         );
         expect(result).toMatchObject({ tag: "Err", content: [{ path: ["type"] }] });
     });
@@ -199,7 +199,7 @@ describe("LLM conversation documents", () => {
         const other = await binder.createNotebook(SimpleOlog, { title: "Other model" });
         const result = await binder.loadLLMConversationFromRef(
             other,
-            binder.getDocumentRef(conversation.handle),
+            binder.getDocumentRef(conversation),
         );
         expect(result).toMatchObject({
             tag: "Err",

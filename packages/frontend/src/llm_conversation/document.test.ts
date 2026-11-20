@@ -54,7 +54,12 @@ async function makeInvalidInstance(fixture: Fixture) {
     const table = (await instance.validate()).tables[0];
     assert(table);
     const row = expectOk(await instance.addRow(table));
-    fixture.store.changeDocument(instance.handle, (document) => {
+    const handle = await fixture.store.getHandle(fixture.binder.getDocumentRef(instance));
+    assert.strictEqual(handle.tag, "Ok");
+    if (handle.tag === "Err") {
+        throw new Error("Expected an instance handle");
+    }
+    fixture.store.changeDocument(handle.content, (document) => {
         assert.strictEqual(document.type, "instance");
         if (document.type !== "instance") {
             return;
@@ -217,7 +222,7 @@ describe("LLM conversation turns", { timeout: 30_000 }, () => {
 
     test("skips documents that have no document API object", async () => {
         const fixture = await makeFixture();
-        const schemaRefId = fixture.store.getDocumentRef(fixture.schema.handle).id;
+        const schemaRefId = fixture.schema.id;
         const diagramHandle = await fixture.store.createHandle(
             Diagram.newDiagramDocument({ _id: schemaRefId, _version: null, _server: "" }),
         );

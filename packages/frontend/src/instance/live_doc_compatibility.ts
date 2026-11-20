@@ -103,11 +103,11 @@ export async function createInstance(
     modelRefId: string,
 ): Promise<string> {
     const ref = { id: modelRefId, version: null, server: api.serverHost };
-    const handle = await binder.getHandle(ref);
-    if (handle.tag === "Err") {
-        throw new Error(handle.content.map((issue) => issue.message).join("\n"));
+    const snapshot = await binder.getDocumentSnapshotFromRef(ref);
+    if (snapshot.tag === "Err") {
+        throw new Error(snapshot.content.map((issue) => issue.message).join("\n"));
     }
-    const document = binder.getDocumentSnapshot(handle.content);
+    const document = snapshot.content;
     if (!("theory" in document) || typeof document.theory !== "string") {
         throw new Error("Cannot create a data instance of a document without a theory.");
     }
@@ -123,5 +123,5 @@ export async function createInstance(
     if (instance.tag === "Err") {
         throw new Error(instance.content.map((issue) => issue.message).join("\n"));
     }
-    return instance.content.handle.ref.id;
+    return instance.content.id;
 }
