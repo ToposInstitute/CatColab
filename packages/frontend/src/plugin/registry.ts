@@ -17,15 +17,11 @@ models, and possibly other functionality as plugins.
 export class PluginRegistry {
     private readonly plugins: Map<string, AnalysisPlugin>;
 
-    /** Cache of analysis manifests applicable to a scope, keyed by type and scope. */
-    private readonly analysisManifests: Map<string, AnalysisManifest[]>;
-
-    /** Cache of loaded analysis builders, keyed by plugin ID. */
+    /** Loaded analysis builders, keyed by plugin ID. */
     private readonly analysisBuilders: Map<string, AnalysisBuilder<unknown>>;
 
     constructor() {
         this.plugins = new Map();
-        this.analysisManifests = new Map();
         this.analysisBuilders = new Map();
     }
 
@@ -35,7 +31,6 @@ export class PluginRegistry {
             throw new Error(`Plugin with ID ${plugin.id} already exists`);
         }
         this.plugins.set(plugin.id, plugin);
-        this.analysisManifests.clear();
     }
 
     /** Gets the analyses available for a model. */
@@ -50,16 +45,11 @@ export class PluginRegistry {
 
     /** Gets the analyses of the given type available for an entity. */
     analyses(type: AnalysisType, key: AnalysisScopeKey): AnalysisManifest[] {
-        const cacheKey = JSON.stringify([type, key.doctrine, key.theory]);
-        let manifests = this.analysisManifests.get(cacheKey);
-        if (!manifests) {
-            manifests = [];
-            for (const plugin of this.plugins.values()) {
-                if (plugin.type === type && isKeyInScope(plugin, key)) {
-                    manifests.push(plugin);
-                }
+        const manifests: AnalysisManifest[] = [];
+        for (const plugin of this.plugins.values()) {
+            if (plugin.type === type && isKeyInScope(plugin, key)) {
+                manifests.push(plugin);
             }
-            this.analysisManifests.set(cacheKey, manifests);
         }
         return manifests;
     }
@@ -70,7 +60,7 @@ export class PluginRegistry {
     }
 
     /** Gets the builder for an analysis of any type, loading it if necessary. */
-    async analysisBuilder(id: string): Promise<AnalysisBuilder<unknown>> {
+    analysisBuilder(id: string): Promise<AnalysisBuilder<unknown>> {
         const plugin = this.plugins.get(id);
         if (!plugin) {
             throw new Error(`No analysis with ID ${id}`);
@@ -79,7 +69,7 @@ export class PluginRegistry {
     }
 
     /** Gets the builder for a model analysis, loading it if necessary. */
-    async modelAnalysisBuilder(id: string): Promise<ModelAnalysisBuilder<unknown>> {
+    modelAnalysisBuilder(id: string): Promise<ModelAnalysisBuilder<unknown>> {
         const plugin = this.plugins.get(id);
         if (plugin?.type !== "model") {
             throw new Error(`No model analysis with ID ${id}`);
@@ -88,7 +78,7 @@ export class PluginRegistry {
     }
 
     /** Gets the builder for a diagram analysis, loading it if necessary. */
-    async diagramAnalysisBuilder(id: string): Promise<DiagramAnalysisBuilder<unknown>> {
+    diagramAnalysisBuilder(id: string): Promise<DiagramAnalysisBuilder<unknown>> {
         const plugin = this.plugins.get(id);
         if (plugin?.type !== "diagram") {
             throw new Error(`No diagram analysis with ID ${id}`);
