@@ -6,7 +6,7 @@ const contributions = [
         label: "Table view",
         description: "Visualize the instance as a table",
         help: "tabularview",
-        type: "diagram",
+        analysisType: "diagram",
         scope: {
             theory: ["simple-schema"],
         },

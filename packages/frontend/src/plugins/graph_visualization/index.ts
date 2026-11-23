@@ -6,7 +6,7 @@ const contributions = [
         label: "Visualization",
         description: "Visualize the model as a graph",
         help: "visualization",
-        type: "model",
+        analysisType: "model",
         scope: {
             doctrine: ["discrete"],
         },
@@ -16,7 +16,7 @@ const contributions = [
         name: "diagram",
         label: "Visualization",
         description: "Visualize the diagram as a graph",
-        type: "diagram",
+        analysisType: "diagram",
         scope: {
             doctrine: ["discrete"],
         },
@@ -26,7 +26,7 @@ const contributions = [
         name: "petri-net",
         label: "Visualization",
         description: "Visualize the Petri net",
-        type: "model",
+        analysisType: "model",
         scope: {
             theory: ["petri-net"],
         },
@@ -36,7 +36,7 @@ const contributions = [
         name: "stock-flow",
         label: "Visualization",
         description: "Visualize the diagram",
-        type: "model",
+        analysisType: "model",
         scope: {
             theory: ["primitive-stock-flow", "primitive-signed-stock-flow"],
         },

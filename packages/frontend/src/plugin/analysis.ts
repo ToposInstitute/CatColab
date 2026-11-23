@@ -21,7 +21,7 @@ export type AnalysisManifest = {
     help?: string;
 
     /** Type of entity that analysis is of: model, diagram, etc. */
-    type: AnalysisType;
+    analysisType: AnalysisType;
 
     /** Scope of applicability of analysis.
 
@@ -36,13 +36,13 @@ export type AnalysisManifest = {
 
 /** Contribution of an analysis of models. */
 export type ModelAnalysisContribution = AnalysisManifest & {
-    type: "model";
+    analysisType: "model";
     load: (manifest: AnalysisManifest) => Promise<ModelAnalysisBuilder<unknown>>;
 };
 
 /** Contribution of an analysis of diagrams. */
 export type DiagramAnalysisContribution = AnalysisManifest & {
-    type: "diagram";
+    analysisType: "diagram";
     load: (manifest: AnalysisManifest) => Promise<DiagramAnalysisBuilder<unknown>>;
 };
 

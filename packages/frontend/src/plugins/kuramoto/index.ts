@@ -7,7 +7,7 @@ const contributions = [
         label: "Kuramoto dynamics",
         description: "Simulate the system using the Kuramoto dynamical model",
         help: "kuramoto",
-        type: "model",
+        analysisType: "model",
         scope: {
             theory: ["power-system"],
         },

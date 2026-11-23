@@ -5,7 +5,7 @@ const contributions = [
         name: "simulation",
         label: "Simulation",
         description: "Simulate the PDE using Decapodes",
-        type: "diagram",
+        analysisType: "diagram",
         scope: {
             theory: ["unary-dec"],
         },

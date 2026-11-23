@@ -7,7 +7,7 @@ export const contributions = [
         label: "Balancing loops",
         description: "Find the fast-acting balancing loops",
         help: "loops",
-        type: "model",
+        analysisType: "model",
         scope: {
             theory: ["causal-loop-delays"],
         },
@@ -20,7 +20,7 @@ export const contributions = [
         label: "Reinforcing loops",
         description: "Find the fast-acting reinforcing loops",
         help: "loops",
-        type: "model",
+        analysisType: "model",
         scope: {
             theory: ["causal-loop-delays"],
         },
@@ -33,7 +33,7 @@ export const contributions = [
         label: "Delayed balancing loops",
         description: "Find the slow-acting balancing loops",
         help: "loops",
-        type: "model",
+        analysisType: "model",
         scope: {
             theory: ["causal-loop-delays"],
         },
@@ -47,7 +47,7 @@ export const contributions = [
         label: "Delayed reinforcing loops",
         description: "Find the slow-acting reinforcing loops",
         help: "loops",
-        type: "model",
+        analysisType: "model",
         scope: {
             theory: ["causal-loop-delays"],
         },

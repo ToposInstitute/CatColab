@@ -6,7 +6,7 @@ const contributions = [
         label: "Stochastic mass-action dynamics",
         description: "Simulate a stochastic system using the law of mass action",
         help: "stochastic-mass-action",
-        type: "model",
+        analysisType: "model",
         scope: {
             theory: ["petri-net"],
         },

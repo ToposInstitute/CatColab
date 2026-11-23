@@ -7,7 +7,7 @@ const contributions = [
         label: "Polynomial ODE simulation",
         description: "Simulate the system",
         help: "polynomial-ode-simulation",
-        type: "model",
+        analysisType: "model",
         scope: {
             theory: ["polynomial-ode"],
         },
@@ -22,7 +22,7 @@ const contributions = [
         label: "Polynomial ODE equations",
         description: "Display the symbolic equations",
         help: "polynomial-ode-equations",
-        type: "model",
+        analysisType: "model",
         scope: {
             theory: ["polynomial-ode"],
         },
@@ -36,7 +36,7 @@ const contributions = [
         label: "Polynomial ODE simulation",
         description: "Simulate the system",
         help: "polynomial-ode-simulation",
-        type: "model",
+        analysisType: "model",
         scope: {
             theory: ["signed-polynomial-ode"],
         },
@@ -51,7 +51,7 @@ const contributions = [
         label: "Polynomial ODE equations",
         description: "Display the symbolic equations",
         help: "polynomial-ode-equations",
-        type: "model",
+        analysisType: "model",
         scope: {
             theory: ["signed-polynomial-ode"],
         },

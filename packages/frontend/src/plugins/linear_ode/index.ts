@@ -6,7 +6,7 @@ const contributions = [
         label: "Linear ODE dynamics",
         description: "Simulate the system using a constant-coefficient linear first-order ODE",
         help: "linear-ode",
-        type: "model",
+        analysisType: "model",
         scope: {
             theory: ["causal-loop", "reg-net"],
         },

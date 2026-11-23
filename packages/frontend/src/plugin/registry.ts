@@ -52,7 +52,7 @@ export class PluginRegistry {
     analyses(type: AnalysisType, key: ScopeKey): ResolvedAnalysisManifest[] {
         const manifests: ResolvedAnalysisManifest[] = [];
         for (const contribution of this.contributions.values()) {
-            if (contribution.type === type && isKeyInScope(contribution, key)) {
+            if (contribution.analysisType === type && isKeyInScope(contribution, key)) {
                 manifests.push(contribution);
             }
         }
@@ -76,7 +76,7 @@ export class PluginRegistry {
     /** Gets the builder for a model analysis, loading it if necessary. */
     async modelAnalysisBuilder(id: string): Promise<ModelAnalysisBuilder<unknown>> {
         const contribution = this.contributions.get(id);
-        if (contribution?.type !== "model") {
+        if (contribution?.analysisType !== "model") {
             throw new Error(`No model analysis with ID ${id}`);
         }
         return this.load(contribution);
@@ -85,7 +85,7 @@ export class PluginRegistry {
     /** Gets the builder for a diagram analysis, loading it if necessary. */
     async diagramAnalysisBuilder(id: string): Promise<DiagramAnalysisBuilder<unknown>> {
         const contribution = this.contributions.get(id);
-        if (contribution?.type !== "diagram") {
+        if (contribution?.analysisType !== "diagram") {
             throw new Error(`No diagram analysis with ID ${id}`);
         }
         return this.load(contribution);

@@ -6,7 +6,7 @@ const contributions = [
         label: "Sub-reachability check",
         description: "Check that forbidden tokenings are unreachable",
         help: "subreachability",
-        type: "model",
+        analysisType: "model",
         scope: {
             theory: ["petri-net"],
         },

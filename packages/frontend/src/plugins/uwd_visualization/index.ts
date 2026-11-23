@@ -7,7 +7,7 @@ const contributions = [
         description:
             "Visualize the composition pattern of the model as an undirected wiring diagram",
         help: "composition-pattern",
-        type: "model",
+        analysisType: "model",
         scope: {}, // Applicable to any model.
         load: async () => (await import("./uwd_visualization")).default,
     } satisfies ModelAnalysisContribution,

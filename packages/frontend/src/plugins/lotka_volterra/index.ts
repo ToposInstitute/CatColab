@@ -6,7 +6,7 @@ const contributions = [
         label: "Lotka-Volterra dynamics",
         description: "Simulate the system using a Lotka-Volterra ODE",
         help: "lotka-volterra",
-        type: "model",
+        analysisType: "model",
         scope: {
             theory: ["causal-loop", "reg-net"],
         },

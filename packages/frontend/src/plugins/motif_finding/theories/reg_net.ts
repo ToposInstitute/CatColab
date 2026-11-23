@@ -7,7 +7,7 @@ export const contributions = [
         label: "Positive feedback",
         description: "Analyze the network for positive feedback loops",
         help: "loops",
-        type: "model",
+        analysisType: "model",
         scope: {
             theory: ["reg-net"],
         },
@@ -20,7 +20,7 @@ export const contributions = [
         label: "Negative feedback",
         description: "Analyze the network for negative feedback loops",
         help: "loops",
-        type: "model",
+        analysisType: "model",
         scope: {
             theory: ["reg-net"],
         },

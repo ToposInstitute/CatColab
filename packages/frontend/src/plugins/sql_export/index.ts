@@ -6,7 +6,7 @@ const contributions = [
         label: "SQL schema",
         description: "Produce SQL DML from this schema",
         help: "sql",
-        type: "model",
+        analysisType: "model",
         scope: {
             theory: ["simple-schema"],
         },

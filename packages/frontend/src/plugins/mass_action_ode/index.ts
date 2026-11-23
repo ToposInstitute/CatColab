@@ -13,7 +13,7 @@ const contributions = [
         label: "Mass-action dynamics",
         description: "Simulate the system using the law of mass action",
         help: "mass-action",
-        type: "model",
+        analysisType: "model",
         scope: {
             theory: ["petri-net"],
         },
@@ -28,7 +28,7 @@ const contributions = [
         label: "Mass-action dynamics equations",
         description: "Display the symbolic mass-action dynamics equations",
         help: "mass-action-equations",
-        type: "model",
+        analysisType: "model",
         scope: {
             theory: ["petri-net"],
         },
@@ -43,7 +43,7 @@ const contributions = [
         label: "Mass-action dynamics",
         description: "Simulate the system using the law of mass action",
         help: "mass-action",
-        type: "model",
+        analysisType: "model",
         scope: {
             theory: ["primitive-stock-flow"],
         },
@@ -58,7 +58,7 @@ const contributions = [
         label: "Mass-action dynamics equations",
         description: "Display the symbolic mass-action dynamics equations",
         help: "mass-action-equations",
-        type: "model",
+        analysisType: "model",
         scope: {
             theory: ["primitive-stock-flow"],
         },
@@ -73,7 +73,7 @@ const contributions = [
         label: "Mass-action dynamics",
         description: "Simulate the system using the law of mass action",
         help: "mass-action",
-        type: "model",
+        analysisType: "model",
         scope: {
             theory: ["primitive-signed-stock-flow"],
         },
@@ -89,7 +89,7 @@ const contributions = [
         label: "Mass-action dynamics equations",
         description: "Display the symbolic mass-action dynamics equations",
         help: "mass-action-equations",
-        type: "model",
+        analysisType: "model",
         scope: {
             theory: ["primitive-signed-stock-flow"],
         },

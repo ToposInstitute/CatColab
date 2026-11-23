@@ -7,7 +7,7 @@ export const contributions = [
         label: "Balancing loops",
         description: "Analyze the diagram for balancing loops",
         help: "loops",
-        type: "model",
+        analysisType: "model",
         scope: {
             theory: ["causal-loop"],
         },
@@ -20,7 +20,7 @@ export const contributions = [
         label: "Reinforcing loops",
         description: "Analyze the diagram for reinforcing loops",
         help: "loops",
-        type: "model",
+        analysisType: "model",
         scope: {
             theory: ["causal-loop"],
         },

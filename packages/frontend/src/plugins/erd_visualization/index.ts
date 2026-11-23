@@ -6,7 +6,7 @@ const contributions = [
         label: "Entity-relationship diagram",
         description: "Visualize the schema as an entity-relationship diagram",
         help: "schema-erd",
-        type: "model",
+        analysisType: "model",
         scope: {
             theory: ["simple-schema"],
         },
