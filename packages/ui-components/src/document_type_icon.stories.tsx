@@ -1,7 +1,8 @@
 import { For } from "solid-js";
 import type { Meta, StoryObj } from "storybook-solidjs-vite";
 
-import { type DocumentType, DocumentTypeIcon } from "./document_type_icon";
+import type { DocumentType } from "catcolab-document-types";
+import { DocumentTypeIcon } from "./document_type_icon";
 
 const theoryToLetterMap: Record<string, [string, string]> = {
     empty: ["I", "n"],
