@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - production
   pull_request:
 
 env:
@@ -155,8 +156,10 @@ jobs:
         name: topos-institute
         authToken: '${{ secrets.CACHIX_TOPOS_AUTH_TOKEN }}'
 
-    - name: Build the NixOS system for catcolab-next
-      run: nix build .#nixosConfigurations.catcolab-next.config.system.build.toplevel
+    - name: Build the NixOS system
+      env:
+        DEPLOY_TARGET: ${{ github.ref == 'refs/heads/production' && 'catcolab' || 'catcolab-next' }}
+      run: nix build ".#nixosConfigurations.$DEPLOY_TARGET.config.system.build.toplevel"
 
   backend_dev_setup:
     name: backend dev setup

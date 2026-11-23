@@ -49,8 +49,8 @@ Adding a user's SSH key to `ssh-keys.nix` grants them both SSH access and secret
    `secrets.nix`. This gives the new user the ability to decrypt and re-encrypt the secret files.
 4. Open a PR with the changes to `ssh-keys.nix` and the re-encrypted `.age` files.
 
-Host access takes effect after the changes are deployed. Staging is deployed when a PR is merged
-into main, and production is deployed when a release is created. Secret file access takes effect
+Host access takes effect after the changes are deployed. Staging is deployed on pushes to `main`,
+and production is deployed on pushes to `production`. Secret file access takes effect
 immediately after step 3.
 
 
