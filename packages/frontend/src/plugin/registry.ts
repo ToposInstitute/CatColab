@@ -3,9 +3,9 @@ import type { Doctrine } from "catlog-wasm";
 import type { AnalysisBuilder, DiagramAnalysisBuilder, ModelAnalysisBuilder } from "../analysis";
 import type {
     AnalysisManifest,
-    AnalysisPlugin,
-    DiagramAnalysisPlugin,
-    ModelAnalysisPlugin,
+    AnalysisContribution,
+    DiagramAnalysisContribution,
+    ModelAnalysisContribution,
 } from "./types";
 
 /** Registry of plugins.
@@ -15,22 +15,24 @@ that exists so far. In the future it will be possible to contribute theories,
 models, and possibly other functionality as plugins.
  */
 export class PluginRegistry {
-    private readonly plugins: Map<string, AnalysisPlugin>;
+    private readonly contributions: Map<string, AnalysisContribution>;
 
-    /** Loaded analysis builders, keyed by plugin ID. */
+    /** Loaded analysis builders, keyed by contribution ID. */
     private readonly analysisBuilders: Map<string, AnalysisBuilder<unknown>>;
 
     constructor() {
-        this.plugins = new Map();
+        this.contributions = new Map();
         this.analysisBuilders = new Map();
     }
 
     /** Adds a plugin to the registry. */
-    add(plugin: AnalysisPlugin) {
-        if (this.plugins.has(plugin.id)) {
-            throw new Error(`Plugin with ID ${plugin.id} already exists`);
+    add(plugin: Array<AnalysisContribution>) {
+        for (const contribution of plugin) {
+            if (this.contributions.has(contribution.id)) {
+                throw new Error(`Contribution with ID ${contribution.id} already exists`);
+            }
+            this.contributions.set(contribution.id, contribution);
         }
-        this.plugins.set(plugin.id, plugin);
     }
 
     /** Gets the analyses available for a model. */
@@ -46,9 +48,9 @@ export class PluginRegistry {
     /** Gets the analyses of the given type available for an entity. */
     analyses(type: AnalysisType, key: AnalysisScopeKey): AnalysisManifest[] {
         const manifests: AnalysisManifest[] = [];
-        for (const plugin of this.plugins.values()) {
-            if (plugin.type === type && isKeyInScope(plugin, key)) {
-                manifests.push(plugin);
+        for (const contribution of this.contributions.values()) {
+            if (contribution.type === type && isKeyInScope(contribution, key)) {
+                manifests.push(contribution);
             }
         }
         return manifests;
@@ -56,44 +58,46 @@ export class PluginRegistry {
 
     /** Gets the manifest for an analysis, if it exists. */
     analysisManifest(id: string): AnalysisManifest | undefined {
-        return this.plugins.get(id);
+        return this.contributions.get(id);
     }
 
     /** Gets the builder for an analysis of any type, loading it if necessary. */
     analysisBuilder(id: string): Promise<AnalysisBuilder<unknown>> {
-        const plugin = this.plugins.get(id);
-        if (!plugin) {
+        const contribution = this.contributions.get(id);
+        if (!contribution) {
             throw new Error(`No analysis with ID ${id}`);
         }
-        return this.loadAnalysis(plugin);
+        return this.load(contribution);
     }
 
     /** Gets the builder for a model analysis, loading it if necessary. */
     modelAnalysisBuilder(id: string): Promise<ModelAnalysisBuilder<unknown>> {
-        const plugin = this.plugins.get(id);
-        if (plugin?.type !== "model") {
+        const contribution = this.contributions.get(id);
+        if (contribution?.type !== "model") {
             throw new Error(`No model analysis with ID ${id}`);
         }
-        return this.loadAnalysis(plugin);
+        return this.load(contribution);
     }
 
     /** Gets the builder for a diagram analysis, loading it if necessary. */
     diagramAnalysisBuilder(id: string): Promise<DiagramAnalysisBuilder<unknown>> {
-        const plugin = this.plugins.get(id);
-        if (plugin?.type !== "diagram") {
+        const contribution = this.contributions.get(id);
+        if (contribution?.type !== "diagram") {
             throw new Error(`No diagram analysis with ID ${id}`);
         }
-        return this.loadAnalysis(plugin);
+        return this.load(contribution);
     }
 
-    private loadAnalysis(plugin: ModelAnalysisPlugin): Promise<ModelAnalysisBuilder<unknown>>;
-    private loadAnalysis(plugin: DiagramAnalysisPlugin): Promise<DiagramAnalysisBuilder<unknown>>;
-    private loadAnalysis(plugin: AnalysisPlugin): Promise<AnalysisBuilder<unknown>>;
-    private async loadAnalysis(plugin: AnalysisPlugin) {
-        let builder = this.analysisBuilders.get(plugin.id);
+    private load(contribution: ModelAnalysisContribution): Promise<ModelAnalysisBuilder<unknown>>;
+    private load(
+        contribution: DiagramAnalysisContribution,
+    ): Promise<DiagramAnalysisBuilder<unknown>>;
+    private load(contribution: AnalysisContribution): Promise<AnalysisBuilder<unknown>>;
+    private async load(contribution: AnalysisContribution) {
+        let builder = this.analysisBuilders.get(contribution.id);
         if (!builder) {
-            builder = await plugin.load(plugin);
-            this.analysisBuilders.set(plugin.id, builder);
+            builder = await contribution.load(contribution);
+            this.analysisBuilders.set(contribution.id, builder);
         }
         return builder;
     }

@@ -1,6 +1,6 @@
-import type { ModelAnalysisPlugin } from "../../plugin";
+import type { ModelAnalysisContribution } from "../../plugin";
 
-export const plugins = [
+export const contributions = [
     {
         id: "lotka-volterra",
         name: "Lotka-Volterra dynamics",
@@ -12,4 +12,4 @@ export const plugins = [
         },
         load: async () => (await import("./lotka_volterra")).default,
     },
-] satisfies ModelAnalysisPlugin[];
+] satisfies ModelAnalysisContribution[];

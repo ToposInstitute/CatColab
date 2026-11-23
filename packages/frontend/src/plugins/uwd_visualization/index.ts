@@ -1,6 +1,6 @@
-import type { ModelAnalysisPlugin } from "../../plugin";
+import type { ModelAnalysisContribution } from "../../plugin";
 
-export const plugins = [
+export const contributions = [
     {
         id: "composition-pattern",
         name: "Composition pattern",
@@ -10,5 +10,5 @@ export const plugins = [
         type: "model",
         scope: {}, // Applicable to any model.
         load: async () => (await import("./uwd_visualization")).default,
-    } satisfies ModelAnalysisPlugin,
+    } satisfies ModelAnalysisContribution,
 ];

@@ -1,6 +1,6 @@
-import type { ModelAnalysisPlugin } from "../../plugin";
+import type { ModelAnalysisContribution } from "../../plugin";
 
-export const plugins = [
+export const contributions = [
     {
         id: "stochastic-mass-action",
         name: "Stochastic mass-action dynamics",
@@ -12,4 +12,4 @@ export const plugins = [
         },
         load: async () => (await import("./mass_action_stochastic")).default,
     },
-] satisfies ModelAnalysisPlugin[];
+] satisfies ModelAnalysisContribution[];

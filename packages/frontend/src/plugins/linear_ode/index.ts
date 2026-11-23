@@ -1,6 +1,6 @@
-import type { ModelAnalysisPlugin } from "../../plugin";
+import type { ModelAnalysisContribution } from "../../plugin";
 
-export const plugins = [
+export const contributions = [
     {
         id: "linear-ode",
         name: "Linear ODE dynamics",
@@ -12,4 +12,4 @@ export const plugins = [
         },
         load: async () => (await import("./linear_ode")).default,
     },
-] satisfies ModelAnalysisPlugin[];
+] satisfies ModelAnalysisContribution[];

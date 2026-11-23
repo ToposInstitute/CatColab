@@ -1,6 +1,6 @@
-import type { ModelAnalysisPlugin } from "../../plugin";
+import type { ModelAnalysisContribution } from "../../plugin";
 
-export const plugins = [
+export const contributions = [
     {
         id: "sql-schema-export",
         name: "SQL schema",
@@ -11,5 +11,5 @@ export const plugins = [
             theory: ["simple-schema"],
         },
         load: async () => (await import("./sql_export")).default,
-    } satisfies ModelAnalysisPlugin,
+    } satisfies ModelAnalysisContribution,
 ];

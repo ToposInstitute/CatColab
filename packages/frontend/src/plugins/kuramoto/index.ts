@@ -1,7 +1,7 @@
-import type { ModelAnalysisPlugin } from "../../plugin";
+import type { ModelAnalysisContribution } from "../../plugin";
 import { loadKuramotoAnalysis } from "./builder";
 
-export const plugins = [
+export const contributions = [
     {
         id: "kuramoto",
         name: "Kuramoto dynamics",
@@ -17,4 +17,4 @@ export const plugins = [
             forcingLabel: "Input power",
         }),
     },
-] satisfies ModelAnalysisPlugin[];
+] satisfies ModelAnalysisContribution[];

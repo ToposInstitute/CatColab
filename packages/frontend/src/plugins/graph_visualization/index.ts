@@ -1,6 +1,6 @@
-import type { DiagramAnalysisPlugin, ModelAnalysisPlugin } from "../../plugin";
+import type { DiagramAnalysisContribution, ModelAnalysisContribution } from "../../plugin";
 
-export const plugins = [
+export const contributions = [
     {
         id: "model-graph-visualization",
         name: "Visualization",
@@ -11,7 +11,7 @@ export const plugins = [
             doctrine: ["discrete"],
         },
         load: async () => (await import("./model_graph")).default,
-    } satisfies ModelAnalysisPlugin,
+    } satisfies ModelAnalysisContribution,
     {
         id: "diagram-graph-visualization",
         name: "Visualization",
@@ -21,7 +21,7 @@ export const plugins = [
             doctrine: ["discrete"],
         },
         load: async () => (await import("./diagram_graph")).default,
-    } satisfies DiagramAnalysisPlugin,
+    } satisfies DiagramAnalysisContribution,
     {
         id: "petri-net-visualization",
         name: "Visualization",
@@ -31,7 +31,7 @@ export const plugins = [
             theory: ["petri-net"],
         },
         load: async () => (await import("./petri_net_visualization")).default,
-    } satisfies ModelAnalysisPlugin,
+    } satisfies ModelAnalysisContribution,
     {
         id: "stock-flow-visualization",
         name: "Visualization",
@@ -41,5 +41,5 @@ export const plugins = [
             theory: ["primitive-stock-flow", "primitive-signed-stock-flow"],
         },
         load: async () => (await import("./stock_flow_diagram")).default,
-    } satisfies ModelAnalysisPlugin,
+    } satisfies ModelAnalysisContribution,
 ];

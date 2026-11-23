@@ -1,6 +1,6 @@
-import type { ModelAnalysisPlugin } from "../../plugin";
+import type { ModelAnalysisContribution } from "../../plugin";
 
-export const plugins = [
+export const contributions = [
     {
         id: "subreachability",
         name: "Sub-reachability check",
@@ -11,5 +11,5 @@ export const plugins = [
             theory: ["petri-net"],
         },
         load: async () => (await import("./subreachability")).default,
-    } satisfies ModelAnalysisPlugin,
+    } satisfies ModelAnalysisContribution,
 ];

@@ -1,6 +1,6 @@
-import type { DiagramAnalysisPlugin } from "../../plugin";
+import type { DiagramAnalysisContribution } from "../../plugin";
 
-export const plugins = [
+export const contributions = [
     {
         id: "decapodes",
         name: "Simulation",
@@ -10,5 +10,5 @@ export const plugins = [
             theory: ["unary-dec"],
         },
         load: async () => (await import("./decapodes")).default,
-    } satisfies DiagramAnalysisPlugin,
+    } satisfies DiagramAnalysisContribution,
 ];

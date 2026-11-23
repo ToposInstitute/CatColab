@@ -30,14 +30,17 @@ export type AnalysisManifest = {
     };
 };
 
-export type ModelAnalysisPlugin = AnalysisManifest & {
+/** Contribution of an analysis of models. */
+export type ModelAnalysisContribution = AnalysisManifest & {
     type: "model";
     load: (manifest: AnalysisManifest) => Promise<ModelAnalysisBuilder<unknown>>;
 };
 
-export type DiagramAnalysisPlugin = AnalysisManifest & {
+/** Contribution of an analysis of diagrams. */
+export type DiagramAnalysisContribution = AnalysisManifest & {
     type: "diagram";
     load: (manifest: AnalysisManifest) => Promise<DiagramAnalysisBuilder<unknown>>;
 };
 
-export type AnalysisPlugin = ModelAnalysisPlugin | DiagramAnalysisPlugin;
+/** Contribution of an analysis. */
+export type AnalysisContribution = ModelAnalysisContribution | DiagramAnalysisContribution;

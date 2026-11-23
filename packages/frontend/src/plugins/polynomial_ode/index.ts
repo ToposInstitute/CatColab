@@ -1,7 +1,7 @@
-import type { ModelAnalysisPlugin } from "../../plugin";
+import type { ModelAnalysisContribution } from "../../plugin";
 import { loadPolynomialODEAnalysis, loadPolynomialODEEquationsAnalysis } from "./builder";
 
-export const plugins = [
+export const contributions = [
     {
         id: "polynomial-ode-simulation",
         name: "Polynomial ODE simulation",
@@ -60,4 +60,4 @@ export const plugins = [
                 (await import("./bindings/signed_polynomial_ode")).polynomialODEEquations,
         }),
     },
-] satisfies ModelAnalysisPlugin[];
+] satisfies ModelAnalysisContribution[];

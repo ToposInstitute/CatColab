@@ -1,6 +1,6 @@
-import type { DiagramAnalysisPlugin } from "../../plugin";
+import type { DiagramAnalysisContribution } from "../../plugin";
 
-export const plugins = [
+export const contributions = [
     {
         id: "diagram-tabular-view",
         name: "Table view",
@@ -11,5 +11,5 @@ export const plugins = [
             theory: ["simple-schema"],
         },
         load: async () => (await import("./tabular_view")).default,
-    } satisfies DiagramAnalysisPlugin,
+    } satisfies DiagramAnalysisContribution,
 ];

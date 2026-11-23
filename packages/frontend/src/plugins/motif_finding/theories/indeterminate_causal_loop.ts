@@ -1,7 +1,7 @@
-import type { ModelAnalysisPlugin } from "../../../plugin";
+import type { ModelAnalysisContribution } from "../../../plugin";
 import { loadMotifFindingAnalysis } from "../builder";
 
-export const plugins = [
+export const contributions = [
     {
         id: "indeterminate-causal-loop-negative-loops",
         name: "Balancing loops",
@@ -41,4 +41,4 @@ export const plugins = [
             async () => (await import("../bindings/nullable_signed_category")).indeterminateLoops,
         ),
     },
-] satisfies ModelAnalysisPlugin[];
+] satisfies ModelAnalysisContribution[];

@@ -1,7 +1,7 @@
-import type { ModelAnalysisPlugin } from "../../../plugin";
+import type { ModelAnalysisContribution } from "../../../plugin";
 import { loadMotifFindingAnalysis } from "../builder";
 
-export const plugins = [
+export const contributions = [
     {
         id: "reg-net-positive-loops",
         name: "Positive feedback",
@@ -28,4 +28,4 @@ export const plugins = [
             async () => (await import("../bindings/signed_category")).negativeLoops,
         ),
     },
-] satisfies ModelAnalysisPlugin[];
+] satisfies ModelAnalysisContribution[];

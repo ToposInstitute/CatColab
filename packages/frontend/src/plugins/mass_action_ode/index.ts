@@ -1,5 +1,5 @@
 import type { MorType } from "catlog-wasm";
-import type { ModelAnalysisPlugin } from "../../plugin";
+import type { ModelAnalysisContribution } from "../../plugin";
 import { loadMassActionAnalysis, loadMassActionEquationsAnalysis } from "./builder";
 
 const flowType: MorType = {
@@ -7,7 +7,7 @@ const flowType: MorType = {
     content: { tag: "Basic", content: "Object" },
 };
 
-export const plugins = [
+export const contributions = [
     {
         id: "petri-net-mass-action",
         name: "Mass-action dynamics",
@@ -99,4 +99,4 @@ export const plugins = [
             ratesHaveGranularity: false,
         }),
     },
-] satisfies ModelAnalysisPlugin[];
+] satisfies ModelAnalysisContribution[];

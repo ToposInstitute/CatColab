@@ -1,6 +1,6 @@
-import type { ModelAnalysisPlugin } from "../../plugin";
+import type { ModelAnalysisContribution } from "../../plugin";
 
-export const plugins = [
+export const contributions = [
     {
         id: "schema-erd",
         name: "Entity-relationship diagram",
@@ -11,5 +11,5 @@ export const plugins = [
             theory: ["simple-schema"],
         },
         load: async () => (await import("./erd_visualization")).default,
-    } satisfies ModelAnalysisPlugin,
+    } satisfies ModelAnalysisContribution,
 ];

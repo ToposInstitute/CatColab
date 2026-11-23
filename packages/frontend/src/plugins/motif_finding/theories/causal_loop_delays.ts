@@ -1,7 +1,7 @@
-import type { ModelAnalysisPlugin } from "../../../plugin";
+import type { ModelAnalysisContribution } from "../../../plugin";
 import { loadMotifFindingAnalysis } from "../builder";
 
-export const plugins = [
+export const contributions = [
     {
         id: "causal-loop-delays-negative-loops",
         name: "Balancing loops",
@@ -56,4 +56,4 @@ export const plugins = [
                 (await import("../bindings/delayable_signed_category")).delayedPositiveLoops,
         ),
     },
-] satisfies ModelAnalysisPlugin[];
+] satisfies ModelAnalysisContribution[];
