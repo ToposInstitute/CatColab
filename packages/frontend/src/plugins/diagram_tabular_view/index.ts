@@ -1,9 +1,9 @@
-import type { DiagramAnalysisContribution } from "../../plugin";
+import type { DiagramAnalysisContribution, Plugin } from "../../plugin";
 
-export const contributions = [
+const contributions = [
     {
-        id: "diagram-tabular-view",
-        name: "Table view",
+        name: "view",
+        label: "Table view",
         description: "Visualize the instance as a table",
         help: "tabularview",
         type: "diagram",
@@ -13,3 +13,9 @@ export const contributions = [
         load: async () => (await import("./tabular_view")).default,
     } satisfies DiagramAnalysisContribution,
 ];
+
+export default {
+    namespace: "std",
+    name: "diagram-tabular-view",
+    contributions,
+} satisfies Plugin;

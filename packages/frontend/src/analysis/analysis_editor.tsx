@@ -5,7 +5,7 @@ import invariant from "tiny-invariant";
 import { Nb } from "catcolab-document-methods";
 import { ErrorAlert, type FocusHandle } from "catcolab-ui-components";
 import { type CellConstructor, type FormalCellEditorProps, NotebookEditor } from "../notebook";
-import { type AnalysisManifest, PluginRegistryContext } from "../plugin";
+import { PluginRegistryContext, type ResolvedAnalysisManifest } from "../plugin";
 import { LiveAnalysisContext } from "./context";
 import {
     type LiveAnalysisDoc,
@@ -72,7 +72,7 @@ function AnalysisCellEditor(props: FormalCellEditorProps<Analysis<unknown>>) {
     );
 
     const errorTitle = () => {
-        const name = plugins.analysisManifest(props.content.id)?.name;
+        const name = plugins.analysisManifest(props.content.id)?.label;
         return name ? `Error in analysis: ${name}` : "Analysis error";
     };
 
@@ -115,12 +115,12 @@ function AnalysisCellEditor(props: FormalCellEditorProps<Analysis<unknown>>) {
 }
 
 function analysisCellConstructor<T>(
-    manifest: AnalysisManifest,
+    manifest: ResolvedAnalysisManifest,
     loadBuilder: () => Promise<AnalysisBuilder<T>>,
 ): CellConstructor<Analysis<T>> {
-    const { id, name, description } = manifest;
+    const { id, label, description } = manifest;
     return {
-        name,
+        name: label,
         description,
         construct: async () => {
             const builder = await loadBuilder();

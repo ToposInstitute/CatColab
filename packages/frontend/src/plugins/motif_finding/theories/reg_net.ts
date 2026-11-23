@@ -3,8 +3,8 @@ import { loadMotifFindingAnalysis } from "../builder";
 
 export const contributions = [
     {
-        id: "reg-net-positive-loops",
-        name: "Positive feedback",
+        name: "reg-net-positive-loops",
+        label: "Positive feedback",
         description: "Analyze the network for positive feedback loops",
         help: "loops",
         type: "model",
@@ -16,8 +16,8 @@ export const contributions = [
         ),
     },
     {
-        id: "reg-net-negative-loops",
-        name: "Negative feedback",
+        name: "reg-net-negative-loops",
+        label: "Negative feedback",
         description: "Analyze the network for negative feedback loops",
         help: "loops",
         type: "model",

@@ -1,9 +1,9 @@
-import type { DiagramAnalysisContribution, ModelAnalysisContribution } from "../../plugin";
+import type { DiagramAnalysisContribution, ModelAnalysisContribution, Plugin } from "../../plugin";
 
-export const contributions = [
+const contributions = [
     {
-        id: "model-graph-visualization",
-        name: "Visualization",
+        name: "model",
+        label: "Visualization",
         description: "Visualize the model as a graph",
         help: "visualization",
         type: "model",
@@ -13,8 +13,8 @@ export const contributions = [
         load: async () => (await import("./model_graph")).default,
     } satisfies ModelAnalysisContribution,
     {
-        id: "diagram-graph-visualization",
-        name: "Visualization",
+        name: "diagram",
+        label: "Visualization",
         description: "Visualize the diagram as a graph",
         type: "diagram",
         scope: {
@@ -23,8 +23,8 @@ export const contributions = [
         load: async () => (await import("./diagram_graph")).default,
     } satisfies DiagramAnalysisContribution,
     {
-        id: "petri-net-visualization",
-        name: "Visualization",
+        name: "petri-net",
+        label: "Visualization",
         description: "Visualize the Petri net",
         type: "model",
         scope: {
@@ -33,8 +33,8 @@ export const contributions = [
         load: async () => (await import("./petri_net_visualization")).default,
     } satisfies ModelAnalysisContribution,
     {
-        id: "stock-flow-visualization",
-        name: "Visualization",
+        name: "stock-flow",
+        label: "Visualization",
         description: "Visualize the diagram",
         type: "model",
         scope: {
@@ -43,3 +43,9 @@ export const contributions = [
         load: async () => (await import("./stock_flow_diagram")).default,
     } satisfies ModelAnalysisContribution,
 ];
+
+export default {
+    namespace: "std",
+    name: "graph-visualization",
+    contributions,
+} satisfies Plugin;

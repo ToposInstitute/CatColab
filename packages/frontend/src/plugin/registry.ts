@@ -6,16 +6,12 @@ import type {
     AnalysisContribution,
     DiagramAnalysisContribution,
     ModelAnalysisContribution,
-} from "./types";
+} from "./analysis";
+import type { Plugin } from "./types";
 
-/** Registry of plugins.
-
-The registry covers only analysis plugins, since that's the only kind of plugin
-that exists so far. In the future it will be possible to contribute theories,
-models, and possibly other functionality as plugins.
- */
+/** Registry of plugins. */
 export class PluginRegistry {
-    private readonly contributions: Map<string, AnalysisContribution>;
+    private readonly contributions: Map<string, ResolvedAnalysisContribution>;
 
     /** Loaded analysis builders, keyed by contribution ID. */
     private readonly analysisBuilders: Map<string, AnalysisBuilder<unknown>>;
@@ -26,28 +22,35 @@ export class PluginRegistry {
     }
 
     /** Adds a plugin to the registry. */
-    add(plugin: Array<AnalysisContribution>) {
-        for (const contribution of plugin) {
-            if (this.contributions.has(contribution.id)) {
-                throw new Error(`Contribution with ID ${contribution.id} already exists`);
+    add(plugin: Plugin) {
+        validateName(plugin.namespace, "Plugin namespace");
+        validateName(plugin.name, "Plugin name");
+        const prefix = `${plugin.namespace}/${plugin.name}`;
+
+        for (const contribution of plugin.contributions) {
+            validateName(contribution.name, `Contribution name in plugin ${prefix}`);
+            const id = `${prefix}/${contribution.name}`;
+
+            if (this.contributions.has(id)) {
+                throw new Error(`Contribution with ID ${id} already exists`);
             }
-            this.contributions.set(contribution.id, contribution);
+            this.contributions.set(id, { id, ...contribution });
         }
     }
 
     /** Gets the analyses available for a model. */
-    modelAnalyses(key: AnalysisScopeKey): AnalysisManifest[] {
+    modelAnalyses(key: ScopeKey): ResolvedAnalysisManifest[] {
         return this.analyses("model", key);
     }
 
     /** Gets the analyses available for a diagram. */
-    diagramAnalyses(key: AnalysisScopeKey): AnalysisManifest[] {
+    diagramAnalyses(key: ScopeKey): ResolvedAnalysisManifest[] {
         return this.analyses("diagram", key);
     }
 
     /** Gets the analyses of the given type available for an entity. */
-    analyses(type: AnalysisType, key: AnalysisScopeKey): AnalysisManifest[] {
-        const manifests: AnalysisManifest[] = [];
+    analyses(type: AnalysisType, key: ScopeKey): ResolvedAnalysisManifest[] {
+        const manifests: ResolvedAnalysisManifest[] = [];
         for (const contribution of this.contributions.values()) {
             if (contribution.type === type && isKeyInScope(contribution, key)) {
                 manifests.push(contribution);
@@ -57,12 +60,12 @@ export class PluginRegistry {
     }
 
     /** Gets the manifest for an analysis, if it exists. */
-    analysisManifest(id: string): AnalysisManifest | undefined {
+    analysisManifest(id: string): ResolvedAnalysisManifest | undefined {
         return this.contributions.get(id);
     }
 
     /** Gets the builder for an analysis of any type, loading it if necessary. */
-    analysisBuilder(id: string): Promise<AnalysisBuilder<unknown>> {
+    async analysisBuilder(id: string): Promise<AnalysisBuilder<unknown>> {
         const contribution = this.contributions.get(id);
         if (!contribution) {
             throw new Error(`No analysis with ID ${id}`);
@@ -71,7 +74,7 @@ export class PluginRegistry {
     }
 
     /** Gets the builder for a model analysis, loading it if necessary. */
-    modelAnalysisBuilder(id: string): Promise<ModelAnalysisBuilder<unknown>> {
+    async modelAnalysisBuilder(id: string): Promise<ModelAnalysisBuilder<unknown>> {
         const contribution = this.contributions.get(id);
         if (contribution?.type !== "model") {
             throw new Error(`No model analysis with ID ${id}`);
@@ -80,7 +83,7 @@ export class PluginRegistry {
     }
 
     /** Gets the builder for a diagram analysis, loading it if necessary. */
-    diagramAnalysisBuilder(id: string): Promise<DiagramAnalysisBuilder<unknown>> {
+    async diagramAnalysisBuilder(id: string): Promise<DiagramAnalysisBuilder<unknown>> {
         const contribution = this.contributions.get(id);
         if (contribution?.type !== "diagram") {
             throw new Error(`No diagram analysis with ID ${id}`);
@@ -88,12 +91,14 @@ export class PluginRegistry {
         return this.load(contribution);
     }
 
-    private load(contribution: ModelAnalysisContribution): Promise<ModelAnalysisBuilder<unknown>>;
     private load(
-        contribution: DiagramAnalysisContribution,
+        contribution: ResolvedID & ModelAnalysisContribution,
+    ): Promise<ModelAnalysisBuilder<unknown>>;
+    private load(
+        contribution: ResolvedID & DiagramAnalysisContribution,
     ): Promise<DiagramAnalysisBuilder<unknown>>;
-    private load(contribution: AnalysisContribution): Promise<AnalysisBuilder<unknown>>;
-    private async load(contribution: AnalysisContribution) {
+    private load(contribution: ResolvedAnalysisContribution): Promise<AnalysisBuilder<unknown>>;
+    private async load(contribution: ResolvedAnalysisContribution) {
         let builder = this.analysisBuilders.get(contribution.id);
         if (!builder) {
             builder = await contribution.load(contribution);
@@ -103,14 +108,25 @@ export class PluginRegistry {
     }
 }
 
-/** Key against which the scope of an analysis is matched. */
-type AnalysisScopeKey = {
+type ResolvedID = {
+    /** Globally unique identifier of a contribution.
+
+    Has the form `{namespace}/{plugin name}/{contribution name}`.
+     */
+    id: string;
+};
+
+/** Manifest for an analysis, with its globally unique ID. */
+export type ResolvedAnalysisManifest = ResolvedID & AnalysisManifest;
+type ResolvedAnalysisContribution = ResolvedID & AnalysisContribution;
+
+type ScopeKey = {
     doctrine: Doctrine;
     theory: string;
 };
 
 /** Does the key satisfy all the constraints in the manifest's scope? */
-function isKeyInScope(manifest: AnalysisManifest, key: AnalysisScopeKey): boolean {
+function isKeyInScope(manifest: AnalysisManifest, key: ScopeKey): boolean {
     const { doctrine, theory, model } = manifest.scope;
     if (model !== undefined) {
         throw new Error("`model` scope is not implemented");
@@ -119,4 +135,11 @@ function isKeyInScope(manifest: AnalysisManifest, key: AnalysisScopeKey): boolea
         (doctrine === undefined || doctrine.includes(key.doctrine)) &&
         (theory === undefined || theory.includes(key.theory))
     );
+}
+
+/** Throws if the name is empty or contains whitespace or a slash. */
+function validateName(name: string, description: string) {
+    if (!name || /[\s/]/.test(name)) {
+        throw new Error(`${description} must be nonempty without whitespace or slash: "${name}"`);
+    }
 }

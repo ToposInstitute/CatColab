@@ -1,9 +1,9 @@
-import type { DiagramAnalysisContribution } from "../../plugin";
+import type { Plugin, DiagramAnalysisContribution } from "../../plugin";
 
-export const contributions = [
+const contributions = [
     {
-        id: "decapodes",
-        name: "Simulation",
+        name: "simulation",
+        label: "Simulation",
         description: "Simulate the PDE using Decapodes",
         type: "diagram",
         scope: {
@@ -12,3 +12,9 @@ export const contributions = [
         load: async () => (await import("./decapodes")).default,
     } satisfies DiagramAnalysisContribution,
 ];
+
+export default {
+    namespace: "std",
+    name: "decapodes",
+    contributions,
+} satisfies Plugin;

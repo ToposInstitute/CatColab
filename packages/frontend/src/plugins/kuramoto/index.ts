@@ -1,10 +1,10 @@
-import type { ModelAnalysisContribution } from "../../plugin";
+import type { ModelAnalysisContribution, Plugin } from "../../plugin";
 import { loadKuramotoAnalysis } from "./builder";
 
-export const contributions = [
+const contributions = [
     {
-        id: "kuramoto",
-        name: "Kuramoto dynamics",
+        name: "simulation",
+        label: "Kuramoto dynamics",
         description: "Simulate the system using the Kuramoto dynamical model",
         help: "kuramoto",
         type: "model",
@@ -18,3 +18,9 @@ export const contributions = [
         }),
     },
 ] satisfies ModelAnalysisContribution[];
+
+export default {
+    namespace: "std",
+    name: "kuramoto",
+    contributions,
+} satisfies Plugin;

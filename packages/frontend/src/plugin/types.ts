@@ -1,46 +1,34 @@
-import type { AnalysisType } from "catcolab-document-types";
-import type { Doctrine } from "catlog-wasm";
-import type { DiagramAnalysisBuilder, ModelAnalysisBuilder } from "../analysis";
+import type { AnalysisContribution } from "./analysis";
 
-/** Manifest for an analysis contributed by a plugin. */
-export type AnalysisManifest = {
-    /** Globally unique identifier of analysis. */
-    id: string;
+/** A plugin to the CatColab application.
 
-    /** Human-readable name of analysis. */
+As in a typical plugin system, a plugin is simply a set of contributions that
+are distributed together.
+*/
+export type Plugin = {
+    /** Namespace for the plugin.
+
+    Must be globally unique, and must not contain whitespace or a slash.
+
+    As yet we take no position on where namespaces will come from, except that
+    CatColab's standard library of plugins will belong to the namespace `std`.
+     */
+    namespace: string;
+
+    /** Name of the plugin.
+
+    Must be unique within plugins with the same namespace, and must not contain
+    whitespace or a slash.
+     */
     name: string;
 
-    /** Short description of analysis. */
-    description?: string;
-
-    /** Name of the help page (excluding file extension) for the analysis, if any. */
-    help?: string;
-
-    /** Type of entity that analysis is of: model, diagram, etc. */
-    type: AnalysisType;
-
-    /** Scope of applicability of analysis.
-
-    The analysis will apply iff *all* supplied constraints are satisfied.
-     */
-    scope: {
-        doctrine?: Array<Doctrine>;
-        theory?: Array<string>;
-        model?: Array<string>;
-    };
+    /** Contributions provided by the plugin. */
+    contributions: Contribution[];
 };
 
-/** Contribution of an analysis of models. */
-export type ModelAnalysisContribution = AnalysisManifest & {
-    type: "model";
-    load: (manifest: AnalysisManifest) => Promise<ModelAnalysisBuilder<unknown>>;
-};
+/** A contribution provided by a plugin.
 
-/** Contribution of an analysis of diagrams. */
-export type DiagramAnalysisContribution = AnalysisManifest & {
-    type: "diagram";
-    load: (manifest: AnalysisManifest) => Promise<DiagramAnalysisBuilder<unknown>>;
-};
-
-/** Contribution of an analysis. */
-export type AnalysisContribution = ModelAnalysisContribution | DiagramAnalysisContribution;
+So far only analyses can be contributed via plugins. In the future it will be
+possible to contribute theories, models, and possibly other functionality.
+ */
+type Contribution = AnalysisContribution;

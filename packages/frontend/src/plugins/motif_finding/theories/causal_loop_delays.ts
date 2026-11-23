@@ -3,8 +3,8 @@ import { loadMotifFindingAnalysis } from "../builder";
 
 export const contributions = [
     {
-        id: "causal-loop-delays-negative-loops",
-        name: "Balancing loops",
+        name: "causal-loop-delays-negative-loops",
+        label: "Balancing loops",
         description: "Find the fast-acting balancing loops",
         help: "loops",
         type: "model",
@@ -16,8 +16,8 @@ export const contributions = [
         ),
     },
     {
-        id: "causal-loop-delays-positive-loops",
-        name: "Reinforcing loops",
+        name: "causal-loop-delays-positive-loops",
+        label: "Reinforcing loops",
         description: "Find the fast-acting reinforcing loops",
         help: "loops",
         type: "model",
@@ -29,8 +29,8 @@ export const contributions = [
         ),
     },
     {
-        id: "causal-loop-delays-delayed-negative-loops",
-        name: "Delayed balancing loops",
+        name: "causal-loop-delays-delayed-negative-loops",
+        label: "Delayed balancing loops",
         description: "Find the slow-acting balancing loops",
         help: "loops",
         type: "model",
@@ -43,8 +43,8 @@ export const contributions = [
         ),
     },
     {
-        id: "causal-loop-delays-delayed-positive-loops",
-        name: "Delayed reinforcing loops",
+        name: "causal-loop-delays-delayed-positive-loops",
+        label: "Delayed reinforcing loops",
         description: "Find the slow-acting reinforcing loops",
         help: "loops",
         type: "model",

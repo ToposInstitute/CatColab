@@ -3,8 +3,8 @@ import { loadMotifFindingAnalysis } from "../builder";
 
 export const contributions = [
     {
-        id: "causal-loop-negative-loops",
-        name: "Balancing loops",
+        name: "causal-loop-negative-loops",
+        label: "Balancing loops",
         description: "Analyze the diagram for balancing loops",
         help: "loops",
         type: "model",
@@ -16,8 +16,8 @@ export const contributions = [
         ),
     },
     {
-        id: "causal-loop-positive-loops",
-        name: "Reinforcing loops",
+        name: "causal-loop-positive-loops",
+        label: "Reinforcing loops",
         description: "Analyze the diagram for reinforcing loops",
         help: "loops",
         type: "model",

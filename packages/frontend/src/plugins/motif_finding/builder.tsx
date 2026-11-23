@@ -13,7 +13,7 @@ export function loadMotifFindingAnalysis(
             contentVersion: 0,
             initialContent: newMotifFindingContent,
             component: (props: ModelAnalysisProps<MotifFindingContent>) => (
-                <SubmodelGraphs findSubmodels={finder} title={manifest.name} {...props} />
+                <SubmodelGraphs findSubmodels={finder} title={manifest.label} {...props} />
             ),
         };
     };

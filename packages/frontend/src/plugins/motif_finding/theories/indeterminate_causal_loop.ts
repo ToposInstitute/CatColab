@@ -3,8 +3,8 @@ import { loadMotifFindingAnalysis } from "../builder";
 
 export const contributions = [
     {
-        id: "indeterminate-causal-loop-negative-loops",
-        name: "Balancing loops",
+        name: "indeterminate-causal-loop-negative-loops",
+        label: "Balancing loops",
         description: "Analyze the diagram for balancing loops",
         help: "loops",
         type: "model",
@@ -16,8 +16,8 @@ export const contributions = [
         ),
     },
     {
-        id: "indeterminate-causal-loop-positive-loops",
-        name: "Reinforcing loops",
+        name: "indeterminate-causal-loop-positive-loops",
+        label: "Reinforcing loops",
         description: "Analyze the diagram for reinforcing loops",
         help: "loops",
         type: "model",
@@ -29,8 +29,8 @@ export const contributions = [
         ),
     },
     {
-        id: "indeterminate-causal-loop-indeterminate-loops",
-        name: "Indeterminate loops",
+        name: "indeterminate-causal-loop-indeterminate-loops",
+        label: "Indeterminate loops",
         description: "Analyze the diagram for indeterminate loops",
         help: "loops",
         type: "model",

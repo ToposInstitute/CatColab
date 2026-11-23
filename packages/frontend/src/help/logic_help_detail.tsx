@@ -83,7 +83,7 @@ function LogicHelpDetail(props: { theory: Theory }) {
                                 <For each={modelAnalyses()}>
                                     {(typeMeta) => (
                                         <>
-                                            <dt>{typeMeta.name}</dt>
+                                            <dt>{typeMeta.label}</dt>
                                             <dd>{typeMeta.description}</dd>
                                         </>
                                     )}
@@ -120,7 +120,7 @@ export function HelpAnalysisById(props: HelpAnalysisProps) {
 
                 return (
                     <div class="help-analysis-pane">
-                        <h3>{analysis().name}</h3>
+                        <h3>{analysis().label}</h3>
                         <p class="help-analysis-pane-description">{analysis().description}</p>
                         {props.children}
                         {HelpComponent && <Dynamic component={HelpComponent} />}

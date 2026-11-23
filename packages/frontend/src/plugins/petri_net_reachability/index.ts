@@ -1,9 +1,9 @@
-import type { ModelAnalysisContribution } from "../../plugin";
+import type { ModelAnalysisContribution, Plugin } from "../../plugin";
 
-export const contributions = [
+const contributions = [
     {
-        id: "subreachability",
-        name: "Sub-reachability check",
+        name: "subreachability",
+        label: "Sub-reachability check",
         description: "Check that forbidden tokenings are unreachable",
         help: "subreachability",
         type: "model",
@@ -13,3 +13,9 @@ export const contributions = [
         load: async () => (await import("./subreachability")).default,
     } satisfies ModelAnalysisContribution,
 ];
+
+export default {
+    namespace: "std",
+    name: "petri-net-reachability",
+    contributions,
+} satisfies Plugin;

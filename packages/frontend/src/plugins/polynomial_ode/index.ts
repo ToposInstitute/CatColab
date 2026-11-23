@@ -1,10 +1,10 @@
-import type { ModelAnalysisContribution } from "../../plugin";
+import type { ModelAnalysisContribution, Plugin } from "../../plugin";
 import { loadPolynomialODEAnalysis, loadPolynomialODEEquationsAnalysis } from "./builder";
 
-export const contributions = [
+const contributions = [
     {
-        id: "polynomial-ode-simulation",
-        name: "Polynomial ODE simulation",
+        name: "polynomial-ode-simulation",
+        label: "Polynomial ODE simulation",
         description: "Simulate the system",
         help: "polynomial-ode-simulation",
         type: "model",
@@ -18,8 +18,8 @@ export const contributions = [
         }),
     },
     {
-        id: "polynomial-ode-equations",
-        name: "Polynomial ODE equations",
+        name: "polynomial-ode-equations",
+        label: "Polynomial ODE equations",
         description: "Display the symbolic equations",
         help: "polynomial-ode-equations",
         type: "model",
@@ -32,8 +32,8 @@ export const contributions = [
         }),
     },
     {
-        id: "signed-polynomial-ode-simulation",
-        name: "Polynomial ODE simulation",
+        name: "signed-polynomial-ode-simulation",
+        label: "Polynomial ODE simulation",
         description: "Simulate the system",
         help: "polynomial-ode-simulation",
         type: "model",
@@ -47,8 +47,8 @@ export const contributions = [
         }),
     },
     {
-        id: "signed-polynomial-ode-equations",
-        name: "Polynomial ODE equations",
+        name: "signed-polynomial-ode-equations",
+        label: "Polynomial ODE equations",
         description: "Display the symbolic equations",
         help: "polynomial-ode-equations",
         type: "model",
@@ -61,3 +61,9 @@ export const contributions = [
         }),
     },
 ] satisfies ModelAnalysisContribution[];
+
+export default {
+    namespace: "std",
+    name: "polynomial-ode",
+    contributions,
+} satisfies Plugin;

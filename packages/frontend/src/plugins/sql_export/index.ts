@@ -1,9 +1,9 @@
-import type { ModelAnalysisContribution } from "../../plugin";
+import type { ModelAnalysisContribution, Plugin } from "../../plugin";
 
-export const contributions = [
+const contributions = [
     {
-        id: "sql-schema-export",
-        name: "SQL schema",
+        name: "schema-export",
+        label: "SQL schema",
         description: "Produce SQL DML from this schema",
         help: "sql",
         type: "model",
@@ -13,3 +13,9 @@ export const contributions = [
         load: async () => (await import("./sql_export")).default,
     } satisfies ModelAnalysisContribution,
 ];
+
+export default {
+    namespace: "std",
+    name: "sql-export",
+    contributions,
+} satisfies Plugin;

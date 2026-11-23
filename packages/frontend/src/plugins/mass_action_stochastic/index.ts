@@ -1,9 +1,9 @@
-import type { ModelAnalysisContribution } from "../../plugin";
+import type { ModelAnalysisContribution, Plugin } from "../../plugin";
 
-export const contributions = [
+const contributions = [
     {
-        id: "stochastic-mass-action",
-        name: "Stochastic mass-action dynamics",
+        name: "simulation",
+        label: "Stochastic mass-action dynamics",
         description: "Simulate a stochastic system using the law of mass action",
         help: "stochastic-mass-action",
         type: "model",
@@ -13,3 +13,9 @@ export const contributions = [
         load: async () => (await import("./mass_action_stochastic")).default,
     },
 ] satisfies ModelAnalysisContribution[];
+
+export default {
+    namespace: "std",
+    name: "mass-action-stochastic",
+    contributions,
+} satisfies Plugin;

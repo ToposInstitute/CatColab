@@ -1,9 +1,9 @@
-import type { ModelAnalysisContribution } from "../../plugin";
+import type { ModelAnalysisContribution, Plugin } from "../../plugin";
 
-export const contributions = [
+const contributions = [
     {
-        id: "schema-erd",
-        name: "Entity-relationship diagram",
+        name: "schema",
+        label: "Entity-relationship diagram",
         description: "Visualize the schema as an entity-relationship diagram",
         help: "schema-erd",
         type: "model",
@@ -13,3 +13,9 @@ export const contributions = [
         load: async () => (await import("./erd_visualization")).default,
     } satisfies ModelAnalysisContribution,
 ];
+
+export default {
+    namespace: "std",
+    name: "erd-visualization",
+    contributions,
+} satisfies Plugin;

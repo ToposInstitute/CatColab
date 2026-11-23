@@ -1,5 +1,5 @@
 import type { MorType } from "catlog-wasm";
-import type { ModelAnalysisContribution } from "../../plugin";
+import type { ModelAnalysisContribution, Plugin } from "../../plugin";
 import { loadMassActionAnalysis, loadMassActionEquationsAnalysis } from "./builder";
 
 const flowType: MorType = {
@@ -7,10 +7,10 @@ const flowType: MorType = {
     content: { tag: "Basic", content: "Object" },
 };
 
-export const contributions = [
+const contributions = [
     {
-        id: "petri-net-mass-action",
-        name: "Mass-action dynamics",
+        name: "petri-net-simulation",
+        label: "Mass-action dynamics",
         description: "Simulate the system using the law of mass action",
         help: "mass-action",
         type: "model",
@@ -24,8 +24,8 @@ export const contributions = [
         }),
     },
     {
-        id: "petri-net-mass-action-equations",
-        name: "Mass-action dynamics equations",
+        name: "petri-net-equations",
+        label: "Mass-action dynamics equations",
         description: "Display the symbolic mass-action dynamics equations",
         help: "mass-action-equations",
         type: "model",
@@ -39,8 +39,8 @@ export const contributions = [
         }),
     },
     {
-        id: "primitive-stock-flow-mass-action",
-        name: "Mass-action dynamics",
+        name: "primitive-stock-flow-simulation",
+        label: "Mass-action dynamics",
         description: "Simulate the system using the law of mass action",
         help: "mass-action",
         type: "model",
@@ -54,8 +54,8 @@ export const contributions = [
         }),
     },
     {
-        id: "primitive-stock-flow-mass-action-equations",
-        name: "Mass-action dynamics equations",
+        name: "primitive-stock-flow-equations",
+        label: "Mass-action dynamics equations",
         description: "Display the symbolic mass-action dynamics equations",
         help: "mass-action-equations",
         type: "model",
@@ -69,8 +69,8 @@ export const contributions = [
         }),
     },
     {
-        id: "primitive-signed-stock-flow-mass-action",
-        name: "Mass-action dynamics",
+        name: "primitive-signed-stock-flow-simulation",
+        label: "Mass-action dynamics",
         description: "Simulate the system using the law of mass action",
         help: "mass-action",
         type: "model",
@@ -85,8 +85,8 @@ export const contributions = [
         }),
     },
     {
-        id: "primitive-signed-stock-flow-mass-action-equations",
-        name: "Mass-action dynamics equations",
+        name: "primitive-signed-stock-flow-equations",
+        label: "Mass-action dynamics equations",
         description: "Display the symbolic mass-action dynamics equations",
         help: "mass-action-equations",
         type: "model",
@@ -100,3 +100,9 @@ export const contributions = [
         }),
     },
 ] satisfies ModelAnalysisContribution[];
+
+export default {
+    namespace: "std",
+    name: "mass-action-ode",
+    contributions,
+} satisfies Plugin;
