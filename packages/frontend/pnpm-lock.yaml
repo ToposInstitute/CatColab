@@ -185,6 +185,9 @@ importers:
         specifier: ^13.0.0
         version: 13.0.0
     devDependencies:
+      '@antithesishq/bombadil':
+        specifier: 0.8.0
+        version: 0.8.0
       '@catcolab-dev-tools/oxlint-plugin-catcolab':
         specifier: link:../../tools/oxlint-plugin-catcolab
         version: link:../../tools/oxlint-plugin-catcolab
@@ -238,6 +241,10 @@ importers:
         version: 1.5.0
 
 packages:
+
+  '@antithesishq/bombadil@0.8.0':
+    resolution: {integrity: sha512-BVMjC4vDR2wOhSS0uWMiS3KqVWb8Y9BdN+KiJwBSXi7+vZ5HkLkBfTCk83Dal5E0Evb3wSOT46SFxLgNCGXbmQ==}
+    hasBin: true
 
   '@atlaskit/pragmatic-drag-and-drop-hitbox@1.0.3':
     resolution: {integrity: sha512-/Sbu/HqN2VGLYBhnsG7SbRNg98XKkbF6L7XDdBi+izRybfaK1FeMfodPpm/xnBHPJzwYMdkE0qtLyv6afhgMUA==}
@@ -2908,6 +2915,8 @@ packages:
     resolution: {integrity: sha512-bXE4cR/kVZhKZX/RjPEflHaKVhUVl85noU3v6b8apfQEc1x4A+zBxjZ4lN8LqGd6WZ3dl98pY4o717VFmoPp+A==}
 
 snapshots:
+
+  '@antithesishq/bombadil@0.8.0': {}
 
   '@atlaskit/pragmatic-drag-and-drop-hitbox@1.0.3':
     dependencies:

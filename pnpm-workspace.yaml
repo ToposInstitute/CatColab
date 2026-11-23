@@ -2,6 +2,7 @@
 minimumReleaseAge: 12960
 minimumReleaseAgeExclude:
   - "@automerge/automerge"
+  - "@antithesishq/bombadil@0.8.0"
 packages:
   - "dev-docs"
   - "packages/backend/pkg"

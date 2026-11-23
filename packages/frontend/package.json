@@ -14,12 +14,15 @@
         "build:staging": "tsc -b && vite build --sourcemap true --mode staging",
         "preview": "vite preview",
         "format": "oxfmt .",
-        "check": "pnpm run build:deps && pnpm run lint && tsc",
+        "check": "pnpm run build:deps && pnpm run lint && tsc && pnpm run check:bombadil",
+        "check:bombadil": "tsc --project bombadil/tsconfig.json",
         "lint": "oxlint --fix && oxfmt . && stylelint 'src/**/*.css' --fix",
         "ci": "oxlint --deny-warnings && oxfmt --check . && stylelint 'src/**/*.css'",
         "doc": "typedoc --entryPointStrategy expand ./src",
         "test": "vitest --mode=development",
         "test:ci": "vitest --mode=development --cache=false --configLoader=runner --run",
+        "test:bombadil:logged-out": "bombadil browser test http://localhost:5173 bombadil/logged_out_spec.ts",
+        "test:bombadil:logged-in": "node bombadil/run_logged_in.ts http://localhost:5173",
         "dev": "pnpm run build:deps && vite --host",
         "staging": "pnpm run build:deps && vite --mode staging"
     },
@@ -83,6 +86,7 @@
         "uuid": "^13.0.0"
     },
     "devDependencies": {
+        "@antithesishq/bombadil": "0.8.0",
         "@catcolab-dev-tools/oxlint-plugin-catcolab": "link:../../tools/oxlint-plugin-catcolab",
         "@catcolab-dev-tools/vite-plugin-monorepo-dedupe": "link:../../tools/vite-plugin-monorepo-dedupe",
         "@mdx-js/rollup": "^3.1.0",

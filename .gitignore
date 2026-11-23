@@ -115,3 +115,5 @@ CHANGELOG.html
 .vscode/*
 
 __pycache__/
+
+/packages/frontend/bombadil/logged_in_credentials.json

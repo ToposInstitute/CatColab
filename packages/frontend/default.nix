@@ -3,6 +3,7 @@
   self,
   lib,
   pnpm2nix,
+  inputs,
   ...
 }:
 let
@@ -262,6 +263,10 @@ let
           exit 1
         fi
 
+        if [ "$#" -gt 0 ]; then
+          exec "$@"
+        fi
+
         npm run test:ci
         EOF
 
@@ -273,6 +278,24 @@ let
         # Wrap the script to ensure nodejs is in PATH
         makeWrapper $out/bin/.${name}-tests-unwrapped $out/bin/${name}-tests \
           --prefix PATH : ${pkgs.lib.makeBinPath [ pkgs.nodejs_24 ]}
+
+        ${lib.optionalString pkgs.stdenv.hostPlatform.isLinux (
+          let
+            chromium = (import inputs.browser-nixpkgs { system = pkgs.stdenv.hostPlatform.system; }).chromium;
+            bombadil = inputs.bombadil.packages.${pkgs.stdenv.hostPlatform.system}.default;
+          in
+          ''
+            makeWrapper $out/bin/${name}-tests $out/bin/frontend-bombadil-logged-out \
+              --prefix PATH : ${lib.makeBinPath [ bombadil chromium ]} \
+              --set CHROME ${chromium}/bin/chromium \
+              --add-flags "bombadil browser test http://127.0.0.1:8000 bombadil/logged_out_spec.ts --headless --time-limit 1m --exit-on-violation"
+
+            makeWrapper $out/bin/${name}-tests $out/bin/frontend-bombadil-logged-in \
+              --prefix PATH : ${lib.makeBinPath [ bombadil chromium ]} \
+              --set CHROME ${chromium}/bin/chromium \
+              --add-flags "node bombadil/run_logged_in.ts http://127.0.0.1:8000 --headless --time-limit 1m --exit-on-violation"
+          ''
+        )}
 
         runHook postInstall
       '';

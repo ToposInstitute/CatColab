@@ -5,7 +5,7 @@ import remarkMath from "remark-math";
 import { defaultServerConditions } from "vite";
 import solid from "vite-plugin-solid";
 import wasm from "vite-plugin-wasm";
-import { defineConfig } from "vitest/config";
+import { configDefaults, defineConfig } from "vitest/config";
 
 export default defineConfig({
     plugins: [
@@ -39,6 +39,7 @@ export default defineConfig({
     // so prefer browser builds ourselves when running under vitest.
     resolve: process.env.VITEST ? { conditions: ["browser", ...defaultServerConditions] } : {},
     test: {
+        exclude: [...configDefaults.exclude, "bombadil/**"],
         // Run test files sequentially to prevent cross-test contamination via
         // the server's shared user state.
         fileParallelism: false,
