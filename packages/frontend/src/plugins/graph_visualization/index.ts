@@ -2,6 +2,7 @@ import type { DiagramAnalysisContribution, ModelAnalysisContribution, Plugin } f
 
 const contributions = [
     {
+        type: "analysis",
         name: "model",
         label: "Visualization",
         description: "Visualize the model as a graph",
@@ -13,6 +14,7 @@ const contributions = [
         load: async () => (await import("./model_graph")).default,
     } satisfies ModelAnalysisContribution,
     {
+        type: "analysis",
         name: "diagram",
         label: "Visualization",
         description: "Visualize the diagram as a graph",
@@ -23,6 +25,7 @@ const contributions = [
         load: async () => (await import("./diagram_graph")).default,
     } satisfies DiagramAnalysisContribution,
     {
+        type: "analysis",
         name: "petri-net",
         label: "Visualization",
         description: "Visualize the Petri net",
@@ -33,6 +36,7 @@ const contributions = [
         load: async () => (await import("./petri_net_visualization")).default,
     } satisfies ModelAnalysisContribution,
     {
+        type: "analysis",
         name: "stock-flow",
         label: "Visualization",
         description: "Visualize the diagram",

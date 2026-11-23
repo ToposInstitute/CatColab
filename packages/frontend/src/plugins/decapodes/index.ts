@@ -2,6 +2,7 @@ import type { Plugin, DiagramAnalysisContribution } from "../../plugin";
 
 const contributions = [
     {
+        type: "analysis",
         name: "simulation",
         label: "Simulation",
         description: "Simulate the PDE using Decapodes",

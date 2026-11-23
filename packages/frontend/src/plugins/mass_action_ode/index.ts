@@ -9,6 +9,7 @@ const flowType: MorType = {
 
 const contributions = [
     {
+        type: "analysis",
         name: "petri-net-simulation",
         label: "Mass-action dynamics",
         description: "Simulate the system using the law of mass action",
@@ -24,6 +25,7 @@ const contributions = [
         }),
     },
     {
+        type: "analysis",
         name: "petri-net-equations",
         label: "Mass-action dynamics equations",
         description: "Display the symbolic mass-action dynamics equations",
@@ -39,6 +41,7 @@ const contributions = [
         }),
     },
     {
+        type: "analysis",
         name: "primitive-stock-flow-simulation",
         label: "Mass-action dynamics",
         description: "Simulate the system using the law of mass action",
@@ -54,6 +57,7 @@ const contributions = [
         }),
     },
     {
+        type: "analysis",
         name: "primitive-stock-flow-equations",
         label: "Mass-action dynamics equations",
         description: "Display the symbolic mass-action dynamics equations",
@@ -69,6 +73,7 @@ const contributions = [
         }),
     },
     {
+        type: "analysis",
         name: "primitive-signed-stock-flow-simulation",
         label: "Mass-action dynamics",
         description: "Simulate the system using the law of mass action",
@@ -85,6 +90,7 @@ const contributions = [
         }),
     },
     {
+        type: "analysis",
         name: "primitive-signed-stock-flow-equations",
         label: "Mass-action dynamics equations",
         description: "Display the symbolic mass-action dynamics equations",

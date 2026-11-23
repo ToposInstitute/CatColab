@@ -3,6 +3,7 @@ import { loadKuramotoAnalysis } from "./builder";
 
 const contributions = [
     {
+        type: "analysis",
         name: "simulation",
         label: "Kuramoto dynamics",
         description: "Simulate the system using the Kuramoto dynamical model",

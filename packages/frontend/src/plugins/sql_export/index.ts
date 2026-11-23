@@ -2,6 +2,7 @@ import type { ModelAnalysisContribution, Plugin } from "../../plugin";
 
 const contributions = [
     {
+        type: "analysis",
         name: "schema-export",
         label: "SQL schema",
         description: "Produce SQL DML from this schema",

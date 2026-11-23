@@ -1,4 +1,4 @@
-import type { AnalysisContribution } from "./analysis";
+import type { AnalysisContributionContent } from "./analysis";
 
 /** A plugin to the CatColab application.
 
@@ -28,7 +28,16 @@ export type Plugin = {
 
 /** A contribution provided by a plugin.
 
-So far only analyses can be contributed via plugins. In the future it will be
-possible to contribute theories, models, and possibly other functionality.
+So far only analyses can be contributed. In the future it will be possible to
+contribute theories, models, and possibly other functionality.
  */
-type Contribution = AnalysisContribution;
+export type Contribution = AnalysisContribution;
+
+/** A contribution of an analysis. */
+export type AnalysisContribution = { type: "analysis" } & AnalysisContributionContent;
+
+/** A contribution of an analysis of models. */
+export type ModelAnalysisContribution = AnalysisContribution & { analysisType: "model" };
+
+/** A contribution of an analysis of diagrams. */
+export type DiagramAnalysisContribution = AnalysisContribution & { analysisType: "diagram" };

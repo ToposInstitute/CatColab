@@ -6,8 +6,7 @@ import type { DiagramAnalysisBuilder, ModelAnalysisBuilder } from "../analysis";
 export type AnalysisManifest = {
     /** Name of analysis.
 
-    Must be unique within the plugin, and must not contain whitespace or a
-    slash.
+    Must be unique within the plugin. Must not contain whitespace or a slash.
      */
     name: string;
 
@@ -34,17 +33,16 @@ export type AnalysisManifest = {
     };
 };
 
-/** Contribution of an analysis of models. */
-export type ModelAnalysisContribution = AnalysisManifest & {
+type ModelAnalysisContributionContent = AnalysisManifest & {
     analysisType: "model";
     load: (manifest: AnalysisManifest) => Promise<ModelAnalysisBuilder<unknown>>;
 };
 
-/** Contribution of an analysis of diagrams. */
-export type DiagramAnalysisContribution = AnalysisManifest & {
+type DiagramAnalysisContributionContent = AnalysisManifest & {
     analysisType: "diagram";
     load: (manifest: AnalysisManifest) => Promise<DiagramAnalysisBuilder<unknown>>;
 };
 
-/** Contribution of an analysis. */
-export type AnalysisContribution = ModelAnalysisContribution | DiagramAnalysisContribution;
+export type AnalysisContributionContent =
+    | ModelAnalysisContributionContent
+    | DiagramAnalysisContributionContent;

@@ -2,6 +2,7 @@ import type { ModelAnalysisContribution, Plugin } from "../../plugin";
 
 const contributions = [
     {
+        type: "analysis",
         name: "schema",
         label: "Entity-relationship diagram",
         description: "Visualize the schema as an entity-relationship diagram",

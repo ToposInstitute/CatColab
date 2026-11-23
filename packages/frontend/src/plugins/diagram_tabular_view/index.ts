@@ -2,6 +2,7 @@ import type { DiagramAnalysisContribution, Plugin } from "../../plugin";
 
 const contributions = [
     {
+        type: "analysis",
         name: "view",
         label: "Table view",
         description: "Visualize the instance as a table",

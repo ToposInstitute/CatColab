@@ -2,6 +2,7 @@ import type { ModelAnalysisContribution, Plugin } from "../../plugin";
 
 const contributions = [
     {
+        type: "analysis",
         name: "simulation",
         label: "Lotka-Volterra dynamics",
         description: "Simulate the system using a Lotka-Volterra ODE",

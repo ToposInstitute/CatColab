@@ -1,13 +1,13 @@
 import type { AnalysisType } from "catcolab-document-types";
 import type { Doctrine } from "catlog-wasm";
 import type { AnalysisBuilder, DiagramAnalysisBuilder, ModelAnalysisBuilder } from "../analysis";
+import type { AnalysisManifest } from "./analysis";
 import type {
-    AnalysisManifest,
     AnalysisContribution,
     DiagramAnalysisContribution,
     ModelAnalysisContribution,
-} from "./analysis";
-import type { Plugin } from "./types";
+    Plugin,
+} from "./types";
 
 /** Registry of plugins. */
 export class PluginRegistry {

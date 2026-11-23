@@ -2,6 +2,7 @@ import type { ModelAnalysisContribution, Plugin } from "../../plugin";
 
 const contributions = [
     {
+        type: "analysis",
         name: "composition-pattern",
         label: "Composition pattern",
         description:

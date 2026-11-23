@@ -3,6 +3,7 @@ import { loadPolynomialODEAnalysis, loadPolynomialODEEquationsAnalysis } from ".
 
 const contributions = [
     {
+        type: "analysis",
         name: "polynomial-ode-simulation",
         label: "Polynomial ODE simulation",
         description: "Simulate the system",
@@ -18,6 +19,7 @@ const contributions = [
         }),
     },
     {
+        type: "analysis",
         name: "polynomial-ode-equations",
         label: "Polynomial ODE equations",
         description: "Display the symbolic equations",
@@ -32,6 +34,7 @@ const contributions = [
         }),
     },
     {
+        type: "analysis",
         name: "signed-polynomial-ode-simulation",
         label: "Polynomial ODE simulation",
         description: "Simulate the system",
@@ -47,6 +50,7 @@ const contributions = [
         }),
     },
     {
+        type: "analysis",
         name: "signed-polynomial-ode-equations",
         label: "Polynomial ODE equations",
         description: "Display the symbolic equations",

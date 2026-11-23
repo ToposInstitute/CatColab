@@ -2,6 +2,7 @@ import type { ModelAnalysisContribution, Plugin } from "../../plugin";
 
 const contributions = [
     {
+        type: "analysis",
         name: "simulation",
         label: "Stochastic mass-action dynamics",
         description: "Simulate a stochastic system using the law of mass action",

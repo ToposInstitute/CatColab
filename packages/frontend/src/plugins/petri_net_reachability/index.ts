@@ -2,6 +2,7 @@ import type { ModelAnalysisContribution, Plugin } from "../../plugin";
 
 const contributions = [
     {
+        type: "analysis",
         name: "subreachability",
         label: "Sub-reachability check",
         description: "Check that forbidden tokenings are unreachable",

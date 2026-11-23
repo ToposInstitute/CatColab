@@ -2,6 +2,7 @@ import type { ModelAnalysisContribution, Plugin } from "../../plugin";
 
 const contributions = [
     {
+        type: "analysis",
         name: "simulation",
         label: "Linear ODE dynamics",
         description: "Simulate the system using a constant-coefficient linear first-order ODE",
