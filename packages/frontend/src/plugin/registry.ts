@@ -64,6 +64,11 @@ export class PluginRegistry {
         return manifests;
     }
 
+    /** Gets the manifest for an analysis, if it exists. */
+    analysisManifest(id: string): AnalysisManifest | undefined {
+        return this.plugins.get(id);
+    }
+
     /** Gets the builder for an analysis of any type, loading it if necessary. */
     async analysisBuilder(id: string): Promise<AnalysisBuilder<unknown>> {
         const plugin = this.plugins.get(id);

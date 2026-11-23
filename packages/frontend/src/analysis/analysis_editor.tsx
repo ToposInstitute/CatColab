@@ -1,9 +1,9 @@
-import { createResource, Match, Switch, useContext } from "solid-js";
+import { createResource, ErrorBoundary, Match, Switch, useContext } from "solid-js";
 import { Dynamic } from "solid-js/web";
 import invariant from "tiny-invariant";
 
 import { Nb } from "catcolab-document-methods";
-import { type FocusHandle } from "catcolab-ui-components";
+import { ErrorAlert, type FocusHandle } from "catcolab-ui-components";
 import { type CellConstructor, type FormalCellEditorProps, NotebookEditor } from "../notebook";
 import { type AnalysisManifest, PluginRegistryContext } from "../plugin";
 import { LiveAnalysisContext } from "./context";
@@ -71,33 +71,46 @@ function AnalysisCellEditor(props: FormalCellEditorProps<Analysis<unknown>>) {
         (id) => plugins.diagramAnalysisBuilder(id),
     );
 
+    const errorTitle = () => {
+        const name = plugins.analysisManifest(props.content.id)?.name;
+        return name ? `Error in analysis: ${name}` : "Analysis error";
+    };
+
     return (
-        <Switch>
-            <Match when={!modelAnalysis.error && modelAnalysis()}>
-                {(analysis) => (
-                    <Dynamic
-                        component={analysis().component}
-                        liveModel={(liveAnalysis() as LiveModelAnalysisDoc).liveModel}
-                        content={props.content.content}
-                        changeContent={(f: (c: unknown) => void) =>
-                            props.changeContent((content) => f(content.content))
-                        }
-                    />
-                )}
-            </Match>
-            <Match when={!diagramAnalysis.error && diagramAnalysis()}>
-                {(analysis) => (
-                    <Dynamic
-                        component={analysis().component}
-                        liveDiagram={(liveAnalysis() as LiveDiagramAnalysisDoc).liveDiagram}
-                        content={props.content.content}
-                        changeContent={(f: (c: unknown) => void) =>
-                            props.changeContent((content) => f(content.content))
-                        }
-                    />
-                )}
-            </Match>
-        </Switch>
+        <ErrorBoundary
+            fallback={(err) => (
+                <ErrorAlert title={errorTitle()}>
+                    {err instanceof Error ? err.message : String(err)}
+                </ErrorAlert>
+            )}
+        >
+            <Switch>
+                <Match when={modelAnalysis()}>
+                    {(analysis) => (
+                        <Dynamic
+                            component={analysis().component}
+                            liveModel={(liveAnalysis() as LiveModelAnalysisDoc).liveModel}
+                            content={props.content.content}
+                            changeContent={(f: (c: unknown) => void) =>
+                                props.changeContent((content) => f(content.content))
+                            }
+                        />
+                    )}
+                </Match>
+                <Match when={diagramAnalysis()}>
+                    {(analysis) => (
+                        <Dynamic
+                            component={analysis().component}
+                            liveDiagram={(liveAnalysis() as LiveDiagramAnalysisDoc).liveDiagram}
+                            content={props.content.content}
+                            changeContent={(f: (c: unknown) => void) =>
+                                props.changeContent((content) => f(content.content))
+                            }
+                        />
+                    )}
+                </Match>
+            </Switch>
+        </ErrorBoundary>
     );
 }
 
