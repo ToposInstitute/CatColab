@@ -168,11 +168,14 @@ existing fields is *not* supported.
  */
 async function migrateAnalysis(liveAnalysis: LiveAnalysisDoc, plugins: PluginRegistry) {
     const doc = liveAnalysis.liveDoc.doc;
-    for (const cell of Nb.getFormalCells(doc.notebook)) {
-        let builder;
-        try {
-            builder = await plugins.analysisBuilder(cell.content.id);
-        } catch {
+    const cellsAndBuilders = await Promise.all(
+        Nb.getFormalCells(doc.notebook).map(async (cell) => {
+            const builder = await plugins.analysisBuilder(cell.content.id).catch(() => undefined);
+            return [cell, builder] as const;
+        }),
+    );
+    for (const [cell, builder] of cellsAndBuilders) {
+        if (!builder) {
             continue;
         }
         const initialContent = builder.initialContent() as Record<string, unknown>;
