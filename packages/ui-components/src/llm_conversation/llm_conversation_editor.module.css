@@ -59,6 +59,12 @@
 }
 
 .statusRow {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    margin-left: calc(-1 * var(--gutter-width));
+    padding-left: var(--gutter-width);
+    background: var(--color-background);
     min-height: 2.5rem;
     display: flex;
     flex-wrap: wrap;
