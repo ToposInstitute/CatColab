@@ -18,31 +18,24 @@ export function loggedInScenario(email: string, password: string) {
             state.window.sessionStorage.getItem("catcolab-bombadil-authenticated") === "true",
     );
 
+    const loginState = extract((state) => ({
+        formVisible: !!state.document.querySelector(".login form"),
+        submitted:
+            state.window.sessionStorage.getItem("catcolab-bombadil-login-submitted") === "true",
+        complete: Array.from(state.document.querySelectorAll(".quick-actions button")).some(
+            (button) => button.textContent?.trim() === "My documents",
+        ),
+    }));
+    const openLogin = registerCustomAction("openEmailLogin", async (document) => {
+        Array.from(document.querySelectorAll<HTMLButtonElement>("button"))
+            .find((button) => button.textContent?.trim() === "Log in or sign up")
+            ?.click();
+    });
     const login = registerCustomAction("loginWithEmail", async (document, window) => {
-        const deadline = Date.now() + 30_000;
-        async function waitFor<T>(find: () => T | null | undefined | false): Promise<T> {
-            while (Date.now() < deadline) {
-                const result = find();
-                if (result) {
-                    return result;
-                }
-                await new Promise((resolve) => window.setTimeout(resolve, 100));
-            }
-            throw new Error("Bombadil login timed out; check the test account and backend");
+        const form = document.querySelector<HTMLFormElement>(".login form");
+        if (!form) {
+            throw new Error("Bombadil could not find the login form");
         }
-
-        await waitFor(() => {
-            if (document.querySelector(".login")) {
-                return true;
-            }
-            const openLogin = Array.from(
-                document.querySelectorAll<HTMLButtonElement>("button"),
-            ).find((button) => button.textContent?.trim() === "Log in or sign up");
-            openLogin?.click();
-            return !!document.querySelector(".login");
-        });
-
-        const form = await waitFor(() => document.querySelector<HTMLFormElement>(".login form"));
         const emailInput = form.querySelector<HTMLInputElement>('input[type="email"]');
         const passwordInput = form.querySelector<HTMLInputElement>('input[type="password"]');
         const submit = form.querySelector<HTMLButtonElement>('button[value="sign-in"]');
@@ -57,21 +50,26 @@ export function loggedInScenario(email: string, password: string) {
             input.dispatchEvent(new Event("input", { bubbles: true }));
             input.dispatchEvent(new Event("change", { bubbles: true }));
         }
+        window.sessionStorage.setItem("catcolab-bombadil-login-submitted", "true");
         form.requestSubmit(submit);
-
-        await waitFor(() => {
-            if (form.querySelector(".error")) {
-                throw new Error("Bombadil email/password login failed");
-            }
-            return Array.from(document.querySelectorAll(".quick-actions button")).some(
-                (button) => button.textContent?.trim() === "My documents",
-            );
-        });
+    });
+    const finishLogin = registerCustomAction("finishEmailLogin", async (_document, window) => {
         window.sessionStorage.setItem("catcolab-bombadil-authenticated", "true");
     });
 
     return {
-        loginActions: actions(() => (authenticated.current ? [] : [login()])),
+        loginActions: actions(() => {
+            if (authenticated.current) {
+                return [];
+            }
+            if (loginState.current.complete) {
+                return [finishLogin()];
+            }
+            if (loginState.current.submitted) {
+                return ["Wait"];
+            }
+            return [loginState.current.formVisible ? login() : openLogin()];
+        }),
         loginCompletes: eventually(() => authenticated.current).within(40, "seconds"),
         nextActions: exploration
             .filter((action) => {
