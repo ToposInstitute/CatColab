@@ -1,4 +1,4 @@
-import { eventually } from "@antithesishq/bombadil";
+import { always, eventually } from "@antithesishq/bombadil";
 import { actions, extract, registerCustomAction } from "@antithesishq/bombadil/browser";
 
 import { exploration } from "./shared_spec.ts";
@@ -22,6 +22,9 @@ export function loggedInScenario(email: string, password: string) {
         formVisible: !!state.document.querySelector(".login form"),
         submitted:
             state.window.sessionStorage.getItem("catcolab-bombadil-login-submitted") === "true",
+        errors: Array.from(state.document.querySelectorAll(".login .error")).map(
+            (error) => error.textContent ?? "",
+        ),
         complete: Array.from(state.document.querySelectorAll(".quick-actions button")).some(
             (button) => button.textContent?.trim() === "My documents",
         ),
@@ -71,6 +74,9 @@ export function loggedInScenario(email: string, password: string) {
             return [loginState.current.formVisible ? login() : openLogin()];
         }),
         loginCompletes: eventually(() => authenticated.current).within(40, "seconds"),
+        loginHasNoErrors: always(
+            () => authenticated.current || loginState.current.errors.length === 0,
+        ),
         nextActions: exploration
             .filter((action) => {
                 if (typeof action === "string") {

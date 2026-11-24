@@ -69,6 +69,11 @@ pkgs.testers.runNixOSTest {
         catcolab_vm.wait_for_unit("backend.service")
         catcolab_vm.wait_for_open_port(8000)
         catcolab_vm.wait_until_succeeds("curl --fail --silent http://127.0.0.1:8000/ > /dev/null")
+        for path in ["/help/credits", "/help/credits/", "/documents"]:
+            catcolab_vm.succeed(f"curl --fail --silent -H 'Accept: text/html' http://127.0.0.1:8000{path} | grep -q '<!doctype html>'")
+        for path, expected in [("/assets/missing.js", "404"), ("/rpc/missing", "400")]:
+            code = catcolab_vm.succeed(f"curl --silent -o /dev/null -w '%{{http_code}}' -H 'Accept: text/html' http://127.0.0.1:8000{path}")
+            assert code == expected, f"{path}: expected {expected}, got {code}"
         status, test_output = catcolab_vm.execute("${parallelTests} 2>&1", timeout=240)
         print(test_output)
         failures = []

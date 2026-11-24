@@ -13,4 +13,5 @@ export {
 const scenario = loggedInScenario(credentials.email, credentials.password);
 export const loginActions = scenario.loginActions;
 export const loginCompletes = scenario.loginCompletes;
+export const loginHasNoErrors = scenario.loginHasNoErrors;
 export const nextActions = scenario.nextActions;

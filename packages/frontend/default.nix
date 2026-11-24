@@ -159,7 +159,7 @@ let
         # Generate CSS module type declarations
         pnpm run build:tcm
         # Build with development mode to use .env.development configuration
-        pnpm run build -- --mode development
+        pnpm run build --mode development
         cd -
 
         runHook postBuild
