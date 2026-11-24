@@ -67,6 +67,17 @@
     gap: 0.5rem;
 }
 
+.statusActions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-left: auto;
+
+    & :global(.lucide) {
+        color: var(--color-gray-800);
+    }
+}
+
 .retry {
     margin: 0;
 }

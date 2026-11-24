@@ -783,6 +783,7 @@ export function DocumentPane(props: {
                             {(liveConversation) => (
                                 <LLMConversationEditor
                                     conversation={liveConversation.conversation}
+                                    docRef={props.docRef}
                                 />
                             )}
                         </Match>
