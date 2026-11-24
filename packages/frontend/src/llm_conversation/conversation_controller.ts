@@ -59,6 +59,9 @@ export type LLMConversationController = {
     /** Retry the response to the latest user message. */
     retryTurn: () => Promise<LLMConversationTurnResult>;
 
+    /** Interrupt the running turn and discard its staged edits. */
+    interrupt: () => void;
+
     /** Whether the latest interaction is a user message awaiting a response. */
     canRetry: () => boolean;
 
@@ -75,6 +78,8 @@ export function createLLMConversationController(
     inferenceKey: Accessor<InferenceKeyResult | undefined>,
 ): LLMConversationController {
     const [llmTurnState, setLLMTurnState] = createStore<LLMTurnState>(newLLMTurnState());
+
+    let abortController: AbortController | undefined;
 
     const pushLiveInteraction = (interaction: LLMInteraction) => {
         setLLMTurnState("liveInteractions", llmTurnState.liveInteractions.length, interaction);
@@ -130,7 +135,10 @@ export function createLLMConversationController(
     };
 
     const executeTurn = async (
-        run: (key: InferenceKeyResult) => Promise<LLMConversationTurnResult>,
+        run: (
+            key: InferenceKeyResult,
+            abortSignal: AbortSignal,
+        ) => Promise<LLMConversationTurnResult>,
     ): Promise<LLMConversationTurnResult> => {
         if (llmTurnState.isRunning) {
             return { tag: "Failed", error: "A turn is already running in this conversation." };
@@ -145,27 +153,49 @@ export function createLLMConversationController(
         }
 
         runningToolCallId = undefined;
+        const turnAbortController = new AbortController();
+        abortController = turnAbortController;
         setLLMTurnState(newLLMTurnState({ isRunning: true }));
         try {
-            const result = await run(key);
+            const result = await run(key, turnAbortController.signal);
             setLLMTurnState("notice", turnResultToNotice(result));
             setLLMTurnState("liveInteractions", result.tag === "Retryable" ? result.attempts : []);
             return result;
         } finally {
+            abortController = undefined;
             setLLMTurnState("isRunning", false);
             setLLMTurnState("streamingContent", "");
             setLLMTurnState("streamingReasoning", "");
         }
     };
 
+    const turnEventHandler = (abortSignal: AbortSignal) => (event: ChatTurnEvent) => {
+        if (!abortSignal.aborted) {
+            handleTurnEvent(event);
+        }
+    };
+
     const runTurn = (userInput: LLMConversationUserInput) =>
-        executeTurn((key) =>
-            runLLMConversationTurn(conversation, binder, key, userInput, handleTurnEvent),
+        executeTurn((key, abortSignal) =>
+            runLLMConversationTurn(
+                conversation,
+                binder,
+                key,
+                userInput,
+                turnEventHandler(abortSignal),
+                abortSignal,
+            ),
         );
 
     const retryTurn = () =>
-        executeTurn((key) =>
-            retryLastLLMConversationResponse(conversation, binder, key, handleTurnEvent),
+        executeTurn((key, abortSignal) =>
+            retryLastLLMConversationResponse(
+                conversation,
+                binder,
+                key,
+                turnEventHandler(abortSignal),
+                abortSignal,
+            ),
         );
 
     const canRetry = () =>
@@ -197,6 +227,7 @@ export function createLLMConversationController(
         state: llmTurnState,
         runTurn,
         retryTurn,
+        interrupt: () => abortController?.abort(),
         canRetry,
         validateAttachments,
         readAttachments,
@@ -221,6 +252,8 @@ function turnResultToNotice(result: LLMConversationTurnResult): LLMTurnNotice | 
     switch (result.tag) {
         case "Completed":
             return null;
+        case "Interrupted":
+            return { kind: "note", message: "Interrupted." };
         case "Incomplete":
             // The turn stopped without a final response, but the conversation
             // state is coherent.
