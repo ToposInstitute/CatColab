@@ -1,0 +1,40 @@
+{
+  "name": "Main merge queue",
+  "target": "branch",
+  "enforcement": "active",
+  "conditions": {
+    "ref_name": {
+      "include": ["refs/heads/main"],
+      "exclude": []
+    }
+  },
+  "bypass_actors": [],
+  "rules": [
+    {
+      "type": "required_status_checks",
+      "parameters": {
+        "strict_required_status_checks_policy": false,
+        "do_not_enforce_on_create": false,
+        "required_status_checks": [
+          { "context": "CI checks", "integration_id": 15368 },
+          { "context": "Build checks", "integration_id": 15368 },
+          { "context": "julia-tests", "integration_id": 15368 },
+          { "context": "ui-components-tests", "integration_id": 15368 },
+          { "context": "Vite plugin checks", "integration_id": 15368 }
+        ]
+      }
+    },
+    {
+      "type": "merge_queue",
+      "parameters": {
+        "check_response_timeout_minutes": 120,
+        "grouping_strategy": "ALLGREEN",
+        "max_entries_to_build": 2,
+        "max_entries_to_merge": 1,
+        "merge_method": "MERGE",
+        "min_entries_to_merge": 1,
+        "min_entries_to_merge_wait_minutes": 0
+      }
+    }
+  ]
+}

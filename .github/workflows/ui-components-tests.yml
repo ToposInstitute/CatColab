@@ -13,14 +13,8 @@ on:
       - "flake.lock"
       - ".github/workflows/ui-components-tests.yml"
   pull_request:
-    paths:
-      - "packages/ui-components/**"
-      - "package.json"
-      - "pnpm-lock.yaml"
-      - "pnpm-workspace.yaml"
-      - "flake.nix"
-      - "flake.lock"
-      - ".github/workflows/ui-components-tests.yml"
+  merge_group:
+    types: [checks_requested]
 
 jobs:
   ui-components-tests:

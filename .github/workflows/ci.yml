@@ -6,11 +6,36 @@ on:
       - main
       - production
   pull_request:
+  merge_group:
+    types: [checks_requested]
 
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
+  ci_checks:
+    name: CI checks
+    if: always()
+    needs:
+      - catlog_tests
+      - rust_formatting
+      - rust_lints
+      - check_rust_docs
+      - npm_checks
+      - build_nixos_system
+      - backend_dev_setup
+      - backend_tests
+      - frontend_tests_with_backend
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require successful checks
+        env:
+          RESULTS: ${{ join(needs.*.result, ',') }}
+        run: |
+          for result in ${RESULTS//,/ }; do
+            test "$result" = success || exit 1
+          done
+
   catlog_tests:
     name: catlog tests
     runs-on: ubuntu-latest

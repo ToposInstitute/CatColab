@@ -8,9 +8,8 @@ on:
       - 'packages/algjulia-interop/**'
       - '.github/workflows/julia-tests.yml'
   pull_request:
-    paths:
-      - 'packages/algjulia-interop/**'
-      - '.github/workflows/julia-tests.yml'
+  merge_group:
+    types: [checks_requested]
 
 jobs:
   julia-tests:

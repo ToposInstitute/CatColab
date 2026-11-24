@@ -6,8 +6,31 @@ on:
       - main
       - production
   pull_request:
+  merge_group:
+    types: [checks_requested]
 
 jobs:
+  build_checks:
+    name: Build checks
+    if: always()
+    needs:
+      - build_dev_docs
+      - build_frontend
+      - build_rust_docs
+      - build_math-docs
+      - build_rfc
+      - build_gaios
+      - build_ui_components
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require successful builds
+        env:
+          RESULTS: ${{ join(needs.*.result, ',') }}
+        run: |
+          for result in ${RESULTS//,/ }; do
+            test "$result" = success || exit 1
+          done
+
   deploy:
     needs:
       - build_dev_docs
@@ -17,7 +40,7 @@ jobs:
       - build_rfc
       - build_gaios
       - build_ui_components
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == 'ToposInstitute/CatColab'
+    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == 'ToposInstitute/CatColab')
     permissions:
       contents: read
       deployments: write

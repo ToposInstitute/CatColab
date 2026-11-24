@@ -9,17 +9,14 @@ on:
       - "package.json"
       - "pnpm-lock.yaml"
       - "pnpm-workspace.yaml"
-      - ".github/workflows/vite-plugin-monorepo-dedupe-checks.yml"
+      - ".github/workflows/vite-plugin-monorepo-dedupe.yml"
   pull_request:
-    paths:
-      - "tools/vite-plugin-monorepo-dedupe/**"
-      - "package.json"
-      - "pnpm-lock.yaml"
-      - "pnpm-workspace.yaml"
-      - ".github/workflows/vite-plugin-monorepo-dedupe-checks.yml"
+  merge_group:
+    types: [checks_requested]
 
 jobs:
   checks:
+    name: Vite plugin checks
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
