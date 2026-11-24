@@ -249,6 +249,20 @@ jobs:
         name: topos-institute
         authToken: '${{ secrets.CACHIX_TOPOS_AUTH_TOKEN }}'
 
+    - name: Build frontend test driver
+      run: nix build .#checks.x86_64-linux.frontendTests.driver -L -o frontend-test-driver
+
     - name: Run frontend tests with VM
       run: |
-        nix build .#checks.x86_64-linux.frontendTests -L --no-sandbox
+        mkdir -p frontend-test-results
+        set -o pipefail
+        nix develop .#bombadil --command ./frontend-test-driver/bin/nixos-test-driver -o "$PWD/frontend-test-results" 2>&1 | tee frontend-test-results/driver.log
+
+    - name: Upload frontend test failure diagnostics
+      if: failure()
+      uses: actions/upload-artifact@v7
+      with:
+        name: frontend-test-failure-diagnostics
+        path: frontend-test-results/
+        retention-days: 3
+        if-no-files-found: ignore

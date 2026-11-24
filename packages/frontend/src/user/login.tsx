@@ -13,7 +13,7 @@ import SignInIcon from "lucide-solid/icons/log-in";
 import SignUpIcon from "lucide-solid/icons/user-pen";
 import { siGithub, siGoogle } from "simple-icons";
 import { useAuth, useFirebaseApp } from "solid-firebase";
-import { type JSX, Match, Switch } from "solid-js";
+import { type JSX, Match, Show, Switch } from "solid-js";
 import invariant from "tiny-invariant";
 
 import { Button, IconButton, SimpleIcon } from "catcolab-ui-components";
@@ -31,7 +31,7 @@ export function Login(props: { onComplete?: (user: User) => void }) {
     const api = useApi();
     const firebaseApp = useFirebaseApp();
 
-    const [, { Form, Field }] = createForm<EmailAndPassword>();
+    const [form, { Form, Field }] = createForm<EmailAndPassword>();
 
     const onSubmit: SubmitHandler<EmailAndPassword> = (values, event) => {
         const submitter = event.submitter as HTMLButtonElement;
@@ -117,6 +117,11 @@ export function Login(props: { onComplete?: (user: User) => void }) {
                         </>
                     )}
                 </Field>
+                <Show when={form.response.status === "error"}>
+                    <div class="error" role="alert">
+                        {form.response.message}
+                    </div>
+                </Show>
                 <div class="buttons">
                     <Button type="submit" variant="positive" value="sign-in">
                         <SignInIcon />

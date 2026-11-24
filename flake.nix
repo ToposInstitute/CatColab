@@ -3,7 +3,9 @@
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-25.11";
+    browser-nixpkgs.url = "github:nixos/nixpkgs/nixpkgs-unstable";
     agenix.url = "github:ryantm/agenix";
+    bombadil.url = "github:antithesishq/bombadil/v0.8.0";
     deploy-rs.url = "github:serokell/deploy-rs";
     fenix = {
       url = "github:nix-community/fenix";
@@ -150,6 +152,23 @@
           PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD = "1";
         };
 
+      bombadilShellForSystem =
+        system:
+        let
+          pkgs = nixpkgsFor system;
+          browserPkgs = import inputs.browser-nixpkgs { inherit system; };
+        in
+        pkgs.mkShell {
+          name = "catcolab-bombadil";
+          packages = [
+            inputs.bombadil.packages.${system}.default
+            browserPkgs.chromium
+            pkgs.nodejs_24
+            pkgs.pnpm
+          ];
+          CHROME = "${browserPkgs.chromium}/bin/chromium";
+        };
+
       # Generate devShells for each system
       devShellForSystem =
         system:
@@ -255,6 +274,8 @@
           value = {
             default = devShellForSystem system;
             ui-components-tests = uiComponentsTestsShellForSystem system;
+          } // nixpkgs.lib.optionalAttrs (nixpkgs.lib.hasSuffix "-linux" system) {
+            bombadil = bombadilShellForSystem system;
           };
         }) devShellSystems
       );

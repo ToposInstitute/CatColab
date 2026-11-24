@@ -302,8 +302,29 @@ async fn julia_proxy_handler(
     }
 }
 
-use axum::routing::get_service;
+use tower::ServiceExt;
 use tower_http::services::{ServeDir, ServeFile};
+
+fn frontend_router(directory: &Path) -> Router {
+    let index = directory.join("index.html");
+    let fallback = get(move |request: Request| async move {
+        let path = request.uri().path();
+        let reserved = matches!(
+            path.split('/').nth(1),
+            Some("api" | "rpc" | "repo-ws" | "julia" | "status" | "assets")
+        );
+        let html = request
+            .headers()
+            .get(axum::http::header::ACCEPT)
+            .and_then(|value| value.to_str().ok())
+            .is_some_and(|value| value.split(',').any(|part| part.trim().starts_with("text/html")));
+        if reserved || !html || Path::new(path).extension().is_some() {
+            return axum::http::StatusCode::NOT_FOUND.into_response();
+        }
+        ServeFile::new(index).oneshot(request).await.unwrap().into_response()
+    });
+    Router::new().fallback_service(ServeDir::new(directory).fallback(fallback))
+}
 
 async fn run_web_server(
     state: app::AppState,
@@ -340,12 +361,8 @@ async fn run_web_server(
         .merge(julia_router);
 
     if let Some(spa_dir) = spa_directory() {
-        let index = Path::new(&spa_dir).join("index.html");
-        let spa_service =
-            get_service(ServeDir::new(&spa_dir).not_found_service(ServeFile::new(index)));
-
         info!("Serving frontend from directory: {spa_dir}");
-        app = app.fallback_service(spa_service);
+        app = app.fallback_service(frontend_router(Path::new(&spa_dir)));
     } else {
         info!("frontend directory not found; keeping default text route at /");
         app = app.route("/", get(|| async { "Hello! The CatColab server is running" }));
@@ -373,4 +390,79 @@ fn spa_directory() -> Option<String> {
     }
 
     None
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use axum::body::{Body, to_bytes};
+    use axum::http::{StatusCode, header};
+
+    #[tokio::test]
+    async fn frontend_routes_and_missing_resources() {
+        let directory = std::env::temp_dir().join(format!("catcolab-spa-{}", uuid::Uuid::now_v7()));
+        std::fs::create_dir_all(directory.join("assets")).unwrap();
+        std::fs::write(directory.join("index.html"), "<html>CatColab</html>").unwrap();
+        std::fs::write(directory.join("assets/app.js"), "export {};").unwrap();
+        let router = frontend_router(&directory);
+
+        for path in
+            ["/", "/help", "/help/credits", "/help/credits/", "/documents", "/model/example"]
+        {
+            let response = router
+                .clone()
+                .oneshot(
+                    Request::builder()
+                        .uri(path)
+                        .header(header::ACCEPT, "text/html,application/xhtml+xml")
+                        .body(Body::empty())
+                        .unwrap(),
+                )
+                .await
+                .unwrap();
+            assert_eq!(response.status(), StatusCode::OK, "{path}");
+            assert_eq!(
+                to_bytes(response.into_body(), usize::MAX).await.unwrap(),
+                "<html>CatColab</html>"
+            );
+        }
+
+        for path in [
+            "/assets/missing.js",
+            "/missing.css",
+            "/rpc/missing",
+            "/api/missing",
+            "/julia/missing",
+            "/repo-ws",
+            "/status/missing",
+        ] {
+            let response = router
+                .clone()
+                .oneshot(
+                    Request::builder()
+                        .uri(path)
+                        .header(header::ACCEPT, "text/html")
+                        .body(Body::empty())
+                        .unwrap(),
+                )
+                .await
+                .unwrap();
+            assert_eq!(response.status(), StatusCode::NOT_FOUND, "{path}");
+        }
+
+        let response = router
+            .clone()
+            .oneshot(Request::builder().uri("/assets/app.js").body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        assert_eq!(to_bytes(response.into_body(), usize::MAX).await.unwrap(), "export {};");
+
+        let response = router
+            .oneshot(Request::builder().uri("/missing").body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
+        std::fs::remove_dir_all(directory).unwrap();
+    }
 }
