@@ -1,7 +1,6 @@
 //! Morphisms between models of a discrete double theory.
 
 use std::collections::HashSet;
-use std::rc::Rc;
 
 use nonempty::NonEmpty;
 
@@ -220,10 +219,6 @@ pub struct DiscreteDblModelMorphismFinder<'a> {
 
 impl<'a> DiscreteDblModelMorphismFinder<'a> {
     fn new(dom: &'a DiscreteDblModel, cod: &'a DiscreteDblModel) -> Self {
-        assert!(
-            Rc::ptr_eq(&dom.theory(), &cod.theory()),
-            "Domain and codomain model should have the same theory"
-        );
         assert!(dom.is_free(), "Domain model should be free");
 
         // Order the variables of the CSP, which are the elements of the domain
@@ -375,6 +370,8 @@ impl<'a> DiscreteDblModelMorphismFinder<'a> {
 
 #[cfg(test)]
 mod tests {
+    use std::rc::Rc;
+
     use super::*;
     use crate::stdlib::*;
     use crate::validate::Validate;

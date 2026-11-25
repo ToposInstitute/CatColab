@@ -4,6 +4,7 @@ import { createResource, For, type JSXElement, lazy, Show, useContext } from "so
 import { Dynamic } from "solid-js/web";
 import invariant from "tiny-invariant";
 
+import { PluginRegistryContext } from "../plugin";
 import { type Theory, TheoryLibraryContext } from "../theory";
 
 /** Help page for a theory in the standard library. */
@@ -35,6 +36,8 @@ export default function LogicHelpPage() {
 }
 
 function LogicHelpDetail(props: { theory: Theory }) {
+    const modelAnalyses = useModelAnalyses(() => props.theory);
+
     const [content] = createResource(
         () => props.theory.id,
         async (theoryId) => {
@@ -56,7 +59,7 @@ function LogicHelpDetail(props: { theory: Theory }) {
             <p>
                 <i>{props.theory.description}</i>
             </p>
-            <Show when={props.theory.modelTypes.length + props.theory.modelAnalyses.length > 0}>
+            <Show when={props.theory.modelTypes.length + modelAnalyses().length > 0}>
                 <div class="help-summary-lists">
                     <Show when={props.theory.modelTypes.length > 0}>
                         <div>
@@ -73,14 +76,14 @@ function LogicHelpDetail(props: { theory: Theory }) {
                             </dl>
                         </div>
                     </Show>
-                    <Show when={props.theory.modelAnalyses.length > 0}>
+                    <Show when={modelAnalyses().length > 0}>
                         <div>
                             <h3>Analyses</h3>
                             <dl>
-                                <For each={props.theory.modelAnalyses}>
+                                <For each={modelAnalyses()}>
                                     {(typeMeta) => (
                                         <>
-                                            <dt>{typeMeta.name}</dt>
+                                            <dt>{typeMeta.label}</dt>
                                             <dd>{typeMeta.description}</dd>
                                         </>
                                     )}
@@ -105,7 +108,8 @@ export type HelpAnalysisProps = {
 
 /** Documentation for an analysis of a theory. */
 export function HelpAnalysisById(props: HelpAnalysisProps) {
-    const analysis = () => props.theory.modelAnalyses.find((a) => a.id === props.analysisId);
+    const modelAnalyses = useModelAnalyses(() => props.theory);
+    const analysis = () => modelAnalyses().find((a) => a.id === props.analysisId);
 
     return (
         <Show when={analysis()}>
@@ -116,7 +120,7 @@ export function HelpAnalysisById(props: HelpAnalysisProps) {
 
                 return (
                     <div class="help-analysis-pane">
-                        <h3>{analysis().name}</h3>
+                        <h3>{analysis().label}</h3>
                         <p class="help-analysis-pane-description">{analysis().description}</p>
                         {props.children}
                         {HelpComponent && <Dynamic component={HelpComponent} />}
@@ -125,4 +129,12 @@ export function HelpAnalysisById(props: HelpAnalysisProps) {
             }}
         </Show>
     );
+}
+
+/** Gets the manifests of the model analyses available for a theory. */
+function useModelAnalyses(theory: () => Theory) {
+    const plugins = useContext(PluginRegistryContext);
+    invariant(plugins, "Plugin registry must be provided as context");
+
+    return () => plugins.modelAnalyses({ doctrine: theory().theory.doctrine, theory: theory().id });
 }

@@ -2,7 +2,6 @@ import { lazy } from "solid-js";
 
 import { ThSignedCategory } from "catlog-wasm";
 import { Theory, type TheoryMeta } from "../../theory";
-import * as analyses from "../analyses";
 
 const ObjectCellEditor = lazy(() => import("../../model/object_cell_editor"));
 const MorphismCellEditor = lazy(() => import("../../model/morphism_cell_editor"));
@@ -47,38 +46,6 @@ export default function createCausalLoopTheory(theoryMeta: TheoryMeta): Theory {
                 arrowStyle: "minus",
                 preferUnnamed: true,
             },
-        ],
-        modelAnalyses: [
-            analyses.modelGraph({
-                id: "diagram",
-                name: "Visualization",
-                description: "Visualize the causal loop diagram",
-                help: "visualization",
-            }),
-            analyses.motifFinding({
-                id: "negative-loops",
-                name: "Balancing loops",
-                description: "Analyze the diagram for balancing loops",
-                help: "loops",
-                findMotifs(model, options) {
-                    return thSignedCategory.negativeLoops(model, options);
-                },
-            }),
-            analyses.motifFinding({
-                id: "positive-loops",
-                name: "Reinforcing loops",
-                description: "Analyze the diagram for reinforcing loops",
-                help: "loops",
-                findMotifs(model, options) {
-                    return thSignedCategory.positiveLoops(model, options);
-                },
-            }),
-            analyses.linearODE({
-                simulate: (model, data) => thSignedCategory.linearODE(model, data),
-            }),
-            analyses.lotkaVolterra({
-                simulate: (model, data) => thSignedCategory.lotkaVolterra(model, data),
-            }),
         ],
     });
 }

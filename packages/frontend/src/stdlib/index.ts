@@ -8,3 +8,4 @@ at present this is the complete set of logics available in the application.
  */
 
 export { stdTheories } from "./theories";
+export { stdPlugins } from "./plugins";

@@ -1,11 +1,11 @@
-import { Match, Switch, useContext } from "solid-js";
+import { createResource, ErrorBoundary, Match, Switch, useContext } from "solid-js";
 import { Dynamic } from "solid-js/web";
 import invariant from "tiny-invariant";
 
 import { Nb } from "catcolab-document-methods";
-import { type FocusHandle } from "catcolab-ui-components";
+import { ErrorAlert, type FocusHandle } from "catcolab-ui-components";
 import { type CellConstructor, type FormalCellEditorProps, NotebookEditor } from "../notebook";
-import type { AnalysisMeta, DiagramAnalysisMeta, ModelAnalysisMeta } from "../theory";
+import { PluginRegistryContext, type ResolvedAnalysisManifest } from "../plugin";
 import { LiveAnalysisContext } from "./context";
 import {
     type LiveAnalysisDoc,
@@ -13,7 +13,7 @@ import {
     type LiveModelAnalysisDoc,
     theoryForLiveAnalysis,
 } from "./document";
-import type { Analysis } from "./types";
+import type { Analysis, AnalysisBuilder } from "./types";
 
 /** Notebook editor for analyses of models of double theories.
  */
@@ -23,14 +23,20 @@ export function AnalysisNotebookEditor(props: {
 }) {
     const liveDoc = () => props.liveAnalysis.liveDoc;
 
+    const plugins = useContext(PluginRegistryContext);
+    invariant(plugins, "Plugin registry should be provided as context");
+
     const cellConstructors = () => {
-        let meta: ModelAnalysisMeta[] | DiagramAnalysisMeta[] | undefined;
-        if (props.liveAnalysis.analysisType === "model") {
-            meta = theoryForLiveAnalysis(props.liveAnalysis)?.modelAnalyses;
-        } else if (props.liveAnalysis.analysisType === "diagram") {
-            meta = theoryForLiveAnalysis(props.liveAnalysis)?.diagramAnalyses;
+        const theory = theoryForLiveAnalysis(props.liveAnalysis);
+        if (!theory) {
+            return [];
         }
-        return (meta ?? []).map(analysisCellConstructor);
+        const key = { doctrine: theory.theory.doctrine, theory: theory.id };
+        return plugins
+            .analyses(props.liveAnalysis.analysisType, key)
+            .map((manifest) =>
+                analysisCellConstructor(manifest, () => plugins.analysisBuilder(manifest.id)),
+            );
     };
 
     // oxlint-disable solid/reactivity -- Context.Provider value getter is reactive
@@ -53,56 +59,75 @@ export function AnalysisNotebookEditor(props: {
 function AnalysisCellEditor(props: FormalCellEditorProps<Analysis<unknown>>) {
     const liveAnalysis = useContext(LiveAnalysisContext);
     invariant(liveAnalysis, "Live analysis should be provided as context for cell editor");
+    const plugins = useContext(PluginRegistryContext);
+    invariant(plugins, "Plugin registry should be provided as context");
+
+    const [modelAnalysis] = createResource(
+        () => liveAnalysis().analysisType === "model" && props.content.id,
+        (id) => plugins.modelAnalysisBuilder(id),
+    );
+    const [diagramAnalysis] = createResource(
+        () => liveAnalysis().analysisType === "diagram" && props.content.id,
+        (id) => plugins.diagramAnalysisBuilder(id),
+    );
+
+    const errorTitle = () => {
+        const name = plugins.analysisManifest(props.content.id)?.label;
+        return name ? `Error in analysis: ${name}` : "Analysis error";
+    };
 
     return (
-        <Switch>
-            <Match
-                when={
-                    liveAnalysis().analysisType === "model" &&
-                    theoryForLiveAnalysis(liveAnalysis())?.modelAnalysis(props.content.id)
-                }
-            >
-                {(analysis) => (
-                    <Dynamic
-                        component={analysis().component}
-                        liveModel={(liveAnalysis() as LiveModelAnalysisDoc).liveModel}
-                        content={props.content.content}
-                        changeContent={(f: (c: unknown) => void) =>
-                            props.changeContent((content) => f(content.content))
-                        }
-                    />
-                )}
-            </Match>
-            <Match
-                when={
-                    liveAnalysis().analysisType === "diagram" &&
-                    theoryForLiveAnalysis(liveAnalysis())?.diagramAnalysis(props.content.id)
-                }
-            >
-                {(analysis) => (
-                    <Dynamic
-                        component={analysis().component}
-                        liveDiagram={(liveAnalysis() as LiveDiagramAnalysisDoc).liveDiagram}
-                        content={props.content.content}
-                        changeContent={(f: (c: unknown) => void) =>
-                            props.changeContent((content) => f(content.content))
-                        }
-                    />
-                )}
-            </Match>
-        </Switch>
+        <ErrorBoundary
+            fallback={(err) => (
+                <ErrorAlert title={errorTitle()}>
+                    {err instanceof Error ? err.message : String(err)}
+                </ErrorAlert>
+            )}
+        >
+            <Switch>
+                <Match when={modelAnalysis()}>
+                    {(analysis) => (
+                        <Dynamic
+                            component={analysis().component}
+                            liveModel={(liveAnalysis() as LiveModelAnalysisDoc).liveModel}
+                            content={props.content.content}
+                            changeContent={(f: (c: unknown) => void) =>
+                                props.changeContent((content) => f(content.content))
+                            }
+                        />
+                    )}
+                </Match>
+                <Match when={diagramAnalysis()}>
+                    {(analysis) => (
+                        <Dynamic
+                            component={analysis().component}
+                            liveDiagram={(liveAnalysis() as LiveDiagramAnalysisDoc).liveDiagram}
+                            content={props.content.content}
+                            changeContent={(f: (c: unknown) => void) =>
+                                props.changeContent((content) => f(content.content))
+                            }
+                        />
+                    )}
+                </Match>
+            </Switch>
+        </ErrorBoundary>
     );
 }
 
-function analysisCellConstructor<T>(meta: AnalysisMeta<T>): CellConstructor<Analysis<T>> {
-    const { id, name, description, initialContent } = meta;
+function analysisCellConstructor<T>(
+    manifest: ResolvedAnalysisManifest,
+    loadBuilder: () => Promise<AnalysisBuilder<T>>,
+): CellConstructor<Analysis<T>> {
+    const { id, label, description } = manifest;
     return {
-        name,
+        name: label,
         description,
-        construct: () =>
-            Nb.newFormalCell({
+        construct: async () => {
+            const builder = await loadBuilder();
+            return Nb.newFormalCell({
                 id,
-                content: initialContent(),
-            }),
+                content: builder.initialContent(),
+            });
+        },
     };
 }

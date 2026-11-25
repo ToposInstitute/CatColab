@@ -2,7 +2,6 @@ import { lazy } from "solid-js";
 
 import { ThCategoryLinks } from "catlog-wasm";
 import { Theory, type TheoryMeta } from "../../theory";
-import * as analyses from "../analyses";
 
 const ObjectCellEditor = lazy(() => import("../../model/object_cell_editor"));
 const MorphismCellEditor = lazy(() => import("../../model/morphism_cell_editor"));
@@ -50,30 +49,6 @@ export default function createPrimitiveStockFlowTheory(theoryMeta: TheoryMeta): 
                 preferUnnamed: true,
                 shortcut: ["L"],
             },
-        ],
-        modelAnalyses: [
-            analyses.stockFlowDiagram({
-                id: "diagram",
-                name: "Visualization",
-                description: "Visualize the stock and flow diagram",
-                help: "visualization",
-            }),
-            analyses.massAction({
-                ratesHaveGranularity: false,
-                simulate(model, data) {
-                    return thCategoryLinks.massAction(model, data);
-                },
-                transitionType: {
-                    tag: "Hom",
-                    content: { tag: "Basic", content: "Object" },
-                },
-            }),
-            analyses.massActionEquations({
-                ratesHaveGranularity: false,
-                getEquations(model, data) {
-                    return thCategoryLinks.massActionEquations(model, data);
-                },
-            }),
         ],
     });
 }

@@ -2,7 +2,6 @@ import { lazy } from "solid-js";
 
 import { ThPowerSystem } from "catlog-wasm";
 import { Theory, type TheoryMeta } from "../../theory";
-import * as analyses from "../analyses";
 
 const ObjectCellEditor = lazy(() => import("../../model/object_cell_editor"));
 const MorphismCellEditor = lazy(() => import("../../model/morphism_cell_editor"));
@@ -54,21 +53,6 @@ export default function createPowerSystemsTheory(theoryMeta: TheoryMeta): Theory
                 arrowStyle: "unmarked",
                 preferUnnamed: true,
             },
-        ],
-        modelAnalyses: [
-            analyses.modelGraph({
-                id: "diagram",
-                name: "Visualization",
-                description: "Visualize the power system as a network",
-                help: "visualization",
-            }),
-            analyses.kuramoto({
-                simulate: (model, data) => thPowerSystem.kuramoto(model, data),
-                parameterLabels: {
-                    coupling: "Capacity",
-                    forcing: "Input power",
-                },
-            }),
         ],
     });
 }
