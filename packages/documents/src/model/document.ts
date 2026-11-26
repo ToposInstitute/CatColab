@@ -1,6 +1,7 @@
 import { Model, Nb, type ModelDocument } from "catcolab-document-methods";
 import type { ModelJudgment } from "catcolab-document-types";
-import type { DocumentStore } from "../document-store";
+import type { DocumentRef, DocumentStore } from "../document-store";
+import { registerDocument } from "../document/handle_registry";
 import {
     findObjectType,
     type AnyCellType,
@@ -182,9 +183,9 @@ export interface Notebook<
     H = unknown,
     V = unknown,
 > {
+    readonly ref: Readonly<DocumentRef>;
     readonly shape: S;
     readonly title: string;
-    readonly handle: H;
 
     add<T extends CellTypeOf<S>>(type: T, values: CellValuesOf<S, T>): AddedCellOf<S, T>;
     cells(): readonly CellData[];
@@ -231,9 +232,9 @@ export function modelNotebookFromStore<Handle, S extends Shape, Version>(
         return added;
     }
 
-    return {
+    const notebook: Notebook<S, ModelDocument, Handle, Version> = {
+        ref: Object.freeze({ ...store.getDocumentRef(handle) }),
         shape,
-        handle,
         get title() {
             const parsed = parseNotebookData(store.getDocumentSnapshot(handle));
             return parsed.tag === "Ok" ? parsed.content.value.name : "";
@@ -315,11 +316,13 @@ export function modelNotebookFromStore<Handle, S extends Shape, Version>(
         onValidate: (callback) => scope.track(validator.onValidate(callback)),
         dispose: scope.dispose,
         revert(commit) {
-            const change = commit.documents.get(handle);
+            const change = commit.documents.get(notebook);
             if (change === undefined) {
                 throw new Error("The notebook's document was not part of the commit.");
             }
             store.revertCommit(handle, change);
         },
     };
+
+    return registerDocument(store, handle, notebook);
 }

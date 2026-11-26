@@ -55,7 +55,7 @@ describe("validation snapshots", { timeout: 20_000 }, () => {
         const previousCount = received.length;
         const table = old.tables[0]!;
         schema.add(Entity, { label: "New" });
-        store.changeDocument(instance.handle, (doc) => {
+        store.changeDocument(expectOk(await store.getHandle(instance.ref)), (doc) => {
             if (doc.type === "instance") {
                 doc.tables[table.id] = {
                     rows: { stray: { label: "", fields: {} } },

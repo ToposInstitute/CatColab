@@ -67,9 +67,9 @@ export function LLMConversationPane(props: {
             docs &&
             docs.length > 0 &&
             !conversations.loading &&
-            !docs.some(({ conversation }) => conversation.handle.ref.id === props.selectedRefId)
+            !docs.some(({ conversation }) => conversation.ref.id === props.selectedRefId)
         ) {
-            props.onSelect(docs[0]!.conversation.handle.ref.id, true);
+            props.onSelect(docs[0]!.conversation.ref.id, true);
         }
     });
 
@@ -82,21 +82,20 @@ export function LLMConversationPane(props: {
 
     const onDeleteLLMConversation = async (conversation: ApiLLMConversation) => {
         const deleted = await actions.showDeleteDialog({
-            refId: conversation.handle.ref.id,
+            refId: conversation.ref.id,
             name: conversation.title,
             typeName: documentTypeLabel(conversation.data().type),
         });
-        if (deleted && props.selectedRefId === conversation.handle.ref.id) {
+        if (deleted && props.selectedRefId === conversation.ref.id) {
             const nextConversation = conversations()?.find(
-                ({ conversation: candidate }) =>
-                    candidate.handle.ref.id !== conversation.handle.ref.id,
+                ({ conversation: candidate }) => candidate.ref.id !== conversation.ref.id,
             );
-            props.onSelect(nextConversation?.conversation.handle.ref.id, true);
+            props.onSelect(nextConversation?.conversation.ref.id, true);
         }
     };
 
     const canDeleteLLMConversation = (conversation: ApiLLMConversation) => {
-        const document = userState.documents[conversation.handle.ref.id];
+        const document = userState.documents[conversation.ref.id];
         return (
             document?.deletedAt === null &&
             document.permissions.some(
@@ -154,14 +153,14 @@ export function LLMConversationPane(props: {
                                     class={styles.row}
                                     classList={{
                                         [styles.active]:
-                                            conversation.handle.ref.id === props.selectedRefId,
+                                            conversation.ref.id === props.selectedRefId,
                                     }}
-                                    onMouseDown={() => props.onSelect(conversation.handle.ref.id)}
+                                    onMouseDown={() => props.onSelect(conversation.ref.id)}
                                 >
                                     <DocumentTypeIcon documentType="llmconversation" />
                                     <div
                                         class={styles.rowName}
-                                        onFocusIn={() => props.onSelect(conversation.handle.ref.id)}
+                                        onFocusIn={() => props.onSelect(conversation.ref.id)}
                                     >
                                         <InlineInput
                                             text={conversationData().name}
