@@ -2,12 +2,24 @@ import { defineShape, RichText, defineObject, defineMorphism } from "catcolab-do
 
 export const Variable = defineObject({ tag: "Basic", content: "Object" });
 
-export const PositiveLink = defineMorphism({ tag: "Hom", content: Variable.obType });
+export const PositiveLinkWithDegree = defineMorphism({
+    tag: "Power",
+    morType: { tag: "Basic", content: "Degree" },
+    fallback: { tag: "Basic", content: Variable.obType },
+});
 
-export const NegativeLink = defineMorphism(
-    { tag: "Basic", content: "Negative" },
+export const NegativeLinkWithDegree = defineMorphism({
+    tag: "Composite",
+    content: [
+        { tag: "Basic", content: "Negative" },
+        {
+            tag: "Power",
+            morType: { tag: "Basic", content: "Degree" },
+            fallback: { tag: "Basic", content: Variable.obType }
+        }
+    ],
     { domain: Variable, codomain: Variable },
-);
+});
 
 export const GradedCausalLoop = defineShape({
     theory: "causal-loop-with-degrees",
@@ -16,6 +28,6 @@ export const GradedCausalLoop = defineShape({
         return new ThSignedCategoryWithDegrees().theory();
     },
     objects: { Variable },
-    morphisms: { PositiveLink, NegativeLink },
+    morphisms: { PositiveLinkWithDegree, NegativeLinkWithDegree },
     informal: { RichText },
 });
