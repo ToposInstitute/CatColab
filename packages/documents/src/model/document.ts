@@ -54,35 +54,36 @@ export type { ModelDocument } from "catcolab-document-methods";
 type CellValuesOf<S extends Shape, T extends CellTypeOf<S>> = T extends RichTextType
     ? { content: string }
     : T extends ObjectType
-      ? { label: string | null }
-      : T extends MorphismType
-        ? {
-              label: string | null;
-              from: MorphismEndpointValue<
-                  T,
-                  "domain",
-                  MorphismEndpointCellData<S, T, "domain">
-              > | null;
-              to: MorphismEndpointValue<
-                  T,
-                  "codomain",
-                  MorphismEndpointCellData<S, T, "codomain">
-              > | null;
-          }
-        : T extends EquationType
-          ? { label: string | null; lhs?: EquationSideData; rhs?: EquationSideData }
-          : never;
+    ? { label: string | null }
+    : T extends MorphismType
+    ? {
+        label: string | null;
+        from: MorphismEndpointValue<
+            T,
+            "domain",
+            MorphismEndpointCellData<S, T, "domain">
+        > | null;
+        to: MorphismEndpointValue<
+            T,
+            "codomain",
+            MorphismEndpointCellData<S, T, "codomain">
+        > | null;
+        repeatLength?: number;
+    }
+    : T extends EquationType
+    ? { label: string | null; lhs?: EquationSideData; rhs?: EquationSideData }
+    : never;
 
 /** The data of a cell added to a notebook, by the cell type passed to [`Notebook.add`]. */
 export type AddedCellOf<S extends Shape, T extends CellTypeOf<S>> = T extends RichTextType
     ? RichTextCellData
     : T extends ObjectType
-      ? ObjectCellData<T>
-      : T extends MorphismType
-        ? MorphismCellData<T>
-        : T extends EquationType
-          ? EquationCellData
-          : never;
+    ? ObjectCellData<T>
+    : T extends MorphismType
+    ? MorphismCellData<T>
+    : T extends EquationType
+    ? EquationCellData
+    : never;
 
 function isCellType(value: AnyCellType | Shape): value is AnyCellType {
     return "kind" in value;
@@ -238,14 +239,14 @@ export function modelNotebookFromStore<Handle, S extends Shape, Version>(
             const parsed = parseNotebookData(store.getDocumentSnapshot(handle));
             return parsed.tag === "Ok" ? parsed.content.value.name : "";
         },
-        add<T extends CellTypeOf<S>>(type: T, values: CellValuesOf<S, T>) {
+        add<T extends CellTypeOf<S>>(type: T, cellValues: CellValuesOf<S, T>) {
             if (type.kind === "rich-text") {
-                const richText = values as { content: string };
+                const richText = cellValues as { content: string };
                 return appendCell(Nb.newRichTextCell(richText.content)) as AddedCellOf<S, T>;
             }
 
             if (type.kind === "object") {
-                const object = values as { label: string | null };
+                const object = cellValues as { label: string | null };
                 const judgment = Model.newObjectDecl(type.obType);
                 judgment.name = object.label ?? "";
                 return appendCell(Nb.newFormalCell<ModelJudgment>(judgment)) as AddedCellOf<S, T>;
@@ -257,7 +258,7 @@ export function modelNotebookFromStore<Handle, S extends Shape, Version>(
                         `Shape \`${shape.theory ?? "unnamed"}\` does not support path equations`,
                     );
                 }
-                const equation = values as CellValuesOf<S, EquationType>;
+                const equation = cellValues as CellValuesOf<S, EquationType>;
                 const decl = Model.newEquationDecl();
                 decl.name = equation.label ?? "";
                 const data = getNotebookData(store, handle);
@@ -266,7 +267,8 @@ export function modelNotebookFromStore<Handle, S extends Shape, Version>(
                 return appendCell(Nb.newFormalCell<ModelJudgment>(decl)) as AddedCellOf<S, T>;
             }
 
-            const morphism = values as CellValuesOf<S, MorphismTypesOf<S>>;
+            // Fallback: type.kind === "morphism"
+            const morphism = cellValues as CellValuesOf<S, MorphismTypesOf<S>>;
             const judgment = Model.newMorphismDecl(type.morType);
             judgment.name = morphism.label ?? "";
             const data = getNotebookData(store, handle);
@@ -274,6 +276,38 @@ export function modelNotebookFromStore<Handle, S extends Shape, Version>(
                 .endpoints;
             judgment.dom = obFromMorphismEndpoint(data, endpoints?.domain, morphism.from);
             judgment.cod = obFromMorphismEndpoint(data, endpoints?.codomain, morphism.to);
+            if ("repeatLength" in cellValues) {
+                if (type.morType.tag === "Repeat") {
+                    // TODO: this should be an assertion
+                    if (
+                        typeof judgment.morType.content !== "string"
+                    ) {
+                        judgment.morType.content.repeatLength = cellValues.repeatLength;
+                    } else {
+                        throw new Error("Invalid specification of Repeat morphism type");
+                    }
+                }
+                if (type.morType.tag === "Composite") {
+                    // TODO: this should also be an assertion
+                    if (Array.isArray(judgment.morType.content)) {
+                        const repeat = judgment.morType.content[1];
+                        // TODO: yet another assertion
+                        if (
+                            repeat &&
+                            repeat.tag === "Repeat" &&
+                            typeof repeat.content !== "string"
+                        ) {
+                            repeat.content.repeatLength = cellValues.repeatLength;
+                        } else {
+                            throw new Error(
+                                "This code currently only works for Composite morphisms with Repeat as the second element in the list",
+                            );
+                        }
+                    } else {
+                        throw new Error("Invalid specification of Composite morphism type");
+                    }
+                }
+            }
             return appendCell(Nb.newFormalCell<ModelJudgment>(judgment)) as AddedCellOf<S, T>;
         },
         cells() {

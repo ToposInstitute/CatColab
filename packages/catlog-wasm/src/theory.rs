@@ -44,7 +44,17 @@ impl CanElaborate<MorType, QualifiedPath> for Elaborator {
                 Ok(path.flatten())
             }
             MorType::Hom(ob_type) => Ok(Path::Id(self.elab(ob_type.as_ref())?)),
-            _ => Err(format!("Cannot use morphsim type in discrete double theory: {mor_type:#?}")),
+            MorType::Repeat { mor_type, repeat_length, fallback } => match mor_type.as_ref() {
+                MorType::Basic(id) => match fallback.as_ref() {
+                    ObType::Basic(fallback) => {
+                        Ok(Path::collect(std::iter::repeat_n((*id).into(), *repeat_length))
+                            .unwrap_or_else(|| Path::Id((*fallback).into())))
+                    }
+                    _ => Err(format!("Cannot use fallback object type: {mor_type:#?}")),
+                },
+                _ => Err(format!("Cannot use power for morphism type: {mor_type:#?}")),
+            },
+            _ => Err(format!("Cannot use morphism type in discrete double theory: {mor_type:#?}")),
         }
     }
 }

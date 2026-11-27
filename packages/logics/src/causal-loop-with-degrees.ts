@@ -1,0 +1,46 @@
+import { defineShape, RichText, defineObject, defineMorphism } from "catcolab-documents";
+
+export const Variable = defineObject({ tag: "Basic", content: "Object" });
+
+export const PositiveLinkWithDegree = defineMorphism(
+    {
+        tag: "Repeat",
+        content: {
+            morType: { tag: "Basic", content: "Degree" },
+            fallback: Variable.obType,
+        }
+    },
+    {
+        endpoints: { domain: Variable, codomain: Variable },
+    }
+);
+
+export const NegativeLinkWithDegree = defineMorphism(
+    {
+        tag: "Composite",
+        content: [
+            { tag: "Basic", content: "Negative" },
+            {
+                tag: "Repeat",
+                content: {
+                    morType: { tag: "Basic", content: "Degree" },
+                    fallback: Variable.obType,
+                },
+            }
+        ],
+    },
+    {
+        endpoints: { domain: Variable, codomain: Variable },
+    }
+);
+
+export const GradedCausalLoop = defineShape({
+    theory: "causal-loop-with-degrees",
+    getCoreTheory: async () => {
+        const { ThSignedCategoryWithDegrees } = await import("catlog-wasm");
+        return new ThSignedCategoryWithDegrees().theory();
+    },
+    objects: { Variable },
+    morphisms: { PositiveLinkWithDegree, NegativeLinkWithDegree },
+    informal: { RichText },
+});

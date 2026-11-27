@@ -52,6 +52,14 @@ export function morphismTypesEqual(left: DeepReadonly<MorType>, right: unknown):
                 left.content.modality === right["content"]["modality"] &&
                 morphismTypesEqual(left.content.morType, right["content"]["morType"])
             );
+        case "Repeat":
+            return (
+                right["tag"] === "Repeat" &&
+                isRecord(right["content"]) &&
+                morphismTypesEqual(left.content.morType, right["content"]["morType"]) &&
+                objectTypesEqual(left.content.fallback, right["content"]["fallback"]) &&
+                left.content.repeatLength === right["content"]["repeatLength"]
+            );
         default:
             return assertExhaustive(left["tag"]);
     }

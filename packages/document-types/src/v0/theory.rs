@@ -43,6 +43,17 @@ pub enum MorType {
         #[serde(rename = "morType")]
         mor_type: Box<MorType>,
     },
+
+    /// Concatenated morphism type, given by repeating a given morphism type a given number of
+    /// times, along with the "fallback" in the case where the exponent is zero (which will be
+    /// the identity morphism on the given ObType).
+    Repeat {
+        #[serde(rename = "morType")]
+        mor_type: Box<MorType>,
+        #[serde(rename = "repeatLength")]
+        repeat_length: usize,
+        fallback: Box<ObType>,
+    },
 }
 
 /// Object operation in a double theory.
