@@ -32,10 +32,12 @@ import {
     type RichTextCellData,
 } from "./data";
 import { deleteNotebookCell } from "./delete-cell";
+import { duplicateNotebookCell } from "./duplicate-cell";
 import type { ModelValidation } from "./elaborated-model";
 import { morphismEndpointsEqual } from "./endpoint";
 import { morphismTypesEqual, objectTypesEqual } from "./equality";
 import { morFromSide } from "./equation-translate";
+import { moveNotebookCellDown, moveNotebookCellTo, moveNotebookCellUp } from "./move-cell";
 import type { NotebookDocument } from "./notebook-document";
 import {
     isCellRef,
@@ -196,6 +198,14 @@ export interface Notebook<
     /** Patch a cell. */
     update<C extends CellData>(cell: C, patch: CellPatchOf<S, C>): void;
     delete(cell: CellRef): void;
+    /** Move a cell one position up, if possible. */
+    moveUp(cell: CellRef): void;
+    /** Move a cell one position down, if possible. */
+    moveDown(cell: CellRef): void;
+    /** Move a cell to an index in the cell order, clamped to the ends. */
+    moveTo(cell: CellRef, index: number): void;
+    /** Duplicate a cell, inserting the copy after it in the cell order. */
+    duplicate(cell: CellRef): CellData | undefined;
     /** Dump the underlying document object. */
     dump(): D;
     onChange(callback: () => void): () => void;
@@ -304,6 +314,18 @@ export function modelNotebookFromStore<Handle, S extends Shape, Version>(
         },
         delete(cell) {
             deleteNotebookCell(store, handle, cell.id);
+        },
+        moveUp(cell) {
+            moveNotebookCellUp(store, handle, cell.id);
+        },
+        moveDown(cell) {
+            moveNotebookCellDown(store, handle, cell.id);
+        },
+        moveTo(cell, index) {
+            moveNotebookCellTo(store, handle, cell.id, index);
+        },
+        duplicate(cell) {
+            return duplicateNotebookCell(store, handle, cell.id);
         },
         dump() {
             return structuredClone(store.getDocumentSnapshot(handle)) as ModelDocument;

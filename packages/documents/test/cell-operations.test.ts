@@ -23,46 +23,72 @@ async function threeObjectNotebook() {
     return { notebook, a, b, c, names };
 }
 
-describe.skip("duplicating cells", () => {
+describe("duplicating cells", () => {
     test("copies keep the shape, get fresh identities and update independently", async () => {
         const binder = createBinder();
         const notebook = await binder.createNotebook(SimpleOlog, { title: "An Olog" });
 
         const a = notebook.add(Type, { label: "A" });
-        const b = a.duplicate();
-        b.update({
-            label: `B (copy of ${a.label})`,
-        });
+        const b = notebook.duplicate(a);
+        expect(b).toBeDefined();
+        if (!b) {
+            return;
+        }
 
-        expect(a.label).toBe("A");
-        expect(b.label).toBe("B (copy of A)");
+        expect(notebook.cells().map((cell) => cell.id)).toEqual([a.id, b.id]);
         expect(b.id).not.toBe(a.id);
-        expect(notebook.cellsOf(Type).length).toBe(2);
+        expect(b.generatorId).not.toBe(a.generatorId);
+
+        notebook.update(b, { label: `B (copy of ${a.label})` });
+        expect(notebook.cellsOf(Type).map((cell) => cell.label)).toEqual(["A", "B (copy of A)"]);
+    });
+
+    test("rich-text cells can be duplicated in the same way", async () => {
+        const { notebook, a, b, c } = await threeObjectNotebook();
+
+        const note = notebook.add(RichText, { content: "A note." });
+        const copy = notebook.duplicate(note);
+        expect(copy?.content).toBe("A note.");
+        expect(copy?.id).not.toBe(note.id);
+        expect(notebook.cells().map((cell) => cell.id)).toEqual([
+            a.id,
+            b.id,
+            c.id,
+            note.id,
+            copy?.id,
+        ]);
+    });
+
+    test("duplicating a missing cell is a silent no-op", async () => {
+        const { notebook, names } = await threeObjectNotebook();
+
+        expect(notebook.duplicate({ id: "missing" })).toBeUndefined();
+        expect(names()).toBe("A, B, C");
     });
 });
 
-describe.skip("re-ordering cells", () => {
+describe("re-ordering cells", () => {
     test("moveUp and moveDown shift a cell one position; moveTo moves to an index", async () => {
-        const { a, b, c, names } = await threeObjectNotebook();
+        const { notebook, a, b, c, names } = await threeObjectNotebook();
 
-        c.moveUp();
+        notebook.moveUp(c);
         expect(names()).toBe("A, C, B");
 
-        a.moveDown();
+        notebook.moveDown(a);
         expect(names()).toBe("C, A, B");
 
-        b.moveTo(0);
+        notebook.moveTo(b, 0);
         expect(names()).toBe("B, C, A");
     });
 
     test("impossible moves are silent no-ops and out-of-range targets clamp", async () => {
-        const { a, b, c, names } = await threeObjectNotebook();
+        const { notebook, a, b, c, names } = await threeObjectNotebook();
 
-        a.moveUp();
-        c.moveDown();
+        notebook.moveUp(a);
+        notebook.moveDown(c);
         expect(names()).toBe("A, B, C");
 
-        b.moveTo(99);
+        notebook.moveTo(b, 99);
         expect(names()).toBe("A, C, B");
     });
 });
