@@ -68,6 +68,7 @@ type CellValuesOf<S extends Shape, T extends CellTypeOf<S>> = T extends RichText
             "codomain",
             MorphismEndpointCellData<S, T, "codomain">
         > | null;
+        repeatLength?: number;
     }
     : T extends EquationType
     ? { label: string | null; lhs?: EquationSideData; rhs?: EquationSideData }
@@ -266,6 +267,7 @@ export function modelNotebookFromStore<Handle, S extends Shape, Version>(
                 return appendCell(Nb.newFormalCell<ModelJudgment>(decl)) as AddedCellOf<S, T>;
             }
 
+            // Fallback: type.kind === "morphism"
             const morphism = cellValues as CellValuesOf<S, MorphismTypesOf<S>>;
             const judgment = Model.newMorphismDecl(type.morType);
             judgment.name = morphism.label ?? "";
@@ -274,6 +276,13 @@ export function modelNotebookFromStore<Handle, S extends Shape, Version>(
                 .endpoints;
             judgment.dom = obFromMorphismEndpoint(data, endpoints?.domain, morphism.from);
             judgment.cod = obFromMorphismEndpoint(data, endpoints?.codomain, morphism.to);
+            if (repeatLength) {
+                // TODO: fix (need to actually check in the case of composite (e.g. NegativeLinkWithDegree))
+                //       (use ts-pattern)
+                if (type.morType.tag !== "Repeat") {
+                    throw new Error("You can only give repeatLength for a Repeat morphism type")
+                }
+            }
             return appendCell(Nb.newFormalCell<ModelJudgment>(judgment)) as AddedCellOf<S, T>;
         },
         cells() {
