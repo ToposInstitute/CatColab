@@ -54,35 +54,35 @@ export type { ModelDocument } from "catcolab-document-methods";
 type CellValuesOf<S extends Shape, T extends CellTypeOf<S>> = T extends RichTextType
     ? { content: string }
     : T extends ObjectType
-      ? { label: string | null }
-      : T extends MorphismType
-        ? {
-              label: string | null;
-              from: MorphismEndpointValue<
-                  T,
-                  "domain",
-                  MorphismEndpointCellData<S, T, "domain">
-              > | null;
-              to: MorphismEndpointValue<
-                  T,
-                  "codomain",
-                  MorphismEndpointCellData<S, T, "codomain">
-              > | null;
-          }
-        : T extends EquationType
-          ? { label: string | null; lhs?: EquationSideData; rhs?: EquationSideData }
-          : never;
+    ? { label: string | null }
+    : T extends MorphismType
+    ? {
+        label: string | null;
+        from: MorphismEndpointValue<
+            T,
+            "domain",
+            MorphismEndpointCellData<S, T, "domain">
+        > | null;
+        to: MorphismEndpointValue<
+            T,
+            "codomain",
+            MorphismEndpointCellData<S, T, "codomain">
+        > | null;
+    }
+    : T extends EquationType
+    ? { label: string | null; lhs?: EquationSideData; rhs?: EquationSideData }
+    : never;
 
 /** The data of a cell added to a notebook, by the cell type passed to [`Notebook.add`]. */
 export type AddedCellOf<S extends Shape, T extends CellTypeOf<S>> = T extends RichTextType
     ? RichTextCellData
     : T extends ObjectType
-      ? ObjectCellData<T>
-      : T extends MorphismType
-        ? MorphismCellData<T>
-        : T extends EquationType
-          ? EquationCellData
-          : never;
+    ? ObjectCellData<T>
+    : T extends MorphismType
+    ? MorphismCellData<T>
+    : T extends EquationType
+    ? EquationCellData
+    : never;
 
 function isCellType(value: AnyCellType | Shape): value is AnyCellType {
     return "kind" in value;

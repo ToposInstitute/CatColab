@@ -10,8 +10,10 @@ export const PositiveLinkWithDegree = defineMorphism(
             fallback: Variable.obType,
         }
     },
-    { domain: Variable, codomain: Variable },
-    { values: ["repeatLength"] as const }
+    {
+        endpoints: { domain: Variable, codomain: Variable },
+        values: ["repeatLength"]
+    }
 );
 
 export const NegativeLinkWithDegree = defineMorphism(
@@ -28,8 +30,10 @@ export const NegativeLinkWithDegree = defineMorphism(
             }
         ],
     },
-    { domain: Variable, codomain: Variable },
-    { values: ["repeatLength"] as const }
+    {
+        endpoints: { domain: Variable, codomain: Variable },
+        values: ["repeatLength"]
+    }
 );
 
 export const GradedCausalLoop = defineShape({
