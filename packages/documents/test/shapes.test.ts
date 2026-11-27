@@ -29,8 +29,10 @@ const tensor = { tag: "Basic", content: "tensor" } as const;
 const ListMor = defineMorphism(
     { tag: "Hom", content: BasicObj.obType },
     {
-        domain: { kind: "operation-list", apply: tensor, modality: "List" },
-        codomain: { kind: "operation-list", apply: tensor, modality: "List" },
+        endpoints: {
+            domain: { kind: "operation-list", apply: tensor, modality: "List" },
+            codomain: { kind: "operation-list", apply: tensor, modality: "List" },
+        },
     },
 );
 
@@ -42,8 +44,10 @@ const ListShape = defineShape({
 const SymmetricListMor = defineMorphism(
     { tag: "Hom", content: BasicObj.obType },
     {
-        domain: { kind: "operation-list", apply: tensor, modality: "SymmetricList" },
-        codomain: { kind: "operation-list", apply: tensor, modality: "SymmetricList" },
+        endpoints: {
+            domain: { kind: "operation-list", apply: tensor, modality: "SymmetricList" },
+            codomain: { kind: "operation-list", apply: tensor, modality: "SymmetricList" },
+        },
     },
 );
 
@@ -55,8 +59,10 @@ const SymmetricListShape = defineShape({
 const CocartesianListMor = defineMorphism(
     { tag: "Hom", content: BasicObj.obType },
     {
-        domain: { kind: "operation-list", apply: tensor, modality: "CocartesianList" },
-        codomain: { kind: "operation-list", apply: tensor, modality: "CocartesianList" },
+        endpoints: {
+            domain: { kind: "operation-list", apply: tensor, modality: "CocartesianList" },
+            codomain: { kind: "operation-list", apply: tensor, modality: "CocartesianList" },
+        },
     },
 );
 
@@ -68,8 +74,10 @@ const CocartesianListShape = defineShape({
 const CartesianListMor = defineMorphism(
     { tag: "Hom", content: BasicObj.obType },
     {
-        domain: { kind: "operation-list", apply: tensor, modality: "CartesianList" },
-        codomain: { kind: "operation-list", apply: tensor, modality: "CartesianList" },
+        endpoints: {
+            domain: { kind: "operation-list", apply: tensor, modality: "CartesianList" },
+            codomain: { kind: "operation-list", apply: tensor, modality: "CartesianList" },
+        },
     },
 );
 
@@ -81,8 +89,10 @@ const CartesianListShape = defineShape({
 const AdditiveListMor = defineMorphism(
     { tag: "Hom", content: BasicObj.obType },
     {
-        domain: { kind: "operation-list", apply: tensor, modality: "AdditiveList" },
-        codomain: { kind: "operation-list", apply: tensor, modality: "AdditiveList" },
+        endpoints: {
+            domain: { kind: "operation-list", apply: tensor, modality: "AdditiveList" },
+            codomain: { kind: "operation-list", apply: tensor, modality: "AdditiveList" },
+        },
     },
 );
 
