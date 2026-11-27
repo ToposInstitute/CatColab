@@ -276,11 +276,31 @@ export function modelNotebookFromStore<Handle, S extends Shape, Version>(
                 .endpoints;
             judgment.dom = obFromMorphismEndpoint(data, endpoints?.domain, morphism.from);
             judgment.cod = obFromMorphismEndpoint(data, endpoints?.codomain, morphism.to);
-            if (repeatLength) {
-                // TODO: fix (need to actually check in the case of composite (e.g. NegativeLinkWithDegree))
-                //       (use ts-pattern)
-                if (type.morType.tag !== "Repeat") {
-                    throw new Error("You can only give repeatLength for a Repeat morphism type")
+            if ("repeatLength" in cellValues) {
+                if (type.morType.tag === "Repeat") {
+                    // TODO: this should be an assertion
+                    if (
+                        typeof judgment.morType.content !== "string" &&
+                        "repeatLength" in judgment.morType.content
+                    ) {
+                        judgment.morType.content.repeatLength = cellValues.repeatLength;
+                    } else {
+                        throw new Error("Invalid specification of Repeat morphism type");
+                    }
+                }
+                if (type.morType.tag === "Composite") {
+                    // TODO: this should also be an assertion
+                    if (Array.isArray(judgment.morType.content)) {
+                        const repeat = judgment.morType.content[1];
+                        // TODO: yet another assertion
+                        if (repeat && repeat.tag === "Repeat" && typeof repeat.content !== "string" && "repeatLength" in repeat.content) {
+                            repeat.content.repeatLength = cellValues.repeatLength;
+                        } else {
+                            throw new Error("This code currently only works for Composite morphisms with Repeat as the second element in the list");
+                        }
+                    } else {
+                        throw new Error("Invalid specification of Composite morphism type");
+                    }
                 }
             }
             return appendCell(Nb.newFormalCell<ModelJudgment>(judgment)) as AddedCellOf<S, T>;
