@@ -1,7 +1,7 @@
 import invariant from "tiny-invariant";
 import { v7 } from "uuid";
 
-import type { Cell, Notebook } from "catcolab-document-types";
+import type { Cell, Notebook, RichTextContent } from "catcolab-document-types";
 
 /** A cell containing custom data, usually a formal object. */
 export type FormalCell<T> = Cell<T> & { tag: "formal" };
@@ -16,7 +16,7 @@ export const newNotebook = <T>(): Notebook<T> => ({
 });
 
 /** Creates a rich text cell with the given content. */
-export const newRichTextCell = (content?: string): RichTextCell => ({
+export const newRichTextCell = (content?: RichTextContent): RichTextCell => ({
     tag: "rich-text",
     id: v7(),
     content: content ?? "",
@@ -136,7 +136,7 @@ export function duplicateCell<T>(cell: Cell<T>, duplicateFn?: (cellContent: T) =
             return newFormalCell(content);
         }
         case "rich-text":
-            throw new Error("Rich text cells may not be duplicated");
+            return newRichTextCell(cell.content);
         default:
             throw new Error(`Call has unknown tag: ${cell}`);
     }

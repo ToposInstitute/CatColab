@@ -20,6 +20,8 @@ A notebook binding `nb` has:
 - `nb.cells()` --- cells supported by the notebook's shape, in notebook order; `nb.cellsOf(type)` --- the cells of one cell type. These are immutable data snapshots, not live handles: re-read them after edits to see updated values.
 - `nb.data()` --- snapshot of the notebook's metadata (`type`, `name`, `theory`) and all `cells`, including cells outside the shape.
 - `nb.update(cell, patch)` and `nb.delete(cell)` --- edit or delete a cell, addressed by its `id`.
+- `nb.duplicate(cell)` --- insert a copy of a cell right after it and return the copy's cell data; the copy keeps the source's data but gets fresh ids, so edit it afterwards to set it apart. Returns `undefined` when the cell is missing.
+- `nb.moveUp(cell)`, `nb.moveDown(cell)`, and `nb.moveTo(cell, index)` --- move a cell within the notebook's cell order; `moveTo` clamps `index` to the notebook's ends, and all three are silent no-ops for a missing cell.
 - `nb.supports(type)` --- whether the notebook's shape supports the cell type.
 - `nb.add(type, values)` --- add a cell of a cell type in scope and return its cell data snapshot. `type` is one of the cell-type bindings in scope and carries a `kind` --- `"object"`, `"morphism"`, `"path-equation"`, or `"rich-text"` --- which determines the shape of `values`:
     - `"object"`: `{ label }`
