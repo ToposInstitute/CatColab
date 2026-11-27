@@ -5,7 +5,8 @@ export const Variable = defineObject({ tag: "Basic", content: "Object" });
 export const PositiveLinkWithDegree = defineMorphism({
     tag: "Power",
     morType: { tag: "Basic", content: "Degree" },
-    fallback: { tag: "Basic", content: Variable.obType },
+    fallback: Variable.obType,
+    { domain: Variable, codomain: Variable },
 });
 
 export const NegativeLinkWithDegree = defineMorphism({
@@ -15,7 +16,7 @@ export const NegativeLinkWithDegree = defineMorphism({
         {
             tag: "Power",
             morType: { tag: "Basic", content: "Degree" },
-            fallback: { tag: "Basic", content: Variable.obType }
+            fallback: Variable.obType,
         }
     ],
     { domain: Variable, codomain: Variable },

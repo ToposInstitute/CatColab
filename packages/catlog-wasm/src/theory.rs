@@ -46,13 +46,11 @@ impl CanElaborate<MorType, QualifiedPath> for Elaborator {
             MorType::Hom(ob_type) => Ok(Path::Id(self.elab(ob_type.as_ref())?)),
             MorType::Power { mor_type, exponent, fallback } => match mor_type.as_ref() {
                 MorType::Basic(id) => match fallback.as_ref() {
-                    MorType::Basic(fallback) => {
+                    ObType::Basic(fallback) => {
                         Ok(Path::collect(std::iter::repeat_n((*id).into(), *exponent))
-                            .unwrap_or_else(|| Path::single((*fallback).into())))
+                            .unwrap_or_else(|| Path::Id((*fallback).into())))
                     }
-                    _ => Err(format!(
-                        "Cannot have degree-zero fallback of morphism type: {mor_type:#?}"
-                    )),
+                    _ => Err(format!("Cannot use fallback object type: {mor_type:#?}")),
                 },
                 _ => Err(format!("Cannot use power for morphism type: {mor_type:#?}")),
             },

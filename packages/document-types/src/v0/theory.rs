@@ -49,7 +49,7 @@ pub enum MorType {
     Power {
         mor_type: Box<MorType>,
         exponent: usize,
-        fallback: Box<MorType>,
+        fallback: Box<ObType>,
     },
 }
 
