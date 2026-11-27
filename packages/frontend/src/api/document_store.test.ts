@@ -6,8 +6,15 @@ import { type DocHandle, Repo } from "@automerge/automerge-repo";
 import type { UserState } from "catcolab-api/src/user_state";
 import { createDocumentDataView, createInstanceValidationView } from "catcolab-documents-solid";
 import { SimpleOlog, Type } from "catcolab-logics/simple-olog";
+import { SimpleSchema } from "catcolab-logics/simple-schema";
 import { type Auth, onAuthStateChanged } from "firebase/auth";
-import { createComponent, createRenderEffect, createRoot } from "solid-js";
+import {
+    createComponent,
+    createRenderEffect,
+    createRoot,
+    createSignal,
+    type Resource,
+} from "solid-js";
 import { parse as uuidParse } from "uuid";
 import { describe, expect, test, vi } from "vitest";
 
@@ -17,12 +24,23 @@ import {
     type ModelDocument,
     Nb,
 } from "catcolab-document-methods";
-import { createBinder, defineShape, type InstanceDocument } from "catcolab-documents";
+import {
+    createBinder,
+    createInMemoryStore,
+    defineShape,
+    type InstanceDocument,
+    type MetaDocument,
+    type MetaDocumentData,
+} from "catcolab-documents";
+import {
+    type ScopedLLMConversation,
+    useLLMConversationsOf,
+} from "../llm_conversation/use_llm_conversations_of";
 import { INITIAL_USER_STATE, useUserState } from "../user/user_state_context";
 import { UserStateProvider } from "../user/user_state_provider";
-import { BinderContext } from "./context";
+import { ApiContext, BinderContext } from "./context";
 import { makeLiveDoc } from "./document";
-import { createApiBinder, createApiDocumentStore } from "./document_store";
+import { type ApiBinder, createApiBinder, createApiDocumentStore } from "./document_store";
 import type { Api } from "./types";
 
 vi.mock("firebase/auth", async (importOriginal) => ({
@@ -551,59 +569,71 @@ describe("API document store", () => {
         expect(local.content.ref.server).toBe(server);
     });
 
-    test("lists documents related through the API, indexed by link type", async () => {
-        const { instanceAutomergeHandle, schemaAutomergeHandle, store } = await createFixture();
-
-        const schema = await store.getHandle({ id: schemaRef, version: null, server });
-        expect(schema.tag).toBe("Ok");
-        if (schema.tag === "Err") {
-            throw new Error("expected schema ref to resolve");
+    test("lists API document meta indexed by link type", async () => {
+        const { binder, schema } = await createFixtureWithSchema();
+        const result = await binder.loadInstanceFromRef(schema, {
+            id: instanceRef,
+            version: null,
+            server,
+        });
+        if (result.tag === "Err") {
+            throw new Error("expected instance to load");
         }
-        const instance = await store.getHandle({ id: instanceRef, version: null, server });
-        expect(instance.tag).toBe("Ok");
-        if (instance.tag === "Err") {
-            throw new Error("expected instance ref to resolve");
-        }
-
-        // The backend's ref ids are resolved back into store handles, and
-        // relations of unknown types are dropped.
-        expect(await store.listUsedBy(schema.content)).toEqual({
+        const instance = result.content;
+        expect(binder.listRelatedDocuments(schema.ref, { direction: "used-by" })).toEqual({
             "analysis-of": [],
             "diagram-in": [],
-            "instance-of": [instance.content],
+            "instance-of": [
+                expect.objectContaining({
+                    ref: instance.ref,
+                    name: "Instance",
+                    typeName: "instance",
+                }),
+            ],
             "llmconversation-of": [],
             instantiation: [],
         });
-        expect((await store.listUsedBy(schema.content))["instance-of"][0]?.automergeHandle).toBe(
-            instanceAutomergeHandle,
-        );
-
-        expect(await store.listDependsOn(instance.content)).toEqual({
+        expect(binder.listRelatedDocuments(instance.ref, { direction: "depends-on" })).toEqual({
             "analysis-of": [],
             "diagram-in": [],
-            "instance-of": [schema.content],
+            "instance-of": [
+                expect.objectContaining({
+                    ref: schema.ref,
+                    name: "Schema",
+                    typeName: "model",
+                }),
+            ],
             "llmconversation-of": [],
             instantiation: [],
         });
-        expect(
-            (await store.listDependsOn(instance.content))["instance-of"][0]?.automergeHandle,
-        ).toBe(schemaAutomergeHandle);
-
-        // Documents without relations resolve to empty groups.
-        expect(await store.listUsedBy(instance.content)).toEqual({
+        const empty = {
             "analysis-of": [],
             "diagram-in": [],
             "instance-of": [],
             "llmconversation-of": [],
             instantiation: [],
+        };
+        expect(binder.listRelatedDocuments(instance.ref, { direction: "used-by" })).toEqual(empty);
+        expect(binder.listRelatedDocuments(schema.ref, { direction: "depends-on" })).toEqual(empty);
+    });
+
+    test("relation queries follow meta changes", async () => {
+        const { binder, schema, userStateHandle } = await createFixtureWithSchema();
+        const related = () =>
+            binder.listRelatedDocuments(schema.ref, { direction: "used-by" })["instance-of"];
+        expect(related()).toHaveLength(1);
+        userStateHandle.change((doc) => {
+            doc.documents[instanceRef]!.deletedAt = Date.now();
         });
-        expect(await store.listDependsOn(schema.content)).toEqual({
-            "analysis-of": [],
-            "diagram-in": [],
-            "instance-of": [],
-            "llmconversation-of": [],
-            instantiation: [],
+        expect(related()).toEqual([]);
+        userStateHandle.change((doc) => {
+            doc.documents[instanceRef]!.deletedAt = null;
         });
+        expect(related()).toHaveLength(1);
+        userStateHandle.change((doc) => {
+            doc.documents[schemaRef]!.usedBy = [];
+        });
+        expect(related()).toEqual([]);
     });
 
     test("snapshots are stable, detached, and refresh without subscribers", async () => {
@@ -801,5 +831,124 @@ describe("API document store", () => {
 
         store.discardDraft(draft);
         expect((await store.getHandle(draftRef)).tag).toBe("Err");
+    });
+});
+
+function conversationScopeFixture() {
+    const store = createInMemoryStore();
+    let snapshot = store.meta.data();
+    const listeners = new Set<() => void>();
+    const replace = (data: typeof snapshot) => {
+        snapshot = data;
+        for (const listener of listeners) {
+            listener();
+        }
+    };
+    const stop = store.meta.onChange(() => replace(store.meta.data()));
+    const meta: MetaDocument = {
+        data: () => snapshot,
+        onChange(listener) {
+            listeners.add(listener);
+            return () => listeners.delete(listener);
+        },
+    };
+    const binder = createBinder({ ...store, meta });
+    return { binder, meta, replace, stop };
+}
+
+function mountConversationScope(
+    binder: ReturnType<typeof conversationScopeFixture>["binder"],
+    initial: readonly string[],
+) {
+    return createRoot((dispose) => {
+        const [refs, setRefs] = createSignal(initial);
+        let conversations!: Resource<ScopedLLMConversation[]>;
+        createComponent(ApiContext.Provider, {
+            value: { serverHost: "" } as Api,
+            get children() {
+                return createComponent(BinderContext.Provider, {
+                    value: binder as unknown as ApiBinder,
+                    get children() {
+                        conversations = useLLMConversationsOf(refs);
+                        return undefined;
+                    },
+                });
+            },
+        });
+        return { conversations, setRefs, dispose };
+    });
+}
+
+describe("LLM conversations in document scope", () => {
+    test("uses one-level scope, deduplicates overlapping origins, and sorts newest first", async () => {
+        const { binder, stop } = conversationScopeFixture();
+        const notebook = await binder.createNotebook(SimpleSchema, { title: "Schema" });
+        const instanceResult = await binder.createInstance(notebook, { title: "Instance" });
+        if (instanceResult.tag === "Err") {
+            throw new Error("Expected instance");
+        }
+        const instance = instanceResult.content;
+        const clock = vi.spyOn(Date, "now").mockReturnValue(100);
+        let older;
+        let newer;
+        try {
+            older = await binder.createLLMConversation(notebook, "test", { title: "Older" });
+            clock.mockReturnValue(200);
+            newer = await binder.createLLMConversation(instance, "test", { title: "Newer" });
+        } finally {
+            clock.mockRestore();
+        }
+        const unrelated = await binder.createNotebook(SimpleSchema, { title: "Unrelated" });
+        await binder.createLLMConversation(unrelated, "test", { title: "Outside scope" });
+        await binder.createLLMConversation(newer, "test", { title: "Too far" });
+        const owner = mountConversationScope(binder, [
+            notebook.ref.id,
+            instance.ref.id,
+            notebook.ref.id,
+        ]);
+        try {
+            await expect
+                .poll(() => owner.conversations()?.map(({ conversation }) => conversation.ref.id))
+                .toEqual([newer.ref.id, older.ref.id]);
+            expect(owner.conversations()?.map(({ attachment }) => attachment.ref.id)).toEqual([
+                instance.ref.id,
+                notebook.ref.id,
+            ]);
+        } finally {
+            owner.dispose();
+            stop();
+        }
+    });
+
+    test("updates for newly related documents, conversation creation, and deletion", async () => {
+        const { binder, meta, replace, stop } = conversationScopeFixture();
+        const notebook = await binder.createNotebook(SimpleSchema, { title: "Schema" });
+        const getSnapshot = vi.spyOn(binder, "getDocumentSnapshotFromRef");
+        const owner = mountConversationScope(binder, [notebook.ref.id]);
+        try {
+            await expect.poll(() => owner.conversations()).toEqual([]);
+            expect(getSnapshot).not.toHaveBeenCalled();
+            const result = await binder.createInstance(notebook, { title: "New instance" });
+            if (result.tag === "Err") {
+                throw new Error("Expected instance");
+            }
+            expect(getSnapshot).not.toHaveBeenCalled();
+            const conversation = await binder.createLLMConversation(result.content, "test", {
+                title: "New conversation",
+            });
+            await expect
+                .poll(() => owner.conversations()?.map(({ conversation }) => conversation.ref.id))
+                .toEqual([conversation.ref.id]);
+            expect(getSnapshot.mock.calls.map(([ref]) => ref.id)).toContain(result.content.ref.id);
+            const data = structuredClone(meta.data()) as MetaDocumentData;
+            data.documents[conversation.ref.id]!.deletedAt = Date.now();
+            replace(data);
+            await expect.poll(() => owner.conversations()).toEqual([]);
+            owner.setRefs([]);
+            await expect.poll(() => owner.conversations()).toEqual([]);
+        } finally {
+            owner.dispose();
+            stop();
+        }
     });
 });

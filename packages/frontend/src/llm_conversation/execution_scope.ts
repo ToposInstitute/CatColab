@@ -87,32 +87,26 @@ async function createScopedDocuments<
 }> {
     const origin = conversation.attachment;
 
-    const [dependsOn, usedBy] = await Promise.all([
-        binder.listDependsOn(origin),
-        binder.listUsedBy(origin),
-    ]);
+    const dependsOn = binder.listRelatedDocuments(origin.ref, { direction: "depends-on" });
+    const usedBy = binder.listRelatedDocuments(origin.ref, { direction: "used-by" });
 
     // Stage the origin together with every document it depends on and every
     // document that depends on it. The running conversation is the one
     // exception: we don't put it into the scope.
     const conversationRefId = conversation.ref.id;
     const entries: Array<ScopeEntry> = [];
-    for (const [link, refs] of Object.entries(dependsOn) as Array<
-        [LinkType, ReadonlyArray<DocumentRef>]
-    >) {
-        for (const ref of refs) {
-            entries.push({ kind: "dependency", link, ref });
+    for (const [link, documents] of Object.entries(dependsOn)) {
+        for (const { ref } of documents) {
+            entries.push({ kind: "dependency", link: link as LinkType, ref });
         }
     }
     entries.push({ kind: "attachment" });
-    for (const [link, refs] of Object.entries(usedBy) as Array<
-        [LinkType, ReadonlyArray<DocumentRef>]
-    >) {
-        for (const ref of refs) {
+    for (const [link, documents] of Object.entries(usedBy)) {
+        for (const { ref } of documents) {
             if (ref.id === conversationRefId) {
                 continue;
             }
-            entries.push({ kind: "dependent", link, ref });
+            entries.push({ kind: "dependent", link: link as LinkType, ref });
         }
     }
 

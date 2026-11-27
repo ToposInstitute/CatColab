@@ -4,12 +4,7 @@ import type { Document } from "catcolab-document-types";
 // A SolidJS document store: keeps a draft document plus a Solid store view
 // reconciled on every change.
 import type { DeepReadonly, DocumentStore } from "catcolab-documents";
-import {
-    createDocumentSnapshot,
-    createInMemoryStore,
-    documentLinks,
-    emptyHandlesByLinkType,
-} from "catcolab-documents";
+import { createDocumentSnapshot, createInMemoryStore } from "catcolab-documents";
 
 export type SolidStoreHandle = {
     draftDoc: Document;
@@ -31,10 +26,6 @@ const solidStoreIdFor = (handle: SolidStoreHandle): string => {
     return id;
 };
 
-// Handles minted by `createHandle`, so `listUsedBy` can enumerate them.
-// Drafts are excluded: only committed documents answer the query.
-const createdHandles = new Set<SolidStoreHandle>();
-
 export const solidStore: DocumentStore<SolidStoreHandle> = {
     meta: createInMemoryStore().meta,
     async createHandle(initialDoc) {
@@ -47,7 +38,6 @@ export const solidStore: DocumentStore<SolidStoreHandle> = {
             listeners: new Set<(handle: SolidStoreHandle) => void>(),
             snapshot: createDocumentSnapshot(draftDoc),
         };
-        createdHandles.add(handle);
         return handle;
     },
     changeDocument: (handle, fn) => {
@@ -99,31 +89,6 @@ export const solidStore: DocumentStore<SolidStoreHandle> = {
     },
     getDocumentSnapshot: (handle) => handle.snapshot,
     getDocumentRef: (handle) => ({ id: solidStoreIdFor(handle), version: null, server: "" }),
-    listUsedBy: async (handle) => {
-        const linked = emptyHandlesByLinkType<SolidStoreHandle>();
-        for (const other of createdHandles) {
-            if (other === handle) {
-                continue;
-            }
-            for (const link of documentLinks(other.docView)) {
-                if (link._id === solidStoreIdFor(handle)) {
-                    linked[link.type].push(other);
-                }
-            }
-        }
-        return linked;
-    },
-    listDependsOn: async (handle) => {
-        const linked = emptyHandlesByLinkType<SolidStoreHandle>();
-        for (const link of documentLinks(handle.docView)) {
-            for (const other of createdHandles) {
-                if (other !== handle && solidStoreIdFor(other) === link._id) {
-                    linked[link.type].push(other);
-                }
-            }
-        }
-        return linked;
-    },
     // Link resolution omitted for brevity.
     getHandle: async () => ({
         tag: "Err",

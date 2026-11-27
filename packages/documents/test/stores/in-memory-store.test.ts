@@ -1,7 +1,6 @@
 import { Entity, SimpleSchema } from "catcolab-logics/simple-schema";
 import { describe, expect, test } from "vitest";
 
-// The in-memory store's link-indexed relation queries.
 import { Diagram } from "catcolab-document-methods";
 import { createBinder, createInMemoryStore, type Result } from "catcolab-documents";
 
@@ -31,56 +30,60 @@ describe("in-memory store", () => {
         );
         schema.add(Entity, { label: "Person" });
 
-        expect(await store.listUsedBy(expectOk(await store.getHandle(schema.ref)))).toEqual({
+        const usedBy = binder.listRelatedDocuments(schema.ref, { direction: "used-by" });
+        expect(usedBy).toEqual({
             "analysis-of": [],
-            "diagram-in": [diagram],
-            "instance-of": [expectOk(await store.getHandle(instance.ref))],
-            "llmconversation-of": [expectOk(await store.getHandle(conversation.ref))],
+            "diagram-in": [expect.objectContaining({ ref: store.getDocumentRef(diagram) })],
+            "instance-of": [expect.objectContaining({ ref: instance.ref, name: "Data" })],
+            "llmconversation-of": [expect.objectContaining({ ref: conversation.ref })],
             instantiation: [],
         });
-        expect((await store.listDependsOn(diagram))["diagram-in"]).toEqual([
-            expectOk(await store.getHandle(schema.ref)),
-        ]);
         expect(
-            (await store.listUsedBy(expectOk(await store.getHandle(other.ref))))["instance-of"],
+            binder.listRelatedDocuments(store.getDocumentRef(diagram), { direction: "depends-on" })[
+                "diagram-in"
+            ],
+        ).toEqual([expect.objectContaining({ ref: schema.ref })]);
+        expect(
+            binder.listRelatedDocuments(other.ref, { direction: "used-by" })["instance-of"],
         ).toHaveLength(1);
-
-        expect(await store.listDependsOn(expectOk(await store.getHandle(instance.ref)))).toEqual({
+        expect(binder.listRelatedDocuments(instance.ref, { direction: "depends-on" })).toEqual({
             "analysis-of": [],
             "diagram-in": [],
-            "instance-of": [expectOk(await store.getHandle(schema.ref))],
+            "instance-of": [expect.objectContaining({ ref: schema.ref })],
             "llmconversation-of": [],
             instantiation: [],
         });
         expect(
-            (await store.listDependsOn(expectOk(await store.getHandle(conversation.ref))))[
+            binder.listRelatedDocuments(conversation.ref, { direction: "depends-on" })[
                 "llmconversation-of"
             ],
-        ).toEqual([expectOk(await store.getHandle(schema.ref))]);
+        ).toEqual([expect.objectContaining({ ref: schema.ref })]);
 
         // The schema depends on no document, and nothing depends on the
         // instance.
-        expect(await store.listDependsOn(expectOk(await store.getHandle(schema.ref)))).toEqual({
+        const empty = {
             "analysis-of": [],
             "diagram-in": [],
             "instance-of": [],
             "llmconversation-of": [],
             instantiation: [],
-        });
-        expect(await store.listUsedBy(expectOk(await store.getHandle(instance.ref)))).toEqual({
-            "analysis-of": [],
-            "diagram-in": [],
-            "instance-of": [],
-            "llmconversation-of": [],
-            instantiation: [],
-        });
+        };
+        expect(binder.listRelatedDocuments(schema.ref, { direction: "depends-on" })).toEqual(empty);
+        expect(binder.listRelatedDocuments(instance.ref, { direction: "used-by" })).toEqual(empty);
 
         // Drafts are invisible to the query: staging a draft of the instance
         // does not make it (or its clone) appear twice.
         const draft = store.createDraft(expectOk(await store.getHandle(instance.ref)));
+        store.changeDocument(draft, (doc) => {
+            if (doc.type === "instance") {
+                doc.instanceOf._id = other.ref.id;
+            }
+        });
+        expect(binder.listRelatedDocuments(schema.ref, { direction: "used-by" })).toEqual(usedBy);
         expect(
-            (await store.listUsedBy(expectOk(await store.getHandle(schema.ref))))["instance-of"],
-        ).toEqual([expectOk(await store.getHandle(instance.ref))]);
+            binder.listRelatedDocuments(other.ref, { direction: "used-by" })["instance-of"],
+        ).toHaveLength(1);
         store.discardDraft(draft);
+        expect(binder.listRelatedDocuments(schema.ref, { direction: "used-by" })).toEqual(usedBy);
     });
 });

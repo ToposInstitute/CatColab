@@ -94,16 +94,9 @@ describe("private document handles", { timeout: 20_000 }, () => {
     test("document operations require a binder sharing the document store", async () => {
         const store = createInMemoryStore();
         const binder = createBinder(store);
-        const sharedBinder = createBinder(store);
         const foreignBinder = createBinder();
         const notebook = await binder.createNotebook(SimpleSchema, { title: "Schema" });
 
-        expect(await sharedBinder.listUsedBy(notebook)).toEqual(await binder.listUsedBy(notebook));
-        await expect(binder.listUsedBy({ ...notebook })).rejects.toThrow("not bound to this store");
-        await expect(foreignBinder.listUsedBy(notebook)).rejects.toThrow("not bound to this store");
-        await expect(foreignBinder.listDependsOn(notebook)).rejects.toThrow(
-            "not bound to this store",
-        );
         await expect(foreignBinder.beginTransaction({ notebook })).rejects.toThrow(
             "not bound to this store",
         );
@@ -120,7 +113,11 @@ describe("private document handles", { timeout: 20_000 }, () => {
             tag: "Ok",
             content: store.getDocumentSnapshot(diagram),
         });
-        expect((await binder.listUsedBy(notebook))["diagram-in"]).toEqual([
+        const relatedDocuments = binder.listRelatedDocuments(notebook.ref, {
+            direction: "used-by",
+            links: ["diagram-in"],
+        });
+        expect(relatedDocuments["diagram-in"].map(({ ref }) => ref)).toEqual([
             store.getDocumentRef(diagram),
         ]);
     });
@@ -136,9 +133,21 @@ describe("private document handles", { timeout: 20_000 }, () => {
         const conversation = await binder.createLLMConversation(instance, "test-model", {
             title: "Conversation",
         });
-        expect((await binder.listUsedBy(notebook))["instance-of"]).toEqual([instance.ref]);
-        expect((await binder.listDependsOn(instance))["instance-of"]).toEqual([notebook.ref]);
-        expect((await binder.listUsedBy(instance))["llmconversation-of"]).toEqual([
+        const notebookDependents = binder.listRelatedDocuments(notebook.ref, {
+            direction: "used-by",
+            links: ["instance-of"],
+        });
+        expect(notebookDependents["instance-of"].map(({ ref }) => ref)).toEqual([instance.ref]);
+        const instanceDependencies = binder.listRelatedDocuments(instance.ref, {
+            direction: "depends-on",
+            links: ["instance-of"],
+        });
+        expect(instanceDependencies["instance-of"].map(({ ref }) => ref)).toEqual([notebook.ref]);
+        const instanceDependents = binder.listRelatedDocuments(instance.ref, {
+            direction: "used-by",
+            links: ["llmconversation-of"],
+        });
+        expect(instanceDependents["llmconversation-of"].map(({ ref }) => ref)).toEqual([
             conversation.ref,
         ]);
         expect(

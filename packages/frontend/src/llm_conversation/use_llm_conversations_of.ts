@@ -1,9 +1,8 @@
-import { type Accessor, createMemo, createResource, type Resource } from "solid-js";
-import { stringify as uuidStringify } from "uuid";
+import { createRelatedDocumentsView } from "catcolab-documents-solid";
+import { type Accessor, createMemo, createResource, mapArray, type Resource } from "solid-js";
 
 import type { DocumentRef } from "catcolab-documents";
 import { useApi, useBinder } from "../api";
-import { useUserState } from "../user/user_state_context";
 import { resolveSupportedDocument } from "./document_resolution";
 import type { ApiLLMConversation, ApiLLMConversationAttachment } from "./live_doc_compatibility";
 
@@ -14,102 +13,91 @@ export type ScopedLLMConversation = {
 
 /** LLM conversations in the one-level relation scope of the given documents, newest first.
 
-Resolved through the binder, re-resolving whenever the relations of the
-documents change in the user state.
+Resolved through the binder, re-resolving whenever the reactive relation views
+of the origins or their scoped attachments change.
  */
 export function useLLMConversationsOf(
     refIds: Accessor<readonly string[]>,
 ): Resource<ScopedLLMConversation[]> {
     const api = useApi();
     const binder = useBinder();
-    const userState = useUserState();
+    const refForId = (id: string): DocumentRef => ({ id, version: null, server: api.serverHost });
 
-    // The store resolves relations from the user state but is not itself
-    // reactive, so depend on the relations here to refetch when they change.
-    // A fresh array is returned so that the resource sees the change even if
-    // the ref IDs are the same.
-    const source = createMemo(() => {
-        const ids = refIds();
-        for (const id of ids) {
-            const document = userState.documents[id];
-            const relations = [...(document?.dependsOn ?? []), ...(document?.usedBy ?? [])];
-            for (const relation of relations) {
-                const relatedId = uuidStringify(relation.refId);
-                void userState.documents[relatedId]?.deletedAt;
-                for (const usedBy of userState.documents[relatedId]?.usedBy ?? []) {
-                    void usedBy.refId;
-                }
-            }
-        }
-        return [...ids];
+    const originIds = createMemo(() => [...new Set(refIds())]);
+    const originRelations = mapArray(originIds, (id) => {
+        const ref = refForId(id);
+        return createRelatedDocumentsView(binder, () => ref, { direction: "both" });
     });
 
-    const [conversations] = createResource(source, async (ids) => {
-        const origins = await Promise.all(
-            ids.map(async (id) => {
-                const ref = { id, version: null, server: api.serverHost };
-                const snapshot = await binder.getDocumentSnapshotFromRef(ref);
-                if (snapshot.tag === "Err") {
-                    return undefined;
-                }
-                return (await resolveSupportedDocument(binder, ref))?.document;
-            }),
-        );
-
-        const scope = new Map<string, DocumentRef>();
-        await Promise.all(
-            origins.map(async (origin) => {
-                if (!origin) {
-                    return;
-                }
-                scope.set(origin.ref.id, origin.ref);
-                const [dependsOn, usedBy] = await Promise.all([
-                    binder.listDependsOn(origin),
-                    binder.listUsedBy(origin),
-                ]);
-                for (const ref of [
-                    ...Object.values(dependsOn).flat(),
-                    ...Object.values(usedBy).flat(),
-                ]) {
-                    const snapshot = await binder.getDocumentSnapshotFromRef(ref);
-                    if (snapshot.tag === "Ok" && snapshot.content.type !== "llmconversation") {
-                        scope.set(ref.id, ref);
+    const scopeIds = createMemo(
+        () => {
+            const ids = new Set(originIds());
+            for (const related of originRelations()) {
+                for (const group of Object.values(related())) {
+                    for (const summary of group) {
+                        if (summary.typeName !== "llmconversation") {
+                            ids.add(summary.ref.id);
+                        }
                     }
                 }
-            }),
-        );
+            }
+            return [...ids];
+        },
+        undefined,
+        { equals: (a, b) => a.length === b.length && a.every((id, index) => id === b[index]) },
+    );
 
-        const conversations = await Promise.all(
-            [...scope.values()].map(async (attachment) => {
-                const resolved = await resolveSupportedDocument(binder, attachment);
-                if (!resolved) {
-                    return [];
-                }
-                const usedBy = await binder.listUsedBy(resolved.document);
-                return (
-                    await Promise.all(
-                        usedBy["llmconversation-of"].map(async (ref) => {
-                            const result = await binder.loadLLMConversationFromRef(
-                                resolved.document,
-                                ref,
-                            );
-                            return result.tag === "Ok"
-                                ? { conversation: result.content, attachment: resolved.document }
-                                : undefined;
-                        }),
-                    )
-                ).filter((item) => item !== undefined);
-            }),
-        );
-        const byRefId = new Map(
-            conversations.flat().map((item) => [item.conversation.ref.id, item]),
-        );
-        return [...byRefId.values()].toSorted(
-            (a, b) =>
-                (userState.documents[b.conversation.ref.id]?.createdAt ?? 0) -
-                (userState.documents[a.conversation.ref.id]?.createdAt ?? 0),
-        );
+    const conversationRelations = mapArray(scopeIds, (id) => {
+        const ref = refForId(id);
+        const related = createRelatedDocumentsView(binder, () => ref, {
+            direction: "used-by",
+            links: ["llmconversation-of"],
+        });
+        return () => ({ ref, summaries: related()["llmconversation-of"] });
     });
+
+    const [conversations] = createResource(
+        () =>
+            conversationRelations()
+                .map((entry) => entry())
+                .filter(({ summaries }) => summaries.length > 0),
+        async (current) => {
+            const groups = await Promise.all(
+                current.map(async ({ ref, summaries }) => {
+                    const snapshot = await binder.getDocumentSnapshotFromRef(ref);
+                    if (snapshot.tag === "Err") {
+                        return [];
+                    }
+                    const resolved = await resolveSupportedDocument(binder, ref);
+                    if (!resolved) {
+                        return [];
+                    }
+                    const attachment = resolved.document;
+                    return (
+                        await Promise.all(
+                            summaries.map(async (summary) => {
+                                const result = await binder.loadLLMConversationFromRef(
+                                    attachment,
+                                    summary.ref,
+                                );
+                                return result.tag === "Ok"
+                                    ? {
+                                          conversation: result.content,
+                                          attachment,
+                                          createdAt: summary.createdAt,
+                                      }
+                                    : undefined;
+                            }),
+                        )
+                    ).filter((item) => item !== undefined);
+                }),
+            );
+            const byRefId = new Map(groups.flat().map((item) => [item.conversation.ref.id, item]));
+            return [...byRefId.values()]
+                .toSorted((a, b) => b.createdAt - a.createdAt)
+                .map(({ conversation, attachment }) => ({ conversation, attachment }));
+        },
+    );
 
     return conversations;
 }

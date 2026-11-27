@@ -22,6 +22,7 @@
         "test/notebook-update.test.ts",
         "test/binder.test-d.ts",
         "test/meta_document.test.ts",
+        "test/document_meta_info.test.ts",
         "test/handle_registry.test.ts",
         "test/structurally-valid.test-d.ts",
         "test/instance-data.test.ts",
