@@ -16,7 +16,7 @@ describe("defining notebook shapes", () => {
         const AttrType = defineObject({ tag: "Basic", content: "AttrType" });
         const Attr = defineMorphism(
             { tag: "Basic", content: "Attr" },
-            { domain: Entity, codomain: AttrType },
+            { endpoints: { domain: Entity, codomain: AttrType } },
         );
         const Composite = defineMorphism({
             tag: "Composite",
@@ -26,15 +26,17 @@ describe("defining notebook shapes", () => {
         const Transition = defineMorphism(
             { tag: "Hom", content: Entity.obType },
             {
-                domain: {
-                    kind: "operation-list",
-                    apply: { tag: "Basic", content: "tensor" },
-                    modality: "SymmetricList",
-                },
-                codomain: {
-                    kind: "operation-list",
-                    apply: { tag: "Basic", content: "tensor" },
-                    modality: "SymmetricList",
+                endpoints: {
+                    domain: {
+                        kind: "operation-list",
+                        apply: { tag: "Basic", content: "tensor" },
+                        modality: "SymmetricList",
+                    },
+                    codomain: {
+                        kind: "operation-list",
+                        apply: { tag: "Basic", content: "tensor" },
+                        modality: "SymmetricList",
+                    },
                 },
             },
         );
