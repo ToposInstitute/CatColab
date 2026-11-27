@@ -2,25 +2,35 @@ import { defineShape, RichText, defineObject, defineMorphism } from "catcolab-do
 
 export const Variable = defineObject({ tag: "Basic", content: "Object" });
 
-export const PositiveLinkWithDegree = defineMorphism({
-    tag: "Repeat",
-    morType: { tag: "Basic", content: "Degree" },
-    fallback: Variable.obType,
-    { domain: Variable, codomain: Variable },
-});
-
-export const NegativeLinkWithDegree = defineMorphism({
-    tag: "Composite",
-    content: [
-        { tag: "Basic", content: "Negative" },
-        {
-            tag: "Repeat",
+export const PositiveLinkWithDegree = defineMorphism(
+    {
+        tag: "Repeat",
+        content: {
             morType: { tag: "Basic", content: "Degree" },
             fallback: Variable.obType,
         }
-    ],
+    },
     { domain: Variable, codomain: Variable },
-});
+    { values: ["repeatLength"] as const }
+);
+
+export const NegativeLinkWithDegree = defineMorphism(
+    {
+        tag: "Composite",
+        content: [
+            { tag: "Basic", content: "Negative" },
+            {
+                tag: "Repeat",
+                content: {
+                    morType: { tag: "Basic", content: "Degree" },
+                    fallback: Variable.obType,
+                },
+            }
+        ],
+    },
+    { domain: Variable, codomain: Variable },
+    { values: ["repeatLength"] as const }
+);
 
 export const GradedCausalLoop = defineShape({
     theory: "causal-loop-with-degrees",

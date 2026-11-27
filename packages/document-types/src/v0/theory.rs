@@ -48,8 +48,10 @@ pub enum MorType {
     /// times, along with the "fallback" in the case where the exponent is zero (which will be
     /// the identity morphism on the given ObType).
     Repeat {
+        #[serde(rename = "morType")]
         mor_type: Box<MorType>,
-        exponent: usize,
+        #[serde(rename = "repeatLength")]
+        repeat_length: usize,
         fallback: Box<ObType>,
     },
 }
