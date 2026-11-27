@@ -280,8 +280,7 @@ export function modelNotebookFromStore<Handle, S extends Shape, Version>(
                 if (type.morType.tag === "Repeat") {
                     // TODO: this should be an assertion
                     if (
-                        typeof judgment.morType.content !== "string" &&
-                        "repeatLength" in judgment.morType.content
+                        typeof judgment.morType.content !== "string"
                     ) {
                         judgment.morType.content.repeatLength = cellValues.repeatLength;
                     } else {
@@ -293,10 +292,16 @@ export function modelNotebookFromStore<Handle, S extends Shape, Version>(
                     if (Array.isArray(judgment.morType.content)) {
                         const repeat = judgment.morType.content[1];
                         // TODO: yet another assertion
-                        if (repeat && repeat.tag === "Repeat" && typeof repeat.content !== "string" && "repeatLength" in repeat.content) {
+                        if (
+                            repeat &&
+                            repeat.tag === "Repeat" &&
+                            typeof repeat.content !== "string"
+                        ) {
                             repeat.content.repeatLength = cellValues.repeatLength;
                         } else {
-                            throw new Error("This code currently only works for Composite morphisms with Repeat as the second element in the list");
+                            throw new Error(
+                                "This code currently only works for Composite morphisms with Repeat as the second element in the list",
+                            );
                         }
                     } else {
                         throw new Error("Invalid specification of Composite morphism type");
