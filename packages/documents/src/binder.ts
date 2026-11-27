@@ -3,11 +3,16 @@ import {
     LLMConversation as LLMConversationMethods,
     Model,
 } from "catcolab-document-methods";
-import type { Document, LinkType } from "catcolab-document-types";
-import type { DocumentRef, DocumentStore, HandlesByLinkType } from "./document-store";
+import type { Document } from "catcolab-document-types";
+import type { DocumentRef, DocumentStore } from "./document-store";
 import { createInMemoryStore } from "./document-store";
 import type { DocumentChange } from "./document-store";
 import { getBoundHandle } from "./document/handle_registry";
+import {
+    listRelatedDocuments,
+    type RelatedDocuments,
+    type RelatedDocumentsOptions,
+} from "./document/meta_info";
 import { parseInstanceData } from "./instance/data";
 import { instanceFromStore, type Instance } from "./instance/document";
 import { type LLMConversation, llmConversationFromStore } from "./llm-conversation";
@@ -22,18 +27,14 @@ import type { Commit, Transaction } from "./transaction";
 import { assertExhaustive } from "./util/assert_exhaustive";
 import type { DeepReadonly } from "./util/deep-readonly";
 
-export type DocumentRefsByLinkType = Record<LinkType, ReadonlyArray<DocumentRef>>;
-
 export interface Binder<Handle, Version> {
     readonly meta: MetaDocument;
+    listRelatedDocuments(
+        ref: DocumentRef,
+        options: RelatedDocumentsOptions,
+    ): DeepReadonly<RelatedDocuments>;
     //TODO: We shouldn't be exposing this but it is needed for resolving linked documents in frontend LLM execution scopes.
     getDocumentSnapshotFromRef(ref: DocumentRef): Promise<Result<DeepReadonly<Document>>>;
-    listUsedBy(
-        document: SupportedDocument<Shape, Handle, Version>,
-    ): Promise<DocumentRefsByLinkType>;
-    listDependsOn(
-        document: SupportedDocument<Shape, Handle, Version>,
-    ): Promise<DocumentRefsByLinkType>;
 
     createNotebook<S extends Shape & { readonly theory: string }>(
         shape: S,
@@ -95,27 +96,15 @@ function binderFromStore<Handle, Version>(
     const handleOf = (document: SupportedDocument<Shape, Handle, Version>): Handle =>
         getBoundHandle(store, document);
 
-    const refs = (handles: ReadonlyArray<Handle>): DocumentRef[] =>
-        handles.map((handle) => store.getDocumentRef(handle));
-    const refsByLinkType = (handles: HandlesByLinkType<Handle>): DocumentRefsByLinkType => ({
-        "analysis-of": refs(handles["analysis-of"]),
-        "diagram-in": refs(handles["diagram-in"]),
-        "instance-of": refs(handles["instance-of"]),
-        "llmconversation-of": refs(handles["llmconversation-of"]),
-        instantiation: refs(handles.instantiation),
-    });
-
     return {
         meta: store.meta,
+        listRelatedDocuments: (ref, options) => listRelatedDocuments(store.meta, ref, options),
         async getDocumentSnapshotFromRef(ref) {
             const result = await store.getHandle(ref);
             return result.tag === "Err"
                 ? result
                 : { tag: "Ok", content: store.getDocumentSnapshot(result.content) };
         },
-        listUsedBy: async (document) => refsByLinkType(await store.listUsedBy(handleOf(document))),
-        listDependsOn: async (document) =>
-            refsByLinkType(await store.listDependsOn(handleOf(document))),
         async createNotebook<S extends Shape & { readonly theory: string }>(
             shape: S,
             options: { title: string },

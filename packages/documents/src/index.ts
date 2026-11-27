@@ -4,6 +4,11 @@ export { parseInstanceStructure } from "./instance/parse-structure";
 export { parseModelNotebookStructure } from "./model/parse-structure";
 export { createBinder } from "./binder";
 export type {
+    RelatedDocSummary as DocumentSummary,
+    RelatedDocuments,
+    RelatedDocumentsOptions,
+} from "./document/meta_info";
+export type {
     MetaDocument,
     MetaDocumentData,
     UserInfo,
@@ -11,17 +16,12 @@ export type {
     RelationInfo,
 } from "./meta_document";
 export { CellKind } from "./model/cell";
-export type { Binder, DocumentRefsByLinkType } from "./binder";
-export type {
-    DocumentChange,
-    DocumentRef,
-    DocumentStore,
-    HandlesByLinkType,
-} from "./document-store";
+export type { Binder } from "./binder";
+export type { DocumentChange, DocumentRef, DocumentStore } from "./document-store";
 
 export type { DeepReadonly } from "./util/deep-readonly";
 export type { Issue, PathSegment, Result } from "./result";
-export { documentLinks, emptyHandlesByLinkType, getDocumentSnapshot } from "./document-store";
+export { documentLinks, getDocumentSnapshot } from "./document-store";
 export { createInMemoryStore } from "./document-store/in-memory";
 export type { InstanceData, TableData, RowData, FieldValueData } from "./instance/data";
 export type { WithIssues, StructuralIssue, StructurallyValid } from "./document/parse-structure";

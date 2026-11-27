@@ -2,9 +2,8 @@ import { applyPatches, diff, getHeads, type Heads, load, save, toJS } from "@aut
 import { DocHandle, generateAutomergeUrl, parseAutomergeUrl } from "@automerge/automerge-repo";
 import type { UserState } from "catcolab-api/src/user_state";
 import type { Auth } from "firebase/auth";
-import { stringify as uuidStringify } from "uuid";
 
-import type { Document, LinkType } from "catcolab-document-types";
+import type { Document } from "catcolab-document-types";
 import {
     type Binder,
     createBinder,
@@ -12,9 +11,7 @@ import {
     type DocumentChange,
     type DocumentRef,
     type DocumentStore,
-    type HandlesByLinkType,
     type MetaDocument,
-    type RelationInfo,
     type Result,
 } from "catcolab-documents";
 import { createApiMetaDocument } from "./meta_document";
@@ -121,36 +118,6 @@ export function createApiDocumentStore(api: Api, meta: MetaDocument): ApiDocumen
         }
     }
 
-    /** Resolve the relations recorded for a document in the user state into
-     * handles, indexed by link type. Relations of unknown link types, and
-     * relations to documents that no longer exist, are skipped. */
-    async function resolveLinked(
-        relations: ReadonlyArray<DeepReadonly<RelationInfo>>,
-        data: ReturnType<MetaDocument["data"]>,
-    ): Promise<HandlesByLinkType<ApiDocumentHandle>> {
-        const linked: Record<LinkType, ApiDocumentHandle[]> = {
-            "analysis-of": [],
-            "diagram-in": [],
-            "instance-of": [],
-            "llmconversation-of": [],
-            instantiation: [],
-        };
-        for (const relation of relations) {
-            if (!Object.hasOwn(linked, relation.relationType)) {
-                continue;
-            }
-            const refId = uuidStringify(Uint8Array.from(relation.refId));
-            if (data.documents[refId]?.deletedAt !== null) {
-                continue;
-            }
-            const result = await getHandle({ id: refId, version: null, server: api.serverHost });
-            if (result.tag === "Ok") {
-                linked[relation.relationType as LinkType].push(result.content);
-            }
-        }
-        return linked;
-    }
-
     const createAutomergeDraft = (source: DocHandle<Document>): DocHandle<Document> => {
         const { documentId } = parseAutomergeUrl(generateAutomergeUrl());
         const draft = new DocHandle<Document>(documentId, () => {
@@ -182,14 +149,6 @@ export function createApiDocumentStore(api: Api, meta: MetaDocument): ApiDocumen
             };
         },
         getDocumentRef: (handle) => handle.ref,
-        async listUsedBy(handle) {
-            const data = meta.data();
-            return resolveLinked(data.documents[handle.ref.id]?.usedBy ?? [], data);
-        },
-        async listDependsOn(handle) {
-            const data = meta.data();
-            return resolveLinked(data.documents[handle.ref.id]?.dependsOn ?? [], data);
-        },
         getHandle,
         createDraft: (handle) => {
             const automergeDraft = createAutomergeDraft(handle.automergeHandle);

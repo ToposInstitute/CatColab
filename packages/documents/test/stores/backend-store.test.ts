@@ -15,8 +15,6 @@ import {
     createBinder,
     createInMemoryStore,
     type DocumentStore,
-    documentLinks,
-    emptyHandlesByLinkType,
     Instantiation,
 } from "catcolab-documents";
 import { FakeBackend } from "../helpers/fake_backend";
@@ -69,34 +67,6 @@ const backendStore: DocumentStore<StoreHandle> = {
             throw new Error("handle is not registered with this store");
         }
         return { id: refId, version: null, server: backend.serverHost };
-    },
-    listUsedBy: async (handle) => {
-        const refId = refByDocId.get(handle.docHandle.documentId);
-        if (!refId) {
-            throw new Error("handle is not registered with this store");
-        }
-        const linked = emptyHandlesByLinkType<StoreHandle>();
-        for (const other of handleByRefId.values()) {
-            if (other === handle) {
-                continue;
-            }
-            for (const link of documentLinks(other.docHandle.doc())) {
-                if (link._id === refId) {
-                    linked[link.type].push(other);
-                }
-            }
-        }
-        return linked;
-    },
-    listDependsOn: async (handle) => {
-        const linked = emptyHandlesByLinkType<StoreHandle>();
-        for (const link of documentLinks(handle.docHandle.doc())) {
-            const other = handleByRefId.get(link._id);
-            if (other !== undefined && other !== handle) {
-                linked[link.type].push(other);
-            }
-        }
-        return linked;
     },
     getHandle: async (ref) => {
         const refId = ref.id;

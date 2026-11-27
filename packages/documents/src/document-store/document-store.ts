@@ -1,4 +1,4 @@
-import type { Document, Link, LinkType } from "catcolab-document-types";
+import type { Document, Link } from "catcolab-document-types";
 import type { MetaDocument } from "../meta_document";
 import type { Result } from "../result";
 import type { DeepReadonly } from "../util/deep-readonly";
@@ -8,11 +8,6 @@ export interface DocumentRef {
     version: string | null;
     server?: string;
 }
-
-/** Handles of documents related to a document, indexed by the type of the
- * link relating them. Every link type is present; a type with no matches
- * maps to an empty array. */
-export type HandlesByLinkType<Handle> = Record<LinkType, ReadonlyArray<Handle>>;
 
 /** The links a document has to other documents. */
 export function documentLinks(document: Document): Link[] {
@@ -28,19 +23,6 @@ export function documentLinks(document: Document): Link[] {
         case "llmconversation":
             return [document.llmConversationOf];
     }
-}
-
-/** An index of handles by link type with no handles in it. The arrays are
- * fresh, so store implementations can fill them in before answering a link
- * query. */
-export function emptyHandlesByLinkType<Handle>(): Record<LinkType, Handle[]> {
-    return {
-        "analysis-of": [],
-        "diagram-in": [],
-        "instance-of": [],
-        "llmconversation-of": [],
-        instantiation: [],
-    };
 }
 
 /**
@@ -70,12 +52,6 @@ export interface DocumentStore<Handle, Version = unknown> {
     getDocumentRef(handle: Handle): DocumentRef;
     // Return an immutable snapshot of the document's current state.
     getDocumentSnapshot(handle: Handle): DeepReadonly<Document>;
-    // List the documents that depend on the document at `handle`, indexed by
-    // the type of the link through which each depends on it.
-    listUsedBy(handle: Handle): Promise<HandlesByLinkType<Handle>>;
-    // List the documents that the document at `handle` depends on, indexed by
-    // the type of each of its links.
-    listDependsOn(handle: Handle): Promise<HandlesByLinkType<Handle>>;
     // Create a working copy of the document at `handle`. Changes made to the
     // draft are not visible through `handle` until it is committed.
     createDraft(handle: Handle): Handle;
