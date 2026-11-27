@@ -3,6 +3,13 @@ export { parseNotebookData } from "./model/data";
 export { parseInstanceStructure } from "./instance/parse-structure";
 export { parseModelNotebookStructure } from "./model/parse-structure";
 export { createBinder } from "./binder";
+export type {
+    MetaDocument,
+    MetaDocumentData,
+    UserInfo,
+    DocInfo,
+    RelationInfo,
+} from "./meta_document";
 export { CellKind } from "./model/cell";
 export type { Binder, DocumentRefsByLinkType } from "./binder";
 export type {

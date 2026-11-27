@@ -1,14 +1,15 @@
 // @vitest-environment happy-dom
 // The happy-dom environment makes solid-js resolve to its reactive client
 // build, which the reactive projection tests depend on.
-import { spans, splice, splitBlock } from "@automerge/automerge";
-import { Repo } from "@automerge/automerge-repo";
+import { ImmutableString, spans, splice, splitBlock } from "@automerge/automerge";
+import { type DocHandle, Repo } from "@automerge/automerge-repo";
 import type { UserState } from "catcolab-api/src/user_state";
 import { createDocumentDataView, createInstanceValidationView } from "catcolab-documents-solid";
 import { SimpleOlog, Type } from "catcolab-logics/simple-olog";
-import { createRenderEffect, createRoot } from "solid-js";
+import { type Auth, onAuthStateChanged } from "firebase/auth";
+import { createComponent, createRenderEffect, createRoot } from "solid-js";
 import { parse as uuidParse } from "uuid";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 
 import {
     Instance as LegacyInstance,
@@ -17,15 +18,222 @@ import {
     Nb,
 } from "catcolab-document-methods";
 import { createBinder, defineShape, type InstanceDocument } from "catcolab-documents";
+import { INITIAL_USER_STATE, useUserState } from "../user/user_state_context";
+import { UserStateProvider } from "../user/user_state_provider";
+import { BinderContext } from "./context";
 import { makeLiveDoc } from "./document";
-import { createApiDocumentStore } from "./document_store";
+import { createApiBinder, createApiDocumentStore } from "./document_store";
 import type { Api } from "./types";
+
+vi.mock("firebase/auth", async (importOriginal) => ({
+    ...(await importOriginal<typeof import("firebase/auth")>()),
+    onAuthStateChanged: vi.fn<typeof onAuthStateChanged>(),
+}));
+
+function apiMetaFixture() {
+    let notify!: () => Promise<void>;
+    const stopAuth = vi.fn<() => void>();
+    vi.mocked(onAuthStateChanged).mockImplementation((_auth, next) => {
+        if (typeof next !== "function") {
+            throw new Error("Expected auth callback");
+        }
+        notify = () => Promise.resolve(next(null));
+        return stopAuth;
+    });
+    const query = vi.fn<() => Promise<{ tag: "Ok"; content: string }>>();
+    const find = vi.fn<(id: string) => Promise<DocHandle<UserState>>>();
+    const api = {
+        rpc: { get_user_state_doc_id: { query } },
+        repo: { find },
+    } as unknown as Api;
+    const binder = createApiBinder(api, {} as Auth);
+    return {
+        binder,
+        meta: { doc: binder.meta, dispose: binder.dispose },
+        notify,
+        query,
+        find,
+        stopAuth,
+        async load(handle: DocHandle<UserState>) {
+            query.mockResolvedValue({ tag: "Ok", content: handle.documentId });
+            find.mockResolvedValue(handle);
+            await notify();
+        },
+    };
+}
+
+function authBinderFixture() {
+    const fixture = apiMetaFixture();
+    const repo = new Repo();
+    const handles = ["alice", "bob"].map((username) =>
+        repo.create<UserState>({
+            ...structuredClone(INITIAL_USER_STATE),
+            profile: { username, displayName: null },
+        }),
+    );
+    const [first, second] = handles as [DocHandle<UserState>, DocHandle<UserState>];
+    fixture.query.mockResolvedValue({ tag: "Ok", content: first.documentId });
+    fixture.find.mockImplementation(
+        async (id) => handles.find((handle) => handle.documentId === id)!,
+    );
+    return { ...fixture, first, second };
+}
+
+describe("API binder meta lifecycle", () => {
+    test("loads and rebinds meta on auth changes and cleans up on disposal", async () => {
+        const { binder, notify, stopAuth, query, first, second } = authBinderFixture();
+        const observed: Array<string | null> = [];
+        binder.meta.onChange(() => observed.push(binder.meta.data().profile.username));
+        expect(observed).toEqual([]);
+        await notify();
+        expect(observed).toEqual(["alice"]);
+        query.mockResolvedValue({ tag: "Ok", content: second.documentId });
+        const reloading = notify();
+        expect(binder.meta.data()).toEqual(INITIAL_USER_STATE);
+        await reloading;
+        expect(observed).toEqual(["alice", null, "bob"]);
+        first.change((doc) => {
+            doc.profile.username = "ignored";
+        });
+        expect(binder.meta.data().profile.username).toBe("bob");
+        binder.dispose();
+        expect(stopAuth).toHaveBeenCalledOnce();
+        second.change((doc) => {
+            doc.profile.username = "after disposal";
+        });
+        await notify();
+        expect(observed).toEqual(["alice", null, "bob"]);
+        expect(query).toHaveBeenCalledTimes(2);
+    });
+
+    test("ignores stale handle loads after another auth change", async () => {
+        const { binder, notify, query, find, first, second } = authBinderFixture();
+        let finish!: (value: DocHandle<UserState>) => void;
+        find.mockReturnValueOnce(
+            new Promise<DocHandle<UserState>>((resolve) => {
+                finish = resolve;
+            }),
+        );
+        const loading = notify();
+        await expect.poll(() => find.mock.calls.length).toBe(1);
+        query.mockResolvedValue({ tag: "Ok", content: second.documentId });
+        await notify();
+        finish(first);
+        await loading;
+        expect(binder.meta.data().profile.username).toBe("bob");
+        first.change((doc) => {
+            doc.profile.username = "ignored";
+        });
+        expect(binder.meta.data().profile.username).toBe("bob");
+        binder.dispose();
+    });
+});
+
+describe("API store meta", () => {
+    test("exposes binder meta through UserStateContext", async () => {
+        const repo = new Repo();
+        const { binder, load } = apiMetaFixture();
+        let data!: UserState;
+        const observed: Array<string | null> = [];
+        const dispose = createRoot((dispose) => {
+            createComponent(BinderContext.Provider, {
+                value: binder,
+                get children() {
+                    return createComponent(UserStateProvider, {
+                        get children() {
+                            data = useUserState();
+                            createRenderEffect(() => observed.push(data.profile.username));
+                            return undefined;
+                        },
+                    });
+                },
+            });
+            return dispose;
+        });
+        expect(data).toEqual(binder.meta.data());
+        const handle = repo.create<UserState>({
+            ...structuredClone(INITIAL_USER_STATE),
+            profile: { username: "alice", displayName: null },
+            documents: {
+                example: {
+                    name: "Example",
+                    typeName: "model",
+                    theory: "simple-olog",
+                    permissions: [{ user: null, level: "Read" }],
+                    createdAt: 0,
+                    deletedAt: null,
+                    currentSnapshotUpdatedAt: 1,
+                    currentSnapshot: 1,
+                    snapshots: { "1": { parent: null, createdAt: 1, heads: [] } },
+                    dependsOn: [],
+                    usedBy: [],
+                },
+            },
+        });
+        await load(handle);
+        expect(observed).toEqual([null, "alice"]);
+        expect(data.documents.example).toEqual(handle.doc().documents.example);
+        const before = binder.meta.data();
+        handle.change((doc) => {
+            doc.knownUsers.bob = { username: "bob", displayName: null };
+        });
+        expect(data.knownUsers.bob?.username).toBe("bob");
+        expect(observed).toEqual([null, "alice"]);
+        expect(before.knownUsers.bob).toBeUndefined();
+        dispose();
+        await load(handle);
+        expect(observed).toEqual([null, "alice"]);
+        binder.dispose();
+    });
+
+    test("reads current Automerge snapshots without subscribers and retains the last on disposal", async () => {
+        const { binder, notify, first } = authBinderFixture();
+        await notify();
+        const loaded = binder.meta.data();
+        first.change((doc) => {
+            doc.profile.username = "updated";
+        });
+        const updated = binder.meta.data();
+        expect(updated.profile.username).toBe("updated");
+        expect(loaded.profile.username).toBe("alice");
+        binder.dispose();
+        first.change((doc) => {
+            doc.profile.username = "after disposal";
+        });
+        expect(binder.meta.data()).toBe(updated);
+    });
+
+    test("normalizes immutable strings and preserves relation UUID bytes", async () => {
+        const repo = new Repo();
+        const refId = uuidParse(crypto.randomUUID());
+        const handle = repo.create<UserState>({
+            ...structuredClone(INITIAL_USER_STATE),
+            profile: {
+                username: new ImmutableString("alice") as unknown as string,
+                displayName: null,
+            },
+            documents: {
+                example: {
+                    usedBy: [{ refId, relationType: "instance-of" }],
+                } as UserState["documents"][string],
+            },
+        });
+        const { meta, load } = apiMetaFixture();
+        await load(handle);
+        expect(meta.doc.data().profile.username).toBe("alice");
+        const bytes = meta.doc.data().documents.example?.usedBy[0]?.refId;
+        expect(bytes).toBeInstanceOf(Uint8Array);
+        expect(bytes).toEqual(refId);
+        expect(bytes).not.toBe(refId);
+        meta.dispose();
+    });
+});
 
 const schemaRef = crypto.randomUUID();
 const instanceRef = crypto.randomUUID();
 const server = "test.catcolab.org";
 
-function createFixture() {
+async function createFixture() {
     const repo = new Repo();
     const schemaAutomergeHandle = repo.create(Model.newModelDocument({ theory: "simple-olog" }));
     const instanceAutomergeHandle = repo.create(
@@ -43,6 +251,10 @@ function createFixture() {
     const userState = {
         documents: {
             [schemaRef]: {
+                name: "Schema",
+                typeName: "model",
+                createdAt: 0,
+                dependsOn: [],
                 usedBy: [
                     { refId: uuidParse(instanceRef), relationType: "instance-of" },
                     { refId: uuidParse(instanceRef), relationType: "not-a-link" },
@@ -50,6 +262,9 @@ function createFixture() {
                 deletedAt: null,
             },
             [instanceRef]: {
+                name: "Instance",
+                typeName: "instance",
+                createdAt: 0,
                 usedBy: [],
                 dependsOn: [{ refId: uuidParse(schemaRef), relationType: "instance-of" }],
                 deletedAt: null,
@@ -69,7 +284,10 @@ function createFixture() {
             throw new Error(`Unknown document ref: ${refId}`);
         },
     } as unknown as Api;
-    const store = createApiDocumentStore(api, userState);
+    const userStateHandle = repo.create<UserState>(userState);
+    const { meta, load } = apiMetaFixture();
+    await load(userStateHandle);
+    const store = createApiDocumentStore(api, meta.doc);
 
     return {
         repo,
@@ -77,12 +295,13 @@ function createFixture() {
         instanceAutomergeHandle,
         instanceLiveDoc,
         schemaAutomergeHandle,
+        userStateHandle,
         store,
     };
 }
 
 async function createFixtureWithSchema() {
-    const fixture = createFixture();
+    const fixture = await createFixture();
     const schema = await fixture.binder.loadNotebookFromRef(SimpleOlog, {
         id: schemaRef,
         version: null,
@@ -240,7 +459,7 @@ describe("API document store", () => {
     });
 
     test("rejects instances of unsupported schema shapes", async () => {
-        const { binder } = createFixture();
+        const { binder } = await createFixture();
 
         const unsupportedSchema = await binder.loadNotebookFromRef(
             defineShape({ theory: "simple-olog" }),
@@ -289,7 +508,7 @@ describe("API document store", () => {
     });
 
     test("document snapshots tolerate rich text block markers", async () => {
-        const { schemaAutomergeHandle, store } = createFixture();
+        const { schemaAutomergeHandle, store } = await createFixture();
 
         // The ProseMirror integration stores paragraphs as block markers
         // inside the Automerge text of a rich text cell.
@@ -321,7 +540,7 @@ describe("API document store", () => {
     });
 
     test("resolves local refs to canonical cached handles", async () => {
-        const { schemaAutomergeHandle, store } = createFixture();
+        const { schemaAutomergeHandle, store } = await createFixture();
 
         const local = await store.getHandle({ id: schemaRef, version: null });
         expect(local.tag).toBe("Ok");
@@ -333,7 +552,7 @@ describe("API document store", () => {
     });
 
     test("lists documents related through the API, indexed by link type", async () => {
-        const { instanceAutomergeHandle, schemaAutomergeHandle, store } = createFixture();
+        const { instanceAutomergeHandle, schemaAutomergeHandle, store } = await createFixture();
 
         const schema = await store.getHandle({ id: schemaRef, version: null, server });
         expect(schema.tag).toBe("Ok");
@@ -486,7 +705,7 @@ describe("API document store", () => {
     });
 
     test("drafts resolve by their own refs while sources stay committed", async () => {
-        const { store } = createFixture();
+        const { store } = await createFixture();
 
         const local = await store.getHandle({ id: schemaRef, version: null });
         expect(local.tag).toBe("Ok");
@@ -533,7 +752,7 @@ describe("API document store", () => {
     });
 
     test("reverting a commit restores deleted rich text blocks", async () => {
-        const { schemaAutomergeHandle, store } = createFixture();
+        const { schemaAutomergeHandle, store } = await createFixture();
 
         const cell = Nb.newRichTextCell();
         const path = ["notebook", "cellContents", cell.id, "content"];
@@ -568,7 +787,7 @@ describe("API document store", () => {
     });
 
     test("discarded drafts stop resolving", async () => {
-        const { store } = createFixture();
+        const { store } = await createFixture();
 
         const local = await store.getHandle({ id: schemaRef, version: null });
         expect(local.tag).toBe("Ok");

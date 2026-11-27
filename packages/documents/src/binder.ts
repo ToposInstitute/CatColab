@@ -11,6 +11,7 @@ import { getBoundHandle } from "./document/handle_registry";
 import { parseInstanceData } from "./instance/data";
 import { instanceFromStore, type Instance } from "./instance/document";
 import { type LLMConversation, llmConversationFromStore } from "./llm-conversation";
+import type { MetaDocument } from "./meta_document";
 import { parseNotebookData } from "./model/data";
 import type { ModelDocument } from "./model/document";
 import { modelNotebookFromStore, type Notebook } from "./model/document";
@@ -24,6 +25,7 @@ import type { DeepReadonly } from "./util/deep-readonly";
 export type DocumentRefsByLinkType = Record<LinkType, ReadonlyArray<DocumentRef>>;
 
 export interface Binder<Handle, Version> {
+    readonly meta: MetaDocument;
     //TODO: We shouldn't be exposing this but it is needed for resolving linked documents in frontend LLM execution scopes.
     getDocumentSnapshotFromRef(ref: DocumentRef): Promise<Result<DeepReadonly<Document>>>;
     listUsedBy(
@@ -104,6 +106,7 @@ function binderFromStore<Handle, Version>(
     });
 
     return {
+        meta: store.meta,
         async getDocumentSnapshotFromRef(ref) {
             const result = await store.getHandle(ref);
             return result.tag === "Err"

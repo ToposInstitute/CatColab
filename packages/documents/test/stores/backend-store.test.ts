@@ -13,6 +13,7 @@ import { describe, expect, test } from "vitest";
 import type { Document } from "catcolab-document-types";
 import {
     createBinder,
+    createInMemoryStore,
     type DocumentStore,
     documentLinks,
     emptyHandlesByLinkType,
@@ -36,6 +37,7 @@ const refByDocId = new Map<DocumentId, string>();
 const handleByRefId = new Map<string, StoreHandle>();
 
 const backendStore: DocumentStore<StoreHandle> = {
+    meta: createInMemoryStore().meta,
     createHandle: async (initialDoc: Document) => {
         const created = await backend.new_ref(initialDoc);
         if (created.tag !== "Ok") {

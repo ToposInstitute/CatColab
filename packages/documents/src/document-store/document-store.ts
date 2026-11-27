@@ -1,4 +1,5 @@
 import type { Document, Link, LinkType } from "catcolab-document-types";
+import type { MetaDocument } from "../meta_document";
 import type { Result } from "../result";
 import type { DeepReadonly } from "../util/deep-readonly";
 
@@ -52,6 +53,7 @@ export interface DocumentChange<Version> {
 }
 
 export interface DocumentStore<Handle, Version = unknown> {
+    readonly meta: MetaDocument;
     // An async function to create a document handle from initial data.
     createHandle(initialDoc: Document): Promise<Handle>;
     // An async function to get a document handle from a `DocumentRef`,

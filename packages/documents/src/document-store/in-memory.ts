@@ -1,6 +1,7 @@
-import { v7 } from "uuid";
+import { parse as uuidParse, stringify as uuidStringify, v7, validate as uuidValidate } from "uuid";
 
 import type { Document } from "catcolab-document-types";
+import type { MetaDocument, MetaDocumentData } from "../meta_document";
 import type { Result } from "../result";
 import type { DeepReadonly } from "../util/deep-readonly";
 import type {
@@ -16,7 +17,41 @@ export function createDocumentSnapshot(document: DeepReadonly<Document>): DeepRe
     return structuredClone(document);
 }
 
+/** Create an in-memory meta document for in-memory document stores. */
+function createInMemoryMetaDocument(): {
+    doc: MetaDocument;
+    replace(data: MetaDocumentData): void;
+} {
+    let snapshot: DeepReadonly<MetaDocumentData> = {
+        profile: { username: null, displayName: null },
+        knownUsers: {},
+        documents: {},
+    };
+    const listeners = new Set<() => void>();
+
+    const meta: MetaDocument = {
+        data: () => snapshot,
+        onChange(callback) {
+            listeners.add(callback);
+            return (): void => {
+                listeners.delete(callback);
+            };
+        },
+    };
+
+    return {
+        doc: meta,
+        replace(data): void {
+            snapshot = structuredClone(data);
+            for (const callback of Array.from(listeners)) {
+                callback();
+            }
+        },
+    };
+}
+
 export function createInMemoryStore(): DocumentStore<Document, Document> {
+    const meta = createInMemoryMetaDocument();
     const idToDocument = new Map<string, Document>();
     const documentToId = new WeakMap<Document, string>();
     const documentToCallbacks = new WeakMap<Document, Set<(handle: Document) => void>>();
@@ -36,9 +71,41 @@ export function createInMemoryStore(): DocumentStore<Document, Document> {
         return id;
     }
 
+    function syncMetadata(): void {
+        const data = structuredClone(meta.doc.data()) as MetaDocumentData;
+        for (const [id, document] of idToDocument) {
+            if (drafts.has(document)) {
+                continue;
+            }
+            const previous = data.documents[id];
+            const now = Date.now();
+            data.documents[id] = {
+                createdAt: now,
+                deletedAt: null,
+                ...previous,
+                name: document.name,
+                typeName: document.type,
+                dependsOn: documentLinks(document)
+                    .filter((link) => uuidValidate(link._id))
+                    .map((link) => ({ refId: uuidParse(link._id), relationType: link.type })),
+                usedBy: [],
+            };
+        }
+        for (const [id, document] of Object.entries(data.documents)) {
+            for (const link of document?.dependsOn ?? []) {
+                const target = data.documents[uuidStringify(link.refId)];
+                target?.usedBy.push({ refId: uuidParse(id), relationType: link.relationType });
+            }
+        }
+        meta.replace(data);
+    }
+
     function notify(handle: Document): void {
         const snapshot = createDocumentSnapshot(handle);
         snapshots.set(handle, snapshot);
+        if (!drafts.has(handle)) {
+            syncMetadata();
+        }
         pending.push({ handle, callbacks: Array.from(documentToCallbacks.get(handle) ?? []) });
         if (notifying) {
             return;
@@ -81,12 +148,14 @@ export function createInMemoryStore(): DocumentStore<Document, Document> {
     }
 
     return {
+        meta: meta.doc,
         async createHandle(initialDoc: Document): Promise<Document> {
             const uuid = v7();
             idToDocument.set(uuid, initialDoc);
             documentToCallbacks.set(initialDoc, new Set());
             snapshots.set(initialDoc, createDocumentSnapshot(initialDoc));
             documentToId.set(initialDoc, uuid);
+            syncMetadata();
             return initialDoc;
         },
 

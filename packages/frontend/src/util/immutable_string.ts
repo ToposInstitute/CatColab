@@ -5,6 +5,9 @@ export function normalizeImmutableStrings<T>(value: T): T {
     if (isImmutableString(value)) {
         return value.toString() as unknown as T;
     }
+    if (value instanceof Uint8Array) {
+        return value.slice() as T;
+    }
     if (Array.isArray(value)) {
         return value.map(normalizeImmutableStrings) as unknown as T;
     }

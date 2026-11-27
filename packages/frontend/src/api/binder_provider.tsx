@@ -1,15 +1,17 @@
-import { type JSX } from "solid-js";
+import { getAuth } from "firebase/auth";
+import { useFirebaseApp } from "solid-firebase";
+import { type JSX, onCleanup } from "solid-js";
 
-import { useUserState } from "../user/user_state_context";
 import { BinderContext, useApi } from "./context";
 import { createApiBinder } from "./document_store";
 
 /** Provide a binder over the API document store, resolving document relations
- * through the user state from application context.
+ * through auth-backed metadata.
  *
- * Must be nested inside `UserStateProvider`. */
+ * Must wrap `UserStateProvider`. */
 export function BinderProvider(props: { children: JSX.Element }) {
-    const binder = createApiBinder(useApi(), useUserState());
+    const binder = createApiBinder(useApi(), getAuth(useFirebaseApp()));
+    onCleanup(() => binder.dispose());
 
     return <BinderContext.Provider value={binder}>{props.children}</BinderContext.Provider>;
 }
