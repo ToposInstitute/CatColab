@@ -5,8 +5,10 @@ export const Variable = defineObject({ tag: "Basic", content: "State" });
 export const Contribution = defineMorphism(
     { tag: "Basic", content: "Contribution" },
     {
-        domain: { kind: "object-list", obType: Variable.obType, modality: "SymmetricList" },
-        codomain: Variable,
+        endpoints: {
+            domain: { kind: "object-list", obType: Variable.obType, modality: "SymmetricList" },
+            codomain: Variable,
+        },
     },
 );
 

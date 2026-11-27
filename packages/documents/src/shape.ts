@@ -35,10 +35,10 @@ export type MorphismEndpoint =
     | { readonly kind: "tabulator"; readonly morType: MorType }
     | { readonly kind: "object-list"; readonly obType: ObType; readonly modality: ListModality }
     | {
-          readonly kind: "operation-list";
-          readonly apply: ObOp;
-          readonly modality: ListModality;
-      };
+        readonly kind: "operation-list";
+        readonly apply: ObOp;
+        readonly modality: ListModality;
+    };
 
 export interface MorphismEndpoints {
     readonly domain: MorphismEndpoint;
@@ -52,13 +52,19 @@ export function defineObject<const O>(obType: O & ObType): ObjectType<O & ObType
 export function defineMorphism<const M>(morType: M & MorType): MorphismType<M & MorType>;
 export function defineMorphism<const M, const E extends MorphismEndpoints>(
     morType: M & MorType,
-    endpoints: E,
+    options: { endpoints: E },
 ): MorphismType<M & MorType> & { readonly endpoints: E };
 export function defineMorphism<const M, const E extends MorphismEndpoints>(
     morType: M & MorType,
-    endpoints?: E,
+    options?: { endpoints?: E },
 ): MorphismType<M & MorType> | (MorphismType<M & MorType> & { readonly endpoints: E }) {
-    return endpoints ? { kind: "morphism", morType, endpoints } : { kind: "morphism", morType };
+    if (options) {
+        const { endpoints } = options
+        if (endpoints) {
+            return { kind: "morphism", morType, endpoints }
+        }
+    }
+    return { kind: "morphism", morType };
 }
 
 export function defineShape<const S extends Shape>(
@@ -122,14 +128,14 @@ export type EquationType = typeof PathEquation;
  */
 export type ObjectTypesOf<S extends Shape> =
     NonNullable<S["objects"]> extends Readonly<Record<string, infer T extends ObjectType>>
-        ? T
-        : never;
+    ? T
+    : never;
 
 /** The morphism types declared by a shape; see [`ObjectTypesOf`]. */
 export type MorphismTypesOf<S extends Shape> =
     NonNullable<S["morphisms"]> extends Readonly<Record<string, infer T extends MorphismType>>
-        ? T
-        : never;
+    ? T
+    : never;
 export type AnyCellType = RichTextType | ObjectType | MorphismType | EquationType;
 export type CellTypeOf<S extends Shape> =
     | RichTextType
@@ -139,10 +145,10 @@ export type CellTypeOf<S extends Shape> =
 
 type MatchingObjectTypesOf<O, EndpointObType> = O extends ObjectType
     ? O["obType"] extends EndpointObType
-        ? EndpointObType extends O["obType"]
-            ? O
-            : never
-        : never
+    ? EndpointObType extends O["obType"]
+    ? O
+    : never
+    : never
     : never;
 
 type HomObjectTypesOf<S extends Shape, M extends MorphismType> = M["morType"] extends {

@@ -6,7 +6,7 @@ export const PositiveLink = defineMorphism({ tag: "Hom", content: Variable.obTyp
 
 export const NegativeLink = defineMorphism(
     { tag: "Basic", content: "Negative" },
-    { domain: Variable, codomain: Variable },
+    { endpoints: { domain: Variable, codomain: Variable } },
 );
 
 export const CausalLoop = defineShape({

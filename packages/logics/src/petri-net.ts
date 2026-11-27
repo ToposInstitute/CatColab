@@ -5,15 +5,17 @@ export const Place = defineObject({ tag: "Basic", content: "Object" });
 export const Transition = defineMorphism(
     { tag: "Hom", content: Place.obType },
     {
-        domain: {
-            kind: "operation-list",
-            apply: { tag: "Basic", content: "tensor" },
-            modality: "SymmetricList",
-        },
-        codomain: {
-            kind: "operation-list",
-            apply: { tag: "Basic", content: "tensor" },
-            modality: "SymmetricList",
+        endpoints: {
+            domain: {
+                kind: "operation-list",
+                apply: { tag: "Basic", content: "tensor" },
+                modality: "SymmetricList",
+            },
+            codomain: {
+                kind: "operation-list",
+                apply: { tag: "Basic", content: "tensor" },
+                modality: "SymmetricList",
+            },
         },
     },
 );

@@ -6,7 +6,7 @@ export const Flow = defineMorphism({ tag: "Hom", content: Stock.obType });
 
 export const Link = defineMorphism(
     { tag: "Basic", content: "Link" },
-    { domain: Stock, codomain: { kind: "tabulator", morType: Flow.morType } },
+    { endpoints: { domain: Stock, codomain: { kind: "tabulator", morType: Flow.morType } } },
 );
 
 export const PrimitiveStockFlow = defineShape({

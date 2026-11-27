@@ -9,11 +9,14 @@ const linkEndpoints = {
     codomain: { kind: "tabulator", morType: Flow.morType },
 } as const;
 
-export const PositiveLink = defineMorphism({ tag: "Basic", content: "Link" }, linkEndpoints);
+export const PositiveLink = defineMorphism(
+    { tag: "Basic", content: "Link" },
+    { endpoints: linkEndpoints },
+);
 
 export const NegativeLink = defineMorphism(
     { tag: "Basic", content: "NegativeLink" },
-    linkEndpoints,
+    { endpoints: linkEndpoints },
 );
 
 export const PrimitiveSignedStockFlow = defineShape({
