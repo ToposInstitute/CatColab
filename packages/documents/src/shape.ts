@@ -49,35 +49,20 @@ export function defineObject<const O>(obType: O & ObType): ObjectType<O & ObType
     return { kind: "object", obType };
 }
 
-export function defineMorphism<const M>(
-    morType: M & MorType,
-    options?: { values?: string[] },
-):
-    | MorphismType<M & MorType>
-    | (MorphismType<M & MorType> & { readonly values?: Record<string, any> });
+export function defineMorphism<const M>(morType: M & MorType): MorphismType<M & MorType>;
 export function defineMorphism<const M, const E extends MorphismEndpoints>(
     morType: M & MorType,
-    options: { endpoints: E; values?: string[] },
-): MorphismType<M & MorType> & { readonly endpoints: E; readonly values?: Record<string, any> };
+    options: { endpoints: E },
+): MorphismType<M & MorType> & { readonly endpoints: E };
 export function defineMorphism<const M, const E extends MorphismEndpoints>(
     morType: M & MorType,
-    options?: {
-        endpoints?: E;
-        values?: string[];
-    },
-):
-    | MorphismType<M & MorType>
-    | (MorphismType<M & MorType> & {
-        readonly endpoints: E;
-        readonly values?: Record<string, any>;
-    }) {
+    options?: { endpoints?: E },
+): MorphismType<M & MorType> | (MorphismType<M & MorType> & { readonly endpoints: E }) {
     if (options) {
-        return {
-            kind: "morphism",
-            morType,
-            endpoints: options?.endpoints,
-            values: options?.values,
-        };
+        const { endpoints } = options;
+        if (endpoints) {
+            return { kind: "morphism", morType, endpoints };
+        }
     }
     return { kind: "morphism", morType };
 }
