@@ -4,7 +4,12 @@ import type { Document } from "catcolab-document-types";
 // A SolidJS document store: keeps a draft document plus a Solid store view
 // reconciled on every change.
 import type { DeepReadonly, DocumentStore } from "catcolab-documents";
-import { createDocumentSnapshot, documentLinks, emptyHandlesByLinkType } from "catcolab-documents";
+import {
+    createDocumentSnapshot,
+    createInMemoryStore,
+    documentLinks,
+    emptyHandlesByLinkType,
+} from "catcolab-documents";
 
 export type SolidStoreHandle = {
     draftDoc: Document;
@@ -31,6 +36,7 @@ const solidStoreIdFor = (handle: SolidStoreHandle): string => {
 const createdHandles = new Set<SolidStoreHandle>();
 
 export const solidStore: DocumentStore<SolidStoreHandle> = {
+    meta: createInMemoryStore().meta,
     async createHandle(initialDoc) {
         const draftDoc = structuredClone(initialDoc);
         const [docView, setDocView] = createStore<Document>(initialDoc);

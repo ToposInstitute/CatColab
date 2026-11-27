@@ -8,6 +8,7 @@ import { describe, expect, test } from "vitest";
 import { migrateDocument, type Document } from "catcolab-document-types";
 import {
     createBinder,
+    createInMemoryStore,
     getDocumentSnapshot,
     type DeepReadonly,
     type DocumentStore,
@@ -361,6 +362,7 @@ function createFixtureStore(
 
     return {
         store: {
+            meta: createInMemoryStore().meta,
             createHandle: async (document) => {
                 const refId = `fixture-created-${createdCount++}`;
                 const handle = {

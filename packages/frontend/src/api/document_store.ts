@@ -1,6 +1,7 @@
 import { applyPatches, diff, getHeads, type Heads, load, save, toJS } from "@automerge/automerge";
 import { DocHandle, generateAutomergeUrl, parseAutomergeUrl } from "@automerge/automerge-repo";
-import type { RelationInfo, UserState } from "catcolab-api/src/user_state";
+import type { UserState } from "catcolab-api/src/user_state";
+import type { Auth } from "firebase/auth";
 import { stringify as uuidStringify } from "uuid";
 
 import type { Document, LinkType } from "catcolab-document-types";
@@ -12,8 +13,11 @@ import {
     type DocumentRef,
     type DocumentStore,
     type HandlesByLinkType,
+    type MetaDocument,
+    type RelationInfo,
     type Result,
 } from "catcolab-documents";
+import { createApiMetaDocument } from "./meta_document";
 import type { Api } from "./types";
 
 export type ApiDocumentHandle = {
@@ -28,25 +32,30 @@ export type ApiDocumentVersion = Heads;
 export type ApiDocumentStore = DocumentStore<ApiDocumentHandle, Heads>;
 
 /** A binder over the API document store. */
-export type ApiBinder = Binder<ApiDocumentHandle, Heads>;
+export type ApiBinder = Omit<Binder<ApiDocumentHandle, Heads>, "meta"> & {
+    readonly meta: MetaDocument<UserState>;
+    dispose(): void;
+};
 
-/** Create a binder over the document store for an API client and user state.
+/** Create a binder over the document store for an API client and Firebase auth.
 
 The binder should be created once per API client and shared across the
 application (via context) so that document handles are cached and deduplicated
-between loads.
+between loads. Dispose it when the owning provider is destroyed to release
+metadata and auth subscriptions.
  */
-export function createApiBinder(api: Api, userState: UserState): ApiBinder {
-    return createBinder(createApiDocumentStore(api, userState));
+export function createApiBinder(api: Api, auth: Auth): ApiBinder {
+    const apiMeta = createApiMetaDocument(api, auth);
+    const binder = createBinder(createApiDocumentStore(api, apiMeta.doc));
+    return { ...binder, meta: apiMeta.doc, dispose: apiMeta.dispose };
 }
 
 /** Adapt frontend Automerge documents to the storage boundary used by catcolab-documents.
 
-The user state tracks relations between documents; it is retrieved from
-application context (see `UserStateContext`) rather than fetched here, and it
-may update while the store lives.
+The metadata document tracks relations between documents and may update while
+the store lives.
  */
-export function createApiDocumentStore(api: Api, userState: UserState): ApiDocumentStore {
+export function createApiDocumentStore(api: Api, meta: MetaDocument): ApiDocumentStore {
     const handles = new Map<string, ApiDocumentHandle>();
 
     const cacheHandle = (ref: DocumentRef, automergeHandle: DocHandle<Document>) => {
@@ -116,7 +125,8 @@ export function createApiDocumentStore(api: Api, userState: UserState): ApiDocum
      * handles, indexed by link type. Relations of unknown link types, and
      * relations to documents that no longer exist, are skipped. */
     async function resolveLinked(
-        relations: ReadonlyArray<RelationInfo>,
+        relations: ReadonlyArray<DeepReadonly<RelationInfo>>,
+        data: ReturnType<MetaDocument["data"]>,
     ): Promise<HandlesByLinkType<ApiDocumentHandle>> {
         const linked: Record<LinkType, ApiDocumentHandle[]> = {
             "analysis-of": [],
@@ -126,11 +136,11 @@ export function createApiDocumentStore(api: Api, userState: UserState): ApiDocum
             instantiation: [],
         };
         for (const relation of relations) {
-            if (!(relation.relationType in linked)) {
+            if (!Object.hasOwn(linked, relation.relationType)) {
                 continue;
             }
-            const refId = uuidStringify(relation.refId);
-            if (userState.documents[refId]?.deletedAt !== null) {
+            const refId = uuidStringify(Uint8Array.from(relation.refId));
+            if (data.documents[refId]?.deletedAt !== null) {
                 continue;
             }
             const result = await getHandle({ id: refId, version: null, server: api.serverHost });
@@ -153,6 +163,7 @@ export function createApiDocumentStore(api: Api, userState: UserState): ApiDocum
     };
 
     return {
+        meta,
         async createHandle(initialDoc) {
             const refId = await api.createDoc(initialDoc);
             const automergeHandle = await api.getDocHandle(refId);
@@ -172,10 +183,12 @@ export function createApiDocumentStore(api: Api, userState: UserState): ApiDocum
         },
         getDocumentRef: (handle) => handle.ref,
         async listUsedBy(handle) {
-            return resolveLinked(userState.documents[handle.ref.id]?.usedBy ?? []);
+            const data = meta.data();
+            return resolveLinked(data.documents[handle.ref.id]?.usedBy ?? [], data);
         },
         async listDependsOn(handle) {
-            return resolveLinked(userState.documents[handle.ref.id]?.dependsOn ?? []);
+            const data = meta.data();
+            return resolveLinked(data.documents[handle.ref.id]?.dependsOn ?? [], data);
         },
         getHandle,
         createDraft: (handle) => {

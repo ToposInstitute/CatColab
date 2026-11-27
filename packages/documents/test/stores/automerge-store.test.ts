@@ -10,6 +10,7 @@ import { describe, expect, test } from "vitest";
 import type { Document } from "catcolab-document-types";
 import {
     createBinder,
+    createInMemoryStore,
     type DocumentStore,
     documentLinks,
     emptyHandlesByLinkType,
@@ -22,6 +23,7 @@ const repo = new Repo();
 const createdHandles = new Set<DocHandle<Document>>();
 
 const automergeStore: DocumentStore<DocHandle<Document>> = {
+    meta: createInMemoryStore().meta,
     createHandle: async (initialDoc) => {
         const handle = repo.create<Document>(initialDoc as Document);
         createdHandles.add(handle);
