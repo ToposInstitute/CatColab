@@ -45,8 +45,9 @@ pub enum MorType {
     },
 
     /// Concatenated morphism type, given by repeating a given morphism type a given number of
-    /// times, along with the "fallback" in the case where the exponent is zero.
-    Power {
+    /// times, along with the "fallback" in the case where the exponent is zero (which will be
+    /// the identity morphism on the given ObType).
+    Repeat {
         mor_type: Box<MorType>,
         exponent: usize,
         fallback: Box<ObType>,

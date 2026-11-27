@@ -44,7 +44,7 @@ impl CanElaborate<MorType, QualifiedPath> for Elaborator {
                 Ok(path.flatten())
             }
             MorType::Hom(ob_type) => Ok(Path::Id(self.elab(ob_type.as_ref())?)),
-            MorType::Power { mor_type, exponent, fallback } => match mor_type.as_ref() {
+            MorType::Repeat { mor_type, exponent, fallback } => match mor_type.as_ref() {
                 MorType::Basic(id) => match fallback.as_ref() {
                     ObType::Basic(fallback) => {
                         Ok(Path::collect(std::iter::repeat_n((*id).into(), *exponent))

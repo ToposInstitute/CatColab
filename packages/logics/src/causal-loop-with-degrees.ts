@@ -3,7 +3,7 @@ import { defineShape, RichText, defineObject, defineMorphism } from "catcolab-do
 export const Variable = defineObject({ tag: "Basic", content: "Object" });
 
 export const PositiveLinkWithDegree = defineMorphism({
-    tag: "Power",
+    tag: "Repeat",
     morType: { tag: "Basic", content: "Degree" },
     fallback: Variable.obType,
     { domain: Variable, codomain: Variable },
@@ -14,7 +14,7 @@ export const NegativeLinkWithDegree = defineMorphism({
     content: [
         { tag: "Basic", content: "Negative" },
         {
-            tag: "Power",
+            tag: "Repeat",
             morType: { tag: "Basic", content: "Degree" },
             fallback: Variable.obType,
         }
