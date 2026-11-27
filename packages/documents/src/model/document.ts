@@ -238,14 +238,14 @@ export function modelNotebookFromStore<Handle, S extends Shape, Version>(
             const parsed = parseNotebookData(store.getDocumentSnapshot(handle));
             return parsed.tag === "Ok" ? parsed.content.value.name : "";
         },
-        add<T extends CellTypeOf<S>>(type: T, values: CellValuesOf<S, T>) {
+        add<T extends CellTypeOf<S>>(type: T, cellValues: CellValuesOf<S, T>) {
             if (type.kind === "rich-text") {
-                const richText = values as { content: string };
+                const richText = cellValues as { content: string };
                 return appendCell(Nb.newRichTextCell(richText.content)) as AddedCellOf<S, T>;
             }
 
             if (type.kind === "object") {
-                const object = values as { label: string | null };
+                const object = cellValues as { label: string | null };
                 const judgment = Model.newObjectDecl(type.obType);
                 judgment.name = object.label ?? "";
                 return appendCell(Nb.newFormalCell<ModelJudgment>(judgment)) as AddedCellOf<S, T>;
@@ -257,7 +257,7 @@ export function modelNotebookFromStore<Handle, S extends Shape, Version>(
                         `Shape \`${shape.theory ?? "unnamed"}\` does not support path equations`,
                     );
                 }
-                const equation = values as CellValuesOf<S, EquationType>;
+                const equation = cellValues as CellValuesOf<S, EquationType>;
                 const decl = Model.newEquationDecl();
                 decl.name = equation.label ?? "";
                 const data = getNotebookData(store, handle);
@@ -266,7 +266,7 @@ export function modelNotebookFromStore<Handle, S extends Shape, Version>(
                 return appendCell(Nb.newFormalCell<ModelJudgment>(decl)) as AddedCellOf<S, T>;
             }
 
-            const morphism = values as CellValuesOf<S, MorphismTypesOf<S>>;
+            const morphism = cellValues as CellValuesOf<S, MorphismTypesOf<S>>;
             const judgment = Model.newMorphismDecl(type.morType);
             judgment.name = morphism.label ?? "";
             const data = getNotebookData(store, handle);

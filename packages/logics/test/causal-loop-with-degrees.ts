@@ -45,7 +45,7 @@ describe("causal loop diagram with degrees", { timeout: 20_000 }, () => {
                     label: "foxes eat hares",
                     from: hares,
                     to: foxes,
-                    values: { repeatLength: 2 }
+                    repeatLength: 2,
                 }
             );
             const beingEaten = notebook.add(NegativeLinkWithDegree,
@@ -53,7 +53,7 @@ describe("causal loop diagram with degrees", { timeout: 20_000 }, () => {
                     label: "hares are eaten by foxes",
                     from: foxes,
                     to: hares,
-                    values: { repeatLength: 1 }
+                    repeatLength: 1,
                 }
             );
         } finally {

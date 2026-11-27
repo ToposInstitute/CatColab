@@ -12,7 +12,6 @@ export const PositiveLinkWithDegree = defineMorphism(
     },
     {
         endpoints: { domain: Variable, codomain: Variable },
-        values: ["repeatLength"]
     }
 );
 
@@ -32,7 +31,6 @@ export const NegativeLinkWithDegree = defineMorphism(
     },
     {
         endpoints: { domain: Variable, codomain: Variable },
-        values: ["repeatLength"]
     }
 );
 
