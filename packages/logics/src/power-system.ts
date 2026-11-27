@@ -6,12 +6,12 @@ export const Line = defineMorphism({ tag: "Hom", content: Bus.obType });
 
 export const Transformer = defineMorphism(
     { tag: "Basic", content: "Passive" },
-    { domain: Bus, codomain: Bus },
+    { endpoints: { domain: Bus, codomain: Bus } },
 );
 
 export const Link = defineMorphism(
     { tag: "Basic", content: "Branch" },
-    { domain: Bus, codomain: Bus },
+    { endpoints: { domain: Bus, codomain: Bus } },
 );
 
 export const PowerSystem = defineShape({

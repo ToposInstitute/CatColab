@@ -52,13 +52,19 @@ export function defineObject<const O>(obType: O & ObType): ObjectType<O & ObType
 export function defineMorphism<const M>(morType: M & MorType): MorphismType<M & MorType>;
 export function defineMorphism<const M, const E extends MorphismEndpoints>(
     morType: M & MorType,
-    endpoints: E,
+    options: { endpoints: E },
 ): MorphismType<M & MorType> & { readonly endpoints: E };
 export function defineMorphism<const M, const E extends MorphismEndpoints>(
     morType: M & MorType,
-    endpoints?: E,
+    options?: { endpoints?: E },
 ): MorphismType<M & MorType> | (MorphismType<M & MorType> & { readonly endpoints: E }) {
-    return endpoints ? { kind: "morphism", morType, endpoints } : { kind: "morphism", morType };
+    if (options) {
+        const { endpoints } = options;
+        if (endpoints) {
+            return { kind: "morphism", morType, endpoints };
+        }
+    }
+    return { kind: "morphism", morType };
 }
 
 export function defineShape<const S extends Shape>(
