@@ -4,7 +4,7 @@ export { parseInstanceStructure } from "./instance/parse-structure";
 export { parseModelNotebookStructure } from "./model/parse-structure";
 export { createBinder } from "./binder";
 export { CellKind } from "./model/cell";
-export type { Binder } from "./binder";
+export type { Binder, BinderOptions } from "./binder";
 export type {
     DocumentChange,
     DocumentRef,

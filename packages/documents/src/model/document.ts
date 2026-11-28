@@ -182,6 +182,7 @@ export interface Notebook<
     H = unknown,
     V = unknown,
 > {
+    readonly type: D["type"];
     readonly shape: S;
     readonly title: string;
     readonly handle: H;
@@ -232,6 +233,7 @@ export function modelNotebookFromStore<Handle, S extends Shape, Version>(
     }
 
     return {
+        type: "model",
         shape,
         handle,
         get title() {
