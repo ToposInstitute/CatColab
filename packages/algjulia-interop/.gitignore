@@ -17,6 +17,9 @@ deps/src/
 docs/build/
 docs/site/
 
+# Build artifacts from tests
+tests/build/
+
 # Julia sys images
 *.so
 
