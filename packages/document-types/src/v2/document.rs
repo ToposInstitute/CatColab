@@ -1,10 +1,10 @@
-use crate::current::instance::Table;
 use crate::v0::AnalysisType;
 use crate::v1;
 use std::{collections::HashMap, str::FromStr};
 
 use super::analysis::Analysis;
 use super::api::Link;
+use super::instance::Table;
 use super::llm_conversation::LLMConversationDocumentContent;
 use super::notebook::Notebook;
 
