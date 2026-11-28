@@ -4,12 +4,14 @@ import {
     createNumericalColumn,
     FixedTableEditor,
     Foldable,
+    ExpandableTable,
+    KatexDisplay,
 } from "catcolab-ui-components";
-import type { DblModel, LotkaVolterraProblemData, QualifiedName } from "catlog-wasm";
+import type { LotkaVolterraProblemData, QualifiedName } from "catlog-wasm";
 import type { ModelAnalysisProps } from "../../analysis";
 import { morLabelOrDefault } from "../../model";
 import { ODEResultPlot } from "../../visualization";
-import { createModelODEPlot } from "./model_ode_plot";
+import { createModelODEPlotWithEquations } from "./model_ode_plot";
 import type { LotkaVolterraSimulator } from "./simulator_types";
 
 import "./simulation.css";
@@ -31,19 +33,19 @@ export default function LotkaVolterra(
         },
         createNumericalColumn({
             name: "Initial value",
-            data: (id) => props.content.initialValues[id],
+            data: (id) => props.content.generalData.initialValues[id],
             validate: (_, data) => data >= 0,
             setData: (id, data) =>
                 props.changeContent((content) => {
-                    content.initialValues[id] = data;
+                    content.generalData.initialValues[id] = data;
                 }),
         }),
         createNumericalColumn({
             name: "Growth/decay",
-            data: (id) => props.content.growthRates[id],
+            data: (id) => props.content.parameterData.growthRates[id],
             setData: (id, data) =>
                 props.changeContent((content) => {
-                    content.growthRates[id] = data;
+                    content.parameterData.growthRates[id] = data;
                 }),
         }),
     ];
@@ -56,12 +58,12 @@ export default function LotkaVolterra(
         },
         createNumericalColumn({
             name: "Interaction",
-            data: (id) => props.content.interactionCoefficients[id],
+            data: (id) => props.content.parameterData.interactionCoefficients[id],
             default: 1,
             validate: (_, data) => data >= 0,
             setData: (id, data) =>
                 props.changeContent((content) => {
-                    content.interactionCoefficients[id] = data;
+                    content.parameterData.interactionCoefficients[id] = data;
                 }),
         }),
     ];
@@ -69,19 +71,22 @@ export default function LotkaVolterra(
     const toplevelSchema: ColumnSchema<null>[] = [
         createNumericalColumn({
             name: "Duration",
-            data: (_) => props.content.duration,
+            data: (_) => props.content.generalData.duration,
             validate: (_, data) => data >= 0,
             setData: (_, data) =>
                 props.changeContent((content) => {
-                    content.duration = data;
+                    content.generalData.duration = data;
                 }),
         }),
     ];
 
-    const plotResult = createModelODEPlot(
+    const result = createModelODEPlotWithEquations(
         () => props.liveModel.validatedModel(),
-        (model: DblModel) => props.simulate(model, props.content),
+        (model) => props.simulate(model, props.content),
     );
+
+    const plotResult = () => result()?.plotData;
+    const latexEquations = () => result()?.latexEquations ?? [];
 
     return (
         <div class="simulation">
@@ -99,7 +104,20 @@ export default function LotkaVolterra(
                     <FixedTableEditor rows={[null]} schema={toplevelSchema} />
                 </div>
             </Foldable>
-            <ODEResultPlot result={plotResult()} />
+            <Foldable title="Equations">
+                <ExpandableTable
+                    threshold={20}
+                    rows={latexEquations()}
+                    columns={[
+                        { cell: (row) => <KatexDisplay math={row.lhs} /> },
+                        { cell: () => <KatexDisplay math="=" /> },
+                        { cell: (row) => <KatexDisplay math={row.rhs} /> },
+                    ]}
+                />
+            </Foldable>
+            <Foldable title="Simulation" defaultExpanded>
+                <ODEResultPlot result={plotResult()} />
+            </Foldable>
         </div>
     );
 }

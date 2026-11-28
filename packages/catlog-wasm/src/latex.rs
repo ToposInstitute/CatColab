@@ -1,142 +1,243 @@
 //! Auxiliary structs and glue code for any LaTeX code being passed through analyses.
 
-use serde::{Deserialize, Serialize};
-use tsify::Tsify;
-
-use catlog::simulate::ode::LatexEquation;
-use catlog::stdlib::analyses::ode;
-use catlog::zero::QualifiedName;
+use catlog::{
+    latex::{list_object_as_latex, wrap_with_backslash_text},
+    zero::QualifiedName,
+};
 
 use super::model::DblModel;
 
-/// Symbolic equations in LaTeX format.
-#[derive(Serialize, Deserialize, Tsify)]
-#[tsify(into_wasm_abi, from_wasm_abi)]
-pub struct LatexEquations(pub Vec<LatexEquation>);
-
-/// Creates a closure that formats object names for LaTeX output.
-pub(crate) fn latex_ob_names(model: &DblModel) -> impl Fn(&QualifiedName) -> String {
+/// Creates a closure that formats object and morphism names for LaTeX output. When a morphism has a
+/// name (and thus label), it is used directly; when unnamed, the label falls back to the format
+/// `domain→codomain` (e.g., `X \to Y`).
+pub(crate) fn latex_names(model: &DblModel) -> impl Fn(&QualifiedName) -> String {
     |id: &QualifiedName| {
-        let name = model.ob_namespace.label_string(id);
-        if name.chars().count() > 1 {
-            format!("\\text{{{name}}}")
+        if let Some(ob_label) = model.ob_namespace.label(id) {
+            // If the uuid has a name in the object namespace.
+            wrap_with_backslash_text(ob_label.to_string())
+        } else if let Some(mor_label) = model.mor_namespace.label(id) {
+            // If the uuid has a name in the morphism namespace.
+            wrap_with_backslash_text(mor_label.to_string())
+        } else if let Some((dom, cod)) = model.mor_generator_dom_cod(id) {
+            // If the uuid corresponds to a morphism without a name.
+            let dom_labels: Vec<String> = model
+                .get_ob_label(&dom)
+                .expect("Object in equation system should have a label.")
+                .into_iter()
+                .map(|label| wrap_with_backslash_text(label.to_string()))
+                .collect();
+            let cod_labels: Vec<String> = model
+                .get_ob_label(&cod)
+                .expect("Object in equation system should have a label.")
+                .into_iter()
+                .map(|label| wrap_with_backslash_text(label.to_string()))
+                .collect();
+            format!(
+                "{} \\to {}",
+                list_object_as_latex(dom_labels),
+                list_object_as_latex(cod_labels)
+            )
         } else {
-            name
+            // If the uuid corresponds to an unnamed (e.g. freshly-created) object.
+            "\\text{unnamed}".to_string()
         }
-    }
-}
-
-/// Creates a closure that formats morphism names for mass-action LaTeX output.
-///
-/// When a morphism has a label, it is used directly. When unnamed, the label
-/// falls back to the domain→codomain format (e.g., `X \to Y`).
-pub(crate) fn latex_mor_names(model: &DblModel) -> impl Fn(&QualifiedName) -> String {
-    // Returns a LaTeX fragment for a morphism, suitable for use as a subscript.
-    // Named morphisms produce `\text{name}`, unnamed ones produce
-    // `\text{dom} \to \text{cod}` so that `\to` is in math mode.
-    let morphism_subscript = |morphism: &QualifiedName| -> String {
-        if let Some(label) = model.mor_namespace.label(morphism) {
-            format!("\\text{{{label}}}")
-        } else {
-            let (dom, cod) = model
-                .mor_generator_dom_cod_label_strings(morphism)
-                .expect("Morphism in equation system should have domain and codomain");
-            format!("\\text{{{dom}}} \\to \\text{{{cod}}}")
-        }
-    };
-
-    move |id: &QualifiedName| {
-        let sub = morphism_subscript(id);
-        format!("\\lambda_{{{sub}}}")
-    }
-}
-
-/// Creates a closure that formats morphism names for mass-action LaTeX output.
-///
-/// When a morphism has a label, it is used directly. When unnamed, the label
-/// falls back to the domain→codomain format (e.g., `X \to Y`).
-pub(crate) fn latex_mor_names_mass_action(
-    model: &DblModel,
-) -> impl Fn(&ode::FlowParameter) -> String {
-    // Returns a LaTeX fragment for a transition, suitable for use as a subscript.
-    // Named morphisms produce `\text{name}`, unnamed ones produce
-    // `\text{dom} \to \text{cod}` so that `\to` is in math mode.
-    let transition_subscript = |transition: &QualifiedName| -> String {
-        if let Some(label) = model.mor_namespace.label(transition) {
-            format!("\\text{{{label}}}")
-        } else {
-            let (dom, cod) = model
-                .mor_generator_dom_cod_label_strings(transition)
-                .expect("Morphism in equation system should have domain and codomain");
-            format!("\\text{{{dom}}} \\to \\text{{{cod}}}")
-        }
-    };
-
-    move |id: &ode::FlowParameter| match id {
-        ode::FlowParameter::Balanced { transition } => {
-            let sub = transition_subscript(transition);
-            format!("r_{{{sub}}}")
-        }
-        ode::FlowParameter::Unbalanced { direction, parameter } => match (direction, parameter) {
-            (ode::Direction::IncomingFlow, ode::RateParameter::PerTransition { transition }) => {
-                let sub = transition_subscript(transition);
-                format!("\\rho_{{{sub}}}")
-            }
-            (ode::Direction::OutgoingFlow, ode::RateParameter::PerTransition { transition }) => {
-                let sub = transition_subscript(transition);
-                format!("\\kappa_{{{sub}}}")
-            }
-            (ode::Direction::IncomingFlow, ode::RateParameter::PerPlace { transition, place }) => {
-                let sub = transition_subscript(transition);
-                let output_place_label = model.ob_namespace.label_string(place);
-                format!("\\rho_{{{sub}}}^{{\\text{{{output_place_label}}}}}")
-            }
-            (ode::Direction::OutgoingFlow, ode::RateParameter::PerPlace { transition, place }) => {
-                let sub = transition_subscript(transition);
-                let input_place_label = model.ob_namespace.label_string(place);
-                format!("\\kappa_{{{sub}}}^{{\\text{{{input_place_label}}}}}")
-            }
-        },
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use catlog::dbl::modal::{List, ModalMorType, ModalOb, ModalObType};
-    use catlog::dbl::model::{ModalDblModel, MutDblModel};
-    use catlog::simulate::ode::LatexEquation;
-    use catlog::stdlib::{analyses::ode, theories};
-    use catlog::zero::{LabelSegment, Namespace, QualifiedName};
-    use std::rc::Rc;
-    use uuid::Uuid;
+    use catlog::latex::{Latex, LatexEquation, LatexEquations};
+    use catlog::stdlib::analyses::ode::{
+        LinearODEAnalysis, LotkaVolterraAnalysis, PetriNetBalancedMassActionAnalysis,
+        PetriNetPerPlaceMassActionAnalysis, PetriNetUnbalancedMassActionAnalysis,
+        StockFlowBalancedMassActionAnalysis, StockFlowUnbalancedMassActionAnalysis,
+        ode_semantics::*,
+    };
 
     use super::*;
-    use crate::model::{DblModel, tests::backward_link};
+    use crate::analyses::tests::{catalytic_petri_net, parallel_negative_cld};
+    use crate::model::tests::backward_link;
 
     #[test]
-    fn unbalanced_mass_action_latex_equations() {
+    fn cld_lotka_volterra_latex_equations() {
+        // The CLD with objects "x" and "yellow", and two negative links "f" and [unnamed] from x to y.
+        let model = parallel_negative_cld("x", "yellow", "f", "");
+
+        let discrete_model = model.discrete().unwrap();
+        let equations = LotkaVolterraAnalysis::default()
+            .build_system(discrete_model)
+            .to_latex_equations_with_map(|param| latex_names(&model)(param));
+
+        let expected = LatexEquations(vec![
+            LatexEquation {
+                lhs: Latex("\\frac{\\mathrm{d}}{\\mathrm{d}t} x".to_string()),
+                rhs: Latex(
+                    "g_{x} \\cdot x"
+                        .to_string(),
+                ),
+            },
+            LatexEquation {
+                lhs: Latex("\\frac{\\mathrm{d}}{\\mathrm{d}t} \\text{yellow}".to_string()),
+                rhs: Latex(
+                    "(-k_{f} - k_{x \\to \\text{yellow}}) \\cdot x \\cdot \\text{yellow} + g_{\\text{yellow}} \\cdot \\text{yellow}"
+                        .to_string(),
+                ),
+            },
+        ]);
+
+        assert_eq!(equations, expected);
+    }
+
+    #[test]
+    fn cld_linear_ode_latex_equations() {
+        // The CLD with objects "x" and "yellow", and two negative links "f" and [unnamed] from x to y.
+        let model = parallel_negative_cld("x", "yellow", "f", "");
+        let discrete_model = model.discrete().unwrap();
+        let equations = LinearODEAnalysis::default()
+            .build_system(discrete_model)
+            .to_latex_equations_with_map(|param| latex_names(&model)(param));
+
+        let expected = LatexEquations(vec![
+            LatexEquation {
+                lhs: Latex("\\frac{\\mathrm{d}}{\\mathrm{d}t} x".to_string()),
+                rhs: Latex("0".to_string()),
+            },
+            LatexEquation {
+                lhs: Latex("\\frac{\\mathrm{d}}{\\mathrm{d}t} \\text{yellow}".to_string()),
+                rhs: Latex(
+                    "(-\\lambda_{f} - \\lambda_{x \\to \\text{yellow}}) \\cdot x".to_string(),
+                ),
+            },
+        ]);
+
+        assert_eq!(equations, expected);
+    }
+
+    #[test]
+    fn stock_flow_balanced_mass_action_latex_equations() {
         let model = backward_link("xxx", "yyy", "fff");
         let tab_model = model.discrete_tab().unwrap();
-        let analysis = ode::StockFlowMassActionAnalysis::default();
-        let sys = analysis.build_system(
-            tab_model,
-            ode::MassConservationType::Unbalanced(ode::RateGranularity::PerTransition),
-        );
-        let equations = sys
-            .map_variables(latex_ob_names(&model))
-            .extend_scalars(|param| param.map_variables(latex_mor_names_mass_action(&model)))
-            .to_latex_equations();
+        let analysis = StockFlowBalancedMassActionAnalysis::default();
+        let sys = analysis.build_system(tab_model);
+        let equations = sys.to_latex_equations_with_map(|param| latex_names(&model)(param));
 
-        let expected = vec![
+        let expected = LatexEquations(vec![
             LatexEquation {
-                lhs: "\\frac{\\mathrm{d}}{\\mathrm{d}t} \\text{xxx}".to_string(),
-                rhs: "-\\kappa_{\\text{fff}} \\cdot \\text{xxx} \\cdot \\text{yyy}".to_string(),
+                lhs: Latex("\\frac{\\mathrm{d}}{\\mathrm{d}t} \\text{xxx}".to_string()),
+                rhs: Latex("-r_{\\text{fff}} \\cdot \\text{xxx} \\cdot \\text{yyy}".to_string()),
             },
             LatexEquation {
-                lhs: "\\frac{\\mathrm{d}}{\\mathrm{d}t} \\text{yyy}".to_string(),
-                rhs: "\\rho_{\\text{fff}} \\cdot \\text{xxx} \\cdot \\text{yyy}".to_string(),
+                lhs: Latex("\\frac{\\mathrm{d}}{\\mathrm{d}t} \\text{yyy}".to_string()),
+                rhs: Latex("r_{\\text{fff}} \\cdot \\text{xxx} \\cdot \\text{yyy}".to_string()),
             },
-        ];
+        ]);
+        assert_eq!(equations, expected);
+    }
+
+    #[test]
+    fn stock_flow_unbalanced_mass_action_latex_equations() {
+        let model = backward_link("xxx", "yyy", "fff");
+        let tab_model = model.discrete_tab().unwrap();
+        let equations = StockFlowUnbalancedMassActionAnalysis::default()
+            .build_system(tab_model)
+            .to_latex_equations_with_map(|param| latex_names(&model)(param));
+
+        let expected = LatexEquations(vec![
+            LatexEquation {
+                lhs: Latex("\\frac{\\mathrm{d}}{\\mathrm{d}t} \\text{xxx}".to_string()),
+                rhs: Latex(
+                    "-\\kappa_{\\text{fff}} \\cdot \\text{xxx} \\cdot \\text{yyy}".to_string(),
+                ),
+            },
+            LatexEquation {
+                lhs: Latex("\\frac{\\mathrm{d}}{\\mathrm{d}t} \\text{yyy}".to_string()),
+                rhs: Latex("\\rho_{\\text{fff}} \\cdot \\text{xxx} \\cdot \\text{yyy}".to_string()),
+            },
+        ]);
+        assert_eq!(equations, expected);
+    }
+
+    #[test]
+    fn petri_net_balanced_mass_action_latex_equations() {
+        // The Petri net with places "liquid", "solid", and "c", and one (unnamed) transition [liquid, c] -> [solid, c].
+        let model = catalytic_petri_net("liquid", "solid", "c", "");
+        let modal_model = model.modal_unital().unwrap();
+        let equations = PetriNetBalancedMassActionAnalysis::default()
+            .build_system(modal_model)
+            .to_latex_equations_with_map(|param| latex_names(&model)(param));
+
+        let expected = LatexEquations(vec![
+            LatexEquation {
+                lhs: Latex("\\frac{\\mathrm{d}}{\\mathrm{d}t} \\text{liquid}".to_string()),
+                rhs: Latex(
+                    "-r_{[\\text{liquid}, c] \\to [\\text{solid}, c]} \\cdot \\text{liquid} \\cdot c"
+                        .to_string(),
+                ),
+            },
+            LatexEquation {
+                lhs: Latex("\\frac{\\mathrm{d}}{\\mathrm{d}t} \\text{solid}".to_string()),
+                rhs: Latex(
+                    "r_{[\\text{liquid}, c] \\to [\\text{solid}, c]} \\cdot \\text{liquid} \\cdot c"
+                        .to_string(),
+                ),
+            },
+            LatexEquation {
+                lhs: Latex("\\frac{\\mathrm{d}}{\\mathrm{d}t} c".to_string()),
+                rhs: Latex("0".to_string()),
+            },
+        ]);
+        assert_eq!(equations, expected);
+    }
+
+    #[test]
+    fn petri_net_unbalanced_pt_mass_action_latex_equations() {
+        // The Petri net with places "liquid", "solid", and "c", and one (unnamed) transition [liquid, c] -> [solid, c].
+        let model = catalytic_petri_net("liquid", "solid", "c", "");
+        let modal_model = model.modal_unital().unwrap();
+        let equations = PetriNetUnbalancedMassActionAnalysis::default()
+            .build_system(modal_model)
+            .to_latex_equations_with_map(|param| latex_names(&model)(param));
+
+        let expected = LatexEquations(vec![
+            LatexEquation {
+                lhs: Latex("\\frac{\\mathrm{d}}{\\mathrm{d}t} \\text{liquid}".to_string()),
+                rhs: Latex("-\\kappa_{[\\text{liquid}, c] \\to [\\text{solid}, c]} \\cdot \\text{liquid} \\cdot c".to_string()),
+            },
+            LatexEquation {
+                lhs: Latex("\\frac{\\mathrm{d}}{\\mathrm{d}t} \\text{solid}".to_string()),
+                rhs: Latex("\\rho_{[\\text{liquid}, c] \\to [\\text{solid}, c]} \\cdot \\text{liquid} \\cdot c".to_string()),
+            },
+            LatexEquation {
+                lhs: Latex("\\frac{\\mathrm{d}}{\\mathrm{d}t} c".to_string()),
+                rhs: Latex("(-\\kappa_{[\\text{liquid}, c] \\to [\\text{solid}, c]} + \\rho_{[\\text{liquid}, c] \\to [\\text{solid}, c]}) \\cdot \\text{liquid} \\cdot c".to_string()),
+            },
+        ]);
+        assert_eq!(equations, expected);
+    }
+
+    #[test]
+    fn petri_net_unbalanced_pp_mass_action_latex_equations() {
+        // The Petri net with places "liquid", "solid", and "c", and one (unnamed) transition [liquid, c] -> [solid, c].
+        let model = catalytic_petri_net("liquid", "solid", "c", "");
+        let modal_model = model.modal_unital().unwrap();
+        let equations = PetriNetPerPlaceMassActionAnalysis::default()
+            .build_system(modal_model)
+            .to_latex_equations_with_map(|param| latex_names(&model)(param));
+
+        let expected = LatexEquations(vec![
+            LatexEquation {
+                lhs: Latex("\\frac{\\mathrm{d}}{\\mathrm{d}t} \\text{liquid}".to_string()),
+                rhs: Latex("-\\kappa_{[\\text{liquid}, c] \\to [\\text{solid}, c]}^{\\text{liquid}} \\cdot \\text{liquid} \\cdot c".to_string()),
+            },
+            LatexEquation {
+                lhs: Latex("\\frac{\\mathrm{d}}{\\mathrm{d}t} \\text{solid}".to_string()),
+                rhs: Latex("\\rho_{[\\text{liquid}, c] \\to [\\text{solid}, c]}^{\\text{solid}} \\cdot \\text{liquid} \\cdot c".to_string()),
+            },
+            LatexEquation {
+                lhs: Latex("\\frac{\\mathrm{d}}{\\mathrm{d}t} c".to_string()),
+                rhs: Latex("(-\\kappa_{[\\text{liquid}, c] \\to [\\text{solid}, c]}^{c} + \\rho_{[\\text{liquid}, c] \\to [\\text{solid}, c]}^{c}) \\cdot \\text{liquid} \\cdot c".to_string()),
+            },
+        ]);
         assert_eq!(equations, expected);
     }
 
@@ -144,99 +245,26 @@ mod tests {
     fn unnamed_mor_uses_dom_cod_in_equations() {
         let model = backward_link("xxx", "yyy", "");
         let tab_model = model.discrete_tab().unwrap();
-        let analysis = ode::StockFlowMassActionAnalysis::default();
-        let sys = analysis.build_system(
-            tab_model,
-            ode::MassConservationType::Unbalanced(ode::RateGranularity::PerTransition),
-        );
-        let equations = sys
-            .map_variables(latex_ob_names(&model))
-            .extend_scalars(|param| param.map_variables(latex_mor_names_mass_action(&model)))
-            .to_latex_equations();
+        let equations = StockFlowUnbalancedMassActionAnalysis::default()
+            .build_system(tab_model)
+            .to_latex_equations_with_map(|param| latex_names(&model)(param));
 
-        let expected = vec![
+        let expected = LatexEquations(vec![
             LatexEquation {
-                lhs: "\\frac{\\mathrm{d}}{\\mathrm{d}t} \\text{xxx}".to_string(),
-                rhs:
+                lhs: Latex("\\frac{\\mathrm{d}}{\\mathrm{d}t} \\text{xxx}".to_string()),
+                rhs: Latex(
                     "-\\kappa_{\\text{xxx} \\to \\text{yyy}} \\cdot \\text{xxx} \\cdot \\text{yyy}"
                         .to_string(),
+                ),
             },
             LatexEquation {
-                lhs: "\\frac{\\mathrm{d}}{\\mathrm{d}t} \\text{yyy}".to_string(),
-                rhs: "\\rho_{\\text{xxx} \\to \\text{yyy}} \\cdot \\text{xxx} \\cdot \\text{yyy}"
-                    .to_string(),
+                lhs: Latex("\\frac{\\mathrm{d}}{\\mathrm{d}t} \\text{yyy}".to_string()),
+                rhs: Latex(
+                    "\\rho_{\\text{xxx} \\to \\text{yyy}} \\cdot \\text{xxx} \\cdot \\text{yyy}"
+                        .to_string(),
+                ),
             },
-        ];
+        ]);
         assert_eq!(equations, expected);
-    }
-
-    #[test]
-    fn modal_mor_dom_cod_labels() {
-        let th = Rc::new(theories::th_sym_monoidal_category());
-        let ob_type = ModalObType::new(QualifiedName::from("Object"));
-        let op = QualifiedName::from("tensor");
-
-        let [s_id, i_id, r_id] = [Uuid::now_v7(), Uuid::now_v7(), Uuid::now_v7()];
-        let [infect_id, recover_id] = [Uuid::now_v7(), Uuid::now_v7()];
-
-        let mut inner = ModalDblModel::new(th);
-        inner.add_ob(s_id.into(), ob_type.clone());
-        inner.add_ob(i_id.into(), ob_type.clone());
-        inner.add_ob(r_id.into(), ob_type.clone());
-
-        // infect: tensor(S, I) -> tensor(I, I) — product-typed dom and cod.
-        inner.add_mor(
-            infect_id.into(),
-            ModalOb::App(
-                ModalOb::List(
-                    List::Symmetric,
-                    vec![ModalOb::Generator(s_id.into()), ModalOb::Generator(i_id.into())],
-                )
-                .into(),
-                op.clone(),
-            ),
-            ModalOb::App(
-                ModalOb::List(
-                    List::Symmetric,
-                    vec![ModalOb::Generator(i_id.into()), ModalOb::Generator(i_id.into())],
-                )
-                .into(),
-                op.clone(),
-            ),
-            ModalMorType::Zero(ob_type.clone()),
-        );
-
-        // recover: I -> R — simple generator dom and cod.
-        inner.add_mor(
-            recover_id.into(),
-            ModalOb::Generator(i_id.into()),
-            ModalOb::Generator(r_id.into()),
-            ModalMorType::Zero(ob_type),
-        );
-
-        let mut ob_namespace = Namespace::new_for_uuid();
-        ob_namespace.set_label(s_id, LabelSegment::Text("S".into()));
-        ob_namespace.set_label(i_id, LabelSegment::Text("I".into()));
-        ob_namespace.set_label(r_id, LabelSegment::Text("R".into()));
-
-        let model = DblModel {
-            model: inner.into(),
-            ty: None,
-            elaboration_errors: Vec::new(),
-            ob_namespace,
-            mor_namespace: Namespace::new_for_uuid(),
-        };
-
-        // Morphism with basic generator dom/cod resolves labels.
-        assert_eq!(
-            model.mor_generator_dom_cod_label_strings(&recover_id.into()),
-            Some(("I".to_string(), "R".to_string()))
-        );
-
-        // Morphism with product-typed dom/cod resolves to bracketed labels.
-        assert_eq!(
-            model.mor_generator_dom_cod_label_strings(&infect_id.into()),
-            Some(("[S, I]".to_string(), "[I, I]".to_string()))
-        );
     }
 }
