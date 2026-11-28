@@ -1,0 +1,79 @@
+set_theory ThSchema
+#/ result: set theory to ThSchema
+
+type WeightedGraph := [
+  V : Entity,
+  E : Entity,
+  Weight : AttrType,
+  src : (Hom Entity)[E, V],
+  tgt : (Hom Entity)[E, V],
+  weight : Attr[E, Weight]
+]
+#/ declared: WeightedGraph
+
+def Edge : WeightedGraph := [
+    E := [e]
+]
+#/ declared: Edge
+#/ instance generators:
+#/   e : E
+
+def I : WeightedGraph := [
+    V := [v1, v2],
+    Weight := [w],
+    we : Edge,
+    wf : Edge,
+    src(we.e) := v1,
+    tgt(we.e) := v2,
+    src(wf.e) := v2,
+    tgt(wf.e) := v1,
+    weight(we.e) := w,
+    weight(wf.e) := w
+]
+#/ declared: I
+#/ instance generators:
+#/   v1 : V
+#/   v2 : V
+#/   w : Weight
+#/   we.e : E
+#/   wf.e : E
+#/ instance equations:
+#/   src(we.e) == v1
+#/   tgt(we.e) == v2
+#/   src(wf.e) == v2
+#/   tgt(wf.e) == v1
+#/   weight(we.e) == w
+#/   weight(wf.e) == w
+
+def I2 : WeightedGraph := [
+    V := [v1, v2],
+    Weight := [w],
+    we : Edge,
+    wf : Edge,
+    src := [we.e := v1, wf.e := v2],
+    tgt := [we.e := v2, wf.e := v1],
+    weight := [we.e := w, wf.e := w]
+]
+#/ declared: I2
+#/ instance generators:
+#/   v1 : V
+#/   v2 : V
+#/   w : Weight
+#/   we.e : E
+#/   wf.e : E
+#/ instance equations:
+#/   src(we.e) == v1
+#/   src(wf.e) == v2
+#/   tgt(we.e) == v2
+#/   tgt(wf.e) == v1
+#/   weight(we.e) == w
+#/   weight(wf.e) == w
+
+def I3 : WeightedGraph := [
+    E := [e1, e2]
+]
+#/ declared: I3
+#/ instance generators:
+#/   e1 : E
+#/   e2 : E
+

@@ -1,0 +1,41 @@
+set_theory ThSchema
+
+type WeightedGraph := [
+  V : Entity,
+  E : Entity,
+  Weight : AttrType,
+  src : (Hom Entity)[E, V],
+  tgt : (Hom Entity)[E, V],
+  weight : Attr[E, Weight]
+]
+
+def Edge : WeightedGraph := [
+    E := [e]
+]
+
+def I : WeightedGraph := [
+    V := [v1, v2],
+    Weight := [w],
+    we : Edge,
+    wf : Edge,
+    src(we.e) := v1,
+    tgt(we.e) := v2,
+    src(wf.e) := v2,
+    tgt(wf.e) := v1,
+    weight(we.e) := w,
+    weight(wf.e) := w
+]
+
+def I2 : WeightedGraph := [
+    V := [v1, v2],
+    Weight := [w],
+    we : Edge,
+    wf : Edge,
+    src := [we.e := v1, wf.e := v2],
+    tgt := [we.e := v2, wf.e := v1],
+    weight := [we.e := w, wf.e := w]
+]
+
+def I3 : WeightedGraph := [
+    E := [e1, e2]
+]

@@ -49,7 +49,11 @@ impl<'a> Evaluator<'a> {
     /// to self.env.
     pub fn eval_ty(&self, ty: &TyS) -> TyV {
         match &**ty {
-            TyS_::TopVar(tv) => self.toplevel.declarations.get(tv).unwrap().clone().unwrap_ty().val,
+            TyS_::TopVar(tv) => match self.toplevel.declarations.get(tv).unwrap() {
+                TopDecl::Type(t) => t.val.clone(),
+                TopDecl::Diag(d) => d.body_ty.clone(),
+                _ => panic!("top-level {tv} should be a type or diagram declaration"),
+            },
             TyS_::Object(ot) => TyV::object(ot.clone()),
             TyS_::Morphism(pt, dom, cod) => {
                 TyV::morphism(pt.clone(), self.eval_tm(dom), self.eval_tm(cod))
@@ -66,6 +70,7 @@ impl<'a> Evaluator<'a> {
             }
             TyS_::Unit => TyV::unit(),
             TyS_::Meta(mv) => TyV::meta(*mv),
+            TyS_::Over(path) => TyV::over(path.clone()),
         }
     }
 
@@ -92,6 +97,22 @@ impl<'a> Evaluator<'a> {
             TmS_::Compose(f, g) => TmV::compose(self.eval_tm(f), self.eval_tm(g)),
             TmS_::ObApp(name, x) => TmV::app(*name, self.eval_tm(x)),
             TmS_::List(elems) => TmV::list(elems.iter().map(|tm| self.eval_tm(tm)).collect()),
+            TmS_::OverApp(mor, mor_label, tgt_path, inner) => {
+                TmV::over_app(*mor, *mor_label, tgt_path.clone(), self.eval_tm(inner))
+            }
+            TmS_::Instance(body) => TmV::instance(InstanceBodyV {
+                generators: body.generators.clone(),
+                equations: body
+                    .equations
+                    .iter()
+                    .map(|(lhs, rhs)| (self.eval_tm(lhs), self.eval_tm(rhs)))
+                    .collect(),
+                sub_instances: body
+                    .sub_instances
+                    .iter()
+                    .map(|(name, (label, inner))| (*name, (*label, self.eval_tm(inner))))
+                    .collect(),
+            }),
             TmS_::Meta(mv) => TmV::meta(*mv),
         }
     }
@@ -143,6 +164,26 @@ impl<'a> Evaluator<'a> {
         self.bind_neu("self".into(), "self".into(), ty)
     }
 
+    /// Synthesize the record type matching an instance body's
+    /// structure. Generators become `@over`-typed fields; sub-instances
+    /// recurse. Equations are elided (they aren't projectable).
+    pub fn synth_instance_body_ty(&self, body: &InstanceBodyV) -> TyV {
+        let mut fields: Row<TyS> = Row::empty();
+        for (name, (label, path)) in &body.generators {
+            fields.insert(*name, *label, TyS::over(path.clone()));
+        }
+        for (name, (label, sub_v)) in &body.sub_instances {
+            let TmV_::Instance(sub_body) = &**sub_v else {
+                continue;
+            };
+            let sub_ty_v = self.synth_instance_body_ty(sub_body);
+            let sub_ty_s = self.quote_ty(&sub_ty_v);
+            fields.insert(*name, *label, sub_ty_s);
+        }
+        let r_v = RecordV::new(self.env.clone(), fields, Dtry::empty());
+        TyV::record(r_v)
+    }
+
     /// Produce type syntax from a type value.
     ///
     /// This is a *section* of eval, in that `self.eval_ty(self.quote_ty(ty_v)) == ty_v`
@@ -192,6 +233,7 @@ impl<'a> Evaluator<'a> {
             }
             TyV_::Unit => TyS::unit(),
             TyV_::Meta(mv) => TyS::meta(*mv),
+            TyV_::Over(path) => TyS::over(path.clone()),
         }
     }
 
@@ -212,6 +254,22 @@ impl<'a> Evaluator<'a> {
         match &**tm {
             TmV_::Neu(n, _) => self.quote_neu(n),
             TmV_::App(name, x) => TmS::ob_app(*name, self.quote_tm(x)),
+            TmV_::OverApp(mor, mor_label, tgt_path, inner) => {
+                TmS::over_app(*mor, *mor_label, tgt_path.clone(), self.quote_tm(inner))
+            }
+            TmV_::Instance(body) => TmS::instance(InstanceBodyS {
+                generators: body.generators.clone(),
+                equations: body
+                    .equations
+                    .iter()
+                    .map(|(lhs, rhs)| (self.quote_tm(lhs), self.quote_tm(rhs)))
+                    .collect(),
+                sub_instances: body
+                    .sub_instances
+                    .iter()
+                    .map(|(name, (label, inner))| (*name, (*label, self.quote_tm(inner))))
+                    .collect(),
+            }),
             TmV_::List(elems) => TmS::list(elems.iter().map(|tm| self.quote_tm(tm)).collect()),
             TmV_::Cons(fields) => TmS::cons(fields.map(|tm| self.quote_tm(tm))),
             TmV_::Tt => TmS::tt(),
@@ -255,6 +313,7 @@ impl<'a> Evaluator<'a> {
             TyV_::Id(_, _, _) => Ok(()),
             TyV_::Unit => Ok(()),
             TyV_::Meta(_) => Ok(()),
+            TyV_::Over(_) => Ok(()),
         }
     }
 
@@ -299,6 +358,13 @@ impl<'a> Evaluator<'a> {
             (TyV_::Sing(ty1, _), _) => self.convertible_ty(ty1, ty2),
             (_, TyV_::Sing(ty2, _)) => self.convertible_ty(ty1, ty2),
             (TyV_::Unit, TyV_::Unit) => Ok(()),
+            (TyV_::Over(p1), TyV_::Over(p2)) => {
+                if p1 == p2 {
+                    Ok(())
+                } else {
+                    Err(t("over-types refer to different paths in the codomain"))
+                }
+            }
             _ => Err(t("tried to convert between types of different type constructors")),
         }
     }
@@ -321,6 +387,7 @@ impl<'a> Evaluator<'a> {
             TyV_::Id(_, _, _) => TmV::tt(), // Extensional equality at a 100% discount!
             TyV_::Unit => TmV::tt(),
             TyV_::Meta(_) => TmV::neu(n.clone(), ty.clone()),
+            TyV_::Over(_) => TmV::neu(n.clone(), ty.clone()),
         }
     }
 
@@ -329,6 +396,12 @@ impl<'a> Evaluator<'a> {
         match &**v {
             TmV_::Neu(tm_n, ty_v) => self.eta_neu(tm_n, ty_v),
             TmV_::App(name, x) => TmV::app(*name, self.eta(x, None)),
+            TmV_::OverApp(mor, mor_label, tgt_path, inner) => {
+                TmV::over_app(*mor, *mor_label, tgt_path.clone(), self.eta(inner, None))
+            }
+            // An [`Instance`](TmV_::Instance) is already in normal form
+            // — its structure isn't subject to η-expansion.
+            TmV_::Instance(_) => v.clone(),
             TmV_::List(elems) => TmV::list(elems.iter().map(|elem| self.eta(elem, None)).collect()),
             TmV_::Cons(row) => {
                 if let Some(ty) = ty {
@@ -415,6 +488,39 @@ impl<'a> Evaluator<'a> {
             (TmV_::Tab(mor1), TmV_::Tab(mor2)) => {
                 self.equal_tm_helper(mor1, mor2, strict1, strict2)
             }
+            (TmV_::OverApp(mor1, _, _, inner1), TmV_::OverApp(mor2, _, _, inner2)) => {
+                if mor1 != mor2 {
+                    return Err(t(format!("OverApp morphisms {mor1} and {mor2} are not equal")));
+                }
+                self.equal_tm_helper(inner1, inner2, strict1, strict2)
+            }
+            (TmV_::Instance(b1), TmV_::Instance(b2)) => {
+                if b1.generators.len() != b2.generators.len()
+                    || b1.equations.len() != b2.equations.len()
+                    || b1.sub_instances.len() != b2.sub_instances.len()
+                {
+                    return Err(t("instance bodies have differing shapes"));
+                }
+                for ((n1, (_, p1)), (n2, (_, p2))) in b1.generators.iter().zip(b2.generators.iter())
+                {
+                    if n1 != n2 || p1 != p2 {
+                        return Err(t(format!("instance generator {n1} differs from {n2}")));
+                    }
+                }
+                for ((lhs1, rhs1), (lhs2, rhs2)) in b1.equations.iter().zip(b2.equations.iter()) {
+                    self.equal_tm_helper(lhs1, lhs2, strict1, strict2)?;
+                    self.equal_tm_helper(rhs1, rhs2, strict1, strict2)?;
+                }
+                for ((n1, (_, t1)), (n2, (_, t2))) in
+                    b1.sub_instances.iter().zip(b2.sub_instances.iter())
+                {
+                    if n1 != n2 {
+                        return Err(t(format!("instance sub-instance {n1} differs from {n2}")));
+                    }
+                    self.equal_tm_helper(t1, t2, strict1, strict2)?;
+                }
+                Ok(())
+            }
             _ => Err(t(format!(
                 "failed to match terms {} and {}",
                 self.quote_tm(tm1),
@@ -431,28 +537,43 @@ impl<'a> Evaluator<'a> {
         field_ty: TyV,
     ) -> Result<(), String> {
         assert!(!path.is_empty());
+        let orig_field_ty = self.path_ty(ty, val, path)?;
+        self.subtype(&field_ty, &orig_field_ty).map_err(|msg| {
+            format!(
+                "{} is not a subtype of {}:\n... because {}",
+                self.quote_ty(&field_ty),
+                self.quote_ty(&orig_field_ty),
+                msg.pretty()
+            )
+        })
+    }
 
-        let TyV_::Record(r) = &**ty else {
-            return Err("cannot specialize a non-record type".into());
-        };
-
-        let (field, path) = (path[0], &path[1..]);
-        if !r.fields.has(field.0) {
-            return Err(format!("no such field .{}", field.1));
+    /// Walk `path` from the value `val` of record type `ty`, returning
+    /// the type of the field at the end of the path.
+    ///
+    /// An empty path returns `ty` unchanged. Each segment requires the
+    /// current type to be a record containing the named field.
+    pub fn path_ty(
+        &self,
+        ty: &TyV,
+        val: &TmV,
+        path: &[(FieldName, LabelSegment)],
+    ) -> Result<TyV, String> {
+        let mut ty = ty.clone();
+        let mut val = val.clone();
+        for &(name, label) in path {
+            let TyV_::Record(r) = &*ty.clone() else {
+                return Err(format!("expected a record type at .{label}"));
+            };
+            if !r.fields.has(name) {
+                return Err(format!("no such field .{label}"));
+            }
+            let next_ty = self.field_ty(&ty, &val, name);
+            let next_val = self.proj(&val, name, label);
+            ty = next_ty;
+            val = next_val;
         }
-        let orig_field_ty = self.field_ty(ty, val, field.0);
-        if path.is_empty() {
-            self.subtype(&field_ty, &orig_field_ty).map_err(|msg| {
-                format!(
-                    "{} is not a subtype of {}:\n... because {}",
-                    self.quote_ty(&field_ty),
-                    self.quote_ty(&orig_field_ty),
-                    msg.pretty()
-                )
-            })
-        } else {
-            self.can_specialize(&orig_field_ty, &self.proj(val, field.0, field.1), path, field_ty)
-        }
+        Ok(ty)
     }
 
     /// Try to specialize the record `r` with the subtype `ty` at `path`.
